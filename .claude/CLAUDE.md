@@ -1,168 +1,25 @@
-# Backend Architecture Rules
+# Marketplace Backend: Senior Developer Guidelines
 
-Tech stack:
+## Tech Stack
+- **Framework:** NestJS (TypeScript)
+- **Database:** PostgreSQL
+- **ORM:** TypeORM
+- **Documentation:** Swagger (@nestjs/swagger)
+- **Validation:** class-validator, class-transformer
 
-- Framework: NestJS
-- ORM: TypeORM
-- Database: PostgreSQL (Supabase)
-- Language: TypeScript
+## Operational Commands
+- **Install:** `npm install`
+- **Build:** `npm run build`
+- **Dev:** `npm run start:dev`
+- **Lint/Format:** `npm run lint` / `npm run format`
+- **Database:** `npm run typeorm migration:generate -- -n [Name]` / `npm run typeorm migration:run`
 
----
+## Senior Engineering Standards
+1. **Zero-Inference Security:** Never assume client data is safe.
+2. **The "Why" Rule:** For complex logic, add comments explaining the rationale (Design Pattern used, performance trade-offs) to assist Junior/Intern developers.
+3. **Explicit Typing:** Avoid `any` at all costs. Every object must have a DTO, Interface, or Entity.
+4. **Error Handling:** All exceptions must be caught by a Global Exception Filter.
 
-# Architecture
-
-Use clean modular architecture.
-
-Each module must contain:
-
-- module
-- controller
-- service
-- dto
-- entity
-- repository (optional)
-
-Example:
-
-src/modules/users/
-  users.module.ts
-  users.controller.ts
-  users.service.ts
-  dto/
-  entities/
-
----
-
-# Controllers
-
-Controllers must:
-
-- only handle HTTP request/response
-- never contain business logic
-- call services
-
----
-
-# Services
-
-Services:
-
-- contain business logic
-- orchestrate repositories
-- handle transactions
-
----
-
-# Database
-
-Rules:
-
-- Never use synchronize=true
-- Always use migrations
-- UUID primary keys
-- snake_case table names
-
-Common fields:
-
-id UUID PK
-created_at
-updated_at
-deleted_at (optional)
-
----
-
-# Query Rules
-
-Avoid:
-
-- SELECT *
-- N+1 queries
-
-Prefer:
-
-- pagination
-- indexes
-- transactions
-
----
-
-# Validation
-
-Use:
-
-class-validator
-class-transformer
-
-All endpoints must validate DTOs.
-
----
-
-# Security
-
-- Never expose Supabase service_role key
-- Use RLS policies when possible
-- Validate user input
-- Use guards for authentication
-
----
-
-# API Style
-
-REST conventions:
-
-GET /users
-GET /users/:id
-POST /users
-PATCH /users/:id
-DELETE /users/:id
-
----
-
-# Code Quality
-
-Follow:
-
-- SOLID
-- dependency injection
-- repository pattern
-
-# Logging
-
-All services must include logging.
-
-Use structured logs.
-
-Include:
-
-- requestId
-- userId
-- operation name
-
-Never log:
-
-- passwords
-- tokens
-- secrets
-
-# API Versioning
-
-All APIs must support versioning.
-
-Default:
-
-/api/v1
-
-Breaking changes require new version:
-
-/api/v2
-
-# API Documentation
-
-All endpoints must be documented with Swagger.
-
-Requirements:
-
-@ApiTags
-@ApiOperation
-@ApiResponse
-@ApiBearerAuth (when required)
+## Global Constraints
+- Enforce `StandardizedResponse<T>` format: `{ statusCode, message, data, timestamp, path }`.
+- **Naming Convention (DB):** Never use auto-generated hashes for Constraints/Indexes. All Foreign Keys, Unique Constraints, and Indexes must follow the naming pattern: `prefix_table_column`.
