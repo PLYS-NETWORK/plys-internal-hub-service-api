@@ -21,4 +21,16 @@ export default registerAs('app', () => ({
     apiKey: process.env.RESEND_API_KEY ?? '',
     fromEmail: process.env.RESEND_FROM_EMAIL ?? 'noreply@example.com',
   },
+  payment: {
+    // Default to Polar.sh. Set PAYMENT_PROCESSOR=stripe to switch providers.
+    processor: process.env.PAYMENT_PROCESSOR ?? 'polar',
+    polar: {
+      accessToken: process.env.POLAR_ACCESS_TOKEN ?? '',
+      webhookSecret: process.env.POLAR_WEBHOOK_SECRET ?? '',
+    },
+    stripe: {
+      secretKey: process.env.STRIPE_SECRET_KEY ?? '',
+      webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
+    },
+  },
 }));

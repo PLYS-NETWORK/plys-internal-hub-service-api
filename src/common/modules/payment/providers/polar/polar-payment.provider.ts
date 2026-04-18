@@ -1,0 +1,110 @@
+import * as crypto from 'crypto';
+
+import { InternalServerErrorException, Logger, UnauthorizedException } from '@nestjs/common';
+import { Polar } from '@polar-sh/sdk';
+
+import { EnvironmentsService } from '../../../environments';
+import {
+  ICheckoutSession,
+  ICreateCheckoutSessionParams,
+} from '../../interfaces/checkout-session.interface';
+import { IPaymentProvider } from '../../interfaces/payment-provider.interface';
+import { ICreateRefundParams } from '../../interfaces/refund.interface';
+import { IWebhookEvent, WebhookEventType } from '../../interfaces/webhook-event.interface';
+
+/**
+ * Concrete Strategy: delivers payment operations via the Polar.sh API.
+ *
+ * Polar uses checkout sessions linked to pre-created product IDs.
+ * The `externalProductId` on ICreateCheckoutSessionParams must be set
+ * to a valid Polar product ID when using this provider.
+ *
+ * The `processorPaymentIntentId` field is intentionally null for Polar
+ * checkouts — Polar uses order IDs for refunds instead.
+ */
+export class PolarPaymentProvider implements IPaymentProvider {
+  private readonly logger = new Logger(PolarPaymentProvider.name);
+  private readonly client: Polar;
+
+  constructor(private readonly env: EnvironmentsService) {
+    this.client = new Polar({ accessToken: this.env.polarAccessToken });
+  }
+
+  public async createCheckoutSession(
+    params: ICreateCheckoutSessionParams,
+  ): Promise<ICheckoutSession> {
+    try {
+      const checkout = await this.client.checkouts.create({
+        // Polar requires pre-created product IDs. Use externalProductId if provided,
+        // otherwise fall back to invoiceId (useful when invoiceId maps to a Polar product).
+        products: [params.externalProductId ?? params.invoiceId],
+        successUrl: params.successUrl,
+        metadata: { invoiceId: params.invoiceId, ...params.metadata },
+      });
+
+      this.logger.log(`Polar checkout created: ${checkout.id} for invoice ${params.invoiceId}`);
+
+      return {
+        processorInvoiceId: checkout.id,
+        // Polar does not expose a payment-intent concept at checkout creation time.
+        processorPaymentIntentId: null,
+        processorPaymentUrl: checkout.url,
+      };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Polar createCheckoutSession failed: ${message}`);
+      throw new InternalServerErrorException('Failed to create payment session. Please try again.');
+    }
+  }
+
+  public async createRefund(params: ICreateRefundParams): Promise<void> {
+    try {
+      // Polar refunds are created against the order ID (processorPaymentIntentId stores
+      // the Polar order ID after the checkout.order_created webhook is received).
+      await this.client.refunds.create({
+        orderId: params.processorPaymentIntentId,
+        // 'customer_request' is a valid RefundReason OpenEnum value.
+        reason: 'customer_request',
+        amount: params.amount,
+        comment: params.reason ?? undefined,
+      });
+
+      this.logger.log(`Polar refund issued for order ${params.processorPaymentIntentId}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Polar createRefund failed: ${message}`);
+      throw new InternalServerErrorException('Failed to issue refund. Please try again.');
+    }
+  }
+
+  public constructWebhookEvent(payload: Buffer, signature: string): IWebhookEvent {
+    // Polar validates webhooks via an HMAC-SHA256 signature sent in the
+    // `webhook-signature` header. Use the raw request body (Buffer) — never
+    // parse to JSON first or the signature check will fail.
+    const expectedSignature = crypto
+      .createHmac('sha256', this.env.polarWebhookSecret)
+      .update(payload)
+      .digest('hex');
+
+    if (signature !== expectedSignature) {
+      throw new UnauthorizedException('Invalid Polar webhook signature.');
+    }
+
+    const raw = JSON.parse(payload.toString('utf8')) as Record<string, unknown>;
+
+    return {
+      type: this.mapEventType(raw['type'] as string | undefined),
+      data: (raw['data'] as Record<string, unknown>) ?? {},
+      processorEventId: (raw['id'] as string) ?? '',
+    };
+  }
+
+  private mapEventType(rawType: string | undefined): WebhookEventType {
+    const map: Record<string, WebhookEventType> = {
+      'order.paid': WebhookEventType.PAYMENT_SUCCEEDED,
+      'order.refunded': WebhookEventType.REFUND_CREATED,
+      'checkout.order_created': WebhookEventType.CHECKOUT_COMPLETED,
+    };
+    return map[rawType ?? ''] ?? WebhookEventType.UNKNOWN;
+  }
+}

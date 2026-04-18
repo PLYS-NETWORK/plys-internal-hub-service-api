@@ -66,4 +66,24 @@ export class EnvironmentsService implements IEnvironmentsService {
   public get resendFromEmail(): string {
     return this.configService.getOrThrow<string>('app.resend.fromEmail');
   }
+
+  public get paymentProcessor(): string {
+    return this.configService.getOrThrow<string>('app.payment.processor');
+  }
+
+  public get polarAccessToken(): string {
+    return this.configService.getOrThrow<string>('app.payment.polar.accessToken');
+  }
+
+  public get polarWebhookSecret(): string {
+    return this.configService.getOrThrow<string>('app.payment.polar.webhookSecret');
+  }
+
+  public get stripeSecretKey(): string {
+    return this.configService.getOrThrow<string>('app.payment.stripe.secretKey');
+  }
+
+  public get stripeWebhookSecret(): string {
+    return this.configService.getOrThrow<string>('app.payment.stripe.webhookSecret');
+  }
 }

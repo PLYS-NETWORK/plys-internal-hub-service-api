@@ -10,6 +10,7 @@ import { TransformResponseInterceptor } from './common/interceptors/transform-re
 import { EmailModule } from './common/modules/email';
 import { EnvironmentsModule } from './common/modules/environments';
 import { I18nModule } from './common/modules/i18n';
+import { PaymentModule } from './common/modules/payment';
 import {
   RequestContextInterceptor,
   RequestContextMiddleware,
@@ -36,6 +37,7 @@ import { UsersModule } from './modules/users/users.module';
     I18nModule,
     RequestContextModule,
     EmailModule,
+    PaymentModule,
     UnitOfWorkModule,
     AuthModule,
     UsersModule,
