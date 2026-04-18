@@ -1,7 +1,7 @@
-import * as path from 'path';
+import 'dotenv/config';
 
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import 'dotenv/config';
+import * as path from 'path';
 
 export function getTypeOrmConfig(): TypeOrmModuleOptions {
   return {
@@ -13,8 +13,9 @@ export function getTypeOrmConfig(): TypeOrmModuleOptions {
     database: process.env.DB_NAME ?? 'marketplace',
     synchronize: false,
     logging: process.env.NODE_ENV !== 'production',
-    entities: [path.resolve(__dirname, 'entities', '*.entity.{ts,js}')],
+    entities: [path.resolve(__dirname, 'entities', '**', '*.entity.{ts,js}')],
     migrations: [path.resolve(__dirname, 'migrations', '*.{ts,js}')],
+    subscribers: [path.resolve(__dirname, 'subscribers', '*.subscriber.{ts,js}')],
     autoLoadEntities: true,
     migrationsRun: false,
   };

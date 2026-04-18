@@ -1,0 +1,23 @@
+{
+  "generic": {
+    "bad_request": "Geçersiz istek",
+    "unauthorized": "Yetkisiz",
+    "forbidden": "Erişim engellendi",
+    "not_found": "Bulunamadı",
+    "conflict": "Çakışma",
+    "internal_server_error": "Bir hata oluştu",
+    "validation_failed": "Doğrulama başarısız"
+  },
+  "auth": {
+    "invalid_credentials": "Geçersiz kimlik bilgileri",
+    "token_expired": "Oturum süresi doldu",
+    "token_invalid": "Geçersiz oturum",
+    "device_mismatch": "Tanınmayan cihaz",
+    "email_not_verified": "E-posta doğrulanmadı"
+  },
+  "database": {
+    "unique_violation": "Bu değerlere sahip bir kayıt zaten mevcut",
+    "foreign_key_violation": "Başvurulan kayıt bulunamadı",
+    "not_null_violation": "Zorunlu bir alan eksik"
+  }
+}

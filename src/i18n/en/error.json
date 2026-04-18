@@ -1,0 +1,23 @@
+{
+  "generic": {
+    "bad_request": "Bad request",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Forbidden",
+    "not_found": "Not found",
+    "conflict": "Conflict",
+    "internal_server_error": "Something went wrong",
+    "validation_failed": "Validation failed"
+  },
+  "auth": {
+    "invalid_credentials": "Invalid credentials",
+    "token_expired": "Token expired",
+    "token_invalid": "Token invalid",
+    "device_mismatch": "Unrecognized device",
+    "email_not_verified": "Email is not verified"
+  },
+  "database": {
+    "unique_violation": "A record with these values already exists",
+    "foreign_key_violation": "Referenced record does not exist",
+    "not_null_violation": "A required field is missing"
+  }
+}

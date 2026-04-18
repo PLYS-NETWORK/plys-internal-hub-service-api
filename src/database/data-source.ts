@@ -1,6 +1,6 @@
-import * as path from 'path';
-
 import 'dotenv/config';
+
+import * as path from 'path';
 import { DataSource } from 'typeorm';
 
 // Standalone DataSource for TypeORM CLI (migration:generate, migration:run, etc.)
@@ -14,6 +14,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME ?? 'marketplace',
   synchronize: false,
   logging: true,
-  entities: [path.resolve(__dirname, 'entities', '*.entity.{ts,js}')],
+  entities: [path.resolve(__dirname, 'entities', '**', '*.entity.{ts,js}')],
   migrations: [path.resolve(__dirname, 'migrations', '*.{ts,js}')],
+  subscribers: [path.resolve(__dirname, 'subscribers', '*.subscriber.{ts,js}')],
 });

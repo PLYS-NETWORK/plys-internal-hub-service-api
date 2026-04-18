@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { AsyncLocalStorage } from 'async_hooks';
 
-import { IRequestContext } from './interfaces/request-context.interface';
+import {
+  DEFAULT_LOCALE,
+  IRequestContext,
+  SupportedLocale,
+} from './interfaces/request-context.interface';
 
 @Injectable()
 export class RequestContextService {
@@ -47,6 +51,10 @@ export class RequestContextService {
 
   public get method(): string {
     return this.storage.getStore()?.method ?? '';
+  }
+
+  public get lang(): SupportedLocale {
+    return this.storage.getStore()?.lang ?? DEFAULT_LOCALE;
   }
 
   // Called by RequestContextInterceptor after JWT guard validates the token.

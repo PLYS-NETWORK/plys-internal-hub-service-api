@@ -1,7 +1,8 @@
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { I18nValidationExceptionFilter, I18nValidationPipe } from 'nestjs-i18n';
 
 import { AppModule } from './app.module';
 
@@ -26,13 +27,20 @@ async function bootstrap(): Promise<void> {
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
-  // Strict validation — strips extra fields, transforms payloads to DTO instances
+  // Strict validation — strips extra fields, transforms payloads to DTO instances,
+  // translates constraint messages using keys from src/i18n/<lang>/validation.json.
   app.useGlobalPipes(
-    new ValidationPipe({
+    new I18nValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
       transformOptions: { enableImplicitConversion: true },
+    }),
+  );
+  // Formats i18n validation errors into the StandardizedResponse shape.
+  app.useGlobalFilters(
+    new I18nValidationExceptionFilter({
+      detailedErrors: false,
     }),
   );
 
