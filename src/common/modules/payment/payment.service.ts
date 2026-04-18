@@ -1,11 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { EnvironmentsService } from '../environments';
 import { PaymentProcessor } from '../../../database/enums/payment-processor.enum';
+import { EnvironmentsService } from '../environments';
+import { IPaymentProvider } from './interfaces';
 import {
   ICheckoutSession,
   ICreateCheckoutSessionParams,
 } from './interfaces/checkout-session.interface';
+import { IPaymentService } from './interfaces/payment-service.interface';
 import { ICreateRefundParams } from './interfaces/refund.interface';
 import { IWebhookEvent } from './interfaces/webhook-event.interface';
 import { PaymentProviderRegistry } from './payment-provider.registry';
@@ -20,7 +22,7 @@ import { PaymentProviderRegistry } from './payment-provider.registry';
  * allowing a restart-free switch if the env var is hot-reloaded.
  */
 @Injectable()
-export class PaymentService {
+export class PaymentService implements IPaymentService {
   private readonly logger = new Logger(PaymentService.name);
 
   constructor(
@@ -60,7 +62,7 @@ export class PaymentService {
   }
 
   // Resolves the currently configured payment provider from the registry.
-  private activeProvider() {
+  private activeProvider(): IPaymentProvider {
     return this.registry.create(this.env.paymentProcessor as PaymentProcessor);
   }
 }

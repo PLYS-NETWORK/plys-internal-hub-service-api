@@ -4,6 +4,7 @@ export { EmailService } from './email.service';
 export type {
   IEmailMessage,
   IEmailProvider,
+  IEmailService,
   IForgotPasswordOtpEmailOptions,
   IVerifyRegistrationEmailOptions,
 } from './interfaces';

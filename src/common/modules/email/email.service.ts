@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { EMAIL_PROVIDER_TOKEN } from './constants';
 import { IEmailProvider } from './interfaces/email-provider.interface';
+import { IEmailService } from './interfaces/email-service.interface';
 import {
   IForgotPasswordOtpEmailOptions,
   IVerifyRegistrationEmailOptions,
@@ -15,7 +16,7 @@ import { buildForgotPasswordOtpEmail, buildVerifyRegistrationEmail } from './tem
  * requires no changes here.
  */
 @Injectable()
-export class EmailService {
+export class EmailService implements IEmailService {
   private readonly logger = new Logger(EmailService.name);
 
   constructor(

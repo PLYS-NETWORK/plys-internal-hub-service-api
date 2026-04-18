@@ -1,7 +1,6 @@
-import * as crypto from 'crypto';
-
 import { InternalServerErrorException, Logger, UnauthorizedException } from '@nestjs/common';
 import { Polar } from '@polar-sh/sdk';
+import * as crypto from 'crypto';
 
 import { EnvironmentsService } from '../../../environments';
 import {
