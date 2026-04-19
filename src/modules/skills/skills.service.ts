@@ -4,10 +4,7 @@ import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable, Logger } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { I18nService } from 'nestjs-i18n';
-import { In } from 'typeorm';
 
-import { AddSkillsDto } from './dto/requests/add-skills.dto';
-import { RemoveSkillsDto } from './dto/requests/remove-skills.dto';
 import { SkillResponseDto } from './dto/responses/skill-response.dto';
 
 @Injectable()
@@ -31,49 +28,6 @@ export class SkillsService {
       this.logger.warn(`[${this.rid}] getAll — result is empty`);
     }
     return skills.map((skill) => this.toResponseDto(skill));
-  }
-
-  public async addList(dto: AddSkillsDto): Promise<SkillResponseDto[]> {
-    this.logger.log(`[${this.rid}] addList — start | requested: ${dto.skills.length}`);
-    // Fetch all existing names (lowercased) to perform case-insensitive duplicate check.
-    // This avoids fragmenting the taxonomy with variant-cased keys.
-    const existing = await this.uow.skills.find({ select: { name: true } });
-    const existingNamesLower = new Set(existing.map((s) => s.name.toLowerCase()));
-
-    const skipped = dto.skills.filter((item) => existingNamesLower.has(item.name.toLowerCase()));
-    if (skipped.length > 0) {
-      this.logger.warn(
-        `[${this.rid}] addList — skipped duplicates | names: ${skipped.map((s) => s.name).join(', ')}`,
-      );
-    }
-
-    const newSkillEntities = dto.skills
-      .filter((item) => !existingNamesLower.has(item.name.toLowerCase()))
-      .map((item) =>
-        this.uow.skills.create({
-          name: item.name,
-          category: item.category ?? null,
-        }),
-      );
-
-    if (newSkillEntities.length === 0) {
-      this.logger.warn(`[${this.rid}] addList — all skills already exist, nothing inserted`);
-      return [];
-    }
-
-    const saved = await this.uow.skills.save(
-      newSkillEntities as Parameters<typeof this.uow.skills.save>[0],
-    );
-
-    this.logger.log(`[${this.rid}] addList — complete | inserted: ${newSkillEntities.length}`);
-    return (saved as typeof newSkillEntities).map((skill) => this.toResponseDto(skill));
-  }
-
-  public async removeList(dto: RemoveSkillsDto): Promise<void> {
-    this.logger.log(`[${this.rid}] removeList — start | ids count: ${dto.ids.length}`);
-    // Soft-delete to preserve FK references in consultant_skills / project_required_skills.
-    await this.uow.skills.softDelete({ id: In(dto.ids) });
-    this.logger.log(`[${this.rid}] removeList — complete`);
   }
 
   // Build an explicit plain object so that computed fields (label, category_label)
