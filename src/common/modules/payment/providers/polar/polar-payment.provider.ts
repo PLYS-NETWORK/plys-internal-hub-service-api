@@ -9,7 +9,10 @@ import {
 } from '@common/modules/payment/interfaces/checkout-session.interface';
 import { IPaymentProvider } from '@common/modules/payment/interfaces/payment-provider.interface';
 import { ICreateRefundParams } from '@common/modules/payment/interfaces/refund.interface';
-import { IWebhookEvent, WebhookEventType } from '@common/modules/payment/interfaces/webhook-event.interface';
+import {
+  IWebhookEvent,
+  WebhookEventType,
+} from '@common/modules/payment/interfaces/webhook-event.interface';
 
 /**
  * Concrete Strategy: delivers payment operations via the Polar.sh API.

@@ -25,6 +25,6 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
     GoogleOAuthGuard,
     GoogleCallbackGuard,
   ],
-  exports: [AuthService],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

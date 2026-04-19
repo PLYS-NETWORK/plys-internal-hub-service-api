@@ -7,10 +7,7 @@ import { EntityManager } from 'typeorm';
 import { ITaskRepository } from './interfaces';
 
 @Injectable()
-export class TaskRepository
-  extends AbstractRepository<Task>
-  implements ITaskRepository
-{
+export class TaskRepository extends AbstractRepository<Task> implements ITaskRepository {
   constructor(
     @InjectEntityManager()
     manager: EntityManager,

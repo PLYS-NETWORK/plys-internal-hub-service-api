@@ -1,3 +1,14 @@
+import { ERROR_CODES } from '@common/constants/error-codes';
+import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
+import { EmailService } from '@common/modules/email/email.service';
+import { EnvironmentsService } from '@common/modules/environments';
+import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { AuthTokenType } from '@database/enums/auth-token-type.enum';
+import { SsoProvider } from '@database/enums/sso-provider.enum';
+import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
+import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -6,15 +17,6 @@ import { createHash, randomBytes } from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import { Not } from 'typeorm';
 
-import { ERROR_CODES } from '@common/constants/error-codes';
-import { TranslatableException } from '@common/exceptions/translatable.exception';
-import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
-import { EmailService } from '@common/modules/email/email.service';
-import { EnvironmentsService } from '@common/modules/environments';
-import { ActivePlatform } from '@database/enums/active-platform.enum';
-import { AuthTokenType } from '@database/enums/auth-token-type.enum';
-import { SsoProvider } from '@database/enums/sso-provider.enum';
-import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { AuthResponseDto, ChangePasswordDto, LoginDto, RegisterDto, UserResponseDto } from './dto';
 import { IAuthService, ISessionContext, ISsoUserData } from './interfaces/auth-service.interface';
 
@@ -31,6 +33,7 @@ export class AuthService implements IAuthService {
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
     private readonly envService: EnvironmentsService,
+    private readonly requestContext: RequestContextService,
   ) {
     this.googleClient = new OAuth2Client(this.envService.googleClientId);
   }
@@ -38,8 +41,20 @@ export class AuthService implements IAuthService {
   // ─── Register ────────────────────────────────────────────────────────────
 
   public async register(dto: RegisterDto, _context: ISessionContext): Promise<void> {
+    // Defence-in-depth: the DTO already forbids ADMIN via @IsIn, but guard here
+    // too so any internal caller that bypasses the DTO cannot create an admin.
+    if (dto.active_platform === ActivePlatform.ADMIN_PLATFORM) {
+      throw new TranslatableException({
+        messageKey: 'error.auth.admin_self_registration_forbidden',
+        errorCode: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
+        status: HttpStatus.FORBIDDEN,
+      });
+    }
+
     await this.uow.withTransaction(async (tx) => {
-      const existing = await tx.users.findUserByEmail(dto.email);
+      // Email uniqueness is scoped to (platform, email) — the same email may
+      // register independently on BUSINESS and CONSULTANT.
+      const existing = await tx.users.findUserByEmailAndPlatform(dto.email, dto.active_platform);
 
       if (existing) {
         throw new TranslatableException({
@@ -53,11 +68,18 @@ export class AuthService implements IAuthService {
 
       const user = tx.users.create({
         email: dto.email.toLowerCase().trim(),
+        platform: dto.active_platform,
         passwordHash,
         isEmailVerified: false,
         isActive: true,
       });
       await tx.users.save(user);
+
+      // Create the minimum viable profile row for the chosen platform so the
+      // user can log in and immediately complete onboarding. Only the name is
+      // captured here — all other profile fields are filled via the profile
+      // module's update/onboard endpoints.
+      const displayName = await this.createInitialProfile(tx, user.id, dto);
 
       // Generate verification token — raw token sent via email, SHA-256 stored in DB
       const rawToken = randomBytes(32).toString('hex');
@@ -76,7 +98,7 @@ export class AuthService implements IAuthService {
       // Fire-and-forget: email delivery failure should not roll back registration
       this.emailService
         .sendVerificationEmail(user.email, {
-          userName: dto.first_name ?? user.email,
+          userName: displayName,
           verificationUrl,
           expiryHours: EMAIL_VERIFICATION_EXPIRY_HOURS,
         })
@@ -141,7 +163,7 @@ export class AuthService implements IAuthService {
   // ─── Login ───────────────────────────────────────────────────────────────
 
   public async login(dto: LoginDto, context: ISessionContext): Promise<AuthResponseDto> {
-    const user = await this.uow.users.findUserByEmail(dto.email);
+    const user = await this.uow.users.findUserByEmailAndPlatform(dto.email, dto.active_platform);
 
     // Use generic "invalid credentials" to prevent user enumeration
     if (!user) {
@@ -221,24 +243,30 @@ export class AuthService implements IAuthService {
       });
     }
 
-    const { userId, user, activePlatform } = session;
+    const { userId, user } = session;
 
-    // Refresh Token Rotation: delete old session, create fresh one
+    // Refresh Token Rotation: delete old session, create fresh one.
+    // The platform is re-read from the user (the session no longer carries it).
     await this.uow.userSessions.remove(session);
 
-    return this.createSession(userId, user.email, activePlatform, context);
+    return this.createSession(userId, user.email, user.platform, context);
   }
 
   // ─── Logout ──────────────────────────────────────────────────────────────
 
-  public async logout(sessionId: string): Promise<void> {
-    await this.uow.userSessions.delete({ id: sessionId });
+  public async logout(): Promise<void> {
+    const sessionId = this.requestContext.sessionId;
+    if (sessionId) {
+      await this.uow.userSessions.delete({ id: sessionId });
+    }
   }
 
   // ─── Me ──────────────────────────────────────────────────────────────────
 
-  public async me(userId: string): Promise<UserResponseDto> {
-    const user = await this.uow.users.findByActiveId(userId);
+  public async me(): Promise<UserResponseDto> {
+    const userId = this.requestContext.userId;
+
+    const user = userId ? await this.uow.users.findByActiveId(userId) : null;
 
     if (!user || !user.isActive) {
       throw new TranslatableException({
@@ -253,12 +281,11 @@ export class AuthService implements IAuthService {
 
   // ─── Change Password ────────────────────────────────────────────────────
 
-  public async changePassword(
-    userId: string,
-    dto: ChangePasswordDto,
-    currentSessionId: string,
-  ): Promise<void> {
-    const user = await this.uow.users.findByActiveId(userId);
+  public async changePassword(dto: ChangePasswordDto): Promise<void> {
+    const userId = this.requestContext.userId;
+    const currentSessionId = this.requestContext.sessionId;
+
+    const user = userId ? await this.uow.users.findByActiveId(userId) : null;
 
     if (!user || !user.isActive) {
       throw new TranslatableException({
@@ -290,10 +317,12 @@ export class AuthService implements IAuthService {
       await tx.users.save(user);
 
       // Revoke all OTHER sessions to force re-login on other devices
-      await tx.userSessions.delete({
-        userId: user.id,
-        id: Not(currentSessionId),
-      });
+      if (currentSessionId) {
+        await tx.userSessions.delete({
+          userId: user.id,
+          id: Not(currentSessionId),
+        });
+      }
     });
   }
 
@@ -313,12 +342,28 @@ export class AuthService implements IAuthService {
       });
     }
 
+    // SSO is only available for BUSINESS and CONSULTANT. Admin accounts are
+    // provisioned out-of-band and must log in with email/password to guarantee
+    // the identity is vetted, not federated through a third-party IdP.
+    if (activePlatform === ActivePlatform.ADMIN_PLATFORM) {
+      throw new TranslatableException({
+        messageKey: 'error.auth.sso_not_allowed_for_platform',
+        errorCode: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
+        status: HttpStatus.FORBIDDEN,
+      });
+    }
+
     const ssoProvider = provider as SsoProvider;
     const email = userData.email.toLowerCase().trim();
 
-    // Check if this SSO identity is already linked
+    // Check if this SSO identity is already linked — scoped by platform so the
+    // same Google account may independently link a Business and a Consultant user.
     const existingLink = await this.uow.userSsoProviders.findOne({
-      where: { provider: ssoProvider, providerUserId: userData.providerUserId },
+      where: {
+        platform: activePlatform,
+        provider: ssoProvider,
+        providerUserId: userData.providerUserId,
+      },
       relations: ['user'],
     });
 
@@ -344,19 +389,18 @@ export class AuthService implements IAuthService {
       return this.createSession(user.id, user.email, activePlatform, context);
     }
 
-    // SSO identity not linked yet — check if email matches an existing user
+    // SSO identity not linked yet — match or create a user on this platform.
     return this.uow.withTransaction(async (tx) => {
-      let user = await tx.users
-        .createQueryBuilder('u')
-        .where('LOWER(u.email) = LOWER(:email)', { email })
-        .getOne();
-
+      let user = await tx.users.findUserByEmailAndPlatform(email, activePlatform);
       let isNewUser = false;
 
       if (!user) {
-        // Create a new user — SSO users are auto-verified
+        // New account on this platform — SSO confirms email ownership so the
+        // user is auto-verified. A minimal profile is created so the user can
+        // complete onboarding immediately after first login.
         user = tx.users.create({
           email,
+          platform: activePlatform,
           passwordHash: null,
           isEmailVerified: true,
           emailVerifiedAt: new Date(),
@@ -364,6 +408,15 @@ export class AuthService implements IAuthService {
           lastLoginAt: new Date(),
         });
         await tx.users.save(user);
+
+        await this.createInitialProfile(tx, user.id, {
+          active_platform: activePlatform,
+          // Use the SSO-provided display name for both platforms; the user can
+          // rename it later via the profile module.
+          company_name: userData.displayName || email,
+          full_name: userData.displayName || email,
+        });
+
         isNewUser = true;
       } else {
         if (!user.isActive) {
@@ -383,9 +436,10 @@ export class AuthService implements IAuthService {
         await tx.users.save(user);
       }
 
-      // Link the SSO provider to the user
+      // Link the SSO provider to the user on this specific platform
       const ssoLink = tx.userSsoProviders.create({
         userId: user.id,
+        platform: activePlatform,
         provider: ssoProvider,
         providerUserId: userData.providerUserId,
         providerEmail: email,
@@ -438,6 +492,45 @@ export class AuthService implements IAuthService {
 
   // ─── Private Helpers ─────────────────────────────────────────────────────
 
+  /**
+   * Creates the minimum-viable profile row for the user's platform.
+   * - BUSINESS   → `business_profiles` with `company_name`
+   * - CONSULTANT → `consultant_profiles` with `full_name`
+   * - ADMIN      → no profile row (admins have no consumer-facing profile)
+   *
+   * Returns the display name for downstream use (email greeting, etc.).
+   */
+  private async createInitialProfile(
+    tx: IUnitOfWork,
+    userId: string,
+    dto: Pick<RegisterDto, 'active_platform' | 'company_name' | 'full_name'>,
+  ): Promise<string> {
+    if (dto.active_platform === ActivePlatform.BUSINESS) {
+      const companyName = dto.company_name!;
+      const profile = tx.businessProfiles.create({
+        userId,
+        companyName,
+        isVerified: false,
+      });
+      await tx.businessProfiles.save(profile);
+      return companyName;
+    }
+
+    if (dto.active_platform === ActivePlatform.CONSULTANT) {
+      const fullName = dto.full_name!;
+      const profile = tx.consultantProfiles.create({
+        userId,
+        fullName,
+        isVerified: false,
+      });
+      await tx.consultantProfiles.save(profile);
+      return fullName;
+    }
+
+    // ADMIN — no profile row; fall back to a generic greeting.
+    return 'Admin';
+  }
+
   private async createSession(
     userId: string,
     email: string,
@@ -465,7 +558,6 @@ export class AuthService implements IAuthService {
     const session = this.uow.userSessions.create({
       userId,
       sessionToken: sessionTokenHash,
-      activePlatform,
       deviceId: context.deviceId,
       fingerprint: context.fingerprint,
       ipAddress: context.ipAddress || null,

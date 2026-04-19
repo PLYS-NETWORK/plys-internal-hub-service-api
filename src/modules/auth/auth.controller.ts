@@ -13,10 +13,8 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FastifyReply, FastifyRequest } from 'fastify';
 
-import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
-import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ActivePlatform } from '@database/enums/active-platform.enum';
 import { SsoProvider } from '@database/enums/sso-provider.enum';
@@ -103,16 +101,16 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Logout — revoke current session' })
-  public async logout(@CurrentUser() user: JwtPayload): Promise<ITranslatedPayload<null>> {
-    await this.authService.logout(user.sessionId);
+  public async logout(): Promise<ITranslatedPayload<null>> {
+    await this.authService.logout();
     return { messageKey: 'success.ok', data: null };
   }
 
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current authenticated user profile' })
-  public async me(@CurrentUser() user: JwtPayload): Promise<ITranslatedPayload<UserResponseDto>> {
-    const data = await this.authService.me(user.sub);
+  public async me(): Promise<ITranslatedPayload<UserResponseDto>> {
+    const data = await this.authService.me();
     return { messageKey: 'success.ok', data };
   }
 
@@ -120,11 +118,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Change password — revokes all other sessions' })
-  public async changePassword(
-    @CurrentUser() user: JwtPayload,
-    @Body() dto: ChangePasswordDto,
-  ): Promise<ITranslatedPayload<null>> {
-    await this.authService.changePassword(user.sub, dto, user.sessionId);
+  public async changePassword(@Body() dto: ChangePasswordDto): Promise<ITranslatedPayload<null>> {
+    await this.authService.changePassword(dto);
     return { messageKey: 'success.ok', data: null };
   }
 
@@ -149,7 +144,6 @@ export class AuthController {
     @Headers('x-fingerprint') fingerprint?: string,
   ): Promise<void> {
     const context = this.buildSessionContext(deviceId, fingerprint);
-    // Default to BUSINESS for the web redirect flow; the state param can override this
     const queryState = (request.query as Record<string, string>)?.['state'];
     const activePlatform = this.parseActivePlatformFromState(queryState);
 
@@ -206,7 +200,6 @@ export class AuthController {
   }
 
   private parseActivePlatformFromState(state: string | undefined): ActivePlatform {
-    // The state param may encode the platform; otherwise default to BUSINESS
     if (state === ActivePlatform.CONSULTANT) {
       return ActivePlatform.CONSULTANT;
     }

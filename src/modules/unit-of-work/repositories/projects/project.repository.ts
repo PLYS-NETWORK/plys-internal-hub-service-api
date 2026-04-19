@@ -7,10 +7,7 @@ import { EntityManager } from 'typeorm';
 import { IProjectRepository } from './interfaces';
 
 @Injectable()
-export class ProjectRepository
-  extends AbstractRepository<Project>
-  implements IProjectRepository
-{
+export class ProjectRepository extends AbstractRepository<Project> implements IProjectRepository {
   constructor(
     @InjectEntityManager()
     manager: EntityManager,

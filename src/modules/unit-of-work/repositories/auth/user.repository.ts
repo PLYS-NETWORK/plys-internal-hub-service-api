@@ -1,5 +1,6 @@
 import { AbstractRepository } from '@common/repositories';
 import { User } from '@database/entities';
+import { ActivePlatform } from '@database/enums/active-platform.enum';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
@@ -19,7 +20,13 @@ export class UserRepository extends AbstractRepository<User> implements IUserRep
     return new UserRepository(manager) as this;
   }
 
-  public async findUserByEmail(email: string): Promise<User | null> {
-    return this.createQueryBuilder('u').where('LOWER(u.email) = LOWER(:email)', { email }).getOne();
+  public async findUserByEmailAndPlatform(
+    email: string,
+    platform: ActivePlatform,
+  ): Promise<User | null> {
+    return this.createQueryBuilder('u')
+      .where('LOWER(u.email) = LOWER(:email)', { email })
+      .andWhere('u.platform = :platform', { platform })
+      .getOne();
   }
 }

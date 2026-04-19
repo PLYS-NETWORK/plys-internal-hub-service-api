@@ -8,15 +8,12 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PlatformGuard } from './common/guards/platform.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
+import { JwtContextMiddleware } from './common/middleware/jwt-context.middleware';
 import { EmailModule } from './common/modules/email';
 import { EnvironmentsModule } from './common/modules/environments';
 import { I18nModule } from './common/modules/i18n';
 import { PaymentModule } from './common/modules/payment';
-import {
-  RequestContextInterceptor,
-  RequestContextMiddleware,
-  RequestContextModule,
-} from './common/modules/request-context';
+import { RequestContextMiddleware, RequestContextModule } from './common/modules/request-context';
 import configuration from './config/configuration';
 import { AuditSubscriber } from './database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from './database/typeorm.config';
@@ -48,21 +45,23 @@ import { UsersModule } from './modules/users/users.module';
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: TransformResponseInterceptor },
-    // RequestContextInterceptor runs after guards to populate userId/role from the validated JWT
-    { provide: APP_INTERCEPTOR, useClass: RequestContextInterceptor },
     // JwtAuthGuard is global — use @Public() on routes that don't require authentication
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: PlatformGuard },
-    // AuditSubscriber self-registers with the DataSource in its constructor; listing it
-    // here ensures NestJS instantiates it (and injects RequestContextService) at boot.
     AuditSubscriber,
   ],
 })
 export class AppModule implements NestModule {
   public configure(consumer: MiddlewareConsumer): void {
-    // RequestContextMiddleware runs first — creates the AsyncLocalStorage context
-    // for every incoming request before any guard or interceptor executes.
-    consumer.apply(RequestContextMiddleware).forRoutes({ path: '*', method: RequestMethod.ALL });
+    consumer
+      .apply(RequestContextMiddleware)
+      .forRoutes({ path: '*', method: RequestMethod.ALL });
+
+    // JwtContextMiddleware runs after RequestContextMiddleware so the AsyncLocalStorage
+    // context is already established when the JWT payload is written into it.
+    consumer
+      .apply(JwtContextMiddleware)
+      .forRoutes({ path: '*', method: RequestMethod.ALL });
   }
 }

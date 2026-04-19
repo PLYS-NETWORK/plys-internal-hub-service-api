@@ -7,10 +7,7 @@ import { EntityManager } from 'typeorm';
 import { IInvoiceRepository } from './interfaces';
 
 @Injectable()
-export class InvoiceRepository
-  extends AbstractRepository<Invoice>
-  implements IInvoiceRepository
-{
+export class InvoiceRepository extends AbstractRepository<Invoice> implements IInvoiceRepository {
   constructor(
     @InjectEntityManager()
     manager: EntityManager,

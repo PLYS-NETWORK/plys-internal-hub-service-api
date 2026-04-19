@@ -1,7 +1,6 @@
-import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
-
 import { User } from '@database/entities/auth/user.entity';
 import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
 // One business profile per user. The creating user is automatically the
 // `owner` in business_members — that table is the authoritative source for

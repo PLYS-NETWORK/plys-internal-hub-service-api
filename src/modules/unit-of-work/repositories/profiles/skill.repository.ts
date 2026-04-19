@@ -7,10 +7,7 @@ import { EntityManager } from 'typeorm';
 import { ISkillRepository } from './interfaces';
 
 @Injectable()
-export class SkillRepository
-  extends AbstractRepository<Skill>
-  implements ISkillRepository
-{
+export class SkillRepository extends AbstractRepository<Skill> implements ISkillRepository {
   constructor(
     @InjectEntityManager()
     manager: EntityManager,

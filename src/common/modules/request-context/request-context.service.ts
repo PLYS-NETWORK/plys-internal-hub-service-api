@@ -1,7 +1,8 @@
+import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { UserRole } from '@database/enums/user-role.enum';
 import { Injectable } from '@nestjs/common';
 import { AsyncLocalStorage } from 'async_hooks';
 
-import { ActivePlatform } from '@database/enums/active-platform.enum';
 import {
   DEFAULT_LOCALE,
   IRequestContext,
@@ -30,8 +31,16 @@ export class RequestContextService {
     return this.storage.getStore()?.userId ?? null;
   }
 
-  public get userRole(): string | null {
+  public get email(): string | null {
+    return this.storage.getStore()?.email ?? null;
+  }
+
+  public get userRole(): UserRole | null {
     return this.storage.getStore()?.userRole ?? null;
+  }
+
+  public get sessionId(): string | null {
+    return this.storage.getStore()?.sessionId ?? null;
   }
 
   public get deviceId(): string | null {
@@ -62,19 +71,23 @@ export class RequestContextService {
     return this.storage.getStore()?.activePlatform ?? null;
   }
 
-  // Called by RequestContextInterceptor after JWT guard validates the token.
+  // Called by JwtContextMiddleware after the JWT is verified.
   public setUser(
     userId: string,
-    userRole: string,
+    email: string,
+    userRole: UserRole,
+    sessionId: string,
     deviceId: string | null,
     activePlatform: ActivePlatform,
   ): void {
     const store = this.storage.getStore();
     if (store) {
       store.userId = userId;
+      store.email = email;
       store.userRole = userRole;
-      store.activePlatform = activePlatform;
+      store.sessionId = sessionId;
       store.deviceId = deviceId;
+      store.activePlatform = activePlatform;
     }
   }
 }

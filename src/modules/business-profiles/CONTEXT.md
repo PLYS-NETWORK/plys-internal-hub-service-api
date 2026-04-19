@@ -1,36 +1,34 @@
 # Business Profiles — Business Context
 
 ## Purpose
-Owns the business-side profile and its team membership. A `BusinessProfile` is created by a user to operate on the Business platform; `BusinessMember` records **who** can act on its behalf and at what privilege level. One user → at most one BusinessProfile. One business → many members.
+Owns the company-side profile for a user operating on the Business platform. A `BusinessProfile` is created during onboarding after email verification. One user → at most one `BusinessProfile`.
 
-## Tables owned
-- `business_profiles` — company metadata (name, industry, address, logo, verification).
-- `business_members` — team roster. Every permission decision should query this table, never `business_profiles.user_id`.
+## Table owned
+- `business_profiles` — company metadata: name, industry, size, address, contact, logo, verification status, partner status, payment credit flag.
 
 ## Key invariants
-- **`BusinessProfile.userId` is the founding user** and should be auto-inserted as `role = owner` in `BusinessMembers` at create time. Never use it for permission checks directly.
-- **Unique per user.** `uq_business_profiles_user_id` prevents a user from creating two businesses.
-- **`BusinessMember.role` defaults to `viewer`.** Raw schema defaulted to `'member'` (not in CHECK list); entity uses `VIEWER` (schema fix §low-nits).
-- **Roles:** `owner | admin | manager | billing | viewer`. See permission matrix in `marketplace_documentation.md` §4.
-- **Owner integrity.** At least one `role = owner, status = active` must exist per business. Removing the last owner should be rejected at the service layer (no DB trigger yet — schema fix §M6).
-- **Unique `(business_id, user_id)`** — a user cannot hold two memberships in the same business simultaneously.
+- **Unique per user.** `uq_business_profiles_user_id` prevents a user from creating two profiles. Attempting to onboard again returns `409 CONFLICT`.
+- **`userId` identifies the owner.** All user-scoped reads and writes resolve the profile by `userId`, not by `id`.
+- **Boolean flags are admin-only.** `is_verified`, `is_partner_platform`, and `allow_payment_credit` can only be set to `true` by a user with `role = ADMIN_PLATFORM`. They are never toggled back to `false` via the current API.
+- **Partial updates.** `PATCH /me` only touches fields explicitly present in the request body; absent optional fields are left unchanged.
 
-## State machines
-`BusinessMember.status`:
+## API surface
 
-```
-active ↔ suspended
-active → left (terminal, keeps row for audit)
-```
+| Method | Route | Role | Description |
+|--------|-------|------|-------------|
+| `POST` | `/business-profiles/onboard` | USER | Create the business profile (once per user) |
+| `PATCH` | `/business-profiles/me` | USER | Update own profile (partial) |
+| `PATCH` | `/business-profiles/:id/partner` | ADMIN_PLATFORM | Set `is_partner_platform = true` |
+| `PATCH` | `/business-profiles/:id/payment-credit` | ADMIN_PLATFORM | Set `allow_payment_credit = true` |
+
+## Role-based access
+Uses `UserRole` enum (`ADMIN_PLATFORM | USER`) stored on the `users` table and embedded in the JWT payload. The `RolesGuard` enforces `@Roles(UserRole.ADMIN_PLATFORM)` on the three admin mutation endpoints.
 
 ## External dependencies
-- **Auth** — resolves `userId` from the current session.
-- **Projects** — every project action checks `BusinessMember.role` for the business that owns the project.
-- **Billing** — only `owner` + `billing` roles see invoices.
-- **Notifications** — new application received, invoice generated, etc. routed to `manager+` or `billing+` subsets.
+- **Auth** — resolves `userId` from the JWT via `@CurrentUser()` decorator.
+- **Unit of Work** — all repository access goes through `UnitOfWorkService`; no direct repository injection.
 
 ## Critical edge cases
-- **Owner leaves or is deleted.** Must transfer ownership first, or the business becomes orphaned. Service layer must refuse.
-- **Role demotion of the only owner.** Same guard as above.
-- **User deletion cascades** — `ON DELETE CASCADE` on the FK to `users` means deleting a user auto-removes memberships. Confirm business-level contracts still work (ownership transfer before delete).
-- **Inviting a user who already has a `left` membership** — service layer should resurrect (update status → `active`) rather than create a new row (unique constraint prevents duplicates).
+- **Double onboard.** Service calls `findByUserId` before creating; throws `409` if a profile already exists.
+- **Profile not found on update.** `findByUserId` returns `null` → throws `404`. The client must onboard first.
+- **Admin actions on non-existent profile.** `findOne({ where: { id } })` returns `null` → throws `404`.

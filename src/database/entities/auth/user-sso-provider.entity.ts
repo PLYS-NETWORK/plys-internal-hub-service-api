@@ -8,19 +8,25 @@ import {
   Unique,
 } from 'typeorm';
 
+import { ActivePlatform } from '@database/enums/active-platform.enum';
 import { SsoProvider } from '@database/enums/sso-provider.enum';
 import { AuditableEntity } from '@database/entities/base/auditable.entity';
 import { User } from './user.entity';
 
-// OAuth / SSO provider links. A single user can have multiple providers
-// linked (Google + LinkedIn, etc.), but the pair (provider, provider_user_id)
-// must be globally unique so the same Google account can't link to two users.
+// OAuth / SSO provider links. Uniqueness is scoped by platform so the same
+// Google account may independently link to a Business user and a Consultant
+// user (two separate accounts, one per platform). The `platform` column is
+// denormalized from the owning user and kept in sync at insert time.
 //
 // SECURITY: access_token and refresh_token must be encrypted at rest.
 // Current implementation stores plaintext with a TODO — see schema fix §H8.
 // Replace with pgcrypto (`pgp_sym_encrypt` wrapper) or external secret store.
 @Entity('user_sso_providers')
-@Unique('uq_user_sso_providers_provider_identity', ['provider', 'providerUserId'])
+@Unique('uq_user_sso_providers_platform_provider_identity', [
+  'platform',
+  'provider',
+  'providerUserId',
+])
 @Index('idx_user_sso_providers_user_id', ['userId'])
 export class UserSsoProvider extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_user_sso_providers' })
@@ -35,6 +41,9 @@ export class UserSsoProvider extends AuditableEntity {
     foreignKeyConstraintName: 'fk_user_sso_providers_to_users',
   })
   public user!: User;
+
+  @Column({ type: 'varchar', length: 20 })
+  public platform!: ActivePlatform;
 
   @Column({ type: 'varchar', length: 50 })
   public provider!: SsoProvider;

@@ -1,7 +1,6 @@
+import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { FastifyRequest } from 'fastify';
-
-import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
 
 export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): JwtPayload => {

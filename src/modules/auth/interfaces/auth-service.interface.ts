@@ -1,5 +1,11 @@
 import { ActivePlatform } from '@database/enums/active-platform.enum';
-import { AuthResponseDto, ChangePasswordDto, LoginDto, RegisterDto, UserResponseDto } from '@modules/auth/dto';
+import {
+  AuthResponseDto,
+  ChangePasswordDto,
+  LoginDto,
+  RegisterDto,
+  UserResponseDto,
+} from '@modules/auth/dto';
 
 export interface ISessionContext {
   readonly ipAddress: string;
@@ -21,9 +27,9 @@ export interface IAuthService {
   verifyEmail(token: string): Promise<void>;
   login(dto: LoginDto, context: ISessionContext): Promise<AuthResponseDto>;
   refresh(refreshToken: string, context: ISessionContext): Promise<AuthResponseDto>;
-  logout(sessionId: string): Promise<void>;
-  me(userId: string): Promise<UserResponseDto>;
-  changePassword(userId: string, dto: ChangePasswordDto, currentSessionId: string): Promise<void>;
+  logout(): Promise<void>;
+  me(): Promise<UserResponseDto>;
+  changePassword(dto: ChangePasswordDto): Promise<void>;
   ssoLogin(
     provider: string,
     userData: ISsoUserData,
