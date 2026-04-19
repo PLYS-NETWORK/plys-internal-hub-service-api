@@ -1,3 +1,4 @@
+import { EnvironmentsService } from '@common/modules/environments';
 import { VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -17,9 +18,11 @@ async function bootstrap(): Promise<void> {
   await app.register(import('@fastify/compress') as never);
   await app.register(import('@fastify/cookie') as never);
 
+  const envService = app.get(EnvironmentsService);
+
   // CORS
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') ?? '*',
+    origin: envService.allowedOrigins,
     credentials: true,
   });
 
@@ -44,29 +47,30 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  // Swagger documentation
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Marketplace API')
-    .setDescription('Marketplace backend API documentation')
-    .setVersion('1.0')
-    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
-    .addTag('Auth')
-    .addTag('Users')
-    .addTag('Business Profiles')
-    .addTag('Categories')
-    .addTag('Products')
-    .addTag('Orders')
-    .addTag('Payments')
-    .addTag('Coupons')
-    .addTag('Wallets')
-    .addTag('Reviews')
-    .build();
+  if (!envService.isProduction) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Marketplace API')
+      .setDescription('Marketplace backend API documentation')
+      .setVersion('1.0')
+      .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
+      .addTag('Auth')
+      .addTag('Users')
+      .addTag('Business Profiles')
+      .addTag('Categories')
+      .addTag('Products')
+      .addTag('Orders')
+      .addTag('Payments')
+      .addTag('Coupons')
+      .addTag('Wallets')
+      .addTag('Reviews')
+      .build();
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/v1/docs', app, document);
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/v1/docs', app, document);
+    console.log(`Swagger docs available at http://localhost:${envService.port}/api/v1/docs`);
+  }
 
-  const port = parseInt(process.env.PORT ?? '3000', 10);
-  await app.listen(port, '0.0.0.0');
+  await app.listen(envService.port, '0.0.0.0');
 }
 
 bootstrap();

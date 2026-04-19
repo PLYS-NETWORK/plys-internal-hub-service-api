@@ -1,22 +1,25 @@
-import 'dotenv/config';
-
+import { EnvironmentsService } from '@common/modules/environments';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import * as path from 'path';
 
-export function getTypeOrmConfig(): TypeOrmModuleOptions {
+export function getTypeOrmConfig(envService: EnvironmentsService): TypeOrmModuleOptions {
   return {
     type: 'postgres',
-    host: process.env.DB_HOST ?? 'localhost',
-    port: parseInt(process.env.DB_PORT ?? '5432', 10),
-    username: process.env.DB_USERNAME ?? 'postgres',
-    password: process.env.DB_PASSWORD ?? 'password',
-    database: process.env.DB_NAME ?? 'marketplace',
-    synchronize: false,
-    logging: process.env.NODE_ENV !== 'production',
+    host: envService.dbHost,
+    port: envService.dbPort,
+    username: envService.dbUsername,
+    password: envService.dbPassword,
+    database: envService.dbName,
+    // Never use synchronize: true in production — use migrations instead.
+    synchronize: !envService.isProduction,
+    logging: !envService.isProduction,
     entities: [path.resolve(__dirname, 'entities', '**', '*.entity.{ts,js}')],
     migrations: [path.resolve(__dirname, 'migrations', '*.{ts,js}')],
-    subscribers: [path.resolve(__dirname, 'subscribers', '*.subscriber.{ts,js}')],
+    // Subscribers are NOT listed here — AuditSubscriber is a NestJS provider
+    // that self-registers via dataSource.subscribers.push(this) in its constructor.
+    // Listing glob patterns here breaks TypeORM 0.3.x which expects class references.
     autoLoadEntities: true,
-    migrationsRun: false,
+    // Automatically run pending migrations in production.
+    migrationsRun: envService.isProduction,
   };
 }

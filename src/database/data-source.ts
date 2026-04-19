@@ -2,7 +2,6 @@ import 'dotenv/config';
 
 import * as path from 'path';
 import { DataSource } from 'typeorm';
-
 // Standalone DataSource for TypeORM CLI (migration:generate, migration:run, etc.)
 // Not used by NestJS DI — AppModule uses TypeOrmModule.forRootAsync instead.
 export const AppDataSource = new DataSource({

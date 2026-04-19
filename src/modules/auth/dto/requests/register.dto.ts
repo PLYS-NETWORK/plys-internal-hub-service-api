@@ -1,7 +1,15 @@
 import { ActivePlatform } from '@database/enums/active-platform.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { IsEmail, IsIn, IsNotEmpty, IsString, Matches, MinLength, ValidateIf } from 'class-validator';
+import {
+  IsEmail,
+  IsIn,
+  IsNotEmpty,
+  IsString,
+  Matches,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 
 import { IRegisterRequest } from './interfaces/register.request.interface';
 

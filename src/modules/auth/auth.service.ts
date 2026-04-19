@@ -11,7 +11,7 @@ import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.inter
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { plainToInstance } from 'class-transformer';
 import { createHash, randomBytes } from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
@@ -26,7 +26,7 @@ const EMAIL_VERIFICATION_EXPIRY_HOURS = 24;
 @Injectable()
 export class AuthService implements IAuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly googleClient: OAuth2Client;
+  private readonly googleClient: OAuth2Client | null;
 
   constructor(
     private readonly uow: UnitOfWorkService,
@@ -35,7 +35,9 @@ export class AuthService implements IAuthService {
     private readonly envService: EnvironmentsService,
     private readonly requestContext: RequestContextService,
   ) {
-    this.googleClient = new OAuth2Client(this.envService.googleClientId);
+    this.googleClient = envService.isGoogleOAuthConfigured
+      ? new OAuth2Client(envService.googleClientId)
+      : null;
   }
 
   // ─── Register ────────────────────────────────────────────────────────────
@@ -50,6 +52,13 @@ export class AuthService implements IAuthService {
         status: HttpStatus.FORBIDDEN,
       });
     }
+
+    // Captured inside the transaction and used after commit so that a
+    // synchronous throw from sendVerificationEmail cannot roll back the
+    // already-committed registration.
+    let registeredEmail = '';
+    let displayName = '';
+    let verificationUrl = '';
 
     await this.uow.withTransaction(async (tx) => {
       // Email uniqueness is scoped to (platform, email) — the same email may
@@ -79,7 +88,7 @@ export class AuthService implements IAuthService {
       // user can log in and immediately complete onboarding. Only the name is
       // captured here — all other profile fields are filled via the profile
       // module's update/onboard endpoints.
-      const displayName = await this.createInitialProfile(tx, user.id, dto);
+      displayName = await this.createInitialProfile(tx, user.id, dto);
 
       // Generate verification token — raw token sent via email, SHA-256 stored in DB
       const rawToken = randomBytes(32).toString('hex');
@@ -93,19 +102,21 @@ export class AuthService implements IAuthService {
       });
       await tx.authTokens.save(authToken);
 
-      const verificationUrl = `${this.envService.frontendUrl}/verify-email?token=${rawToken}`;
-
-      // Fire-and-forget: email delivery failure should not roll back registration
-      this.emailService
-        .sendVerificationEmail(user.email, {
-          userName: displayName,
-          verificationUrl,
-          expiryHours: EMAIL_VERIFICATION_EXPIRY_HOURS,
-        })
-        .catch((err: Error) =>
-          this.logger.error(`Failed to send verification email: ${err.message}`),
-        );
+      registeredEmail = user.email;
+      verificationUrl = `${this.envService.frontendUrl}/verify-email?token=${rawToken}`;
     });
+
+    // Sent AFTER the transaction commits — a synchronous throw from the email
+    // client can no longer roll back the persisted user/token rows.
+    this.emailService
+      .sendVerificationEmail(registeredEmail, {
+        userName: displayName,
+        verificationUrl,
+        expiryHours: EMAIL_VERIFICATION_EXPIRY_HOURS,
+      })
+      .catch((err: Error) =>
+        this.logger.error(`Failed to send verification email: ${err.message}`),
+      );
   }
 
   // ─── Verify Email ────────────────────────────────────────────────────────
@@ -390,7 +401,11 @@ export class AuthService implements IAuthService {
     }
 
     // SSO identity not linked yet — match or create a user on this platform.
-    return this.uow.withTransaction(async (tx) => {
+    // welcomeEmail is populated inside the transaction and sent after commit so
+    // a synchronous throw from the email client cannot roll back persisted rows.
+    let welcomeEmail: { email: string; displayName: string } | null = null;
+
+    const authResponse = await this.uow.withTransaction(async (tx) => {
       let user = await tx.users.findUserByEmailAndPlatform(email, activePlatform);
       let isNewUser = false;
 
@@ -448,25 +463,42 @@ export class AuthService implements IAuthService {
       });
       await tx.userSsoProviders.save(ssoLink);
 
-      const authResponse = await this.createSession(user.id, user.email, activePlatform, context);
-
-      // Send welcome email for new users
       if (isNewUser) {
-        this.emailService
-          .sendWelcomeEmail(user.email, {
-            userName: userData.displayName || user.email,
-            loginUrl: `${this.envService.frontendUrl}/login`,
-          })
-          .catch((err: Error) => this.logger.error(`Failed to send welcome email: ${err.message}`));
+        welcomeEmail = { email: user.email, displayName: userData.displayName || user.email };
       }
 
-      return authResponse;
+      return this.createSession(user.id, user.email, activePlatform, context);
     });
+
+    // Sent AFTER the transaction commits — a synchronous throw from the email
+    // client can no longer roll back the persisted user/SSO-link rows.
+    if (welcomeEmail !== null) {
+      const { email: toEmail, displayName: toName } = welcomeEmail as {
+        email: string;
+        displayName: string;
+      };
+      this.emailService
+        .sendWelcomeEmail(toEmail, {
+          userName: toName,
+          loginUrl: `${this.envService.frontendUrl}/login`,
+        })
+        .catch((err: Error) => this.logger.error(`Failed to send welcome email: ${err.message}`));
+    }
+
+    return authResponse;
   }
 
   // ─── Verify Google ID Token (for SPA/mobile flow) ───────────────────────
 
   public async verifyGoogleIdToken(idToken: string): Promise<ISsoUserData> {
+    if (!this.googleClient) {
+      throw new TranslatableException({
+        messageKey: 'error.auth.sso_not_allowed_for_platform',
+        errorCode: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
+        status: HttpStatus.SERVICE_UNAVAILABLE,
+      });
+    }
+
     const ticket = await this.googleClient.verifyIdToken({
       idToken,
       audience: this.envService.googleClientId,

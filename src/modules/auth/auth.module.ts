@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
+import { EnvironmentsService } from '@common/modules/environments';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
 import { UsersModule } from '@modules/users/users.module';
 import { AuthController } from './auth.controller';
@@ -20,7 +21,18 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
     AuthService,
     JwtStrategy,
     RefreshTokenStrategy,
-    GoogleStrategy,
+    // GoogleStrategy throws during construction when clientID is absent.
+    // Use a factory so it is only instantiated when all three env vars are set.
+    // The guards independently return 503 when unconfigured, so the Passport
+    // strategy is never reached in that case.
+    {
+      provide: GoogleStrategy,
+      useFactory: (envService: EnvironmentsService): GoogleStrategy | null => {
+        if (!envService.isGoogleOAuthConfigured) return null;
+        return new GoogleStrategy(envService);
+      },
+      inject: [EnvironmentsService],
+    },
     RefreshTokenGuard,
     GoogleOAuthGuard,
     GoogleCallbackGuard,

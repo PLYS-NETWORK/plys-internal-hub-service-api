@@ -87,16 +87,20 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.configService.getOrThrow<string>('app.payment.stripe.webhookSecret');
   }
 
-  public get googleClientId(): string {
-    return this.configService.getOrThrow<string>('app.google.clientId');
+  public get googleClientId(): string | undefined {
+    return this.configService.get<string>('app.google.clientId');
   }
 
-  public get googleClientSecret(): string {
-    return this.configService.getOrThrow<string>('app.google.clientSecret');
+  public get googleClientSecret(): string | undefined {
+    return this.configService.get<string>('app.google.clientSecret');
   }
 
-  public get googleCallbackUrl(): string {
-    return this.configService.getOrThrow<string>('app.google.callbackUrl');
+  public get googleCallbackUrl(): string | undefined {
+    return this.configService.get<string>('app.google.callbackUrl');
+  }
+
+  public get isGoogleOAuthConfigured(): boolean {
+    return !!(this.googleClientId && this.googleClientSecret && this.googleCallbackUrl);
   }
 
   public get frontendUrl(): string {

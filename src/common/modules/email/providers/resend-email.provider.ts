@@ -1,9 +1,8 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
-import { Resend } from 'resend';
-
-import { EnvironmentsService } from '@common/modules/environments';
 import { IEmailMessage } from '@common/modules/email/interfaces/email-message.interface';
 import { IEmailProvider } from '@common/modules/email/interfaces/email-provider.interface';
+import { EnvironmentsService } from '@common/modules/environments';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Resend } from 'resend';
 
 /**
  * Concrete Strategy: delivers emails via the Resend API.

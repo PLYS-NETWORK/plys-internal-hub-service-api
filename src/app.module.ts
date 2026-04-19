@@ -10,7 +10,7 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
 import { JwtContextMiddleware } from './common/middleware/jwt-context.middleware';
 import { EmailModule } from './common/modules/email';
-import { EnvironmentsModule } from './common/modules/environments';
+import { EnvironmentsModule, EnvironmentsService } from './common/modules/environments';
 import { I18nModule } from './common/modules/i18n';
 import { PaymentModule } from './common/modules/payment';
 import { RequestContextMiddleware, RequestContextModule } from './common/modules/request-context';
@@ -19,6 +19,7 @@ import { AuditSubscriber } from './database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from './database/typeorm.config';
 import { AuthModule } from './modules/auth/auth.module';
 import { BusinessProfilesModule } from './modules/business-profiles/business-profiles.module';
+import { SkillsModule } from './modules/skills/skills.module';
 import { UnitOfWorkModule } from './modules/unit-of-work/unit-of-work.module';
 import { UsersModule } from './modules/users/users.module';
 
@@ -29,10 +30,12 @@ import { UsersModule } from './modules/users/users.module';
       envFilePath: '.env',
       load: [configuration],
     }),
-    TypeOrmModule.forRootAsync({
-      useFactory: () => getTypeOrmConfig(),
-    }),
     EnvironmentsModule,
+    TypeOrmModule.forRootAsync({
+      imports: [EnvironmentsModule],
+      inject: [EnvironmentsService],
+      useFactory: (envService: EnvironmentsService) => getTypeOrmConfig(envService),
+    }),
     I18nModule,
     RequestContextModule,
     EmailModule,
@@ -40,6 +43,7 @@ import { UsersModule } from './modules/users/users.module';
     UnitOfWorkModule,
     AuthModule,
     BusinessProfilesModule,
+    SkillsModule,
     UsersModule,
   ],
   providers: [
@@ -54,14 +58,10 @@ import { UsersModule } from './modules/users/users.module';
 })
 export class AppModule implements NestModule {
   public configure(consumer: MiddlewareConsumer): void {
-    consumer
-      .apply(RequestContextMiddleware)
-      .forRoutes({ path: '*', method: RequestMethod.ALL });
+    consumer.apply(RequestContextMiddleware).forRoutes({ path: '*', method: RequestMethod.ALL });
 
     // JwtContextMiddleware runs after RequestContextMiddleware so the AsyncLocalStorage
     // context is already established when the JWT payload is written into it.
-    consumer
-      .apply(JwtContextMiddleware)
-      .forRoutes({ path: '*', method: RequestMethod.ALL });
+    consumer.apply(JwtContextMiddleware).forRoutes({ path: '*', method: RequestMethod.ALL });
   }
 }

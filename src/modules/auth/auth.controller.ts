@@ -1,3 +1,8 @@
+import { Public } from '@common/decorators/public.decorator';
+import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
+import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { SsoProvider } from '@database/enums/sso-provider.enum';
 import {
   Body,
   Controller,
@@ -13,11 +18,6 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FastifyReply, FastifyRequest } from 'fastify';
 
-import { Public } from '@common/decorators/public.decorator';
-import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
-import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { ActivePlatform } from '@database/enums/active-platform.enum';
-import { SsoProvider } from '@database/enums/sso-provider.enum';
 import { AuthService } from './auth.service';
 import {
   AuthResponseDto,
