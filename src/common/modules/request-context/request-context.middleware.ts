@@ -20,6 +20,7 @@ export class RequestContextMiddleware implements NestMiddleware {
       requestId: (req.id as string) ?? randomUUID(),
       userId: null, // populated by RequestContextInterceptor after JWT guard runs
       userRole: null,
+      activePlatform: null,
       deviceId: null,
       // Prefer X-Forwarded-For for real IP behind a proxy/load-balancer
       ipAddress:

@@ -13,9 +13,9 @@ async function bootstrap(): Promise<void> {
   );
 
   // Security & compression plugins
-  await app.register(import('@fastify/helmet'));
-  await app.register(import('@fastify/compress'));
-  await app.register(import('@fastify/cookie'));
+  await app.register(import('@fastify/helmet') as never);
+  await app.register(import('@fastify/compress') as never);
+  await app.register(import('@fastify/cookie') as never);
 
   // CORS
   app.enableCors({

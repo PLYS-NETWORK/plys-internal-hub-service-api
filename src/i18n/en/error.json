@@ -12,8 +12,13 @@
     "invalid_credentials": "Invalid credentials",
     "token_expired": "Token expired",
     "token_invalid": "Token invalid",
+    "token_already_used": "Token has already been used",
     "device_mismatch": "Unrecognized device",
-    "email_not_verified": "Email is not verified"
+    "email_not_verified": "Email is not verified",
+    "email_already_registered": "Email is already registered",
+    "user_not_found": "User not found",
+    "account_inactive": "Account is inactive",
+    "sso_email_missing": "SSO provider did not return an email address"
   },
   "database": {
     "unique_violation": "A record with these values already exists",

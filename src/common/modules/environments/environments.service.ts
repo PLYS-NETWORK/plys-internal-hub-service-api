@@ -86,4 +86,20 @@ export class EnvironmentsService implements IEnvironmentsService {
   public get stripeWebhookSecret(): string {
     return this.configService.getOrThrow<string>('app.payment.stripe.webhookSecret');
   }
+
+  public get googleClientId(): string {
+    return this.configService.getOrThrow<string>('app.google.clientId');
+  }
+
+  public get googleClientSecret(): string {
+    return this.configService.getOrThrow<string>('app.google.clientSecret');
+  }
+
+  public get googleCallbackUrl(): string {
+    return this.configService.getOrThrow<string>('app.google.callbackUrl');
+  }
+
+  public get frontendUrl(): string {
+    return this.configService.getOrThrow<string>('app.frontendUrl');
+  }
 }

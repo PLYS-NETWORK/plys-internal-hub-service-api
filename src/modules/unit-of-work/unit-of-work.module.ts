@@ -1,9 +1,88 @@
 import { Module } from '@nestjs/common';
 
+import {
+  AiSessionMessageRepository,
+  AiTaskSessionRepository,
+  ApplicationAnswerChoiceRepository,
+  ApplicationAnswerRepository,
+  AuthTokenRepository,
+  BillingPeriodRepository,
+  BusinessMemberRepository,
+  BusinessProfileRepository,
+  BusinessTransactionRepository,
+  ConsultantProfileRepository,
+  ConsultantSkillRepository,
+  ConsultantWalletRepository,
+  InvoiceLineItemRepository,
+  InvoiceRepository,
+  NotificationRepository,
+  ProjectApplicationRepository,
+  ProjectMemberRepository,
+  ProjectRepository,
+  ProjectRequiredSkillRepository,
+  ProjectStatusHistoryRepository,
+  ScreeningQuestionChoiceRepository,
+  ScreeningQuestionRepository,
+  SkillRepository,
+  TaskCommentAttachmentRepository,
+  TaskCommentRepository,
+  TaskDisputeRepository,
+  TaskHistoryRepository,
+  TaskRepository,
+  UserRepository,
+  UserSessionRepository,
+  UserSsoProviderRepository,
+  WalletTransactionRepository,
+  WebhookEventRepository,
+} from './repositories';
 import { UnitOfWorkService } from './unit-of-work.service';
 
+const repositories = [
+  // Domain 1 — Auth & Identity
+  UserRepository,
+  AuthTokenRepository,
+  UserSsoProviderRepository,
+  UserSessionRepository,
+  // Domain 2 — Profiles
+  BusinessProfileRepository,
+  BusinessMemberRepository,
+  SkillRepository,
+  ConsultantProfileRepository,
+  ConsultantSkillRepository,
+  // Domain 3 — Projects
+  ProjectRepository,
+  ProjectRequiredSkillRepository,
+  ProjectStatusHistoryRepository,
+  // Domain 4 — Tasks
+  TaskRepository,
+  TaskDisputeRepository,
+  TaskHistoryRepository,
+  TaskCommentRepository,
+  TaskCommentAttachmentRepository,
+  // Domain 5 — AI
+  AiTaskSessionRepository,
+  AiSessionMessageRepository,
+  // Domain 6 — Applications
+  ScreeningQuestionRepository,
+  ScreeningQuestionChoiceRepository,
+  ProjectApplicationRepository,
+  ApplicationAnswerRepository,
+  ApplicationAnswerChoiceRepository,
+  ProjectMemberRepository,
+  // Domain 7 — Notifications
+  NotificationRepository,
+  // Domain 8 — Finance
+  BillingPeriodRepository,
+  InvoiceRepository,
+  InvoiceLineItemRepository,
+  ConsultantWalletRepository,
+  WalletTransactionRepository,
+  BusinessTransactionRepository,
+  WebhookEventRepository,
+];
+
 @Module({
-  providers: [UnitOfWorkService],
+  providers: [UnitOfWorkService, ...repositories],
   exports: [UnitOfWorkService],
 })
 export class UnitOfWorkModule {}

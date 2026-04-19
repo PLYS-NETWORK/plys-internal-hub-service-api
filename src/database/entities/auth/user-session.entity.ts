@@ -20,6 +20,7 @@ import { User } from './user.entity';
 @Unique('uq_user_sessions_session_token', ['sessionToken'])
 @Index('idx_user_sessions_user_id', ['userId'])
 @Index('idx_user_sessions_expires_at', ['expiresAt'])
+@Index('idx_user_sessions_device_id', ['deviceId'])
 export class UserSession extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_user_sessions' })
   public readonly id!: string;
@@ -39,6 +40,12 @@ export class UserSession extends AuditableEntity {
 
   @Column({ name: 'active_platform', type: 'varchar', length: 20 })
   public activePlatform!: ActivePlatform;
+
+  @Column({ name: 'device_id', type: 'varchar', length: 255, nullable: true })
+  public deviceId!: string | null;
+
+  @Column({ name: 'fingerprint', type: 'text', nullable: true })
+  public fingerprint!: string | null;
 
   @Column({ name: 'ip_address', type: 'inet', nullable: true })
   public ipAddress!: string | null;

@@ -2,12 +2,17 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { EMAIL_PROVIDER_TOKEN } from './constants';
 import { IEmailProvider } from './interfaces/email-provider.interface';
-import { IEmailService } from './interfaces/email-service.interface';
 import {
   IForgotPasswordOtpEmailOptions,
   IVerifyRegistrationEmailOptions,
+  IWelcomeEmailOptions,
 } from './interfaces/email-send-options.interface';
-import { buildForgotPasswordOtpEmail, buildVerifyRegistrationEmail } from './templates';
+import { IEmailService } from './interfaces/email-service.interface';
+import {
+  buildForgotPasswordOtpEmail,
+  buildVerifyRegistrationEmail,
+  buildWelcomeEmail,
+} from './templates';
 
 /**
  * EmailService is the context in the Strategy Pattern.
@@ -55,6 +60,20 @@ export class EmailService implements IEmailService {
       to,
       subject: 'Your password reset code',
       html: await buildForgotPasswordOtpEmail(options),
+    });
+  }
+
+  /**
+   * Sends a welcome email after a user's account is fully activated
+   * (post email-verification or first SSO login).
+   */
+  public async sendWelcomeEmail(to: string, options: IWelcomeEmailOptions): Promise<void> {
+    this.logger.log(`Sending welcome email to ${to}`);
+
+    await this.emailProvider.send({
+      to,
+      subject: 'Welcome to the Platform!',
+      html: await buildWelcomeEmail(options),
     });
   }
 }

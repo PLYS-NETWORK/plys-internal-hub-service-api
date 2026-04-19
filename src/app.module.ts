@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { PlatformGuard } from './common/guards/platform.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
 import { EmailModule } from './common/modules/email';
@@ -50,6 +51,7 @@ import { UsersModule } from './modules/users/users.module';
     // JwtAuthGuard is global — use @Public() on routes that don't require authentication
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: PlatformGuard },
     // AuditSubscriber self-registers with the DataSource in its constructor; listing it
     // here ensures NestJS instantiates it (and injects RequestContextService) at boot.
     AuditSubscriber,

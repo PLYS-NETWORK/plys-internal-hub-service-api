@@ -17,7 +17,7 @@ export class RequestContextInterceptor implements NestInterceptor {
 
     const user = request.user;
     if (user) {
-      this.requestContextService.setUser(user.sub, user.role, user.deviceId);
+      this.requestContextService.setUser(user.sub, user.role, user.deviceId, user.activePlatform);
     }
 
     return next.handle();

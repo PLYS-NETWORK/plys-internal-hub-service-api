@@ -9,7 +9,9 @@ import { EnvironmentsService } from '../../../common/modules/environments';
 export class RefreshTokenStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
   constructor(private readonly envService: EnvironmentsService) {
     super({
-      jwtFromRequest: ExtractJwt.fromBodyField('refreshToken'),
+      // The raw request body uses snake_case per API conventions.
+      // Passport extracts the token BEFORE the ValidationPipe transforms it.
+      jwtFromRequest: ExtractJwt.fromBodyField('refresh_token'),
       ignoreExpiration: false,
       secretOrKey: envService.jwtRefreshSecret,
     });

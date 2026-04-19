@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AsyncLocalStorage } from 'async_hooks';
 
+import { ActivePlatform } from '../../../database/enums/active-platform.enum';
 import {
   DEFAULT_LOCALE,
   IRequestContext,
@@ -57,12 +58,22 @@ export class RequestContextService {
     return this.storage.getStore()?.lang ?? DEFAULT_LOCALE;
   }
 
+  public get activePlatform(): ActivePlatform | null {
+    return this.storage.getStore()?.activePlatform ?? null;
+  }
+
   // Called by RequestContextInterceptor after JWT guard validates the token.
-  public setUser(userId: string, userRole: string, deviceId: string | null): void {
+  public setUser(
+    userId: string,
+    userRole: string,
+    deviceId: string | null,
+    activePlatform: ActivePlatform,
+  ): void {
     const store = this.storage.getStore();
     if (store) {
       store.userId = userId;
       store.userRole = userRole;
+      store.activePlatform = activePlatform;
       store.deviceId = deviceId;
     }
   }

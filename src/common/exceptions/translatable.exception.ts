@@ -1,7 +1,10 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 
+import { ErrorCode } from '../constants/error-codes';
+
 export interface TranslatableExceptionPayload {
   messageKey: string;
+  errorCode: ErrorCode;
   args?: Record<string, string | number>;
   status?: HttpStatus;
 }
@@ -11,6 +14,7 @@ export interface TranslatableExceptionPayload {
 // Services should throw this for any user-facing error message.
 export class TranslatableException extends HttpException {
   public readonly messageKey: string;
+  public readonly errorCode: ErrorCode;
   public readonly args?: Record<string, string | number>;
 
   constructor(payload: TranslatableExceptionPayload) {
@@ -19,11 +23,13 @@ export class TranslatableException extends HttpException {
       {
         statusCode: status,
         messageKey: payload.messageKey,
+        errorCode: payload.errorCode,
         args: payload.args,
       },
       status,
     );
     this.messageKey = payload.messageKey;
+    this.errorCode = payload.errorCode;
     this.args = payload.args;
   }
 }

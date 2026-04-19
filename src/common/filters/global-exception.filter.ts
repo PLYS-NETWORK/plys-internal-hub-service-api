@@ -10,6 +10,7 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { I18nService } from 'nestjs-i18n';
 import { QueryFailedError } from 'typeorm';
 
+import { ERROR_CODES, ErrorCode } from '../constants/error-codes';
 import { TranslatableException } from '../exceptions/translatable.exception';
 import { RequestContextService } from '../modules/request-context/request-context.service';
 import { StandardizedResponse } from '../response/standardized-response';
@@ -31,13 +32,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = this.translate('error.generic.internal_server_error', lang);
+    let errorCode: ErrorCode = ERROR_CODES.GENERIC_INTERNAL_SERVER_ERROR;
 
     if (exception instanceof TranslatableException) {
       status = exception.getStatus();
       message = this.translate(exception.messageKey, lang, exception.args);
+      errorCode = exception.errorCode;
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
+      errorCode = this.mapHttpStatusToErrorCode(status);
 
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
@@ -53,18 +57,22 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         case '23505':
           status = HttpStatus.CONFLICT;
           message = this.translate('error.database.unique_violation', lang);
+          errorCode = ERROR_CODES.DATABASE_UNIQUE_VIOLATION;
           break;
         case '23503':
           status = HttpStatus.UNPROCESSABLE_ENTITY;
           message = this.translate('error.database.foreign_key_violation', lang);
+          errorCode = ERROR_CODES.DATABASE_FOREIGN_KEY_VIOLATION;
           break;
         case '23502':
           status = HttpStatus.UNPROCESSABLE_ENTITY;
           message = this.translate('error.database.not_null_violation', lang);
+          errorCode = ERROR_CODES.DATABASE_NOT_NULL_VIOLATION;
           break;
         default:
           status = HttpStatus.UNPROCESSABLE_ENTITY;
           message = this.translate('error.generic.bad_request', lang);
+          errorCode = ERROR_CODES.GENERIC_BAD_REQUEST;
       }
     } else if (exception instanceof Error) {
       message = exception.message;
@@ -75,8 +83,20 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       exception instanceof Error ? exception.stack : String(exception),
     );
 
-    const body = new StandardizedResponse<null>(status, message, null, request.url);
+    const body = new StandardizedResponse<null>(status, message, null, request.url, errorCode);
     response.status(status).send(body);
+  }
+
+  private mapHttpStatusToErrorCode(status: number): ErrorCode {
+    const map: Record<number, ErrorCode> = {
+      [HttpStatus.BAD_REQUEST]: ERROR_CODES.GENERIC_BAD_REQUEST,
+      [HttpStatus.UNAUTHORIZED]: ERROR_CODES.GENERIC_UNAUTHORIZED,
+      [HttpStatus.FORBIDDEN]: ERROR_CODES.GENERIC_FORBIDDEN,
+      [HttpStatus.NOT_FOUND]: ERROR_CODES.GENERIC_NOT_FOUND,
+      [HttpStatus.CONFLICT]: ERROR_CODES.GENERIC_CONFLICT,
+      [HttpStatus.UNPROCESSABLE_ENTITY]: ERROR_CODES.GENERIC_UNPROCESSABLE,
+    };
+    return map[status] ?? ERROR_CODES.GENERIC_INTERNAL_SERVER_ERROR;
   }
 
   private translate(key: string, lang: string, args?: Record<string, string | number>): string {

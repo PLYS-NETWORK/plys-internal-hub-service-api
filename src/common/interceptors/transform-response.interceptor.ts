@@ -48,16 +48,24 @@ export class TransformResponseInterceptor<T> implements NestInterceptor<
         const lang = this.requestContext.lang;
         if (isTranslatedPayload<T>(payload)) {
           const message = this.translate(payload.messageKey, lang, payload.args);
+          // errorCode is null on all success paths — it is only populated by GlobalExceptionFilter.
           return new StandardizedResponse<T>(
             response.statusCode,
             message,
             payload.data,
             request.url,
+            null,
           );
         }
         // No explicit messageKey — fall back to the translated default success.
         const message = this.translate('success.ok', lang);
-        return new StandardizedResponse<T>(response.statusCode, message, payload as T, request.url);
+        return new StandardizedResponse<T>(
+          response.statusCode,
+          message,
+          payload as T,
+          request.url,
+          null,
+        );
       }),
     );
   }

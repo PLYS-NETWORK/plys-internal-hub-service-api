@@ -1,94 +1,92 @@
-import { Repository } from 'typeorm';
-
 import {
-  AiSessionMessage,
-  AiTaskSession,
-  ApplicationAnswer,
-  ApplicationAnswerChoice,
-  AuthToken,
-  BillingPeriod,
-  BusinessMember,
-  BusinessProfile,
-  BusinessTransaction,
-  ConsultantProfile,
-  ConsultantSkill,
-  ConsultantWallet,
-  Invoice,
-  InvoiceLineItem,
-  Notification,
-  Project,
-  ProjectApplication,
-  ProjectMember,
-  ProjectRequiredSkill,
-  ProjectStatusHistory,
-  ScreeningQuestion,
-  ScreeningQuestionChoice,
-  Skill,
-  Task,
-  TaskComment,
-  TaskCommentAttachment,
-  TaskDispute,
-  TaskHistory,
-  User,
-  UserSession,
-  UserSsoProvider,
-  WalletTransaction,
-  WebhookEvent,
-} from '../../../database/entities';
+  IAiSessionMessageRepository,
+  IAiTaskSessionRepository,
+  IApplicationAnswerChoiceRepository,
+  IApplicationAnswerRepository,
+  IAuthTokenRepository,
+  IBillingPeriodRepository,
+  IBusinessMemberRepository,
+  IBusinessProfileRepository,
+  IBusinessTransactionRepository,
+  IConsultantProfileRepository,
+  IConsultantSkillRepository,
+  IConsultantWalletRepository,
+  IInvoiceLineItemRepository,
+  IInvoiceRepository,
+  INotificationRepository,
+  IProjectApplicationRepository,
+  IProjectMemberRepository,
+  IProjectRepository,
+  IProjectRequiredSkillRepository,
+  IProjectStatusHistoryRepository,
+  IScreeningQuestionChoiceRepository,
+  IScreeningQuestionRepository,
+  ISkillRepository,
+  ITaskCommentAttachmentRepository,
+  ITaskCommentRepository,
+  ITaskDisputeRepository,
+  ITaskHistoryRepository,
+  ITaskRepository,
+  IUserRepository,
+  IUserSessionRepository,
+  IUserSsoProviderRepository,
+  IWalletTransactionRepository,
+  IWebhookEventRepository,
+} from '../repositories';
 
-// One repository accessor per entity. Service code injects IUnitOfWork instead
-// of individual @InjectRepository tokens — that way `withTransaction(...)`
+// One typed repository accessor per entity. Service code injects IUnitOfWork
+// instead of individual repository tokens — that way `withTransaction(...)`
 // produces a scoped UoW where every read/write goes through the same
 // EntityManager and participates in one atomic unit.
 export interface IUnitOfWork {
   // Domain 1 — Auth & Identity
-  readonly users: Repository<User>;
-  readonly authTokens: Repository<AuthToken>;
-  readonly userSsoProviders: Repository<UserSsoProvider>;
-  readonly userSessions: Repository<UserSession>;
+  readonly users: IUserRepository;
+  readonly authTokens: IAuthTokenRepository;
+  readonly userSsoProviders: IUserSsoProviderRepository;
+  readonly userSessions: IUserSessionRepository;
 
   // Domain 2 — Profiles
-  readonly businessProfiles: Repository<BusinessProfile>;
-  readonly businessMembers: Repository<BusinessMember>;
-  readonly skills: Repository<Skill>;
-  readonly consultantProfiles: Repository<ConsultantProfile>;
-  readonly consultantSkills: Repository<ConsultantSkill>;
+  readonly businessProfiles: IBusinessProfileRepository;
+  readonly businessMembers: IBusinessMemberRepository;
+  readonly skills: ISkillRepository;
+  readonly consultantProfiles: IConsultantProfileRepository;
+  readonly consultantSkills: IConsultantSkillRepository;
 
   // Domain 3 — Projects
-  readonly projects: Repository<Project>;
-  readonly projectRequiredSkills: Repository<ProjectRequiredSkill>;
-  readonly projectStatusHistory: Repository<ProjectStatusHistory>;
+  readonly projects: IProjectRepository;
+  readonly projectRequiredSkills: IProjectRequiredSkillRepository;
+  readonly projectStatusHistory: IProjectStatusHistoryRepository;
 
   // Domain 4 — Tasks
-  readonly tasks: Repository<Task>;
-  readonly taskDisputes: Repository<TaskDispute>;
-  readonly taskHistory: Repository<TaskHistory>;
-  readonly taskComments: Repository<TaskComment>;
-  readonly taskCommentAttachments: Repository<TaskCommentAttachment>;
+  readonly tasks: ITaskRepository;
+  readonly taskDisputes: ITaskDisputeRepository;
+  readonly taskHistory: ITaskHistoryRepository;
+  readonly taskComments: ITaskCommentRepository;
+  readonly taskCommentAttachments: ITaskCommentAttachmentRepository;
 
   // Domain 5 — AI
-  readonly aiTaskSessions: Repository<AiTaskSession>;
-  readonly aiSessionMessages: Repository<AiSessionMessage>;
+  readonly aiTaskSessions: IAiTaskSessionRepository;
+  readonly aiSessionMessages: IAiSessionMessageRepository;
 
   // Domain 6 — Applications
-  readonly screeningQuestions: Repository<ScreeningQuestion>;
-  readonly screeningQuestionChoices: Repository<ScreeningQuestionChoice>;
-  readonly projectApplications: Repository<ProjectApplication>;
-  readonly applicationAnswers: Repository<ApplicationAnswer>;
-  readonly applicationAnswerChoices: Repository<ApplicationAnswerChoice>;
-  readonly projectMembers: Repository<ProjectMember>;
+  readonly screeningQuestions: IScreeningQuestionRepository;
+  readonly screeningQuestionChoices: IScreeningQuestionChoiceRepository;
+  readonly projectApplications: IProjectApplicationRepository;
+  readonly applicationAnswers: IApplicationAnswerRepository;
+  readonly applicationAnswerChoices: IApplicationAnswerChoiceRepository;
+  readonly projectMembers: IProjectMemberRepository;
 
   // Domain 7 — Notifications
-  readonly notifications: Repository<Notification>;
+  readonly notifications: INotificationRepository;
 
   // Domain 8 — Finance
-  readonly billingPeriods: Repository<BillingPeriod>;
-  readonly invoices: Repository<Invoice>;
-  readonly invoiceLineItems: Repository<InvoiceLineItem>;
-  readonly consultantWallets: Repository<ConsultantWallet>;
-  readonly walletTransactions: Repository<WalletTransaction>;
-  readonly businessTransactions: Repository<BusinessTransaction>;
-  readonly webhookEvents: Repository<WebhookEvent>;
+  readonly billingPeriods: IBillingPeriodRepository;
+  readonly invoices: IInvoiceRepository;
+  readonly invoiceLineItems: IInvoiceLineItemRepository;
+  readonly consultantWallets: IConsultantWalletRepository;
+  readonly walletTransactions: IWalletTransactionRepository;
+  readonly businessTransactions: IBusinessTransactionRepository;
+  readonly webhookEvents: IWebhookEventRepository;
 
   withTransaction<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T>;
 }

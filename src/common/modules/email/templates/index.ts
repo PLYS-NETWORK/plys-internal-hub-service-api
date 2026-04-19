@@ -6,3 +6,4 @@ export {
   buildVerifyRegistrationEmail,
   type IVerifyRegistrationTemplateOptions,
 } from './verify-registration.template';
+export { buildWelcomeEmail, type IWelcomeTemplateOptions } from './welcome.template';
