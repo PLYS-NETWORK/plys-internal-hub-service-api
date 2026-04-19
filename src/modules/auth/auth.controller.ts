@@ -13,13 +13,13 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FastifyReply, FastifyRequest } from 'fastify';
 
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Public } from '../../common/decorators/public.decorator';
-import { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
-import { RequestContextService } from '../../common/modules/request-context/request-context.service';
-import { ITranslatedPayload } from '../../common/interceptors/transform-response.interceptor';
-import { ActivePlatform } from '../../database/enums/active-platform.enum';
-import { SsoProvider } from '../../database/enums/sso-provider.enum';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { Public } from '@common/decorators/public.decorator';
+import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
+import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
+import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { SsoProvider } from '@database/enums/sso-provider.enum';
 import { AuthService } from './auth.service';
 import {
   AuthResponseDto,
@@ -95,7 +95,7 @@ export class AuthController {
     @Headers('x-fingerprint') fingerprint?: string,
   ): Promise<ITranslatedPayload<AuthResponseDto>> {
     const context = this.buildSessionContext(deviceId, fingerprint);
-    const data = await this.authService.refresh(dto.refreshToken, context);
+    const data = await this.authService.refresh(dto.refresh_token, context);
     return { messageKey: 'success.ok', data };
   }
 
@@ -164,8 +164,8 @@ export class AuthController {
     // Why: Cookies cannot be set cross-origin from the OAuth callback; the frontend
     // reads these params once, stores them securely, and clears the URL.
     const redirectUrl = new URL('/auth/sso/callback', this.requestContext.path);
-    redirectUrl.searchParams.set('access_token', data.accessToken);
-    redirectUrl.searchParams.set('refresh_token', data.refreshToken);
+    redirectUrl.searchParams.set('access_token', data.access_token);
+    redirectUrl.searchParams.set('refresh_token', data.refresh_token);
 
     await reply.redirect(redirectUrl.toString());
   }
@@ -183,11 +183,11 @@ export class AuthController {
   ): Promise<ITranslatedPayload<AuthResponseDto>> {
     const context = this.buildSessionContext(deviceId, fingerprint);
 
-    const userData = await this.authService.verifyGoogleIdToken(dto.idToken);
+    const userData = await this.authService.verifyGoogleIdToken(dto.id_token);
     const data = await this.authService.ssoLogin(
       SsoProvider.GOOGLE,
       userData,
-      dto.activePlatform,
+      dto.active_platform,
       context,
     );
 

@@ -4,8 +4,8 @@ import { I18nService } from 'nestjs-i18n';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
-import { RequestContextService } from '../modules/request-context/request-context.service';
-import { StandardizedResponse } from '../response/standardized-response';
+import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { StandardizedResponse } from '@common/response/standardized-response';
 
 // Shape controllers return when they want the `message` field translated.
 // Any key under `src/i18n/<lang>/success.json` may be used, dotted (e.g. 'success.created').

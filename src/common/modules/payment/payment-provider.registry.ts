@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
-import { EnvironmentsService } from '../environments';
-import { PaymentProcessor } from '../../../database/enums/payment-processor.enum';
+import { EnvironmentsService } from '@common/modules/environments';
+import { PaymentProcessor } from '@database/enums/payment-processor.enum';
 import { IPaymentProvider } from './interfaces/payment-provider.interface';
 import { IPaymentProviderFactory } from './interfaces/payment-provider-factory.interface';
 import { PolarPaymentProviderFactory } from './providers/polar/polar-payment-provider.factory';

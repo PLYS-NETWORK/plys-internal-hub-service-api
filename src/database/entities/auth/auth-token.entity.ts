@@ -8,8 +8,8 @@ import {
   Unique,
 } from 'typeorm';
 
-import { AuthTokenType } from '../../enums/auth-token-type.enum';
-import { TraceableEntity } from '../base/traceable.entity';
+import { AuthTokenType } from '@database/enums/auth-token-type.enum';
+import { TraceableEntity } from '@database/entities/base/traceable.entity';
 import { User } from './user.entity';
 
 // Append-only audit of short-lived credentials. Raw tokens are never stored —

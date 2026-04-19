@@ -8,8 +8,8 @@ import {
   Unique,
 } from 'typeorm';
 
-import { SsoProvider } from '../../enums/sso-provider.enum';
-import { AuditableEntity } from '../base/auditable.entity';
+import { SsoProvider } from '@database/enums/sso-provider.enum';
+import { AuditableEntity } from '@database/entities/base/auditable.entity';
 import { User } from './user.entity';
 
 // OAuth / SSO provider links. A single user can have multiple providers

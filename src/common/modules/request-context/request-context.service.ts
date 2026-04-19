@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { AsyncLocalStorage } from 'async_hooks';
 
-import { ActivePlatform } from '../../../database/enums/active-platform.enum';
+import { ActivePlatform } from '@database/enums/active-platform.enum';
 import {
   DEFAULT_LOCALE,
   IRequestContext,

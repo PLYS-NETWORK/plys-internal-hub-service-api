@@ -1,8 +1,8 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
-import { ScreeningQuestionType } from '../../enums/screening-question-type.enum';
-import { AuditableEntity } from '../base/auditable.entity';
-import { Project } from '../projects/project.entity';
+import { ScreeningQuestionType } from '@database/enums/screening-question-type.enum';
+import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Project } from '@database/entities/projects/project.entity';
 
 // Locked at the DB level once the project is published (§H5 + §C6 race-fix).
 // See trg_lock_screening_questions_* in Domain 6 migration.

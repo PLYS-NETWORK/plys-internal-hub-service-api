@@ -2,7 +2,7 @@ import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nes
 import { FastifyRequest } from 'fastify';
 import { Observable } from 'rxjs';
 
-import { JwtPayload } from '../../interfaces/jwt-payload.interface';
+import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
 import { RequestContextService } from './request-context.service';
 
 @Injectable()

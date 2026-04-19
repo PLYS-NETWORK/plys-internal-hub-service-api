@@ -1,7 +1,7 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 
-import { TraceableEntity } from '../base/traceable.entity';
-import { Skill } from '../profiles/skill.entity';
+import { TraceableEntity } from '@database/entities/base/traceable.entity';
+import { Skill } from '@database/entities/profiles/skill.entity';
 import { Project } from './project.entity';
 
 // Junction (project, skill). Composite PK; TraceableEntity = createdAt + createdBy only.

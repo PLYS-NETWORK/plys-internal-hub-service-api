@@ -2,11 +2,11 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { FastifyRequest } from 'fastify';
 
-import { ERROR_CODES } from '../constants/error-codes';
-import { ActivePlatform } from '../../database/enums/active-platform.enum';
-import { PLATFORM_KEY } from '../decorators/platform.decorator';
-import { TranslatableException } from '../exceptions/translatable.exception';
-import { JwtPayload } from '../interfaces/jwt-payload.interface';
+import { ERROR_CODES } from '@common/constants/error-codes';
+import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { PLATFORM_KEY } from '@common/decorators/platform.decorator';
+import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
 
 @Injectable()
 export class PlatformGuard implements CanActivate {

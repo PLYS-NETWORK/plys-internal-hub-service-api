@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { PaymentProcessor } from '../../../database/enums/payment-processor.enum';
-import { EnvironmentsService } from '../environments';
+import { PaymentProcessor } from '@database/enums/payment-processor.enum';
+import { EnvironmentsService } from '@common/modules/environments';
 import { IPaymentProvider } from './interfaces';
 import {
   ICheckoutSession,

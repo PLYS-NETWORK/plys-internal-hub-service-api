@@ -1,5 +1,5 @@
-import { ActivePlatform } from '../../../database/enums/active-platform.enum';
-import { AuthResponseDto, ChangePasswordDto, LoginDto, RegisterDto, UserResponseDto } from '../dto';
+import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { AuthResponseDto, ChangePasswordDto, LoginDto, RegisterDto, UserResponseDto } from '@modules/auth/dto';
 
 export interface ISessionContext {
   readonly ipAddress: string;

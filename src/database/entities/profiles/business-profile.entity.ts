@@ -1,7 +1,7 @@
 import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
-import { User } from '../auth/user.entity';
-import { AuditableEntity } from '../base/auditable.entity';
+import { User } from '@database/entities/auth/user.entity';
+import { AuditableEntity } from '@database/entities/base/auditable.entity';
 
 // One business profile per user. The creating user is automatically the
 // `owner` in business_members — that table is the authoritative source for
@@ -37,11 +37,8 @@ export class BusinessProfile extends AuditableEntity {
   @Column({ type: 'text', nullable: true })
   public description!: string | null;
 
-  @Column({ name: 'address_line1', type: 'varchar', length: 255, nullable: true })
-  public addressLine1!: string | null;
-
-  @Column({ name: 'address_line2', type: 'varchar', length: 255, nullable: true })
-  public addressLine2!: string | null;
+  @Column({ name: 'address_line', type: 'varchar', length: 255, nullable: true })
+  public addressLine!: string | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   public city!: string | null;
@@ -63,4 +60,10 @@ export class BusinessProfile extends AuditableEntity {
 
   @Column({ name: 'is_verified', type: 'boolean', default: false })
   public isVerified!: boolean;
+
+  @Column({ name: 'is_partner_platform', type: 'boolean', default: false })
+  public isPartnerPlatform!: boolean;
+
+  @Column({ name: 'allow_payment_credit', type: 'boolean', default: false })
+  public allowPaymentCredit!: boolean;
 }

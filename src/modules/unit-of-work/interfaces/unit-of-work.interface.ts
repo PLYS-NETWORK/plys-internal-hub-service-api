@@ -5,7 +5,6 @@ import {
   IApplicationAnswerRepository,
   IAuthTokenRepository,
   IBillingPeriodRepository,
-  IBusinessMemberRepository,
   IBusinessProfileRepository,
   IBusinessTransactionRepository,
   IConsultantProfileRepository,
@@ -32,7 +31,7 @@ import {
   IUserSsoProviderRepository,
   IWalletTransactionRepository,
   IWebhookEventRepository,
-} from '../repositories';
+} from '@modules/unit-of-work/repositories';
 
 // One typed repository accessor per entity. Service code injects IUnitOfWork
 // instead of individual repository tokens — that way `withTransaction(...)`
@@ -47,7 +46,6 @@ export interface IUnitOfWork {
 
   // Domain 2 — Profiles
   readonly businessProfiles: IBusinessProfileRepository;
-  readonly businessMembers: IBusinessMemberRepository;
   readonly skills: ISkillRepository;
   readonly consultantProfiles: IConsultantProfileRepository;
   readonly consultantSkills: IConsultantSkillRepository;

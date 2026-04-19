@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 
-import { EnvironmentsService } from '../../../environments';
-import { IPaymentProvider } from '../../interfaces/payment-provider.interface';
-import { IPaymentProviderFactory } from '../../interfaces/payment-provider-factory.interface';
+import { EnvironmentsService } from '@common/modules/environments';
+import { IPaymentProvider } from '@common/modules/payment/interfaces/payment-provider.interface';
+import { IPaymentProviderFactory } from '@common/modules/payment/interfaces/payment-provider-factory.interface';
 import { StripePaymentProvider } from './stripe-payment.provider';
 
 /**

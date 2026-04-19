@@ -9,9 +9,9 @@ import {
   UpdateEvent,
 } from 'typeorm';
 
-import { RequestContextService } from '../../common/modules/request-context/request-context.service';
-import { AuditableEntity } from '../entities/base/auditable.entity';
-import { TraceableEntity } from '../entities/base/traceable.entity';
+import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { TraceableEntity } from '@database/entities/base/traceable.entity';
 
 // Populates created_by / updated_by / deleted_by on every entity that extends
 // AuditableEntity (full audit) or TraceableEntity (creation-only trace).

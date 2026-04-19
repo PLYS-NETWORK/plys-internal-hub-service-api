@@ -21,6 +21,7 @@ import configuration from './config/configuration';
 import { AuditSubscriber } from './database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from './database/typeorm.config';
 import { AuthModule } from './modules/auth/auth.module';
+import { BusinessProfilesModule } from './modules/business-profiles/business-profiles.module';
 import { UnitOfWorkModule } from './modules/unit-of-work/unit-of-work.module';
 import { UsersModule } from './modules/users/users.module';
 
@@ -41,6 +42,7 @@ import { UsersModule } from './modules/users/users.module';
     PaymentModule,
     UnitOfWorkModule,
     AuthModule,
+    BusinessProfilesModule,
     UsersModule,
   ],
   providers: [

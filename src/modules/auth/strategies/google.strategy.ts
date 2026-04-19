@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Profile, Strategy, VerifyCallback } from 'passport-google-oauth20';
 
-import { EnvironmentsService } from '../../../common/modules/environments';
+import { EnvironmentsService } from '@common/modules/environments';
 
 export interface GoogleProfile {
   readonly providerUserId: string;

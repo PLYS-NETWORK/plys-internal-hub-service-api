@@ -8,9 +8,9 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-import { ProjectStatus } from '../../enums/project-status.enum';
-import { AuditableEntity } from '../base/auditable.entity';
-import { BusinessProfile } from '../profiles/business-profile.entity';
+import { ProjectStatus } from '@database/enums/project-status.enum';
+import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { BusinessProfile } from '@database/entities/profiles/business-profile.entity';
 
 // Top-level project owned by a business.
 //

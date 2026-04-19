@@ -1,6 +1,6 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
-import { AuditableEntity } from '../base/auditable.entity';
+import { AuditableEntity } from '@database/entities/base/auditable.entity';
 
 // Normalized skill taxonomy, shared across the platform.
 //

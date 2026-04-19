@@ -3,8 +3,8 @@ import { PassportStrategy } from '@nestjs/passport';
 import { FastifyRequest } from 'fastify';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
-import { JwtPayload } from '../../../common/interfaces/jwt-payload.interface';
-import { EnvironmentsService } from '../../../common/modules/environments';
+import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
+import { EnvironmentsService } from '@common/modules/environments';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {

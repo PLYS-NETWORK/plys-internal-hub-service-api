@@ -10,10 +10,10 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { I18nService } from 'nestjs-i18n';
 import { QueryFailedError } from 'typeorm';
 
-import { ERROR_CODES, ErrorCode } from '../constants/error-codes';
-import { TranslatableException } from '../exceptions/translatable.exception';
-import { RequestContextService } from '../modules/request-context/request-context.service';
-import { StandardizedResponse } from '../response/standardized-response';
+import { ERROR_CODES, ErrorCode } from '@common/constants/error-codes';
+import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { StandardizedResponse } from '@common/response/standardized-response';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {

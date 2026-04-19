@@ -21,4 +21,8 @@ export class BusinessProfileRepository
   public withManager(manager: EntityManager): this {
     return new BusinessProfileRepository(manager) as this;
   }
+
+  public async findByUserId(userId: string): Promise<BusinessProfile | null> {
+    return this.findOne({ where: { userId } });
+  }
 }

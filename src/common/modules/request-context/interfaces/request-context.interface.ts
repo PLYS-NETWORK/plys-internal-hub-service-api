@@ -3,7 +3,7 @@ export type SupportedLocale = 'en' | 'tr';
 export const SUPPORTED_LOCALES: readonly SupportedLocale[] = ['en', 'tr'] as const;
 export const DEFAULT_LOCALE: SupportedLocale = 'en';
 
-import { ActivePlatform } from '../../../../database/enums/active-platform.enum';
+import { ActivePlatform } from '@database/enums/active-platform.enum';
 
 export interface IRequestContext {
   requestId: string;

@@ -6,15 +6,15 @@ import { createHash, randomBytes } from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 import { Not } from 'typeorm';
 
-import { ERROR_CODES } from '../../common/constants/error-codes';
-import { TranslatableException } from '../../common/exceptions/translatable.exception';
-import { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
-import { EmailService } from '../../common/modules/email/email.service';
-import { EnvironmentsService } from '../../common/modules/environments';
-import { ActivePlatform } from '../../database/enums/active-platform.enum';
-import { AuthTokenType } from '../../database/enums/auth-token-type.enum';
-import { SsoProvider } from '../../database/enums/sso-provider.enum';
-import { UnitOfWorkService } from '../unit-of-work/unit-of-work.service';
+import { ERROR_CODES } from '@common/constants/error-codes';
+import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
+import { EmailService } from '@common/modules/email/email.service';
+import { EnvironmentsService } from '@common/modules/environments';
+import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { AuthTokenType } from '@database/enums/auth-token-type.enum';
+import { SsoProvider } from '@database/enums/sso-provider.enum';
+import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { AuthResponseDto, ChangePasswordDto, LoginDto, RegisterDto, UserResponseDto } from './dto';
 import { IAuthService, ISessionContext, ISsoUserData } from './interfaces/auth-service.interface';
 
@@ -39,11 +39,7 @@ export class AuthService implements IAuthService {
 
   public async register(dto: RegisterDto, _context: ISessionContext): Promise<void> {
     await this.uow.withTransaction(async (tx) => {
-      // Case-insensitive uniqueness check via LOWER()
-      const existing = await tx.users
-        .createQueryBuilder('u')
-        .where('LOWER(u.email) = LOWER(:email)', { email: dto.email })
-        .getOne();
+      const existing = await tx.users.findUserByEmail(dto.email);
 
       if (existing) {
         throw new TranslatableException({
@@ -80,7 +76,7 @@ export class AuthService implements IAuthService {
       // Fire-and-forget: email delivery failure should not roll back registration
       this.emailService
         .sendVerificationEmail(user.email, {
-          userName: dto.firstName ?? user.email,
+          userName: dto.first_name ?? user.email,
           verificationUrl,
           expiryHours: EMAIL_VERIFICATION_EXPIRY_HOURS,
         })
@@ -145,10 +141,7 @@ export class AuthService implements IAuthService {
   // ─── Login ───────────────────────────────────────────────────────────────
 
   public async login(dto: LoginDto, context: ISessionContext): Promise<AuthResponseDto> {
-    const user = await this.uow.users
-      .createQueryBuilder('u')
-      .where('LOWER(u.email) = LOWER(:email)', { email: dto.email })
-      .getOne();
+    const user = await this.uow.users.findUserByEmail(dto.email);
 
     // Use generic "invalid credentials" to prevent user enumeration
     if (!user) {
@@ -197,7 +190,7 @@ export class AuthService implements IAuthService {
     user.lastLoginAt = new Date();
     await this.uow.users.save(user);
 
-    return this.createSession(user.id, user.email, dto.activePlatform, context);
+    return this.createSession(user.id, user.email, dto.active_platform, context);
   }
 
   // ─── Refresh ─────────────────────────────────────────────────────────────
@@ -283,7 +276,7 @@ export class AuthService implements IAuthService {
       });
     }
 
-    const passwordValid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    const passwordValid = await bcrypt.compare(dto.current_password, user.passwordHash);
     if (!passwordValid) {
       throw new TranslatableException({
         messageKey: 'error.auth.invalid_credentials',
@@ -293,7 +286,7 @@ export class AuthService implements IAuthService {
     }
 
     await this.uow.withTransaction(async (tx) => {
-      user.passwordHash = await bcrypt.hash(dto.newPassword, BCRYPT_ROUNDS);
+      user.passwordHash = await bcrypt.hash(dto.new_password, BCRYPT_ROUNDS);
       await tx.users.save(user);
 
       // Revoke all OTHER sessions to force re-login on other devices
@@ -451,6 +444,17 @@ export class AuthService implements IAuthService {
     activePlatform: ActivePlatform,
     context: ISessionContext,
   ): Promise<AuthResponseDto> {
+    // Fetch user first so role is available for the JWT payload
+    const user = await this.uow.users.findByActiveId(userId);
+
+    if (!user) {
+      throw new TranslatableException({
+        messageKey: 'error.auth.user_not_found',
+        errorCode: ERROR_CODES.AUTH_USER_NOT_FOUND,
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+
     // Generate an opaque refresh token; only its SHA-256 is persisted
     const rawRefreshToken = randomBytes(48).toString('base64url');
     const sessionTokenHash = this.sha256(rawRefreshToken);
@@ -470,11 +474,10 @@ export class AuthService implements IAuthService {
     });
     await this.uow.userSessions.save(session);
 
-    // The JWT role equals the platform — used by RolesGuard and PlatformGuard
     const jwtPayload: Omit<JwtPayload, 'iat' | 'exp'> = {
       sub: userId,
       email,
-      role: activePlatform,
+      role: user.role,
       activePlatform,
       sessionId: session.id,
       deviceId: context.deviceId,
@@ -485,16 +488,6 @@ export class AuthService implements IAuthService {
       secret: this.envService.jwtAccessSecret,
       expiresIn: accessExpiresIn,
     });
-
-    const user = await this.uow.users.findByActiveId(userId);
-
-    if (!user) {
-      throw new TranslatableException({
-        messageKey: 'error.auth.user_not_found',
-        errorCode: ERROR_CODES.AUTH_USER_NOT_FOUND,
-        status: HttpStatus.NOT_FOUND,
-      });
-    }
 
     return plainToInstance(
       AuthResponseDto,

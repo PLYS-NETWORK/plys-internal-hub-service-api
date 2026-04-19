@@ -1,14 +1,14 @@
 import { InternalServerErrorException, Logger, UnauthorizedException } from '@nestjs/common';
 import Stripe from 'stripe';
 
-import { EnvironmentsService } from '../../../environments';
+import { EnvironmentsService } from '@common/modules/environments';
 import {
   ICheckoutSession,
   ICreateCheckoutSessionParams,
-} from '../../interfaces/checkout-session.interface';
-import { IPaymentProvider } from '../../interfaces/payment-provider.interface';
-import { ICreateRefundParams } from '../../interfaces/refund.interface';
-import { IWebhookEvent, WebhookEventType } from '../../interfaces/webhook-event.interface';
+} from '@common/modules/payment/interfaces/checkout-session.interface';
+import { IPaymentProvider } from '@common/modules/payment/interfaces/payment-provider.interface';
+import { ICreateRefundParams } from '@common/modules/payment/interfaces/refund.interface';
+import { IWebhookEvent, WebhookEventType } from '@common/modules/payment/interfaces/webhook-event.interface';
 
 /**
  * Concrete Strategy: delivers payment operations via the Stripe API.

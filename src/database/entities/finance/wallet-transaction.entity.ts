@@ -8,11 +8,11 @@ import {
   Unique,
 } from 'typeorm';
 
-import { TransactionStatus } from '../../enums/transaction-status.enum';
-import { WalletTransactionType } from '../../enums/wallet-transaction-type.enum';
-import { TraceableEntity } from '../base/traceable.entity';
-import { Project } from '../projects/project.entity';
-import { Task } from '../tasks/task.entity';
+import { TransactionStatus } from '@database/enums/transaction-status.enum';
+import { WalletTransactionType } from '@database/enums/wallet-transaction-type.enum';
+import { TraceableEntity } from '@database/entities/base/traceable.entity';
+import { Project } from '@database/entities/projects/project.entity';
+import { Task } from '@database/entities/tasks/task.entity';
 import { ConsultantWallet } from './consultant-wallet.entity';
 import { Invoice } from './invoice.entity';
 

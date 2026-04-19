@@ -8,13 +8,13 @@ import {
   VersionColumn,
 } from 'typeorm';
 
-import { TaskCreationMode } from '../../enums/task-creation-mode.enum';
-import { TaskDifficulty } from '../../enums/task-difficulty.enum';
-import { TaskKanbanStatus } from '../../enums/task-kanban-status.enum';
-import { User } from '../auth/user.entity';
-import { AuditableEntity } from '../base/auditable.entity';
-import { ConsultantProfile } from '../profiles/consultant-profile.entity';
-import { Project } from '../projects/project.entity';
+import { TaskCreationMode } from '@database/enums/task-creation-mode.enum';
+import { TaskDifficulty } from '@database/enums/task-difficulty.enum';
+import { TaskKanbanStatus } from '@database/enums/task-kanban-status.enum';
+import { User } from '@database/entities/auth/user.entity';
+import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
+import { Project } from '@database/entities/projects/project.entity';
 
 // Atomic unit of work inside a project.
 //

@@ -8,10 +8,10 @@ import {
   Unique,
 } from 'typeorm';
 
-import { ProjectMemberStatus } from '../../enums/project-member-status.enum';
-import { AuditableEntity } from '../base/auditable.entity';
-import { ConsultantProfile } from '../profiles/consultant-profile.entity';
-import { Project } from '../projects/project.entity';
+import { ProjectMemberStatus } from '@database/enums/project-member-status.enum';
+import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
+import { Project } from '@database/entities/projects/project.entity';
 import { ProjectApplication } from './project-application.entity';
 
 // Authoritative roster of consultants on a project. Insertion is rate-limited

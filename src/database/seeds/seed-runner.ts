@@ -3,8 +3,8 @@ import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { AppDataSource } from '../data-source';
-import { Skill } from '../entities/profiles/skill.entity';
+import { AppDataSource } from '@database/data-source';
+import { Skill } from '@database/entities/profiles/skill.entity';
 
 interface SkillSeed {
   key: string;

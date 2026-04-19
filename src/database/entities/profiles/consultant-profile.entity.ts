@@ -1,8 +1,8 @@
 import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
-import { ConsultantAvailability } from '../../enums/consultant-availability.enum';
-import { User } from '../auth/user.entity';
-import { AuditableEntity } from '../base/auditable.entity';
+import { ConsultantAvailability } from '@database/enums/consultant-availability.enum';
+import { User } from '@database/entities/auth/user.entity';
+import { AuditableEntity } from '@database/entities/base/auditable.entity';
 
 // One consultant profile per user. `max_concurrent_projects` is enforced by
 // a trigger on project_members.INSERT — see Domain 6 migration.

@@ -7,7 +7,6 @@ import {
   ApplicationAnswerRepository,
   AuthTokenRepository,
   BillingPeriodRepository,
-  BusinessMemberRepository,
   BusinessProfileRepository,
   BusinessTransactionRepository,
   ConsultantProfileRepository,
@@ -45,7 +44,6 @@ const repositories = [
   UserSessionRepository,
   // Domain 2 — Profiles
   BusinessProfileRepository,
-  BusinessMemberRepository,
   SkillRepository,
   ConsultantProfileRepository,
   ConsultantSkillRepository,

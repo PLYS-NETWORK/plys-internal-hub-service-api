@@ -3,8 +3,6 @@ export { AiMessageRole } from './ai-message-role.enum';
 export { ApplicationStatus } from './application-status.enum';
 export { AUTH_TOKEN_TYPES, AuthTokenType } from './auth-token-type.enum';
 export { BillingPeriodStatus } from './billing-period-status.enum';
-export { BUSINESS_MEMBER_ROLES, BusinessMemberRole } from './business-member-role.enum';
-export { BUSINESS_MEMBER_STATUSES, BusinessMemberStatus } from './business-member-status.enum';
 export { BusinessTransactionType } from './business-transaction-type.enum';
 export { CONSULTANT_AVAILABILITIES, ConsultantAvailability } from './consultant-availability.enum';
 export { InvoiceStatus } from './invoice-status.enum';
@@ -22,3 +20,4 @@ export { TASK_KANBAN_STATUSES, TaskKanbanStatus } from './task-kanban-status.enu
 export { TransactionStatus } from './transaction-status.enum';
 export { WalletTransactionType } from './wallet-transaction-type.enum';
 export { WebhookStatus } from './webhook-status.enum';
+export { UserRole } from './user-role.enum';

@@ -1,21 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 
+import { IUserResponse } from './interfaces/user-response.response.interface';
+
 @Exclude()
-export class UserResponseDto {
+export class UserResponseDto implements IUserResponse {
   @Expose()
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
-  readonly id!: string;
+  public readonly id!: string;
 
   @Expose()
   @ApiProperty({ example: 'john@example.com' })
-  readonly email!: string;
+  public readonly email!: string;
 
-  @Expose({ name: 'is_email_verified' })
+  @Expose({ name: 'isEmailVerified' })
   @ApiProperty({ name: 'is_email_verified', example: true })
-  readonly isEmailVerified!: boolean;
+  public readonly is_email_verified!: boolean;
 
-  @Expose({ name: 'is_active' })
+  @Expose({ name: 'isActive' })
   @ApiProperty({ name: 'is_active', example: true })
-  readonly isActive!: boolean;
+  public readonly is_active!: boolean;
 }

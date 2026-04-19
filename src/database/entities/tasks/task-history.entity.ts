@@ -8,10 +8,10 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-import { TaskHistoryChangeType } from '../../enums/task-history-change.enum';
-import { TaskKanbanStatus } from '../../enums/task-kanban-status.enum';
-import { User } from '../auth/user.entity';
-import { ConsultantProfile } from '../profiles/consultant-profile.entity';
+import { TaskHistoryChangeType } from '@database/enums/task-history-change.enum';
+import { TaskKanbanStatus } from '@database/enums/task-kanban-status.enum';
+import { User } from '@database/entities/auth/user.entity';
+import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
 import { Task } from './task.entity';
 
 // Append-only audit. Auto-populated by trg_log_task_change (§H3) — services

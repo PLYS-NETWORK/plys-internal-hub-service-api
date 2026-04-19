@@ -1,6 +1,7 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
-import { AuditableEntity } from '../base/auditable.entity';
+import { UserRole } from '@database/enums/user-role.enum';
+import { AuditableEntity } from '@database/entities/base/auditable.entity';
 
 // Root identity. One row per human.
 // NOTE: email uniqueness is enforced at the DB level via a functional unique index
@@ -28,4 +29,7 @@ export class User extends AuditableEntity {
 
   @Column({ name: 'last_login_at', type: 'timestamptz', nullable: true })
   public lastLoginAt!: Date | null;
+
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
+  public role!: UserRole;
 }

@@ -1,6 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
-import { TraceableEntity } from '../base/traceable.entity';
+import { TraceableEntity } from '@database/entities/base/traceable.entity';
 import { ScreeningQuestion } from './screening-question.entity';
 
 @Entity('screening_question_choices')
