@@ -181,6 +181,7 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
         countryCode: profile.countryCode,
         phoneNumber: profile.phoneNumber,
         isVerified: profile.isVerified,
+        accountBalance: profile.accountBalance,
         createdAt: profile.createdAt,
         skills: skills.map((s) => ({
           skill_id: s.skillId,

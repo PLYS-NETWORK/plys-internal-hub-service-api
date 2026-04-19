@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Exclude, Expose } from 'class-transformer';
+import { Exclude, Expose, Transform } from 'class-transformer';
 
 import { IBusinessProfileResponse } from './interfaces/business-profile.response.interface';
 
@@ -72,6 +72,11 @@ export class BusinessProfileResponseDto implements IBusinessProfileResponse {
   @Expose({ name: 'allowPaymentCredit' })
   @ApiProperty({ name: 'allow_payment_credit', example: false })
   public readonly allow_payment_credit!: boolean;
+
+  @Expose({ name: 'accountBalance' })
+  @Transform(({ value }: { value: string }) => parseFloat(value))
+  @ApiProperty({ name: 'account_balance', example: 0.0, description: 'Account balance (2 decimal places)' })
+  public readonly account_balance!: number;
 
   @Expose({ name: 'createdAt' })
   @ApiProperty({ name: 'created_at' })

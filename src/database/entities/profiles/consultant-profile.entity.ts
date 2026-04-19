@@ -60,4 +60,7 @@ export class ConsultantProfile extends AuditableEntity {
 
   @Column({ name: 'is_verified', type: 'boolean', default: false })
   public isVerified!: boolean;
+
+  @Column({ name: 'account_balance', type: 'numeric', precision: 15, scale: 2, default: 0 })
+  public accountBalance!: string;
 }

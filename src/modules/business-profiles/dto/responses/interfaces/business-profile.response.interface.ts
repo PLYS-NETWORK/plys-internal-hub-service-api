@@ -16,5 +16,6 @@ export interface IBusinessProfileResponse {
   readonly is_verified: boolean;
   readonly is_partner_platform: boolean;
   readonly allow_payment_credit: boolean;
+  readonly account_balance: number;
   readonly created_at: Date;
 }

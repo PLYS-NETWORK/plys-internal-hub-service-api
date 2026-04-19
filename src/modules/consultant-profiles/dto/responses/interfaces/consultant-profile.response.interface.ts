@@ -15,6 +15,7 @@ export interface IConsultantProfileResponse {
   readonly country_code: string | null;
   readonly phone_number: string | null;
   readonly is_verified: boolean;
+  readonly account_balance: number;
   readonly created_at: Date;
   readonly skills: IConsultantSkillResponse[];
 }

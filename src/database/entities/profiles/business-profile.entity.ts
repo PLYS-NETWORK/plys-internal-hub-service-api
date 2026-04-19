@@ -65,4 +65,7 @@ export class BusinessProfile extends AuditableEntity {
 
   @Column({ name: 'allow_payment_credit', type: 'boolean', default: false })
   public allowPaymentCredit!: boolean;
+
+  @Column({ name: 'account_balance', type: 'numeric', precision: 15, scale: 2, default: 0 })
+  public accountBalance!: string;
 }

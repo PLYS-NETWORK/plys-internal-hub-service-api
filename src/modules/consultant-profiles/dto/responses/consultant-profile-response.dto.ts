@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Exclude, Expose, Type } from 'class-transformer';
+import { Exclude, Expose, Transform, Type } from 'class-transformer';
 
 import { ConsultantSkillResponseDto } from './consultant-skill-response.dto';
 import { IConsultantProfileResponse } from './interfaces/consultant-profile.response.interface';
@@ -61,6 +61,15 @@ export class ConsultantProfileResponseDto implements IConsultantProfileResponse 
   @Expose({ name: 'isVerified' })
   @ApiProperty({ name: 'is_verified', example: false })
   public readonly is_verified!: boolean;
+
+  @Expose({ name: 'accountBalance' })
+  @Transform(({ value }: { value: string }) => parseFloat(value))
+  @ApiProperty({
+    name: 'account_balance',
+    example: 0.0,
+    description: 'Account balance (2 decimal places)',
+  })
+  public readonly account_balance!: number;
 
   @Expose({ name: 'createdAt' })
   @ApiProperty({ name: 'created_at' })
