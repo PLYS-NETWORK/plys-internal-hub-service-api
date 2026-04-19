@@ -12,11 +12,11 @@ import { randomBytes } from 'crypto';
 
 import { AuthResponseDto } from '../dto/responses/auth-response.dto';
 import { UserResponseDto } from '../dto/responses/user-response.dto';
-import { ISessionContext } from '../interfaces/auth-service.interface';
+import { ISessionContext, ISessionService } from '../interfaces/auth-service.interface';
 import { parseDuration, sha256 } from '../utils/auth.utils';
 
 @Injectable()
-export class SessionService {
+export class SessionService implements ISessionService {
   private readonly logger = new Logger(SessionService.name);
 
   private get rid(): string {

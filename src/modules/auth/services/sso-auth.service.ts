@@ -9,7 +9,7 @@ import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 
 import { AuthResponseDto } from '../dto/responses/auth-response.dto';
-import { ISessionContext, ISsoUserData } from '../interfaces/auth-service.interface';
+import { ISessionContext, ISsoAuthService, ISsoUserData } from '../interfaces/auth-service.interface';
 import {
   ISsoTokenProvider,
   SSO_PROVIDERS_TOKEN,
@@ -18,7 +18,7 @@ import { SessionService } from './session.service';
 import { UserOnboardingService } from './user-onboarding.service';
 
 @Injectable()
-export class SsoAuthService {
+export class SsoAuthService implements ISsoAuthService {
   private readonly logger = new Logger(SsoAuthService.name);
 
   /** Map built once at construction for O(1) provider lookup by name. */

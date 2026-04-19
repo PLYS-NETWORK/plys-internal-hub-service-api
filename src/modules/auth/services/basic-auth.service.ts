@@ -19,7 +19,7 @@ import {
   RegisterDto,
   ResendVerificationDto,
 } from '../dto';
-import { ISessionContext } from '../interfaces/auth-service.interface';
+import { IBasicAuthService, ISessionContext } from '../interfaces/auth-service.interface';
 import { sha256 } from '../utils/auth.utils';
 import { SessionService } from './session.service';
 import { UserOnboardingService } from './user-onboarding.service';
@@ -28,7 +28,7 @@ const BCRYPT_ROUNDS = 12;
 const EMAIL_VERIFICATION_EXPIRY_HOURS = 24;
 
 @Injectable()
-export class BasicAuthService {
+export class BasicAuthService implements IBasicAuthService {
   private readonly logger = new Logger(BasicAuthService.name);
 
   private get rid(): string {

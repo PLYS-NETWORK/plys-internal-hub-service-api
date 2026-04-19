@@ -3,6 +3,7 @@ import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.inter
 import { Injectable } from '@nestjs/common';
 
 import { RegisterDto } from '../dto/requests/register.dto';
+import { IUserOnboardingService } from '../interfaces/auth-service.interface';
 
 /**
  * UserOnboardingService is responsible for creating the platform-specific
@@ -12,7 +13,7 @@ import { RegisterDto } from '../dto/requests/register.dto';
  * SsoAuthService (first SSO login) to avoid duplication — SRP.
  */
 @Injectable()
-export class UserOnboardingService {
+export class UserOnboardingService implements IUserOnboardingService {
   /**
    * Creates the minimum-viable profile row for the user's platform.
    * - BUSINESS   → business_profiles with company_name

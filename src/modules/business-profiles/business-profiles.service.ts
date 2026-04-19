@@ -9,9 +9,10 @@ import { plainToInstance } from 'class-transformer';
 import { OnboardBusinessProfileDto } from './dto/requests/onboard-business-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/requests/update-business-profile.dto';
 import { BusinessProfileResponseDto } from './dto/responses/business-profile-response.dto';
+import { IBusinessProfilesService } from './interfaces/business-profiles-service.interface';
 
 @Injectable()
-export class BusinessProfilesService {
+export class BusinessProfilesService implements IBusinessProfilesService {
   private readonly logger = new Logger(BusinessProfilesService.name);
 
   private get rid(): string {
