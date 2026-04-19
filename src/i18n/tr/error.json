@@ -24,6 +24,10 @@
     "not_found": "Danışman profili bulunamadı.",
     "already_exists": "Bu kullanıcı için zaten bir danışman profili mevcut."
   },
+  "project": {
+    "not_found": "Proje bulunamadı.",
+    "requires_tasks_for_configured": "Proje yapılandırılmış olarak işaretlenebilmesi için en az bir görev bulunmalıdır."
+  },
   "database": {
     "unique_violation": "Bu değerlere sahip bir kayıt zaten mevcut",
     "foreign_key_violation": "Başvurulan kayıt bulunamadı",

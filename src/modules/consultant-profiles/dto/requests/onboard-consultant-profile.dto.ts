@@ -25,7 +25,10 @@ export class OnboardConsultantProfileDto implements IOnboardConsultantProfileReq
   public readonly full_name!: string;
 
   @Expose()
-  @ApiPropertyOptional({ name: 'bio', example: 'Senior software engineer with 10 years of experience.' })
+  @ApiPropertyOptional({
+    name: 'bio',
+    example: 'Senior software engineer with 10 years of experience.',
+  })
   @IsString()
   @IsOptional()
   public readonly bio?: string;
@@ -38,7 +41,11 @@ export class OnboardConsultantProfileDto implements IOnboardConsultantProfileReq
   public readonly years_of_experience?: number;
 
   @Expose()
-  @ApiPropertyOptional({ name: 'availability', enum: ConsultantAvailability, example: ConsultantAvailability.FULL_TIME })
+  @ApiPropertyOptional({
+    name: 'availability',
+    enum: ConsultantAvailability,
+    example: ConsultantAvailability.FULL_TIME,
+  })
   @IsEnum(ConsultantAvailability)
   @IsOptional()
   public readonly availability?: string;
@@ -68,7 +75,11 @@ export class OnboardConsultantProfileDto implements IOnboardConsultantProfileReq
   public readonly postal_code?: string;
 
   @Expose()
-  @ApiPropertyOptional({ name: 'country_code', example: 'US', description: 'ISO 3166-1 alpha-2 code' })
+  @ApiPropertyOptional({
+    name: 'country_code',
+    example: 'US',
+    description: 'ISO 3166-1 alpha-2 code',
+  })
   @IsString()
   @Length(2, 2)
   @IsUppercase()

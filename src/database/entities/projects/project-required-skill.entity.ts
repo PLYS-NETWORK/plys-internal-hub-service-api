@@ -1,7 +1,7 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
-
 import { TraceableEntity } from '@database/entities/base/traceable.entity';
 import { Skill } from '@database/entities/profiles/skill.entity';
+import { Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+
 import { Project } from './project.entity';
 
 // Junction (project, skill). Composite PK; TraceableEntity = createdAt + createdBy only.
@@ -27,7 +27,4 @@ export class ProjectRequiredSkill extends TraceableEntity {
     foreignKeyConstraintName: 'fk_project_required_skills_to_skills',
   })
   public skill!: Skill;
-
-  @Column({ name: 'is_mandatory', type: 'boolean', default: true })
-  public isMandatory!: boolean;
 }

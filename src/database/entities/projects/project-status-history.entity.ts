@@ -1,3 +1,5 @@
+import { User } from '@database/entities/auth/user.entity';
+import { ProjectStatus } from '@database/enums/project-status.enum';
 import {
   Column,
   CreateDateColumn,
@@ -8,8 +10,6 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-import { ProjectStatus } from '@database/enums/project-status.enum';
-import { User } from '@database/entities/auth/user.entity';
 import { Project } from './project.entity';
 
 // Append-only audit. Auto-populated by trigger on projects status change

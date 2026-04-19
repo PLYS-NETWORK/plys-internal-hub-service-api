@@ -21,6 +21,7 @@ import { getTypeOrmConfig } from './database/typeorm.config';
 import { AuthModule } from './modules/auth/auth.module';
 import { BusinessProfilesModule } from './modules/business-profiles/business-profiles.module';
 import { ConsultantProfilesModule } from './modules/consultant-profiles/consultant-profiles.module';
+import { ProjectsModule } from './modules/projects/projects.module';
 import { SkillsModule } from './modules/skills/skills.module';
 import { UnitOfWorkModule } from './modules/unit-of-work/unit-of-work.module';
 import { UsersModule } from './modules/users/users.module';
@@ -47,6 +48,7 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     BusinessProfilesModule,
     ConsultantProfilesModule,
+    ProjectsModule,
     SkillsModule,
     UsersModule,
   ],

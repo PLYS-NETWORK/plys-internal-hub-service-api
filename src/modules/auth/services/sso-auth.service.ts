@@ -9,7 +9,11 @@ import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 
 import { AuthResponseDto } from '../dto/responses/auth-response.dto';
-import { ISessionContext, ISsoAuthService, ISsoUserData } from '../interfaces/auth-service.interface';
+import {
+  ISessionContext,
+  ISsoAuthService,
+  ISsoUserData,
+} from '../interfaces/auth-service.interface';
 import {
   ISsoTokenProvider,
   SSO_PROVIDERS_TOKEN,

@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export enum Order {
   ASC = 'ASC',
@@ -8,11 +8,6 @@ export enum Order {
 }
 
 export class PageOptionsDto {
-  @ApiPropertyOptional({ enum: Order, default: Order.DESC })
-  @IsEnum(Order)
-  @IsOptional()
-  public readonly order: Order = Order.DESC;
-
   @ApiPropertyOptional({ minimum: 1, default: 1 })
   @Type(() => Number)
   @IsInt()
@@ -27,6 +22,21 @@ export class PageOptionsDto {
   @Max(100)
   @IsOptional()
   public readonly limit: number = 20;
+
+  /**
+   * Column name to sort by. Concrete DTOs or services should document and
+   * whitelist the valid values for their entity.
+   */
+  @ApiPropertyOptional({ description: 'Column to sort by (entity-specific).' })
+  @IsString()
+  @IsOptional()
+  public readonly sort_by?: string;
+
+  /** Sort direction. Defaults to `DESC` in query builders when omitted. */
+  @ApiPropertyOptional({ enum: Order, description: 'Sort direction.' })
+  @IsEnum(Order)
+  @IsOptional()
+  public readonly order_by?: Order;
 
   public get skip(): number {
     return (this.page - 1) * this.limit;
