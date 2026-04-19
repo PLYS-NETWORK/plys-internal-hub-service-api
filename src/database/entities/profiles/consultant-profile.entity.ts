@@ -24,23 +24,11 @@ export class ConsultantProfile extends AuditableEntity {
   @Column({ name: 'full_name', type: 'varchar', length: 255 })
   public fullName!: string;
 
-  @Column({ type: 'varchar', length: 300, nullable: true })
-  public headline!: string | null;
-
   @Column({ type: 'text', nullable: true })
   public bio!: string | null;
 
   @Column({ name: 'years_of_experience', type: 'smallint', nullable: true })
   public yearsOfExperience!: number | null;
-
-  @Column({
-    name: 'hourly_rate',
-    type: 'numeric',
-    precision: 10,
-    scale: 2,
-    nullable: true,
-  })
-  public hourlyRate!: string | null;
 
   @Column({
     type: 'varchar',
@@ -49,18 +37,11 @@ export class ConsultantProfile extends AuditableEntity {
   })
   public availability!: ConsultantAvailability | null;
 
-  // Max simultaneous active project memberships; enforced by DB trigger.
-  @Column({ name: 'max_concurrent_projects', type: 'smallint', default: 5 })
-  public maxConcurrentProjects!: number;
-
   @Column({ name: 'avatar_url', type: 'text', nullable: true })
   public avatarUrl!: string | null;
 
-  @Column({ name: 'address_line1', type: 'varchar', length: 255, nullable: true })
-  public addressLine1!: string | null;
-
-  @Column({ name: 'address_line2', type: 'varchar', length: 255, nullable: true })
-  public addressLine2!: string | null;
+  @Column({ name: 'address_line', type: 'varchar', length: 255, nullable: true })
+  public addressLine!: string | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   public city!: string | null;

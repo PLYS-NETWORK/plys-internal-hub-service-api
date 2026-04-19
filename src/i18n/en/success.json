@@ -3,5 +3,16 @@
   "created": "Created successfully",
   "updated": "Updated successfully",
   "deleted": "Deleted successfully",
-  "verification_resent": "Verification email sent. Please check your inbox."
+  "verification_resent": "Verification email sent. Please check your inbox.",
+  "business_profile": {
+    "created": "Business profile created successfully.",
+    "updated": "Business profile updated successfully.",
+    "partner_marked": "Business marked as partner platform.",
+    "payment_credit_allowed": "Payment credit enabled for this business."
+  },
+  "consultant_profile": {
+    "created": "Consultant profile created successfully.",
+    "updated": "Consultant profile updated successfully.",
+    "verified": "Consultant profile verified successfully."
+  }
 }

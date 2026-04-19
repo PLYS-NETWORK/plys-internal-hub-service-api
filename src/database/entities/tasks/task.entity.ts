@@ -1,3 +1,10 @@
+import { User } from '@database/entities/auth/user.entity';
+import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
+import { Project } from '@database/entities/projects/project.entity';
+import { TaskCreationMode } from '@database/enums/task-creation-mode.enum';
+import { TaskDifficulty } from '@database/enums/task-difficulty.enum';
+import { TaskKanbanStatus } from '@database/enums/task-kanban-status.enum';
 import {
   Column,
   Entity,
@@ -7,14 +14,6 @@ import {
   PrimaryGeneratedColumn,
   VersionColumn,
 } from 'typeorm';
-
-import { TaskCreationMode } from '@database/enums/task-creation-mode.enum';
-import { TaskDifficulty } from '@database/enums/task-difficulty.enum';
-import { TaskKanbanStatus } from '@database/enums/task-kanban-status.enum';
-import { User } from '@database/entities/auth/user.entity';
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
-import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
-import { Project } from '@database/entities/projects/project.entity';
 
 // Atomic unit of work inside a project.
 //
@@ -62,7 +61,7 @@ export class Task extends AuditableEntity {
   // Pricing (CHECK enforced at migration; see also §H9 — draft tasks may have
   // price = 0 prior to publication, enforced via CHECK constraint).
   @Column({ type: 'numeric', precision: 10, scale: 2 })
-  public price!: string;
+  public price!: number;
 
   @Column({
     name: 'platform_fee_rate',
@@ -71,7 +70,7 @@ export class Task extends AuditableEntity {
     scale: 4,
     default: 0.1,
   })
-  public platformFeeRate!: string;
+  public platformFeeRate!: number;
 
   @Column({
     name: 'platform_fee_amount',
@@ -83,7 +82,7 @@ export class Task extends AuditableEntity {
     insert: false,
     update: false,
   })
-  public readonly platformFeeAmount!: string;
+  public readonly platformFeeAmount!: number;
 
   @Column({
     name: 'consultant_payout',
@@ -95,7 +94,7 @@ export class Task extends AuditableEntity {
     insert: false,
     update: false,
   })
-  public readonly consultantPayout!: string;
+  public readonly consultantPayout!: number;
 
   @Column({
     name: 'difficulty_level',

@@ -16,6 +16,14 @@
     "email_not_verified": "E-posta doğrulanmadı",
     "email_pending_verification": "Doğrulama e-postası zaten gönderildi. Lütfen gelen kutunuzu veya spam klasörünüzü kontrol edin."
   },
+  "business_profile": {
+    "not_found": "İşletme profili bulunamadı.",
+    "already_exists": "Bu kullanıcı için zaten bir işletme profili mevcut."
+  },
+  "consultant_profile": {
+    "not_found": "Danışman profili bulunamadı.",
+    "already_exists": "Bu kullanıcı için zaten bir danışman profili mevcut."
+  },
   "database": {
     "unique_violation": "Bu değerlere sahip bir kayıt zaten mevcut",
     "foreign_key_violation": "Başvurulan kayıt bulunamadı",

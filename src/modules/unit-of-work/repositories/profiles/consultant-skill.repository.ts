@@ -21,4 +21,8 @@ export class ConsultantSkillRepository
   public withManager(manager: EntityManager): this {
     return new ConsultantSkillRepository(manager) as this;
   }
+
+  public async findByConsultantId(consultantId: string): Promise<ConsultantSkill[]> {
+    return this.findBy({ consultantId });
+  }
 }

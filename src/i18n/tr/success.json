@@ -3,5 +3,16 @@
   "created": "Başarıyla oluşturuldu",
   "updated": "Başarıyla güncellendi",
   "deleted": "Başarıyla silindi",
-  "verification_resent": "Doğrulama e-postası gönderildi. Lütfen gelen kutunuzu kontrol edin."
+  "verification_resent": "Doğrulama e-postası gönderildi. Lütfen gelen kutunuzu kontrol edin.",
+  "business_profile": {
+    "created": "İşletme profili başarıyla oluşturuldu.",
+    "updated": "İşletme profili başarıyla güncellendi.",
+    "partner_marked": "İşletme ortak platform olarak işaretlendi.",
+    "payment_credit_allowed": "Bu işletme için ödeme kredisi etkinleştirildi."
+  },
+  "consultant_profile": {
+    "created": "Danışman profili başarıyla oluşturuldu.",
+    "updated": "Danışman profili başarıyla güncellendi.",
+    "verified": "Danışman profili başarıyla doğrulandı."
+  }
 }

@@ -21,4 +21,8 @@ export class ConsultantProfileRepository
   public withManager(manager: EntityManager): this {
     return new ConsultantProfileRepository(manager) as this;
   }
+
+  public async findByUserId(userId: string): Promise<ConsultantProfile | null> {
+    return this.findOne({ where: { userId } });
+  }
 }

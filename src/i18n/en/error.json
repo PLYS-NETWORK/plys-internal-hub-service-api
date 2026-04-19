@@ -21,6 +21,14 @@
     "account_inactive": "Account is inactive",
     "sso_email_missing": "SSO provider did not return an email address"
   },
+  "business_profile": {
+    "not_found": "Business profile not found.",
+    "already_exists": "A business profile already exists for this user."
+  },
+  "consultant_profile": {
+    "not_found": "Consultant profile not found.",
+    "already_exists": "A consultant profile already exists for this user."
+  },
   "database": {
     "unique_violation": "A record with these values already exists",
     "foreign_key_violation": "Referenced record does not exist",
