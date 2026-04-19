@@ -53,13 +53,6 @@ export class AuthService implements IAuthService {
       });
     }
 
-    // Captured inside the transaction and used after commit so that a
-    // synchronous throw from sendVerificationEmail cannot roll back the
-    // already-committed registration.
-    let registeredEmail = '';
-    let displayName = '';
-    let verificationUrl = '';
-
     await this.uow.withTransaction(async (tx) => {
       // Email uniqueness is scoped to (platform, email) — the same email may
       // register independently on BUSINESS and CONSULTANT.
@@ -88,7 +81,7 @@ export class AuthService implements IAuthService {
       // user can log in and immediately complete onboarding. Only the name is
       // captured here — all other profile fields are filled via the profile
       // module's update/onboard endpoints.
-      displayName = await this.createInitialProfile(tx, user.id, dto);
+      const displayName = await this.createInitialProfile(tx, user.id, dto);
 
       // Generate verification token — raw token sent via email, SHA-256 stored in DB
       const rawToken = randomBytes(32).toString('hex');
@@ -102,21 +95,17 @@ export class AuthService implements IAuthService {
       });
       await tx.authTokens.save(authToken);
 
-      registeredEmail = user.email;
-      verificationUrl = `${this.envService.frontendUrl}/verify-email?token=${rawToken}`;
-    });
+      const verificationUrl = `${this.envService.frontendUrl}/verify-email?token=${rawToken}`;
 
-    // Sent AFTER the transaction commits — a synchronous throw from the email
-    // client can no longer roll back the persisted user/token rows.
-    this.emailService
-      .sendVerificationEmail(registeredEmail, {
+      // Awaited inside the transaction: if delivery fails the entire transaction
+      // rolls back, the user row and token are removed, and the API returns an
+      // error so the caller knows to retry — no orphaned unverifiable accounts.
+      await this.emailService.sendVerificationEmail(user.email, {
         userName: displayName,
         verificationUrl,
         expiryHours: EMAIL_VERIFICATION_EXPIRY_HOURS,
-      })
-      .catch((err: Error) =>
-        this.logger.error(`Failed to send verification email: ${err.message}`),
-      );
+      });
+    });
   }
 
   // ─── Verify Email ────────────────────────────────────────────────────────
@@ -401,10 +390,6 @@ export class AuthService implements IAuthService {
     }
 
     // SSO identity not linked yet — match or create a user on this platform.
-    // welcomeEmail is populated inside the transaction and sent after commit so
-    // a synchronous throw from the email client cannot roll back persisted rows.
-    let welcomeEmail: { email: string; displayName: string } | null = null;
-
     const authResponse = await this.uow.withTransaction(async (tx) => {
       let user = await tx.users.findUserByEmailAndPlatform(email, activePlatform);
       let isNewUser = false;
@@ -463,27 +448,18 @@ export class AuthService implements IAuthService {
       });
       await tx.userSsoProviders.save(ssoLink);
 
+      // Awaited inside the transaction: if delivery fails the entire transaction
+      // rolls back, the user and SSO-link rows are removed, and the API returns
+      // an error so the caller knows to retry.
       if (isNewUser) {
-        welcomeEmail = { email: user.email, displayName: userData.displayName || user.email };
+        await this.emailService.sendWelcomeEmail(user.email, {
+          userName: userData.displayName || user.email,
+          loginUrl: `${this.envService.frontendUrl}/login`,
+        });
       }
 
       return this.createSession(user.id, user.email, activePlatform, context);
     });
-
-    // Sent AFTER the transaction commits — a synchronous throw from the email
-    // client can no longer roll back the persisted user/SSO-link rows.
-    if (welcomeEmail !== null) {
-      const { email: toEmail, displayName: toName } = welcomeEmail as {
-        email: string;
-        displayName: string;
-      };
-      this.emailService
-        .sendWelcomeEmail(toEmail, {
-          userName: toName,
-          loginUrl: `${this.envService.frontendUrl}/login`,
-        })
-        .catch((err: Error) => this.logger.error(`Failed to send welcome email: ${err.message}`));
-    }
 
     return authResponse;
   }
