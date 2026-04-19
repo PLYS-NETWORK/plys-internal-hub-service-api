@@ -4,4 +4,5 @@ export type { IEnvironmentsService } from './environments.interface';
 export type { IGoogleConfig } from './google-config.interface';
 export type { IJwtConfig } from './jwt-config.interface';
 export type { IPaymentConfig } from './payment-config.interface';
+export type { IRedisConfig } from './redis-config.interface';
 export type { IResendConfig } from './resend-config.interface';

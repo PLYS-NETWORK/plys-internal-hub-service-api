@@ -112,4 +112,28 @@ export class EnvironmentsService implements IEnvironmentsService {
   public get lonaUrl(): string {
     return this.configService.getOrThrow<string>('app.lonaUrl');
   }
+
+  public get redisHost(): string {
+    return this.configService.getOrThrow<string>('app.redis.host');
+  }
+
+  public get redisPort(): number {
+    return this.configService.getOrThrow<number>('app.redis.port');
+  }
+
+  public get redisPassword(): string | undefined {
+    return this.configService.get<string>('app.redis.password') || undefined;
+  }
+
+  public get redisDb(): number {
+    return this.configService.getOrThrow<number>('app.redis.db');
+  }
+
+  public get redisKeyPrefix(): string {
+    return this.configService.getOrThrow<string>('app.redis.keyPrefix');
+  }
+
+  public get redisTlsEnabled(): boolean {
+    return this.configService.getOrThrow<boolean>('app.redis.tlsEnabled');
+  }
 }

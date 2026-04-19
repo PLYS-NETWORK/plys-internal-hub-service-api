@@ -1,7 +1,7 @@
 import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { Injectable } from '@nestjs/common';
 
-import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { RegisterDto } from '../dto/requests/register.dto';
 
 /**

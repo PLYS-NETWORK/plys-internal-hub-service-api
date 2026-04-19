@@ -13,6 +13,7 @@ import { EmailModule } from './common/modules/email';
 import { EnvironmentsModule, EnvironmentsService } from './common/modules/environments';
 import { I18nModule } from './common/modules/i18n';
 import { PaymentModule } from './common/modules/payment';
+import { RedisModule } from './common/modules/redis';
 import { RequestContextMiddleware, RequestContextModule } from './common/modules/request-context';
 import configuration from './config/configuration';
 import { AuditSubscriber } from './database/subscribers/audit.subscriber';
@@ -39,6 +40,7 @@ import { UsersModule } from './modules/users/users.module';
     I18nModule,
     RequestContextModule,
     EmailModule,
+    RedisModule,
     PaymentModule,
     UnitOfWorkModule,
     AuthModule,

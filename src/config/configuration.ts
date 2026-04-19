@@ -41,4 +41,12 @@ export default registerAs('app', () => ({
   },
   ployosUrl: process.env.PLOYOS_URL ?? 'http://localhost:3000',
   lonaUrl: process.env.LONA_URL ?? 'http://localhost:3001',
+  redis: {
+    host: process.env.REDIS_HOST ?? 'localhost',
+    port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
+    password: process.env.REDIS_PASSWORD || undefined,
+    db: parseInt(process.env.REDIS_DB ?? '0', 10),
+    keyPrefix: process.env.REDIS_KEY_PREFIX ?? 'app:',
+    tlsEnabled: process.env.REDIS_TLS_ENABLED === 'true',
+  },
 }));
