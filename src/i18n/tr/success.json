@@ -2,5 +2,6 @@
   "ok": "Tamam",
   "created": "Başarıyla oluşturuldu",
   "updated": "Başarıyla güncellendi",
-  "deleted": "Başarıyla silindi"
+  "deleted": "Başarıyla silindi",
+  "verification_resent": "Doğrulama e-postası gönderildi. Lütfen gelen kutunuzu kontrol edin."
 }

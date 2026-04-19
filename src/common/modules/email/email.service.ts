@@ -1,3 +1,4 @@
+import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { EMAIL_PROVIDER_TOKEN } from './constants';
@@ -27,7 +28,12 @@ export class EmailService implements IEmailService {
   constructor(
     @Inject(EMAIL_PROVIDER_TOKEN)
     private readonly emailProvider: IEmailProvider,
+    private readonly requestContext: RequestContextService,
   ) {}
+
+  private get rid(): string {
+    return this.requestContext.requestId;
+  }
 
   /**
    * Sends an account-verification email to a newly registered user.
@@ -37,13 +43,21 @@ export class EmailService implements IEmailService {
     to: string,
     options: IVerifyRegistrationEmailOptions,
   ): Promise<void> {
-    this.logger.log(`Sending verification email to ${to}`);
-
-    await this.emailProvider.send({
-      to,
-      subject: 'Verify your email address',
-      html: await buildVerifyRegistrationEmail(options),
-    });
+    this.logger.log(`[${this.rid}] sendVerificationEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        to,
+        subject: 'Verify your email address',
+        html: await buildVerifyRegistrationEmail(options),
+      });
+      this.logger.log(`[${this.rid}] sendVerificationEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `[${this.rid}] sendVerificationEmail — failed | to: ${to} | error: ${message}`,
+      );
+      throw err;
+    }
   }
 
   /**
@@ -54,13 +68,21 @@ export class EmailService implements IEmailService {
     to: string,
     options: IForgotPasswordOtpEmailOptions,
   ): Promise<void> {
-    this.logger.log(`Sending forgot-password OTP email to ${to}`);
-
-    await this.emailProvider.send({
-      to,
-      subject: 'Your password reset code',
-      html: await buildForgotPasswordOtpEmail(options),
-    });
+    this.logger.log(`[${this.rid}] sendForgotPasswordOtpEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        to,
+        subject: 'Your password reset code',
+        html: await buildForgotPasswordOtpEmail(options),
+      });
+      this.logger.log(`[${this.rid}] sendForgotPasswordOtpEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `[${this.rid}] sendForgotPasswordOtpEmail — failed | to: ${to} | error: ${message}`,
+      );
+      throw err;
+    }
   }
 
   /**
@@ -68,12 +90,18 @@ export class EmailService implements IEmailService {
    * (post email-verification or first SSO login).
    */
   public async sendWelcomeEmail(to: string, options: IWelcomeEmailOptions): Promise<void> {
-    this.logger.log(`Sending welcome email to ${to}`);
-
-    await this.emailProvider.send({
-      to,
-      subject: 'Welcome to the Platform!',
-      html: await buildWelcomeEmail(options),
-    });
+    this.logger.log(`[${this.rid}] sendWelcomeEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        to,
+        subject: 'Welcome to the Platform!',
+        html: await buildWelcomeEmail(options),
+      });
+      this.logger.log(`[${this.rid}] sendWelcomeEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`[${this.rid}] sendWelcomeEmail — failed | to: ${to} | error: ${message}`);
+      throw err;
+    }
   }
 }

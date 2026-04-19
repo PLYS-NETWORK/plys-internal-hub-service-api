@@ -25,6 +25,7 @@ import {
   LoginDto,
   RefreshTokenDto,
   RegisterDto,
+  ResendVerificationDto,
   SsoTokenDto,
   UserResponseDto,
   VerifyEmailDto,
@@ -66,6 +67,21 @@ export class AuthController {
   public async verifyEmail(@Body() dto: VerifyEmailDto): Promise<ITranslatedPayload<null>> {
     await this.authService.verifyEmail(dto.token);
     return { messageKey: 'success.ok', data: null };
+  }
+
+  @Public()
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Resend email verification link',
+    description:
+      'Always returns 200 regardless of whether the account exists to prevent user enumeration.',
+  })
+  public async resendVerification(
+    @Body() dto: ResendVerificationDto,
+  ): Promise<ITranslatedPayload<null>> {
+    await this.authService.resendVerification(dto);
+    return { messageKey: 'success.verification_resent', data: null };
   }
 
   @Public()

@@ -1,9 +1,11 @@
 import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { SsoProvider } from '@database/enums/sso-provider.enum';
 import {
   AuthResponseDto,
   ChangePasswordDto,
   LoginDto,
   RegisterDto,
+  ResendVerificationDto,
   UserResponseDto,
 } from '@modules/auth/dto';
 
@@ -25,6 +27,7 @@ export interface ISsoUserData {
 export interface IAuthService {
   register(dto: RegisterDto, context: ISessionContext): Promise<void>;
   verifyEmail(token: string): Promise<void>;
+  resendVerification(dto: ResendVerificationDto): Promise<void>;
   login(dto: LoginDto, context: ISessionContext): Promise<AuthResponseDto>;
   refresh(refreshToken: string, context: ISessionContext): Promise<AuthResponseDto>;
   logout(): Promise<void>;
@@ -36,4 +39,5 @@ export interface IAuthService {
     activePlatform: ActivePlatform,
     context: ISessionContext,
   ): Promise<AuthResponseDto>;
+  verifyGoogleIdToken(idToken: string): Promise<ISsoUserData>;
 }

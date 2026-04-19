@@ -1,7 +1,7 @@
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { Skill } from '@database/entities';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { I18nService } from 'nestjs-i18n';
 import { In } from 'typeorm';
@@ -12,6 +12,12 @@ import { SkillResponseDto } from './dto/responses/skill-response.dto';
 
 @Injectable()
 export class SkillsService {
+  private readonly logger = new Logger(SkillsService.name);
+
+  private get rid(): string {
+    return this.requestContext.requestId;
+  }
+
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly i18n: I18nService,
@@ -19,15 +25,27 @@ export class SkillsService {
   ) {}
 
   public async getAll(): Promise<SkillResponseDto[]> {
+    this.logger.log(`[${this.rid}] getAll — start`);
     const skills = await this.uow.skills.find({ order: { name: 'ASC' } });
+    if (skills.length === 0) {
+      this.logger.warn(`[${this.rid}] getAll — result is empty`);
+    }
     return skills.map((skill) => this.toResponseDto(skill));
   }
 
   public async addList(dto: AddSkillsDto): Promise<SkillResponseDto[]> {
+    this.logger.log(`[${this.rid}] addList — start | requested: ${dto.skills.length}`);
     // Fetch all existing names (lowercased) to perform case-insensitive duplicate check.
     // This avoids fragmenting the taxonomy with variant-cased keys.
     const existing = await this.uow.skills.find({ select: { name: true } });
     const existingNamesLower = new Set(existing.map((s) => s.name.toLowerCase()));
+
+    const skipped = dto.skills.filter((item) => existingNamesLower.has(item.name.toLowerCase()));
+    if (skipped.length > 0) {
+      this.logger.warn(
+        `[${this.rid}] addList — skipped duplicates | names: ${skipped.map((s) => s.name).join(', ')}`,
+      );
+    }
 
     const newSkillEntities = dto.skills
       .filter((item) => !existingNamesLower.has(item.name.toLowerCase()))
@@ -39,6 +57,7 @@ export class SkillsService {
       );
 
     if (newSkillEntities.length === 0) {
+      this.logger.warn(`[${this.rid}] addList — all skills already exist, nothing inserted`);
       return [];
     }
 
@@ -46,12 +65,15 @@ export class SkillsService {
       newSkillEntities as Parameters<typeof this.uow.skills.save>[0],
     );
 
+    this.logger.log(`[${this.rid}] addList — complete | inserted: ${newSkillEntities.length}`);
     return (saved as typeof newSkillEntities).map((skill) => this.toResponseDto(skill));
   }
 
   public async removeList(dto: RemoveSkillsDto): Promise<void> {
+    this.logger.log(`[${this.rid}] removeList — start | ids count: ${dto.ids.length}`);
     // Soft-delete to preserve FK references in consultant_skills / project_required_skills.
     await this.uow.skills.softDelete({ id: In(dto.ids) });
+    this.logger.log(`[${this.rid}] removeList — complete`);
   }
 
   // Build an explicit plain object so that computed fields (label, category_label)

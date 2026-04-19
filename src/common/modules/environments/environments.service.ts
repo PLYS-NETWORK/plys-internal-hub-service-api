@@ -103,7 +103,13 @@ export class EnvironmentsService implements IEnvironmentsService {
     return !!(this.googleClientId && this.googleClientSecret && this.googleCallbackUrl);
   }
 
-  public get frontendUrl(): string {
-    return this.configService.getOrThrow<string>('app.frontendUrl');
+  /** Base URL for the Business platform frontend (Ployos). */
+  public get ployosUrl(): string {
+    return this.configService.getOrThrow<string>('app.ployosUrl');
+  }
+
+  /** Base URL for the Consultant platform frontend (Lona). */
+  public get lonaUrl(): string {
+    return this.configService.getOrThrow<string>('app.lonaUrl');
   }
 }

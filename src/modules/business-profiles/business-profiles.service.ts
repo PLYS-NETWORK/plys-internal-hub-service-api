@@ -3,7 +3,7 @@ import { TranslatableException } from '@common/exceptions/translatable.exception
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { BusinessProfile } from '@database/entities';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import { OnboardBusinessProfileDto } from './dto/requests/onboard-business-profile.dto';
@@ -12,6 +12,12 @@ import { BusinessProfileResponseDto } from './dto/responses/business-profile-res
 
 @Injectable()
 export class BusinessProfilesService {
+  private readonly logger = new Logger(BusinessProfilesService.name);
+
+  private get rid(): string {
+    return this.requestContext.requestId;
+  }
+
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
@@ -19,9 +25,11 @@ export class BusinessProfilesService {
 
   public async getProfile(): Promise<BusinessProfileResponseDto> {
     const userId = this.requestContext.userId!;
+    this.logger.log(`[${this.rid}] getProfile — start | userId: ${userId}`);
     const profile = await this.uow.businessProfiles.findByUserId(userId);
 
     if (!profile) {
+      this.logger.warn(`[${this.rid}] getProfile — profile not found | userId: ${userId}`);
       throw new TranslatableException({
         messageKey: 'error.business_profile.not_found',
         errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
@@ -34,9 +42,13 @@ export class BusinessProfilesService {
 
   public async onboard(dto: OnboardBusinessProfileDto): Promise<BusinessProfileResponseDto> {
     const userId = this.requestContext.userId!;
+    this.logger.log(
+      `[${this.rid}] onboard — start | userId: ${userId}, company: ${dto.company_name}`,
+    );
     const existing = await this.uow.businessProfiles.findByUserId(userId);
 
     if (existing) {
+      this.logger.warn(`[${this.rid}] onboard — profile already exists | userId: ${userId}`);
       throw new TranslatableException({
         messageKey: 'error.business_profile.already_exists',
         errorCode: ERROR_CODES.BUSINESS_PROFILE_ALREADY_EXISTS,
@@ -59,14 +71,19 @@ export class BusinessProfilesService {
     });
     await this.uow.businessProfiles.save(profile);
 
+    this.logger.log(
+      `[${this.rid}] onboard — complete | userId: ${userId}, profileId: ${profile.id}`,
+    );
     return this.toResponseDto(profile);
   }
 
   public async updateProfile(dto: UpdateBusinessProfileDto): Promise<BusinessProfileResponseDto> {
     const userId = this.requestContext.userId!;
+    this.logger.log(`[${this.rid}] updateProfile — start | userId: ${userId}`);
     const profile = await this.uow.businessProfiles.findByUserId(userId);
 
     if (!profile) {
+      this.logger.warn(`[${this.rid}] updateProfile — profile not found | userId: ${userId}`);
       throw new TranslatableException({
         messageKey: 'error.business_profile.not_found',
         errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
@@ -87,13 +104,18 @@ export class BusinessProfilesService {
 
     await this.uow.businessProfiles.save(profile);
 
+    this.logger.log(
+      `[${this.rid}] updateProfile — complete | userId: ${userId}, profileId: ${profile.id}`,
+    );
     return this.toResponseDto(profile);
   }
 
   public async markAsPartner(profileId: string): Promise<void> {
+    this.logger.log(`[${this.rid}] markAsPartner — start | profileId: ${profileId}`);
     const profile = await this.uow.businessProfiles.findOne({ where: { id: profileId } });
 
     if (!profile) {
+      this.logger.warn(`[${this.rid}] markAsPartner — profile not found | profileId: ${profileId}`);
       throw new TranslatableException({
         messageKey: 'error.business_profile.not_found',
         errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
@@ -103,12 +125,17 @@ export class BusinessProfilesService {
 
     profile.isPartnerPlatform = true;
     await this.uow.businessProfiles.save(profile);
+    this.logger.log(`[${this.rid}] markAsPartner — complete | profileId: ${profileId}`);
   }
 
   public async allowPaymentCredit(profileId: string): Promise<void> {
+    this.logger.log(`[${this.rid}] allowPaymentCredit — start | profileId: ${profileId}`);
     const profile = await this.uow.businessProfiles.findOne({ where: { id: profileId } });
 
     if (!profile) {
+      this.logger.warn(
+        `[${this.rid}] allowPaymentCredit — profile not found | profileId: ${profileId}`,
+      );
       throw new TranslatableException({
         messageKey: 'error.business_profile.not_found',
         errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
@@ -118,6 +145,7 @@ export class BusinessProfilesService {
 
     profile.allowPaymentCredit = true;
     await this.uow.businessProfiles.save(profile);
+    this.logger.log(`[${this.rid}] allowPaymentCredit — complete | profileId: ${profileId}`);
   }
 
   private toResponseDto(profile: BusinessProfile): BusinessProfileResponseDto {

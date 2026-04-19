@@ -16,6 +16,7 @@
     "device_mismatch": "Unrecognized device",
     "email_not_verified": "Email is not verified",
     "email_already_registered": "Email is already registered",
+    "email_pending_verification": "A verification email has already been sent. Please check your inbox or spam folder.",
     "user_not_found": "User not found",
     "account_inactive": "Account is inactive",
     "sso_email_missing": "SSO provider did not return an email address"

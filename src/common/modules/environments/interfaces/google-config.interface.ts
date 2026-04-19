@@ -3,5 +3,6 @@ export interface IGoogleConfig {
   readonly googleClientSecret: string | undefined;
   readonly googleCallbackUrl: string | undefined;
   readonly isGoogleOAuthConfigured: boolean;
-  readonly frontendUrl: string;
+  readonly ployosUrl: string;
+  readonly lonaUrl: string;
 }

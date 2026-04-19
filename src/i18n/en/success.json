@@ -2,5 +2,6 @@
   "ok": "OK",
   "created": "Created successfully",
   "updated": "Updated successfully",
-  "deleted": "Deleted successfully"
+  "deleted": "Deleted successfully",
+  "verification_resent": "Verification email sent. Please check your inbox."
 }

@@ -1,6 +1,5 @@
-import { HttpException, HttpStatus } from '@nestjs/common';
-
 import { ErrorCode } from '@common/constants/error-codes';
+import { HttpException, HttpStatus } from '@nestjs/common';
 
 export interface TranslatableExceptionPayload {
   messageKey: string;
