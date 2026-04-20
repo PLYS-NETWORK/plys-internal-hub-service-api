@@ -9,6 +9,7 @@ import {
 } from './interfaces/checkout-session.interface';
 import { IPaymentService } from './interfaces/payment-service.interface';
 import { ICreateRefundParams } from './interfaces/refund.interface';
+import { ICreateTransferParams, ITransferResult } from './interfaces/transfer.interface';
 import { IWebhookEvent } from './interfaces/webhook-event.interface';
 import { PaymentProviderRegistry } from './payment-provider.registry';
 
@@ -59,6 +60,19 @@ export class PaymentService implements IPaymentService {
    */
   public constructWebhookEvent(payload: Buffer, signature: string): IWebhookEvent {
     return this.activeProvider().constructWebhookEvent(payload, signature);
+  }
+
+  /**
+   * Creates a transfer/payout to a connected account.
+   * Uses Stripe provider regardless of active payment processor since Polar
+   * does not support payouts.
+   */
+  public async createTransfer(params: ICreateTransferParams): Promise<ITransferResult> {
+    this.logger.log(
+      `Creating transfer via stripe for account ${params.destinationAccountId}, amount: ${params.amount}`,
+    );
+    // Always use Stripe for transfers since Polar doesn't support payouts
+    return this.registry.create(PaymentProcessor.STRIPE).createTransfer(params);
   }
 
   // Resolves the currently configured payment provider from the registry.

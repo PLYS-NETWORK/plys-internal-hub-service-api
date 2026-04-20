@@ -21,12 +21,14 @@ import { AuditSubscriber } from './database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from './database/typeorm.config';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BusinessPaymentsModule } from './modules/business-payments/business-payments.module';
 import { BusinessProfilesModule } from './modules/business-profiles/business-profiles.module';
 import { ConsultantProfilesModule } from './modules/consultant-profiles/consultant-profiles.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { SkillsModule } from './modules/skills/skills.module';
 import { UnitOfWorkModule } from './modules/unit-of-work/unit-of-work.module';
 import { UsersModule } from './modules/users/users.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -50,11 +52,13 @@ import { UsersModule } from './modules/users/users.module';
     UnitOfWorkModule,
     ApplicationsModule,
     AuthModule,
+    BusinessPaymentsModule,
     BusinessProfilesModule,
     ConsultantProfilesModule,
     ProjectsModule,
     SkillsModule,
     UsersModule,
+    WebhooksModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },

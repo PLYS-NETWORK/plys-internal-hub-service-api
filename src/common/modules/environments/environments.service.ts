@@ -79,12 +79,20 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.configService.getOrThrow<string>('app.payment.polar.webhookSecret');
   }
 
+  public get polarTopUpProductId(): string {
+    return this.configService.getOrThrow<string>('app.payment.polar.topUpProductId');
+  }
+
   public get stripeSecretKey(): string {
     return this.configService.getOrThrow<string>('app.payment.stripe.secretKey');
   }
 
   public get stripeWebhookSecret(): string {
     return this.configService.getOrThrow<string>('app.payment.stripe.webhookSecret');
+  }
+
+  public get stripeConnectClientId(): string {
+    return this.configService.getOrThrow<string>('app.payment.stripe.connectClientId');
   }
 
   public get googleClientId(): string | undefined {

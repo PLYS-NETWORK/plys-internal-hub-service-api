@@ -27,10 +27,12 @@ export default registerAs('app', () => ({
     polar: {
       accessToken: process.env.POLAR_ACCESS_TOKEN ?? '',
       webhookSecret: process.env.POLAR_WEBHOOK_SECRET ?? '',
+      topUpProductId: process.env.POLAR_TOP_UP_PRODUCT_ID ?? '',
     },
     stripe: {
       secretKey: process.env.STRIPE_SECRET_KEY ?? '',
       webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
+      connectClientId: process.env.STRIPE_CONNECT_CLIENT_ID ?? '',
     },
   },
   google: {

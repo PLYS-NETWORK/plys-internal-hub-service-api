@@ -6,6 +6,10 @@ import {
 import { IPaymentProvider } from '@common/modules/payment/interfaces/payment-provider.interface';
 import { ICreateRefundParams } from '@common/modules/payment/interfaces/refund.interface';
 import {
+  ICreateTransferParams,
+  ITransferResult,
+} from '@common/modules/payment/interfaces/transfer.interface';
+import {
   IWebhookEvent,
   WebhookEventType,
 } from '@common/modules/payment/interfaces/webhook-event.interface';
@@ -92,6 +96,31 @@ export class StripePaymentProvider implements IPaymentProvider {
       data: event.data.object as unknown as Record<string, unknown>,
       processorEventId: event.id,
     };
+  }
+
+  public async createTransfer(params: ICreateTransferParams): Promise<ITransferResult> {
+    try {
+      const transfer = await this.client.transfers.create({
+        amount: params.amount,
+        currency: params.currency.toLowerCase(),
+        destination: params.destinationAccountId,
+        transfer_group: params.transactionId,
+        description: params.description,
+        metadata: { transactionId: params.transactionId },
+      });
+
+      this.logger.log(
+        `Stripe transfer created: ${transfer.id} to account ${params.destinationAccountId}`,
+      );
+
+      return {
+        processorTransferId: transfer.id,
+      };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Stripe createTransfer failed: ${message}`);
+      throw new InternalServerErrorException('Failed to create transfer. Please try again.');
+    }
   }
 
   private mapEventType(rawType: string): WebhookEventType {

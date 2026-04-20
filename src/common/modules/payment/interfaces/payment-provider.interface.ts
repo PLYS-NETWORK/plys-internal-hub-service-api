@@ -1,5 +1,6 @@
 import { ICheckoutSession, ICreateCheckoutSessionParams } from './checkout-session.interface';
 import { ICreateRefundParams } from './refund.interface';
+import { ICreateTransferParams, ITransferResult } from './transfer.interface';
 import { IWebhookEvent } from './webhook-event.interface';
 
 /**
@@ -26,4 +27,11 @@ export interface IPaymentProvider {
    * Throws if the signature is invalid (security boundary — never skip this).
    */
   constructWebhookEvent(payload: Buffer, signature: string): IWebhookEvent;
+
+  /**
+   * Creates a transfer/payout to a connected account.
+   * Only supported by providers with payout capabilities (e.g., Stripe Connect).
+   * Throws NotImplementedException if the provider does not support payouts.
+   */
+  createTransfer(params: ICreateTransferParams): Promise<ITransferResult>;
 }

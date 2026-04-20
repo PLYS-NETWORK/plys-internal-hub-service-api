@@ -6,10 +6,19 @@ import {
 import { IPaymentProvider } from '@common/modules/payment/interfaces/payment-provider.interface';
 import { ICreateRefundParams } from '@common/modules/payment/interfaces/refund.interface';
 import {
+  ICreateTransferParams,
+  ITransferResult,
+} from '@common/modules/payment/interfaces/transfer.interface';
+import {
   IWebhookEvent,
   WebhookEventType,
 } from '@common/modules/payment/interfaces/webhook-event.interface';
-import { InternalServerErrorException, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  InternalServerErrorException,
+  Logger,
+  NotImplementedException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Polar } from '@polar-sh/sdk';
 import * as crypto from 'crypto';
 
@@ -98,6 +107,11 @@ export class PolarPaymentProvider implements IPaymentProvider {
       data: (raw['data'] as Record<string, unknown>) ?? {},
       processorEventId: (raw['id'] as string) ?? '',
     };
+  }
+
+  public async createTransfer(_params: ICreateTransferParams): Promise<ITransferResult> {
+    // Polar.sh does not support payouts/transfers. Withdrawals must use Stripe Connect.
+    throw new NotImplementedException('Polar does not support transfers. Use Stripe for payouts.');
   }
 
   private mapEventType(rawType: string | undefined): WebhookEventType {
