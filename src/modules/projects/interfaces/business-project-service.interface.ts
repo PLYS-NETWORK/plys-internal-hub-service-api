@@ -7,6 +7,7 @@ import {
   UpdateProjectStatusDto,
 } from '../dto/requests';
 import { BusinessProjectResponseDto } from '../dto/responses';
+import { PublishValidationResponseDto } from '../dto/responses/publish-validation-response.dto';
 
 /**
  * Contract for all project operations performed by a business user.
@@ -84,4 +85,31 @@ export interface IBusinessProjectService {
    * @throws TranslatableException (404) — project not found or not owned by caller.
    */
   updateStatus(id: string, dto: UpdateProjectStatusDto): Promise<BusinessProjectResponseDto>;
+
+  /**
+   * Validates whether a project is eligible for publication.
+   *
+   * Checks project status (must be `configured`) and, for pre-paid businesses,
+   * whether the account balance covers the total project amount (sum of task
+   * prices). Returns a payload with `can_publish`, payment type, and amounts
+   * so the frontend can render a confirmation dialog.
+   *
+   * @param projectId - UUID of the project to validate.
+   * @returns Publish validation result DTO.
+   * @throws TranslatableException (404) — project not found or not owned by caller.
+   */
+  validatePublish(projectId: string): Promise<PublishValidationResponseDto>;
+
+  /**
+   * Re-validates publish eligibility and transitions the project to `public`.
+   *
+   * For pre-paid businesses, deducts the project amount from the business
+   * account balance and creates a `BusinessTransaction` record inside the
+   * same transaction. Credit-based businesses publish without balance changes.
+   *
+   * @param projectId - UUID of the project to publish.
+   * @throws TranslatableException (404) — project not found or not owned by caller.
+   * @throws TranslatableException (422) — project not eligible for publication.
+   */
+  confirmPublish(projectId: string): Promise<void>;
 }

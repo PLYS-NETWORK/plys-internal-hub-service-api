@@ -15,6 +15,12 @@
     "updated": "Danışman profili başarıyla güncellendi.",
     "verified": "Danışman profili başarıyla doğrulandı."
   },
+  "project": {
+    "created": "Proje başarıyla oluşturuldu.",
+    "updated": "Proje başarıyla güncellendi.",
+    "status_updated": "Proje durumu başarıyla güncellendi.",
+    "published": "Proje başarıyla yayınlandı."
+  },
   "application": {
     "created": "Başvuru başarıyla gönderildi.",
     "approved": "Başvuru başarıyla onaylandı.",

@@ -27,6 +27,7 @@ import {
   UpdateProjectStatusDto,
 } from './dto/requests';
 import { BusinessProjectResponseDto } from './dto/responses';
+import { PublishValidationResponseDto } from './dto/responses/publish-validation-response.dto';
 import { BusinessProjectService } from './services/business-project.service';
 
 @ApiTags('Projects - Business')
@@ -56,6 +57,26 @@ export class BusinessProjectController {
   ): Promise<ITranslatedPayload<PageDto<BusinessProjectResponseDto>>> {
     const data = await this.businessProjectService.listMyProjects(dto);
     return { messageKey: 'success.ok', data };
+  }
+
+  @Get(':id/publish-validation')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Check whether a project can be published' })
+  public async validatePublish(
+    @Param('id') id: string,
+  ): Promise<ITranslatedPayload<PublishValidationResponseDto>> {
+    const data = await this.businessProjectService.validatePublish(id);
+    return { messageKey: 'success.ok', data };
+  }
+
+  @Patch(':id/publish')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Confirm and publish the project' })
+  public async confirmPublish(
+    @Param('id') id: string,
+  ): Promise<ITranslatedPayload<BusinessProjectResponseDto>> {
+    const data = await this.businessProjectService.confirmPublish(id);
+    return { messageKey: 'success.project.published', data };
   }
 
   @Get(':id')

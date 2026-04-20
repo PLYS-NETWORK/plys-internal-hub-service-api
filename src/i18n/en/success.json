@@ -15,6 +15,12 @@
     "updated": "Consultant profile updated successfully.",
     "verified": "Consultant profile verified successfully."
   },
+  "project": {
+    "created": "Project created successfully.",
+    "updated": "Project updated successfully.",
+    "status_updated": "Project status updated successfully.",
+    "published": "Project published successfully."
+  },
   "application": {
     "created": "Application submitted successfully.",
     "approved": "Application approved successfully.",

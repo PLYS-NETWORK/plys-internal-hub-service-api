@@ -27,7 +27,9 @@
   "project": {
     "not_found": "Proje bulunamadı.",
     "requires_tasks_for_configured": "Proje yapılandırılmış olarak işaretlenebilmesi için en az bir görev bulunmalıdır.",
-    "cannot_be_edited": "Proje mevcut durumunda düzenlenemez."
+    "cannot_be_edited": "Proje mevcut durumunda düzenlenemez.",
+    "cannot_publish": "Bu proje mevcut durumunda yayınlanamaz.",
+    "insufficient_balance": "Bu projeyi yayınlamak için yeterli hesap bakiyesi yok."
   },
   "database": {
     "unique_violation": "Bu değerlere sahip bir kayıt zaten mevcut",

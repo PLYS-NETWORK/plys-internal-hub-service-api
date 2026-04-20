@@ -32,7 +32,9 @@
   "project": {
     "not_found": "Project not found.",
     "requires_tasks_for_configured": "Project must have at least one task before it can be marked as configured.",
-    "cannot_be_edited": "Project cannot be edited in its current status."
+    "cannot_be_edited": "Project cannot be edited in its current status.",
+    "cannot_publish": "This project cannot be published in its current state.",
+    "insufficient_balance": "Insufficient account balance to publish this project."
   },
   "database": {
     "unique_violation": "A record with these values already exists",

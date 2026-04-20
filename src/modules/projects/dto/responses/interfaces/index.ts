@@ -3,3 +3,4 @@ export { IConsultantProjectResponse } from './consultant-project.response.interf
 export { IProjectInterviewQuestionResponse } from './project-interview-question.response.interface';
 export { IProjectSkillResponse } from './project-skill.response.interface';
 export { IProjectTaskResponse } from './project-task.response.interface';
+export { IPublishValidationResponse } from './publish-validation.response.interface';
