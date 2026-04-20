@@ -16,6 +16,7 @@ import {
   InvoiceRepository,
   NotificationRepository,
   ProjectApplicationRepository,
+  ProjectInterviewQuestionRepository,
   ProjectMemberRepository,
   ProjectRepository,
   ProjectRequiredSkillRepository,
@@ -77,6 +78,7 @@ const repositories = [
   WalletTransactionRepository,
   BusinessTransactionRepository,
   WebhookEventRepository,
+  ProjectInterviewQuestionRepository,
 ];
 
 @Module({

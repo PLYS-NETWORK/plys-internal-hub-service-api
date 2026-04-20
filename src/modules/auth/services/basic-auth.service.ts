@@ -141,7 +141,7 @@ export class BasicAuthService implements IBasicAuthService {
 
   // ─── Verify Email ────────────────────────────────────────────────────────
 
-  public async verifyEmail(token: string): Promise<void> {
+  public async verifyEmail(token: string, context: ISessionContext): Promise<AuthResponseDto> {
     this.logger.log(`[${this.rid}] verifyEmail — start`);
     const tokenHash = sha256(token);
 
@@ -185,6 +185,7 @@ export class BasicAuthService implements IBasicAuthService {
 
       authToken.user.isEmailVerified = true;
       authToken.user.emailVerifiedAt = new Date();
+      authToken.user.lastLoginAt = new Date();
       await tx.users.save(authToken.user);
     });
 
@@ -203,6 +204,13 @@ export class BasicAuthService implements IBasicAuthService {
           `[${this.rid}] verifyEmail — welcome email failed | error: ${err.message}`,
         ),
       );
+
+    return this.sessionService.createSession(
+      authToken.user.id,
+      authToken.user.email,
+      authToken.user.platform,
+      context,
+    );
   }
 
   // ─── Login ───────────────────────────────────────────────────────────────

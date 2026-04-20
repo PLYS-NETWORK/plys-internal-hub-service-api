@@ -64,9 +64,14 @@ export class AuthController {
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify email with token from verification link' })
-  public async verifyEmail(@Body() dto: VerifyEmailDto): Promise<ITranslatedPayload<null>> {
-    await this.authService.verifyEmail(dto.token);
-    return { messageKey: 'success.ok', data: null };
+  public async verifyEmail(
+    @Body() dto: VerifyEmailDto,
+    @Headers('x-device-id') deviceId?: string,
+    @Headers('x-fingerprint') fingerprint?: string,
+  ): Promise<ITranslatedPayload<AuthResponseDto>> {
+    const context = this.buildSessionContext(deviceId, fingerprint);
+    const data = await this.authService.verifyEmail(dto.token, context);
+    return { messageKey: 'success.ok', data };
   }
 
   @Public()

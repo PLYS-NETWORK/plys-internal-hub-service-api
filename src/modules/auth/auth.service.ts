@@ -36,8 +36,8 @@ export class AuthService implements IAuthService {
     return this.basicAuth.register(dto, context);
   }
 
-  public verifyEmail(token: string): Promise<void> {
-    return this.basicAuth.verifyEmail(token);
+  public verifyEmail(token: string, context: ISessionContext): Promise<AuthResponseDto> {
+    return this.basicAuth.verifyEmail(token, context);
   }
 
   public resendVerification(dto: ResendVerificationDto): Promise<void> {

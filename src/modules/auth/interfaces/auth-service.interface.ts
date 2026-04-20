@@ -29,7 +29,7 @@ export interface ISsoUserData {
 
 export interface IBasicAuthService {
   register(dto: RegisterDto, context: ISessionContext): Promise<void>;
-  verifyEmail(token: string): Promise<void>;
+  verifyEmail(token: string, context: ISessionContext): Promise<AuthResponseDto>;
   resendVerification(dto: ResendVerificationDto): Promise<void>;
   login(dto: LoginDto, context: ISessionContext): Promise<AuthResponseDto>;
   changePassword(dto: ChangePasswordDto): Promise<void>;
@@ -69,7 +69,7 @@ export interface IUserOnboardingService {
 
 export interface IAuthService {
   register(dto: RegisterDto, context: ISessionContext): Promise<void>;
-  verifyEmail(token: string): Promise<void>;
+  verifyEmail(token: string, context: ISessionContext): Promise<AuthResponseDto>;
   resendVerification(dto: ResendVerificationDto): Promise<void>;
   login(dto: LoginDto, context: ISessionContext): Promise<AuthResponseDto>;
   refresh(refreshToken: string, context: ISessionContext): Promise<AuthResponseDto>;
