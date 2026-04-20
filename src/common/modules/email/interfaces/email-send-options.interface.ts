@@ -16,3 +16,21 @@ export interface IWelcomeEmailOptions {
   readonly userName: string;
   readonly loginUrl: string;
 }
+
+export interface IApplicationNotificationEmailOptions {
+  /** Recipient name (business company name or consultant full name). */
+  readonly recipientName: string;
+  readonly projectTitle: string;
+  readonly consultantFullName: string;
+  /** Translated skill names that matched. */
+  readonly matchedSkills: string[];
+  /** Formatted consultant address string. */
+  readonly consultantAddress: string;
+  /** Link to view the application on the business platform. Only provided for business recipients. */
+  readonly applicationUrl?: string;
+}
+
+export interface IAiDetectedEmailOptions {
+  readonly userName: string;
+  readonly projectTitle: string;
+}

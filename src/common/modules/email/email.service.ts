@@ -4,12 +4,16 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { EMAIL_PROVIDER_TOKEN } from './constants';
 import { IEmailProvider } from './interfaces/email-provider.interface';
 import {
+  IAiDetectedEmailOptions,
+  IApplicationNotificationEmailOptions,
   IForgotPasswordOtpEmailOptions,
   IVerifyRegistrationEmailOptions,
   IWelcomeEmailOptions,
 } from './interfaces/email-send-options.interface';
 import { IEmailService } from './interfaces/email-service.interface';
 import {
+  buildAiDetectedEmail,
+  buildApplicationNotificationEmail,
   buildForgotPasswordOtpEmail,
   buildVerifyRegistrationEmail,
   buildWelcomeEmail,
@@ -101,6 +105,53 @@ export class EmailService implements IEmailService {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`[${this.rid}] sendWelcomeEmail — failed | to: ${to} | error: ${message}`);
+      throw err;
+    }
+  }
+
+  /**
+   * Sends a notification email when a consultant applies to a project.
+   * Called once for the business owner and once for the consultant.
+   */
+  public async sendApplicationNotificationEmail(
+    to: string,
+    options: IApplicationNotificationEmailOptions,
+  ): Promise<void> {
+    this.logger.log(`[${this.rid}] sendApplicationNotificationEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        to,
+        subject: `New Application: ${options.projectTitle}`,
+        html: await buildApplicationNotificationEmail(options),
+      });
+      this.logger.log(`[${this.rid}] sendApplicationNotificationEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `[${this.rid}] sendApplicationNotificationEmail — failed | to: ${to} | error: ${message}`,
+      );
+      throw err;
+    }
+  }
+
+  /**
+   * Sends a warning email when a consultant's interview answers are
+   * flagged as AI-generated content.
+   */
+  public async sendAiDetectedEmail(to: string, options: IAiDetectedEmailOptions): Promise<void> {
+    this.logger.log(`[${this.rid}] sendAiDetectedEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        to,
+        subject: `Application Review Notice: ${options.projectTitle}`,
+        html: await buildAiDetectedEmail(options),
+      });
+      this.logger.log(`[${this.rid}] sendAiDetectedEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `[${this.rid}] sendAiDetectedEmail — failed | to: ${to} | error: ${message}`,
+      );
       throw err;
     }
   }

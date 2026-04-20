@@ -5,9 +5,10 @@ import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable, Logger } from '@nestjs/common';
 
 import { InterviewQuestionItemDto } from '../dto/requests/interview-question-item.dto';
+import { IProjectInterviewQuestionsService } from '../interfaces';
 
 @Injectable()
-export class ProjectInterviewQuestionsService {
+export class ProjectInterviewQuestionsService implements IProjectInterviewQuestionsService {
   private readonly logger = new Logger(ProjectInterviewQuestionsService.name);
 
   private get rid(): string {

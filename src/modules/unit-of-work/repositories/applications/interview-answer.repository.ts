@@ -1,24 +1,24 @@
 import { AbstractRepository } from '@common/repositories';
-import { ScreeningQuestion } from '@database/entities';
+import { InterviewAnswer } from '@database/entities';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 
-import { IScreeningQuestionRepository } from './interfaces';
+import { IInterviewAnswerRepository } from './interfaces';
 
 @Injectable()
-export class ScreeningQuestionRepository
-  extends AbstractRepository<ScreeningQuestion>
-  implements IScreeningQuestionRepository
+export class InterviewAnswerRepository
+  extends AbstractRepository<InterviewAnswer>
+  implements IInterviewAnswerRepository
 {
   constructor(
     @InjectEntityManager()
     manager: EntityManager,
   ) {
-    super(ScreeningQuestion, manager);
+    super(InterviewAnswer, manager);
   }
 
   public withManager(manager: EntityManager): this {
-    return new ScreeningQuestionRepository(manager) as this;
+    return new InterviewAnswerRepository(manager) as this;
   }
 }

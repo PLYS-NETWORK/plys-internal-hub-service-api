@@ -33,5 +33,14 @@
     "unique_violation": "Bu değerlere sahip bir kayıt zaten mevcut",
     "foreign_key_violation": "Başvurulan kayıt bulunamadı",
     "not_null_violation": "Zorunlu bir alan eksik"
+  },
+  "application": {
+    "project_not_accepting": "Bu proje şu anda başvuru kabul etmiyor.",
+    "already_applied": "Bu projeye zaten başvurdunuz.",
+    "no_matching_skills": "Becerileriniz proje gereksinimleriyle eşleşmiyor.",
+    "missing_answers": "Başvurmadan önce lütfen tüm gerekli mülakat sorularını yanıtlayın.",
+    "ai_detected": "Yanıtlarınız yapay zeka tarafından oluşturulmuş içerik olarak tespit edildi. Bu projeye başvuramazsınız.",
+    "ai_check_failed": "Yanıtlarınız şu anda doğrulanamıyor. Lütfen daha sonra tekrar deneyin.",
+    "cover_letter_required": "Bu projeye başvururken bir ön yazı gereklidir."
   }
 }

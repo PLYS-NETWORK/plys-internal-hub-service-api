@@ -4,8 +4,10 @@ import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.inter
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable, Logger } from '@nestjs/common';
 
+import { IProjectRequiredSkillsService } from '../interfaces';
+
 @Injectable()
-export class ProjectRequiredSkillsService {
+export class ProjectRequiredSkillsService implements IProjectRequiredSkillsService {
   private readonly logger = new Logger(ProjectRequiredSkillsService.name);
 
   private get rid(): string {

@@ -10,7 +10,6 @@ export { PaymentProcessor } from './payment-processor.enum';
 export { PROFICIENCY_LEVELS, ProficiencyLevel } from './proficiency-level.enum';
 export { ProjectMemberStatus } from './project-member-status.enum';
 export { PROJECT_STATUSES, ProjectStatus } from './project-status.enum';
-export { ScreeningQuestionType } from './screening-question-type.enum';
 export { SsoProvider } from './sso-provider.enum';
 export { TaskCreationMode } from './task-creation-mode.enum';
 export { TASK_DIFFICULTIES, TaskDifficulty } from './task-difficulty.enum';

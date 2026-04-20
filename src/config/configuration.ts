@@ -49,4 +49,7 @@ export default registerAs('app', () => ({
     keyPrefix: process.env.REDIS_KEY_PREFIX ?? 'app:',
     tlsEnabled: process.env.REDIS_TLS_ENABLED === 'true',
   },
+  copyleaks: {
+    apiKey: process.env.COPYLEAKS_API_KEY ?? '',
+  },
 }));

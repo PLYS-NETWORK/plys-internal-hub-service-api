@@ -1,8 +1,6 @@
 import {
   IAiSessionMessageRepository,
   IAiTaskSessionRepository,
-  IApplicationAnswerChoiceRepository,
-  IApplicationAnswerRepository,
   IAuthTokenRepository,
   IBillingPeriodRepository,
   IBusinessProfileRepository,
@@ -10,6 +8,7 @@ import {
   IConsultantProfileRepository,
   IConsultantSkillRepository,
   IConsultantWalletRepository,
+  IInterviewAnswerRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
   INotificationRepository,
@@ -19,8 +18,6 @@ import {
   IProjectRepository,
   IProjectRequiredSkillRepository,
   IProjectStatusHistoryRepository,
-  IScreeningQuestionChoiceRepository,
-  IScreeningQuestionRepository,
   ISkillRepository,
   ITaskCommentAttachmentRepository,
   ITaskCommentRepository,
@@ -69,11 +66,8 @@ export interface IUnitOfWork {
   readonly aiSessionMessages: IAiSessionMessageRepository;
 
   // Domain 6 — Applications
-  readonly screeningQuestions: IScreeningQuestionRepository;
-  readonly screeningQuestionChoices: IScreeningQuestionChoiceRepository;
   readonly projectApplications: IProjectApplicationRepository;
-  readonly applicationAnswers: IApplicationAnswerRepository;
-  readonly applicationAnswerChoices: IApplicationAnswerChoiceRepository;
+  readonly interviewAnswers: IInterviewAnswerRepository;
   readonly projectMembers: IProjectMemberRepository;
 
   // Domain 7 — Notifications

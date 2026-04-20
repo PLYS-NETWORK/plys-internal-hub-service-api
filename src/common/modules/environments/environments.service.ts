@@ -136,4 +136,8 @@ export class EnvironmentsService implements IEnvironmentsService {
   public get redisTlsEnabled(): boolean {
     return this.configService.getOrThrow<boolean>('app.redis.tlsEnabled');
   }
+
+  public get copyleaksApiKey(): string {
+    return this.configService.getOrThrow<string>('app.copyleaks.apiKey');
+  }
 }

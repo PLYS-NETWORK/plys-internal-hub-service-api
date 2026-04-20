@@ -9,6 +9,7 @@ import { PlatformGuard } from './common/guards/platform.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
 import { JwtContextMiddleware } from './common/middleware/jwt-context.middleware';
+import { CopyleaksModule } from './common/modules/copyleaks';
 import { EmailModule } from './common/modules/email';
 import { EnvironmentsModule, EnvironmentsService } from './common/modules/environments';
 import { I18nModule } from './common/modules/i18n';
@@ -18,6 +19,7 @@ import { RequestContextMiddleware, RequestContextModule } from './common/modules
 import configuration from './config/configuration';
 import { AuditSubscriber } from './database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from './database/typeorm.config';
+import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BusinessProfilesModule } from './modules/business-profiles/business-profiles.module';
 import { ConsultantProfilesModule } from './modules/consultant-profiles/consultant-profiles.module';
@@ -42,9 +44,11 @@ import { UsersModule } from './modules/users/users.module';
     I18nModule,
     RequestContextModule,
     EmailModule,
+    CopyleaksModule,
     RedisModule,
     PaymentModule,
     UnitOfWorkModule,
+    ApplicationsModule,
     AuthModule,
     BusinessProfilesModule,
     ConsultantProfilesModule,

@@ -14,5 +14,8 @@
     "created": "Consultant profile created successfully.",
     "updated": "Consultant profile updated successfully.",
     "verified": "Consultant profile verified successfully."
+  },
+  "application": {
+    "created": "Application submitted successfully."
   }
 }

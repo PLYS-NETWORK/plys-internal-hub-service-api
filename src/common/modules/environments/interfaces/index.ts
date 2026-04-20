@@ -1,4 +1,5 @@
 export type { IAppConfig } from './app-config.interface';
+export type { ICopyleaksConfig } from './copyleaks-config.interface';
 export type { IDataConnection } from './data-connection.interface';
 export type { IEnvironmentsService } from './environments.interface';
 export type { IGoogleConfig } from './google-config.interface';

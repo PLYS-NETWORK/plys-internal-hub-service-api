@@ -1,3 +1,8 @@
+export { buildAiDetectedEmail, type IAiDetectedTemplateOptions } from './ai-detected.template';
+export {
+  buildApplicationNotificationEmail,
+  type IApplicationNotificationTemplateOptions,
+} from './application-notification.template';
 export {
   buildForgotPasswordOtpEmail,
   type IForgotPasswordOtpTemplateOptions,

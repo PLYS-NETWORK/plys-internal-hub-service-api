@@ -40,15 +40,6 @@ export class ProjectApplication extends AuditableEntity {
   @Column({ name: 'cover_letter', type: 'text', nullable: true })
   public coverLetter!: string | null;
 
-  @Column({
-    name: 'proposed_rate',
-    type: 'numeric',
-    precision: 10,
-    scale: 2,
-    nullable: true,
-  })
-  public proposedRate!: string | null;
-
   @Column({ name: 'reviewed_by', type: 'uuid', nullable: true })
   public reviewedBy!: string | null;
 

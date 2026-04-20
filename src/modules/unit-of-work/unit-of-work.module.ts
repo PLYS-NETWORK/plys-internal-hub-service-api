@@ -3,8 +3,6 @@ import { Module } from '@nestjs/common';
 import {
   AiSessionMessageRepository,
   AiTaskSessionRepository,
-  ApplicationAnswerChoiceRepository,
-  ApplicationAnswerRepository,
   AuthTokenRepository,
   BillingPeriodRepository,
   BusinessProfileRepository,
@@ -12,6 +10,7 @@ import {
   ConsultantProfileRepository,
   ConsultantSkillRepository,
   ConsultantWalletRepository,
+  InterviewAnswerRepository,
   InvoiceLineItemRepository,
   InvoiceRepository,
   NotificationRepository,
@@ -21,8 +20,6 @@ import {
   ProjectRepository,
   ProjectRequiredSkillRepository,
   ProjectStatusHistoryRepository,
-  ScreeningQuestionChoiceRepository,
-  ScreeningQuestionRepository,
   SkillRepository,
   TaskCommentAttachmentRepository,
   TaskCommentRepository,
@@ -62,11 +59,8 @@ const repositories = [
   AiTaskSessionRepository,
   AiSessionMessageRepository,
   // Domain 6 — Applications
-  ScreeningQuestionRepository,
-  ScreeningQuestionChoiceRepository,
   ProjectApplicationRepository,
-  ApplicationAnswerRepository,
-  ApplicationAnswerChoiceRepository,
+  InterviewAnswerRepository,
   ProjectMemberRepository,
   // Domain 7 — Notifications
   NotificationRepository,

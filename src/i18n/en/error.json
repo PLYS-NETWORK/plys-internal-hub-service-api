@@ -38,5 +38,14 @@
     "unique_violation": "A record with these values already exists",
     "foreign_key_violation": "Referenced record does not exist",
     "not_null_violation": "A required field is missing"
+  },
+  "application": {
+    "project_not_accepting": "This project is not currently accepting applications.",
+    "already_applied": "You have already applied to this project.",
+    "no_matching_skills": "Your skills do not match the project requirements.",
+    "missing_answers": "Please answer all required interview questions before applying.",
+    "ai_detected": "Your answers have been detected as AI-generated content. You cannot apply to this project.",
+    "ai_check_failed": "Unable to verify your answers at this time. Please try again later.",
+    "cover_letter_required": "A cover letter is required when applying to this project."
   }
 }

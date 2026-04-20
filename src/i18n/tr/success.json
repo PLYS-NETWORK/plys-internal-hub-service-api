@@ -14,5 +14,8 @@
     "created": "Danışman profili başarıyla oluşturuldu.",
     "updated": "Danışman profili başarıyla güncellendi.",
     "verified": "Danışman profili başarıyla doğrulandı."
+  },
+  "application": {
+    "created": "Başvuru başarıyla gönderildi."
   }
 }
