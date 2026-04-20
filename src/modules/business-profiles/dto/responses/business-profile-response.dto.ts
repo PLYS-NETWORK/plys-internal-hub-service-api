@@ -75,7 +75,11 @@ export class BusinessProfileResponseDto implements IBusinessProfileResponse {
 
   @Expose({ name: 'accountBalance' })
   @Transform(({ value }: { value: string }) => parseFloat(value))
-  @ApiProperty({ name: 'account_balance', example: 0.0, description: 'Account balance (2 decimal places)' })
+  @ApiProperty({
+    name: 'account_balance',
+    example: 0.0,
+    description: 'Account balance (2 decimal places)',
+  })
   public readonly account_balance!: number;
 
   @Expose({ name: 'createdAt' })

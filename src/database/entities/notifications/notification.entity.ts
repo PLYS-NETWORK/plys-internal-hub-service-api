@@ -1,10 +1,9 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-
 import { ProjectApplication } from '@database/entities/applications/project-application.entity';
 import { User } from '@database/entities/auth/user.entity';
 import { TraceableEntity } from '@database/entities/base/traceable.entity';
 import { Project } from '@database/entities/projects/project.entity';
 import { Task } from '@database/entities/tasks/task.entity';
+import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 // Append-only event log per user. `metadata` is intentionally JSONB —
 // each notification `type` may carry its own contextual payload (project id,

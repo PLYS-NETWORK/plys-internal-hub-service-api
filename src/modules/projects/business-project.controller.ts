@@ -29,13 +29,13 @@ import {
 import { BusinessProjectResponseDto } from './dto/responses';
 import { BusinessProjectService } from './services/business-project.service';
 
-@ApiTags('Projects')
+@ApiTags('Projects - Business')
 @ApiBearerAuth()
-@Controller('projects')
+@Controller('projects-business')
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
-export class ProjectsController {
+export class BusinessProjectController {
   constructor(private readonly businessProjectService: BusinessProjectService) {}
 
   @Post()
@@ -70,7 +70,7 @@ export class ProjectsController {
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update project fields (replaces skills when provided)' })
+  @ApiOperation({ summary: 'Update project fields (replaces skills and questions when provided)' })
   public async updateProject(
     @Param('id') id: string,
     @Body() dto: UpdateProjectDto,

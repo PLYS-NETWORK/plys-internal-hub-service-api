@@ -1,8 +1,8 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-
-import { TaskDisputeStatus } from '@database/enums/task-dispute-status.enum';
 import { User } from '@database/entities/auth/user.entity';
 import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { TaskDisputeStatus } from '@database/enums/task-dispute-status.enum';
+import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+
 import { Task } from './task.entity';
 
 // Opened when business rejects work at pending_approval. Side-effect on

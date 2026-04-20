@@ -1,3 +1,6 @@
+import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { BusinessProfile } from '@database/entities/profiles/business-profile.entity';
+import { InvoiceStatus } from '@database/enums/invoice-status.enum';
 import {
   Column,
   Entity,
@@ -9,9 +12,6 @@ import {
   Unique,
 } from 'typeorm';
 
-import { InvoiceStatus } from '@database/enums/invoice-status.enum';
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
-import { BusinessProfile } from '@database/entities/profiles/business-profile.entity';
 import { BillingPeriod } from './billing-period.entity';
 
 @Entity('invoices')

@@ -1,11 +1,10 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { PLATFORM_KEY } from '@common/decorators/platform.decorator';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 
 @Injectable()
 export class PlatformGuard implements CanActivate {

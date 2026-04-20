@@ -1,6 +1,6 @@
+import { TraceableEntity } from '@database/entities/base/traceable.entity';
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
-import { TraceableEntity } from '@database/entities/base/traceable.entity';
 import { ProjectApplication } from './project-application.entity';
 import { ScreeningQuestion } from './screening-question.entity';
 

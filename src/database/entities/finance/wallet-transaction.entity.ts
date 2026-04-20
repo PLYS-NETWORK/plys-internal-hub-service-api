@@ -1,3 +1,8 @@
+import { TraceableEntity } from '@database/entities/base/traceable.entity';
+import { Project } from '@database/entities/projects/project.entity';
+import { Task } from '@database/entities/tasks/task.entity';
+import { TransactionStatus } from '@database/enums/transaction-status.enum';
+import { WalletTransactionType } from '@database/enums/wallet-transaction-type.enum';
 import {
   Column,
   Entity,
@@ -8,11 +13,6 @@ import {
   Unique,
 } from 'typeorm';
 
-import { TransactionStatus } from '@database/enums/transaction-status.enum';
-import { WalletTransactionType } from '@database/enums/wallet-transaction-type.enum';
-import { TraceableEntity } from '@database/entities/base/traceable.entity';
-import { Project } from '@database/entities/projects/project.entity';
-import { Task } from '@database/entities/tasks/task.entity';
 import { ConsultantWallet } from './consultant-wallet.entity';
 import { Invoice } from './invoice.entity';
 

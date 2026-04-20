@@ -1,7 +1,6 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
-
 import { PaymentProcessor } from '@database/enums/payment-processor.enum';
 import { WebhookStatus } from '@database/enums/webhook-status.enum';
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
 // Idempotency log of incoming payment processor webhooks. The unique
 // constraint scopes event_id by processor (§C4 fix — Stripe and Polar

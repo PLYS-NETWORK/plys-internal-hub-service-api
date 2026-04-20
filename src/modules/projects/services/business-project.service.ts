@@ -3,7 +3,7 @@ import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { Project, ProjectRequiredSkill } from '@database/entities';
+import { Project, ProjectInterviewQuestion, ProjectRequiredSkill } from '@database/entities';
 import { ProjectStatus } from '@database/enums';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
@@ -19,6 +19,7 @@ import {
 } from '../dto/requests';
 import { BusinessProjectResponseDto } from '../dto/responses';
 import { IBusinessProjectService } from '../interfaces';
+import { ProjectInterviewQuestionsService } from './project-interview-questions.service';
 import { ProjectRequiredSkillsService } from './project-required-skills.service';
 
 /** Statuses where auto-derivation from setup state is allowed. */
@@ -26,6 +27,14 @@ const SETUP_STATUSES = new Set<ProjectStatus>([
   ProjectStatus.DRAFT,
   ProjectStatus.SETTING_UP,
   ProjectStatus.CONFIGURED,
+]);
+
+/** Statuses where the project is locked and cannot be edited. */
+const LOCKED_STATUSES = new Set<ProjectStatus>([
+  ProjectStatus.PUBLIC,
+  ProjectStatus.IN_PROGRESS,
+  ProjectStatus.DONE,
+  ProjectStatus.CANCELLED,
 ]);
 
 @Injectable()
@@ -41,6 +50,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     private readonly requestContext: RequestContextService,
     private readonly i18n: I18nService,
     private readonly projectRequiredSkillsService: ProjectRequiredSkillsService,
+    private readonly projectInterviewQuestionsService: ProjectInterviewQuestionsService,
   ) {}
 
   /** @inheritdoc */
@@ -53,7 +63,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     const requiredConsultants = dto.required_consultants ?? 1;
     const status = this.deriveInitialStatus();
 
-    const [project, skills] = await this.uow.withTransaction(async (txUow) => {
+    const [project, skills, questions] = await this.uow.withTransaction(async (txUow) => {
       const newProject = txUow.projects.create({
         businessId,
         title: dto.title,
@@ -67,13 +77,18 @@ export class BusinessProjectService implements IBusinessProjectService {
         dto.skills ?? [],
         txUow,
       );
-      return [savedProject, savedSkills] as const;
+      const savedQuestions = await this.projectInterviewQuestionsService.createForProject(
+        savedProject.id,
+        dto.interviewQuestions ?? [],
+        txUow,
+      );
+      return [savedProject, savedSkills, savedQuestions] as const;
     });
 
     this.logger.log(
-      `[${this.rid}] createProject — complete | businessId: ${businessId}, projectId: ${project.id}, status: ${project.status}, skills: ${skills.length}`,
+      `[${this.rid}] createProject — complete | businessId: ${businessId}, projectId: ${project.id}, status: ${project.status}, skills: ${skills.length}, questions: ${questions.length}`,
     );
-    return this.toResponseDto(project, skills);
+    return this.toResponseDto(project, skills, questions);
   }
 
   /** @inheritdoc */
@@ -92,9 +107,13 @@ export class BusinessProjectService implements IBusinessProjectService {
       dto.order_by,
     );
 
-    const skills = await this.loadSkillsForProjects(projects.map((p) => p.id));
+    const projectIds = projects.map((p) => p.id);
+    const skills = await this.loadSkillsForProjects(projectIds);
+    const questions = await this.loadQuestionsForProjects(projectIds);
 
-    const data = projects.map((p) => this.toResponseDto(p, skills.get(p.id) ?? []));
+    const data = projects.map((p) =>
+      this.toResponseDto(p, skills.get(p.id) ?? [], questions.get(p.id) ?? []),
+    );
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
 
     this.logger.log(
@@ -120,11 +139,14 @@ export class BusinessProjectService implements IBusinessProjectService {
       });
     }
 
-    const skills = await this.projectRequiredSkillsService.findByProjectId(id);
+    const [skills, questions] = await Promise.all([
+      this.projectRequiredSkillsService.findByProjectId(id),
+      this.projectInterviewQuestionsService.findByProjectId(id),
+    ]);
     this.logger.log(
-      `[${this.rid}] getProject — complete | projectId: ${id}, skills: ${skills.length}`,
+      `[${this.rid}] getProject — complete | projectId: ${id}, skills: ${skills.length}, questions: ${questions.length}`,
     );
-    return this.toResponseDto(project, skills);
+    return this.toResponseDto(project, skills, questions);
   }
 
   /** @inheritdoc */
@@ -147,7 +169,18 @@ export class BusinessProjectService implements IBusinessProjectService {
       });
     }
 
-    const [updatedProject, skills] = await this.uow.withTransaction(async (txUow) => {
+    if (LOCKED_STATUSES.has(project.status)) {
+      this.logger.warn(
+        `[${this.rid}] updateProject — locked status | projectId: ${id}, status: ${project.status}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.project.cannot_be_edited',
+        errorCode: ERROR_CODES.PROJECT_CANNOT_BE_EDITED,
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+      });
+    }
+
+    const [updatedProject, skills, questions] = await this.uow.withTransaction(async (txUow) => {
       // Apply field updates to the entity in memory first.
       if (dto.title !== undefined) project.title = dto.title;
       if (dto.introduction !== undefined) project.introduction = dto.introduction;
@@ -160,6 +193,15 @@ export class BusinessProjectService implements IBusinessProjectService {
         dto.skills !== undefined
           ? await this.projectRequiredSkillsService.replaceForProject(project.id, dto.skills, txUow)
           : await this.projectRequiredSkillsService.findByProjectId(project.id, txUow);
+
+      const currentQuestions =
+        dto.interviewQuestions !== undefined
+          ? await this.projectInterviewQuestionsService.replaceForProject(
+              project.id,
+              dto.interviewQuestions,
+              txUow,
+            )
+          : await this.projectInterviewQuestionsService.findByProjectId(project.id, txUow);
 
       // Auto-derive setup status only while the project is still in a
       // pre-published state. PUBLIC / IN_PROGRESS / DONE / CANCELLED are not
@@ -174,13 +216,13 @@ export class BusinessProjectService implements IBusinessProjectService {
       }
 
       const savedProject = await txUow.projects.save(project);
-      return [savedProject, currentSkills] as const;
+      return [savedProject, currentSkills, currentQuestions] as const;
     });
 
     this.logger.log(
-      `[${this.rid}] updateProject — complete | projectId: ${updatedProject.id}, status: ${updatedProject.status}, skills: ${skills.length}`,
+      `[${this.rid}] updateProject — complete | projectId: ${updatedProject.id}, status: ${updatedProject.status}, skills: ${skills.length}, questions: ${questions.length}`,
     );
-    return this.toResponseDto(updatedProject, skills);
+    return this.toResponseDto(updatedProject, skills, questions);
   }
 
   /** @inheritdoc */
@@ -228,11 +270,14 @@ export class BusinessProjectService implements IBusinessProjectService {
     project.status = dto.status;
     const updatedProject = await this.uow.projects.save(project);
 
-    const skills = await this.projectRequiredSkillsService.findByProjectId(id);
+    const [skills, questions] = await Promise.all([
+      this.projectRequiredSkillsService.findByProjectId(id),
+      this.projectInterviewQuestionsService.findByProjectId(id),
+    ]);
     this.logger.log(
       `[${this.rid}] updateStatus — complete | projectId: ${id}, status: ${updatedProject.status}`,
     );
-    return this.toResponseDto(updatedProject, skills);
+    return this.toResponseDto(updatedProject, skills, questions);
   }
 
   // ─── Private helpers ───────────────────────────────────────────────────────
@@ -289,6 +334,26 @@ export class BusinessProjectService implements IBusinessProjectService {
     return ProjectStatus.DRAFT;
   }
 
+  // Loads interview questions for a list of project IDs in a single query (avoids N+1).
+  private async loadQuestionsForProjects(
+    projectIds: string[],
+  ): Promise<Map<string, ProjectInterviewQuestion[]>> {
+    if (projectIds.length === 0) return new Map();
+
+    const allQuestions = await this.uow.projectInterviewQuestions.find({
+      where: projectIds.map((id) => ({ projectId: id })),
+      order: { displayOrder: 'ASC' },
+    });
+
+    const byProject = new Map<string, ProjectInterviewQuestion[]>();
+    for (const question of allQuestions) {
+      const list = byProject.get(question.projectId) ?? [];
+      list.push(question);
+      byProject.set(question.projectId, list);
+    }
+    return byProject;
+  }
+
   // Loads required skills for a list of project IDs in a single query (avoids N+1).
   private async loadSkillsForProjects(
     projectIds: string[],
@@ -312,6 +377,7 @@ export class BusinessProjectService implements IBusinessProjectService {
   private toResponseDto(
     project: Project,
     skills: ProjectRequiredSkill[],
+    questions: ProjectInterviewQuestion[],
   ): BusinessProjectResponseDto {
     const lang = this.requestContext.lang;
 
@@ -332,6 +398,12 @@ export class BusinessProjectService implements IBusinessProjectService {
         skills: skills.map((s) => ({
           skill_id: s.skillId,
           skill_name: this.translateSkillKey(s.skill.name, lang),
+        })),
+        interview_questions: questions.map((q) => ({
+          id: q.id,
+          question_text: q.questionText,
+          display_order: q.displayOrder,
+          is_required: q.isRequired,
         })),
       },
       { excludeExtraneousValues: true },

@@ -1,3 +1,4 @@
+import { AuditableEntity } from '@database/entities/base/auditable.entity';
 import {
   Column,
   Entity,
@@ -8,7 +9,6 @@ import {
   Unique,
 } from 'typeorm';
 
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
 import { User } from './user.entity';
 
 // One row per active browser/device session. The session token is an opaque

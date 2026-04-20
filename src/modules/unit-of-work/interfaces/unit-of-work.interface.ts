@@ -14,6 +14,7 @@ import {
   IInvoiceRepository,
   INotificationRepository,
   IProjectApplicationRepository,
+  IProjectInterviewQuestionRepository,
   IProjectMemberRepository,
   IProjectRepository,
   IProjectRequiredSkillRepository,
@@ -52,6 +53,7 @@ export interface IUnitOfWork {
 
   // Domain 3 — Projects
   readonly projects: IProjectRepository;
+  readonly projectInterviewQuestions: IProjectInterviewQuestionRepository;
   readonly projectRequiredSkills: IProjectRequiredSkillRepository;
   readonly projectStatusHistory: IProjectStatusHistoryRepository;
 

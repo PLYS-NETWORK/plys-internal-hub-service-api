@@ -1,7 +1,3 @@
-import { InternalServerErrorException, Logger, UnauthorizedException } from '@nestjs/common';
-import { Polar } from '@polar-sh/sdk';
-import * as crypto from 'crypto';
-
 import { EnvironmentsService } from '@common/modules/environments';
 import {
   ICheckoutSession,
@@ -13,6 +9,9 @@ import {
   IWebhookEvent,
   WebhookEventType,
 } from '@common/modules/payment/interfaces/webhook-event.interface';
+import { InternalServerErrorException, Logger, UnauthorizedException } from '@nestjs/common';
+import { Polar } from '@polar-sh/sdk';
+import * as crypto from 'crypto';
 
 /**
  * Concrete Strategy: delivers payment operations via the Polar.sh API.

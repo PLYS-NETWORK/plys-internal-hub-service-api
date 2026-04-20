@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 
-import { PaymentProviderRegistry } from './payment-provider.registry';
 import { PaymentService } from './payment.service';
+import { PaymentProviderRegistry } from './payment-provider.registry';
 import { PolarPaymentProviderFactory } from './providers/polar/polar-payment-provider.factory';
 import { StripePaymentProviderFactory } from './providers/stripe/stripe-payment-provider.factory';
 

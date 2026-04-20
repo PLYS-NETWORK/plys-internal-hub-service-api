@@ -1,10 +1,9 @@
-import { Injectable, NestMiddleware } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { FastifyReply, FastifyRequest } from 'fastify';
-
 import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
 import { EnvironmentsService } from '@common/modules/environments';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { Injectable, NestMiddleware } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { FastifyReply, FastifyRequest } from 'fastify';
 
 @Injectable()
 export class JwtContextMiddleware implements NestMiddleware {

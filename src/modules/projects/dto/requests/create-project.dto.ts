@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 import {
   ArrayUnique,
   IsArray,
@@ -9,9 +9,11 @@ import {
   IsUUID,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 
 import { ICreateProjectRequest } from './interfaces/create-project.request.interface';
+import { InterviewQuestionItemDto } from './interview-question-item.dto';
 
 export class CreateProjectDto implements ICreateProjectRequest {
   @Expose()
@@ -45,4 +47,16 @@ export class CreateProjectDto implements ICreateProjectRequest {
   @ArrayUnique()
   @IsOptional()
   public readonly skills?: string[];
+
+  @Expose({ name: 'interview_questions' })
+  @ApiPropertyOptional({
+    name: 'interview_questions',
+    type: [InterviewQuestionItemDto],
+    description: 'Interview questions consultants must answer before applying.',
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => InterviewQuestionItemDto)
+  @IsOptional()
+  public readonly interviewQuestions?: InterviewQuestionItemDto[];
 }

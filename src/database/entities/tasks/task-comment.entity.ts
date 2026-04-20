@@ -1,7 +1,7 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-
 import { User } from '@database/entities/auth/user.entity';
 import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+
 import { Task } from './task.entity';
 
 // Flat comment model. Soft-delete via `is_deleted` flag — body preserved for

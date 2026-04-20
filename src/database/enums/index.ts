@@ -18,6 +18,6 @@ export { TaskDisputeStatus } from './task-dispute-status.enum';
 export { TaskHistoryChangeType } from './task-history-change.enum';
 export { TASK_KANBAN_STATUSES, TaskKanbanStatus } from './task-kanban-status.enum';
 export { TransactionStatus } from './transaction-status.enum';
+export { UserRole } from './user-role.enum';
 export { WalletTransactionType } from './wallet-transaction-type.enum';
 export { WebhookStatus } from './webhook-status.enum';
-export { UserRole } from './user-role.enum';

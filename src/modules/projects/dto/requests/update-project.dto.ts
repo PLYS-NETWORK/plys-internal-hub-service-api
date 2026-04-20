@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 import {
   ArrayUnique,
   IsArray,
@@ -9,9 +9,11 @@ import {
   IsUUID,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 
 import { IUpdateProjectRequest } from './interfaces/update-project.request.interface';
+import { InterviewQuestionItemDto } from './interview-question-item.dto';
 
 export class UpdateProjectDto implements IUpdateProjectRequest {
   @Expose()
@@ -47,4 +49,16 @@ export class UpdateProjectDto implements IUpdateProjectRequest {
   @ArrayUnique()
   @IsOptional()
   public readonly skills?: string[];
+
+  @Expose({ name: 'interview_questions' })
+  @ApiPropertyOptional({
+    name: 'interview_questions',
+    type: [InterviewQuestionItemDto],
+    description: 'When provided, replaces the entire set of interview questions.',
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => InterviewQuestionItemDto)
+  @IsOptional()
+  public readonly interviewQuestions?: InterviewQuestionItemDto[];
 }

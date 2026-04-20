@@ -1,5 +1,6 @@
 import { ProjectStatus } from '@database/enums/project-status.enum';
 
+import { IProjectInterviewQuestionResponse } from './project-interview-question.response.interface';
 import { IProjectSkillResponse } from './project-skill.response.interface';
 
 export interface IConsultantProjectResponse {
@@ -13,4 +14,5 @@ export interface IConsultantProjectResponse {
   started_at: Date | null;
   cancelled_at: Date | null;
   skills: IProjectSkillResponse[];
+  interview_questions: IProjectInterviewQuestionResponse[];
 }

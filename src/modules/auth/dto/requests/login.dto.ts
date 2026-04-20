@@ -1,8 +1,8 @@
+import { ActivePlatform } from '@database/enums/active-platform.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { IsEmail, IsEnum, IsString } from 'class-validator';
 
-import { ActivePlatform } from '@database/enums/active-platform.enum';
 import { ILoginRequest } from './interfaces/login.request.interface';
 
 export class LoginDto implements ILoginRequest {

@@ -1,4 +1,5 @@
 import { EnvironmentsService } from '@common/modules/environments';
+
 import { IPaymentProvider } from './payment-provider.interface';
 
 /**

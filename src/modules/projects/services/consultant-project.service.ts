@@ -4,7 +4,7 @@ import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { Project, ProjectRequiredSkill } from '@database/entities';
+import { Project, ProjectInterviewQuestion, ProjectRequiredSkill } from '@database/entities';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -12,6 +12,7 @@ import { I18nService } from 'nestjs-i18n';
 
 import { ConsultantProjectResponseDto } from '../dto/responses';
 import { IConsultantProjectService } from '../interfaces/consultant-project-service.interface';
+import { ProjectInterviewQuestionsService } from './project-interview-questions.service';
 
 @Injectable()
 export class ConsultantProjectService implements IConsultantProjectService {
@@ -25,6 +26,7 @@ export class ConsultantProjectService implements IConsultantProjectService {
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly i18n: I18nService,
+    private readonly projectInterviewQuestionsService: ProjectInterviewQuestionsService,
   ) {}
 
   // Returns paginated public projects that require at least one skill the
@@ -55,9 +57,13 @@ export class ConsultantProjectService implements IConsultantProjectService {
       pageOptions.limit,
     );
 
-    const skills = await this.loadSkillsForProjects(projects.map((p) => p.id));
+    const projectIds = projects.map((p) => p.id);
+    const skills = await this.loadSkillsForProjects(projectIds);
+    const questions = await this.loadQuestionsForProjects(projectIds);
 
-    const data = projects.map((p) => this.toResponseDto(p, skills.get(p.id) ?? []));
+    const data = projects.map((p) =>
+      this.toResponseDto(p, skills.get(p.id) ?? [], questions.get(p.id) ?? []),
+    );
     const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
 
     this.logger.log(
@@ -105,9 +111,29 @@ export class ConsultantProjectService implements IConsultantProjectService {
     return byProject;
   }
 
+  private async loadQuestionsForProjects(
+    projectIds: string[],
+  ): Promise<Map<string, ProjectInterviewQuestion[]>> {
+    if (projectIds.length === 0) return new Map();
+
+    const allQuestions = await this.uow.projectInterviewQuestions.find({
+      where: projectIds.map((id) => ({ projectId: id })),
+      order: { displayOrder: 'ASC' },
+    });
+
+    const byProject = new Map<string, ProjectInterviewQuestion[]>();
+    for (const question of allQuestions) {
+      const list = byProject.get(question.projectId) ?? [];
+      list.push(question);
+      byProject.set(question.projectId, list);
+    }
+    return byProject;
+  }
+
   private toResponseDto(
     project: Project,
     skills: ProjectRequiredSkill[],
+    questions: ProjectInterviewQuestion[],
   ): ConsultantProjectResponseDto {
     const lang = this.requestContext.lang;
 
@@ -126,6 +152,12 @@ export class ConsultantProjectService implements IConsultantProjectService {
         skills: skills.map((s) => ({
           skill_id: s.skillId,
           skill_name: this.translateSkillKey(s.skill.name, lang),
+        })),
+        interview_questions: questions.map((q) => ({
+          id: q.id,
+          question_text: q.questionText,
+          display_order: q.displayOrder,
+          is_required: q.isRequired,
         })),
       },
       { excludeExtraneousValues: true },

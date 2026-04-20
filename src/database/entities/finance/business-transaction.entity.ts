@@ -1,3 +1,9 @@
+import { TraceableEntity } from '@database/entities/base/traceable.entity';
+import { BusinessProfile } from '@database/entities/profiles/business-profile.entity';
+import { Project } from '@database/entities/projects/project.entity';
+import { Task } from '@database/entities/tasks/task.entity';
+import { BusinessTransactionType } from '@database/enums/business-transaction-type.enum';
+import { TransactionStatus } from '@database/enums/transaction-status.enum';
 import {
   Column,
   Entity,
@@ -8,12 +14,6 @@ import {
   Unique,
 } from 'typeorm';
 
-import { BusinessTransactionType } from '@database/enums/business-transaction-type.enum';
-import { TransactionStatus } from '@database/enums/transaction-status.enum';
-import { TraceableEntity } from '@database/entities/base/traceable.entity';
-import { BusinessProfile } from '@database/entities/profiles/business-profile.entity';
-import { Project } from '@database/entities/projects/project.entity';
-import { Task } from '@database/entities/tasks/task.entity';
 import { Invoice } from './invoice.entity';
 
 @Entity('business_transactions')

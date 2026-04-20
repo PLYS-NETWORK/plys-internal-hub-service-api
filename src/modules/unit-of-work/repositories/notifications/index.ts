@@ -1,3 +1,2 @@
-export { NotificationRepository } from './notification.repository';
-
 export * from './interfaces';
+export { NotificationRepository } from './notification.repository';

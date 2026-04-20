@@ -3,6 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 
 import { IBusinessProjectResponse } from './interfaces/business-project.response.interface';
+import { ProjectInterviewQuestionResponseDto } from './project-interview-question-response.dto';
 import { ProjectSkillResponseDto } from './project-skill-response.dto';
 
 @Exclude()
@@ -55,4 +56,9 @@ export class BusinessProjectResponseDto implements IBusinessProjectResponse {
   @ApiProperty({ type: [ProjectSkillResponseDto] })
   @Type(() => ProjectSkillResponseDto)
   public readonly skills!: ProjectSkillResponseDto[];
+
+  @Expose()
+  @ApiProperty({ name: 'interview_questions', type: [ProjectInterviewQuestionResponseDto] })
+  @Type(() => ProjectInterviewQuestionResponseDto)
+  public readonly interview_questions!: ProjectInterviewQuestionResponseDto[];
 }

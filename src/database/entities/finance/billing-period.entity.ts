@@ -1,3 +1,6 @@
+import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { BusinessProfile } from '@database/entities/profiles/business-profile.entity';
+import { BillingPeriodStatus } from '@database/enums/billing-period-status.enum';
 import {
   Check,
   Column,
@@ -7,10 +10,6 @@ import {
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
-
-import { BillingPeriodStatus } from '@database/enums/billing-period-status.enum';
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
-import { BusinessProfile } from '@database/entities/profiles/business-profile.entity';
 
 // Monthly window per business. Always create / fetch via the SQL function
 // `get_or_create_billing_period(business_id, year, month)` to prevent races

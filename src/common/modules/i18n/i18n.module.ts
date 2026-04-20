@@ -1,8 +1,7 @@
+import { DEFAULT_LOCALE } from '@common/modules/request-context/interfaces/request-context.interface';
 import { Global, Module } from '@nestjs/common';
 import { AcceptLanguageResolver, HeaderResolver, I18nModule as NestI18nModule } from 'nestjs-i18n';
 import * as path from 'path';
-
-import { DEFAULT_LOCALE } from '@common/modules/request-context/interfaces/request-context.interface';
 
 // Wraps nestjs-i18n with our conventions:
 //   - Default locale 'en'

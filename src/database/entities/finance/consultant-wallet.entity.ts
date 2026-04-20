@@ -1,7 +1,6 @@
-import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
-
 import { AuditableEntity } from '@database/entities/base/auditable.entity';
 import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
+import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
 // SCHEMA FIX §C2: cleared_balance does NOT enforce >= 0. The wallet ledger
 // can go negative during chargebacks/reversals. Non-negative withdrawal is

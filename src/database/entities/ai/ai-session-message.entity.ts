@@ -1,3 +1,6 @@
+import { TraceableEntity } from '@database/entities/base/traceable.entity';
+import { Task } from '@database/entities/tasks/task.entity';
+import { AiMessageRole } from '@database/enums/ai-message-role.enum';
 import {
   Column,
   Entity,
@@ -8,9 +11,6 @@ import {
   Unique,
 } from 'typeorm';
 
-import { AiMessageRole } from '@database/enums/ai-message-role.enum';
-import { TraceableEntity } from '@database/entities/base/traceable.entity';
-import { Task } from '@database/entities/tasks/task.entity';
 import { AiTaskSession } from './ai-task-session.entity';
 
 // Append-only conversation log. Optional `linked_task_id` connects a message

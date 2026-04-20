@@ -1,3 +1,7 @@
+import { TraceableEntity } from '@database/entities/base/traceable.entity';
+import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
+import { Project } from '@database/entities/projects/project.entity';
+import { Task } from '@database/entities/tasks/task.entity';
 import {
   Check,
   Column,
@@ -9,10 +13,6 @@ import {
   Unique,
 } from 'typeorm';
 
-import { TraceableEntity } from '@database/entities/base/traceable.entity';
-import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
-import { Project } from '@database/entities/projects/project.entity';
-import { Task } from '@database/entities/tasks/task.entity';
 import { Invoice } from './invoice.entity';
 
 // Snapshot of task pricing at billing time. CHECK ensures

@@ -1,8 +1,7 @@
+import { EnvironmentsService } from '@common/modules/environments';
 import { ExecutionContext, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Observable } from 'rxjs';
-
-import { EnvironmentsService } from '@common/modules/environments';
 
 @Injectable()
 export class GoogleOAuthGuard extends AuthGuard('google') {

@@ -1,5 +1,5 @@
-import { AbstractRepository } from '@common/repositories';
 import { Order } from '@common/dto/page-options.dto';
+import { AbstractRepository } from '@common/repositories';
 import { Project } from '@database/entities';
 
 export interface IProjectRepository extends AbstractRepository<Project> {

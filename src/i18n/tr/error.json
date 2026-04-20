@@ -26,7 +26,8 @@
   },
   "project": {
     "not_found": "Proje bulunamadı.",
-    "requires_tasks_for_configured": "Proje yapılandırılmış olarak işaretlenebilmesi için en az bir görev bulunmalıdır."
+    "requires_tasks_for_configured": "Proje yapılandırılmış olarak işaretlenebilmesi için en az bir görev bulunmalıdır.",
+    "cannot_be_edited": "Proje mevcut durumunda düzenlenemez."
   },
   "database": {
     "unique_violation": "Bu değerlere sahip bir kayıt zaten mevcut",

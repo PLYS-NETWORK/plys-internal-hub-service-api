@@ -1,8 +1,7 @@
-import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
-
+import { AuditableEntity } from '@database/entities/base/auditable.entity';
 import { ActivePlatform } from '@database/enums/active-platform.enum';
 import { UserRole } from '@database/enums/user-role.enum';
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 // Root identity. One row per (human, platform) — the same email may exist once
 // per platform, producing independent accounts on Business / Consultant / Admin.

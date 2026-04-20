@@ -1,10 +1,9 @@
 import 'dotenv/config';
 
-import * as fs from 'fs';
-import * as path from 'path';
-
 import { AppDataSource } from '@database/data-source';
 import { Skill } from '@database/entities/profiles/skill.entity';
+import * as fs from 'fs';
+import * as path from 'path';
 
 interface SkillSeed {
   key: string;

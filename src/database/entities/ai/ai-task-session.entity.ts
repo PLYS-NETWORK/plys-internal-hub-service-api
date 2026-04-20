@@ -1,8 +1,7 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-
 import { User } from '@database/entities/auth/user.entity';
 import { AuditableEntity } from '@database/entities/base/auditable.entity';
 import { Project } from '@database/entities/projects/project.entity';
+import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 // One active session per (project_id, user_id) — enforced by partial unique
 // index in the migration. Closing a session sets is_active = FALSE; history
