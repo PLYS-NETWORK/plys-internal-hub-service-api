@@ -72,11 +72,9 @@ export class BusinessProjectController {
   @Patch(':id/publish')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Confirm and publish the project' })
-  public async confirmPublish(
-    @Param('id') id: string,
-  ): Promise<ITranslatedPayload<BusinessProjectResponseDto>> {
-    const data = await this.businessProjectService.confirmPublish(id);
-    return { messageKey: 'success.project.published', data };
+  public async confirmPublish(@Param('id') id: string): Promise<ITranslatedPayload<null>> {
+    await this.businessProjectService.confirmPublish(id);
+    return { messageKey: 'success.project.published', data: null };
   }
 
   @Get(':id')
