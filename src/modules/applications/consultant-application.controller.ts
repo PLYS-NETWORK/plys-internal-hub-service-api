@@ -1,15 +1,27 @@
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
+import { PageDto } from '@common/dto/page.dto';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { ActivePlatform } from '@database/enums/active-platform.enum';
 import { UserRole } from '@database/enums/user-role.enum';
-import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { PlatformGuard } from '../../common/guards/platform.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { ApplyProjectDto } from './dto/requests';
-import { ApplicationResponseDto } from './dto/responses';
+import { ApplyProjectDto, ListMyApplicationsDto } from './dto/requests';
+import { ApplicationResponseDto, ConsultantApplicationListItemResponseDto } from './dto/responses';
 import { ConsultantApplicationService } from './services/consultant-application.service';
 
 @ApiTags('Applications - Consultant')
@@ -29,5 +41,25 @@ export class ConsultantApplicationController {
   ): Promise<ITranslatedPayload<ApplicationResponseDto>> {
     const data = await this.consultantApplicationService.applyToProject(dto);
     return { messageKey: 'success.application.created', data };
+  }
+
+  @Get('mine')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List my applications' })
+  public async listMyApplications(
+    @Query() dto: ListMyApplicationsDto,
+  ): Promise<ITranslatedPayload<PageDto<ConsultantApplicationListItemResponseDto>>> {
+    const data = await this.consultantApplicationService.listMyApplications(dto);
+    return { messageKey: 'success.ok', data };
+  }
+
+  @Patch(':id/withdraw')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Withdraw a pending application' })
+  public async withdrawApplication(
+    @Param('id') id: string,
+  ): Promise<ITranslatedPayload<ApplicationResponseDto>> {
+    const data = await this.consultantApplicationService.withdrawApplication(id);
+    return { messageKey: 'success.application.withdrawn', data };
   }
 }

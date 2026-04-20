@@ -14,6 +14,7 @@ import {
 
 import { IUpdateProjectRequest } from './interfaces/update-project.request.interface';
 import { InterviewQuestionItemDto } from './interview-question-item.dto';
+import { TaskItemDto } from './task-item.dto';
 
 export class UpdateProjectDto implements IUpdateProjectRequest {
   @Expose()
@@ -61,4 +62,16 @@ export class UpdateProjectDto implements IUpdateProjectRequest {
   @Type(() => InterviewQuestionItemDto)
   @IsOptional()
   public readonly interviewQuestions?: InterviewQuestionItemDto[];
+
+  @Expose()
+  @ApiPropertyOptional({
+    name: 'tasks',
+    type: [TaskItemDto],
+    description: 'When provided, replaces the entire set of tasks.',
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TaskItemDto)
+  @IsOptional()
+  public readonly tasks?: TaskItemDto[];
 }

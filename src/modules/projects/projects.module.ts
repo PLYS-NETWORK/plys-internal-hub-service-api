@@ -7,6 +7,7 @@ import { BusinessProjectService } from './services/business-project.service';
 import { ConsultantProjectService } from './services/consultant-project.service';
 import { ProjectInterviewQuestionsService } from './services/project-interview-questions.service';
 import { ProjectRequiredSkillsService } from './services/project-required-skills.service';
+import { ProjectTasksService } from './services/project-tasks.service';
 
 @Module({
   imports: [UnitOfWorkModule],
@@ -16,6 +17,7 @@ import { ProjectRequiredSkillsService } from './services/project-required-skills
     ConsultantProjectService,
     ProjectInterviewQuestionsService,
     ProjectRequiredSkillsService,
+    ProjectTasksService,
   ],
   exports: [BusinessProjectService, ConsultantProjectService],
 })

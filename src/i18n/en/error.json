@@ -46,6 +46,10 @@
     "missing_answers": "Please answer all required interview questions before applying.",
     "ai_detected": "Your answers have been detected as AI-generated content. You cannot apply to this project.",
     "ai_check_failed": "Unable to verify your answers at this time. Please try again later.",
-    "cover_letter_required": "A cover letter is required when applying to this project."
+    "cover_letter_required": "A cover letter is required when applying to this project.",
+    "not_found": "Application not found.",
+    "cannot_approve": "This application cannot be approved in its current status.",
+    "cannot_reject": "This application cannot be rejected in its current status.",
+    "cannot_withdraw": "Only pending applications can be withdrawn."
   }
 }

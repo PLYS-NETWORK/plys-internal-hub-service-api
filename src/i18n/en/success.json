@@ -16,6 +16,9 @@
     "verified": "Consultant profile verified successfully."
   },
   "application": {
-    "created": "Application submitted successfully."
+    "created": "Application submitted successfully.",
+    "approved": "Application approved successfully.",
+    "rejected": "Application rejected successfully.",
+    "withdrawn": "Application withdrawn successfully."
   }
 }

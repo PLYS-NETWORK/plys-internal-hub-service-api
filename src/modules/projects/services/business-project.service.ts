@@ -3,9 +3,8 @@ import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { Project, ProjectInterviewQuestion, ProjectRequiredSkill } from '@database/entities';
+import { Project, ProjectInterviewQuestion, ProjectRequiredSkill, Task } from '@database/entities';
 import { ProjectStatus } from '@database/enums';
-import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -21,6 +20,7 @@ import { BusinessProjectResponseDto } from '../dto/responses';
 import { IBusinessProjectService } from '../interfaces';
 import { ProjectInterviewQuestionsService } from './project-interview-questions.service';
 import { ProjectRequiredSkillsService } from './project-required-skills.service';
+import { ProjectTasksService } from './project-tasks.service';
 
 /** Statuses where auto-derivation from setup state is allowed. */
 const SETUP_STATUSES = new Set<ProjectStatus>([
@@ -51,6 +51,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     private readonly i18n: I18nService,
     private readonly projectRequiredSkillsService: ProjectRequiredSkillsService,
     private readonly projectInterviewQuestionsService: ProjectInterviewQuestionsService,
+    private readonly projectTasksService: ProjectTasksService,
   ) {}
 
   /** @inheritdoc */
@@ -63,7 +64,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     const requiredConsultants = dto.required_consultants ?? 1;
     const status = this.deriveInitialStatus();
 
-    const [project, skills, questions] = await this.uow.withTransaction(async (txUow) => {
+    const [project, skills, questions, tasks] = await this.uow.withTransaction(async (txUow) => {
       const newProject = txUow.projects.create({
         businessId,
         title: dto.title,
@@ -82,13 +83,18 @@ export class BusinessProjectService implements IBusinessProjectService {
         dto.interviewQuestions ?? [],
         txUow,
       );
-      return [savedProject, savedSkills, savedQuestions] as const;
+      const savedTasks = await this.projectTasksService.createForProject(
+        savedProject.id,
+        dto.tasks ?? [],
+        txUow,
+      );
+      return [savedProject, savedSkills, savedQuestions, savedTasks] as const;
     });
 
     this.logger.log(
-      `[${this.rid}] createProject — complete | businessId: ${businessId}, projectId: ${project.id}, status: ${project.status}, skills: ${skills.length}, questions: ${questions.length}`,
+      `[${this.rid}] createProject — complete | businessId: ${businessId}, projectId: ${project.id}, status: ${project.status}, skills: ${skills.length}, questions: ${questions.length}, tasks: ${tasks.length}`,
     );
-    return this.toResponseDto(project, skills, questions);
+    return this.toResponseDto(project, skills, questions, tasks);
   }
 
   /** @inheritdoc */
@@ -108,11 +114,19 @@ export class BusinessProjectService implements IBusinessProjectService {
     );
 
     const projectIds = projects.map((p) => p.id);
-    const skills = await this.loadSkillsForProjects(projectIds);
-    const questions = await this.loadQuestionsForProjects(projectIds);
+    const [skills, questions, tasks] = await Promise.all([
+      this.loadSkillsForProjects(projectIds),
+      this.loadQuestionsForProjects(projectIds),
+      this.loadTasksForProjects(projectIds),
+    ]);
 
     const data = projects.map((p) =>
-      this.toResponseDto(p, skills.get(p.id) ?? [], questions.get(p.id) ?? []),
+      this.toResponseDto(
+        p,
+        skills.get(p.id) ?? [],
+        questions.get(p.id) ?? [],
+        tasks.get(p.id) ?? [],
+      ),
     );
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
 
@@ -139,14 +153,15 @@ export class BusinessProjectService implements IBusinessProjectService {
       });
     }
 
-    const [skills, questions] = await Promise.all([
+    const [skills, questions, tasks] = await Promise.all([
       this.projectRequiredSkillsService.findByProjectId(id),
       this.projectInterviewQuestionsService.findByProjectId(id),
+      this.projectTasksService.findByProjectId(id),
     ]);
     this.logger.log(
-      `[${this.rid}] getProject — complete | projectId: ${id}, skills: ${skills.length}, questions: ${questions.length}`,
+      `[${this.rid}] getProject — complete | projectId: ${id}, skills: ${skills.length}, questions: ${questions.length}, tasks: ${tasks.length}`,
     );
-    return this.toResponseDto(project, skills, questions);
+    return this.toResponseDto(project, skills, questions, tasks);
   }
 
   /** @inheritdoc */
@@ -180,49 +195,59 @@ export class BusinessProjectService implements IBusinessProjectService {
       });
     }
 
-    const [updatedProject, skills, questions] = await this.uow.withTransaction(async (txUow) => {
-      // Apply field updates to the entity in memory first.
-      if (dto.title !== undefined) project.title = dto.title;
-      if (dto.introduction !== undefined) project.introduction = dto.introduction;
-      if (dto.required_consultants !== undefined)
-        project.requiredConsultants = dto.required_consultants;
+    const [updatedProject, skills, questions, tasks] = await this.uow.withTransaction(
+      async (txUow) => {
+        // Apply field updates to the entity in memory first.
+        if (dto.title !== undefined) project.title = dto.title;
+        if (dto.introduction !== undefined) project.introduction = dto.introduction;
+        if (dto.required_consultants !== undefined)
+          project.requiredConsultants = dto.required_consultants;
 
-      // Resolve the post-update skill set before saving so we can derive status
-      // in a single pass — avoids an extra round-trip after the save.
-      const currentSkills =
-        dto.skills !== undefined
-          ? await this.projectRequiredSkillsService.replaceForProject(project.id, dto.skills, txUow)
-          : await this.projectRequiredSkillsService.findByProjectId(project.id, txUow);
+        // Resolve the post-update skill set before saving so we can derive status
+        // in a single pass — avoids an extra round-trip after the save.
+        const currentSkills =
+          dto.skills !== undefined
+            ? await this.projectRequiredSkillsService.replaceForProject(
+                project.id,
+                dto.skills,
+                txUow,
+              )
+            : await this.projectRequiredSkillsService.findByProjectId(project.id, txUow);
 
-      const currentQuestions =
-        dto.interviewQuestions !== undefined
-          ? await this.projectInterviewQuestionsService.replaceForProject(
-              project.id,
-              dto.interviewQuestions,
-              txUow,
-            )
-          : await this.projectInterviewQuestionsService.findByProjectId(project.id, txUow);
+        const currentQuestions =
+          dto.interviewQuestions !== undefined
+            ? await this.projectInterviewQuestionsService.replaceForProject(
+                project.id,
+                dto.interviewQuestions,
+                txUow,
+              )
+            : await this.projectInterviewQuestionsService.findByProjectId(project.id, txUow);
 
-      // Auto-derive setup status only while the project is still in a
-      // pre-published state. PUBLIC / IN_PROGRESS / DONE / CANCELLED are not
-      // touched — their transitions are governed by the DB trigger.
-      if (SETUP_STATUSES.has(project.status)) {
-        project.status = await this.deriveSetupStatus(
-          project.id,
-          project.requiredConsultants,
-          currentSkills.length,
-          txUow,
-        );
-      }
+        const currentTasks =
+          dto.tasks !== undefined
+            ? await this.projectTasksService.replaceForProject(project.id, dto.tasks, txUow)
+            : await this.projectTasksService.findByProjectId(project.id, txUow);
 
-      const savedProject = await txUow.projects.save(project);
-      return [savedProject, currentSkills, currentQuestions] as const;
-    });
+        // Auto-derive setup status only while the project is still in a
+        // pre-published state. PUBLIC / IN_PROGRESS / DONE / CANCELLED are not
+        // touched — their transitions are governed by the DB trigger.
+        if (SETUP_STATUSES.has(project.status)) {
+          project.status = this.deriveSetupStatus(
+            project.requiredConsultants,
+            currentSkills.length,
+            currentTasks.length,
+          );
+        }
+
+        const savedProject = await txUow.projects.save(project);
+        return [savedProject, currentSkills, currentQuestions, currentTasks] as const;
+      },
+    );
 
     this.logger.log(
-      `[${this.rid}] updateProject — complete | projectId: ${updatedProject.id}, status: ${updatedProject.status}, skills: ${skills.length}, questions: ${questions.length}`,
+      `[${this.rid}] updateProject — complete | projectId: ${updatedProject.id}, status: ${updatedProject.status}, skills: ${skills.length}, questions: ${questions.length}, tasks: ${tasks.length}`,
     );
-    return this.toResponseDto(updatedProject, skills, questions);
+    return this.toResponseDto(updatedProject, skills, questions, tasks);
   }
 
   /** @inheritdoc */
@@ -270,14 +295,15 @@ export class BusinessProjectService implements IBusinessProjectService {
     project.status = dto.status;
     const updatedProject = await this.uow.projects.save(project);
 
-    const [skills, questions] = await Promise.all([
+    const [skills, questions, tasks] = await Promise.all([
       this.projectRequiredSkillsService.findByProjectId(id),
       this.projectInterviewQuestionsService.findByProjectId(id),
+      this.projectTasksService.findByProjectId(id),
     ]);
     this.logger.log(
       `[${this.rid}] updateStatus — complete | projectId: ${id}, status: ${updatedProject.status}`,
     );
-    return this.toResponseDto(updatedProject, skills, questions);
+    return this.toResponseDto(updatedProject, skills, questions, tasks);
   }
 
   // ─── Private helpers ───────────────────────────────────────────────────────
@@ -310,23 +336,17 @@ export class BusinessProjectService implements IBusinessProjectService {
   }
 
   /**
-   * Derives the setup status for an existing project after an update.
-   * Queries task count first — `configured` requires tasks to exist in addition
-   * to requiredConsultants ≥ 1 and at least one skill.
-   *
+   * Derives the setup status after an update.
    * Priority order:
-   * 1. `configured`  — tasks > 0 AND requiredConsultants ≥ 1 AND skills > 0
-   * 2. `setting_up`  — tasks > 0
+   * 1. `configured`  — taskCount > 0 AND requiredConsultants ≥ 1 AND skillCount > 0
+   * 2. `setting_up`  — taskCount > 0
    * 3. `draft`       — none of the above
    */
-  private async deriveSetupStatus(
-    projectId: string,
+  private deriveSetupStatus(
     requiredConsultants: number,
     skillCount: number,
-    uow: IUnitOfWork,
-  ): Promise<ProjectStatus> {
-    const taskCount = await uow.tasks.count({ where: { projectId } as never });
-
+    taskCount: number,
+  ): ProjectStatus {
     if (taskCount > 0 && requiredConsultants >= 1 && skillCount > 0)
       return ProjectStatus.CONFIGURED;
     if (taskCount > 0) return ProjectStatus.SETTING_UP;
@@ -350,6 +370,24 @@ export class BusinessProjectService implements IBusinessProjectService {
       const list = byProject.get(question.projectId) ?? [];
       list.push(question);
       byProject.set(question.projectId, list);
+    }
+    return byProject;
+  }
+
+  // Loads tasks for a list of project IDs in a single query (avoids N+1).
+  private async loadTasksForProjects(projectIds: string[]): Promise<Map<string, Task[]>> {
+    if (projectIds.length === 0) return new Map();
+
+    const allTasks = await this.uow.tasks.find({
+      where: projectIds.map((id) => ({ projectId: id })),
+      order: { displayOrder: 'ASC' },
+    });
+
+    const byProject = new Map<string, Task[]>();
+    for (const task of allTasks) {
+      const list = byProject.get(task.projectId) ?? [];
+      list.push(task);
+      byProject.set(task.projectId, list);
     }
     return byProject;
   }
@@ -378,6 +416,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     project: Project,
     skills: ProjectRequiredSkill[],
     questions: ProjectInterviewQuestion[],
+    tasks: Task[],
   ): BusinessProjectResponseDto {
     const lang = this.requestContext.lang;
 
@@ -404,6 +443,18 @@ export class BusinessProjectService implements IBusinessProjectService {
           question_text: q.questionText,
           display_order: q.displayOrder,
           is_required: q.isRequired,
+        })),
+        tasks: tasks.map((t) => ({
+          id: t.id,
+          title: t.title,
+          description: t.description,
+          price: t.price,
+          platform_fee_amount: t.platformFeeAmount,
+          consultant_payout: t.consultantPayout,
+          difficulty_level: t.difficultyLevel,
+          kanban_status: t.kanbanStatus,
+          display_order: t.displayOrder,
+          created_at: t.createdAt,
         })),
       },
       { excludeExtraneousValues: true },

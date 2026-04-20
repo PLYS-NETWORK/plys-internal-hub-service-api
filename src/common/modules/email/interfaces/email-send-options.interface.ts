@@ -34,3 +34,13 @@ export interface IAiDetectedEmailOptions {
   readonly userName: string;
   readonly projectTitle: string;
 }
+
+export interface IApplicationStatusEmailOptions {
+  readonly consultantName: string;
+  readonly projectTitle: string;
+  readonly status: 'approved' | 'rejected';
+  /** Only provided when status is 'rejected'. */
+  readonly rejectionReason?: string;
+  /** Link to the project on the consultant platform. Only for approved. */
+  readonly projectUrl?: string;
+}

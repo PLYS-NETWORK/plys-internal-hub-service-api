@@ -41,6 +41,10 @@
     "missing_answers": "Başvurmadan önce lütfen tüm gerekli mülakat sorularını yanıtlayın.",
     "ai_detected": "Yanıtlarınız yapay zeka tarafından oluşturulmuş içerik olarak tespit edildi. Bu projeye başvuramazsınız.",
     "ai_check_failed": "Yanıtlarınız şu anda doğrulanamıyor. Lütfen daha sonra tekrar deneyin.",
-    "cover_letter_required": "Bu projeye başvururken bir ön yazı gereklidir."
+    "cover_letter_required": "Bu projeye başvururken bir ön yazı gereklidir.",
+    "not_found": "Başvuru bulunamadı.",
+    "cannot_approve": "Bu başvuru mevcut durumunda onaylanamaz.",
+    "cannot_reject": "Bu başvuru mevcut durumunda reddedilemez.",
+    "cannot_withdraw": "Yalnızca bekleyen başvurular geri çekilebilir."
   }
 }

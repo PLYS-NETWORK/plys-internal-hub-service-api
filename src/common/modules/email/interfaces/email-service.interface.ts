@@ -1,6 +1,7 @@
 import {
   IAiDetectedEmailOptions,
   IApplicationNotificationEmailOptions,
+  IApplicationStatusEmailOptions,
   IForgotPasswordOtpEmailOptions,
   IVerifyRegistrationEmailOptions,
   IWelcomeEmailOptions,
@@ -15,4 +16,5 @@ export interface IEmailService {
     options: IApplicationNotificationEmailOptions,
   ): Promise<void>;
   sendAiDetectedEmail(to: string, options: IAiDetectedEmailOptions): Promise<void>;
+  sendApplicationStatusEmail(to: string, options: IApplicationStatusEmailOptions): Promise<void>;
 }

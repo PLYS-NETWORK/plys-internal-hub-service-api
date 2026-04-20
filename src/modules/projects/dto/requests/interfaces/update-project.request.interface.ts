@@ -1,4 +1,5 @@
 import { IInterviewQuestionItemRequest } from './interview-question-item.request.interface';
+import { ITaskItemRequest } from './task-item.request.interface';
 
 export interface IUpdateProjectRequest {
   title?: string;
@@ -6,4 +7,5 @@ export interface IUpdateProjectRequest {
   required_consultants?: number;
   skills?: string[];
   interviewQuestions?: IInterviewQuestionItemRequest[];
+  tasks?: ITaskItemRequest[];
 }

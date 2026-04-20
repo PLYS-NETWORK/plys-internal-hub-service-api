@@ -1,4 +1,6 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
+import { PageDto } from '@common/dto/page.dto';
+import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { CopyleaksService } from '@common/modules/copyleaks';
 import { EmailService } from '@common/modules/email/email.service';
@@ -11,8 +13,8 @@ import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
-import { ApplyProjectDto } from '../dto/requests';
-import { ApplicationResponseDto } from '../dto/responses';
+import { ApplyProjectDto, ListMyApplicationsDto } from '../dto/requests';
+import { ApplicationResponseDto, ConsultantApplicationListItemResponseDto } from '../dto/responses';
 
 /** Statuses where the project accepts new applications. */
 const ACCEPTING_STATUSES = new Set<ProjectStatus>([
@@ -250,6 +252,110 @@ export class ConsultantApplicationService {
       },
       { excludeExtraneousValues: true },
     );
+  }
+
+  /**
+   * Withdraws a pending application owned by the current consultant.
+   */
+  public async withdrawApplication(applicationId: string): Promise<ApplicationResponseDto> {
+    const consultantProfile = await this.resolveConsultantProfile();
+    this.logger.log(
+      `[${this.rid}] withdrawApplication — start | applicationId: ${applicationId}, consultantId: ${consultantProfile.id}`,
+    );
+
+    const application = await this.uow.projectApplications.findOne({
+      where: { id: applicationId, consultantId: consultantProfile.id },
+    });
+
+    if (!application) {
+      this.logger.warn(
+        `[${this.rid}] withdrawApplication — not found | applicationId: ${applicationId}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.application.not_found',
+        errorCode: ERROR_CODES.APPLICATION_NOT_FOUND,
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    if (application.status !== ApplicationStatus.PENDING) {
+      this.logger.warn(
+        `[${this.rid}] withdrawApplication — invalid status | applicationId: ${applicationId}, currentStatus: ${application.status}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.application.cannot_withdraw',
+        errorCode: ERROR_CODES.APPLICATION_CANNOT_WITHDRAW,
+        status: HttpStatus.BAD_REQUEST,
+      });
+    }
+
+    application.status = ApplicationStatus.WITHDRAWN;
+    const updated = await this.uow.projectApplications.save(application);
+
+    this.logger.log(
+      `[${this.rid}] withdrawApplication — complete | applicationId: ${applicationId}`,
+    );
+
+    return plainToInstance(
+      ApplicationResponseDto,
+      {
+        id: updated.id,
+        project_id: updated.projectId,
+        status: updated.status,
+        cover_letter: updated.coverLetter ?? null,
+        matched_skills: [],
+        applied_at: updated.appliedAt.toISOString(),
+      },
+      { excludeExtraneousValues: true },
+    );
+  }
+
+  /**
+   * Lists the current consultant's own applications, paginated and
+   * optionally filtered by status. Always ordered by applied_at DESC.
+   */
+  public async listMyApplications(
+    dto: ListMyApplicationsDto,
+  ): Promise<PageDto<ConsultantApplicationListItemResponseDto>> {
+    const consultantProfile = await this.resolveConsultantProfile();
+    this.logger.log(
+      `[${this.rid}] listMyApplications — start | consultantId: ${consultantProfile.id}, page: ${dto.page}`,
+    );
+
+    const [applications, itemCount] = await this.uow.projectApplications.findAndCount({
+      where: {
+        consultantId: consultantProfile.id,
+        ...(dto.status && { status: dto.status }),
+      },
+      relations: ['project'],
+      order: { appliedAt: 'DESC' },
+      skip: dto.skip,
+      take: dto.limit,
+    });
+
+    const data = applications.map((app) =>
+      plainToInstance(
+        ConsultantApplicationListItemResponseDto,
+        {
+          id: app.id,
+          project: {
+            id: app.project.id,
+            title: app.project.title,
+          },
+          status: app.status,
+          cover_letter: app.coverLetter ?? null,
+          applied_at: app.appliedAt.toISOString(),
+        },
+        { excludeExtraneousValues: true },
+      ),
+    );
+
+    const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
+
+    this.logger.log(
+      `[${this.rid}] listMyApplications — complete | returned: ${data.length}, total: ${itemCount}`,
+    );
+    return new PageDto(data, meta);
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────

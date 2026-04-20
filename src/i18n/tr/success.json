@@ -16,6 +16,9 @@
     "verified": "Danışman profili başarıyla doğrulandı."
   },
   "application": {
-    "created": "Başvuru başarıyla gönderildi."
+    "created": "Başvuru başarıyla gönderildi.",
+    "approved": "Başvuru başarıyla onaylandı.",
+    "rejected": "Başvuru başarıyla reddedildi.",
+    "withdrawn": "Başvuru başarıyla geri çekildi."
   }
 }

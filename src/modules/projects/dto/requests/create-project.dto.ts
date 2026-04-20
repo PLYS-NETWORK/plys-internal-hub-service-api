@@ -14,6 +14,7 @@ import {
 
 import { ICreateProjectRequest } from './interfaces/create-project.request.interface';
 import { InterviewQuestionItemDto } from './interview-question-item.dto';
+import { TaskItemDto } from './task-item.dto';
 
 export class CreateProjectDto implements ICreateProjectRequest {
   @Expose()
@@ -59,4 +60,16 @@ export class CreateProjectDto implements ICreateProjectRequest {
   @Type(() => InterviewQuestionItemDto)
   @IsOptional()
   public readonly interviewQuestions?: InterviewQuestionItemDto[];
+
+  @Expose()
+  @ApiPropertyOptional({
+    name: 'tasks',
+    type: [TaskItemDto],
+    description: 'Initial tasks to create with the project.',
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TaskItemDto)
+  @IsOptional()
+  public readonly tasks?: TaskItemDto[];
 }

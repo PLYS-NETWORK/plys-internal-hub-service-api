@@ -6,6 +6,7 @@ import { IEmailProvider } from './interfaces/email-provider.interface';
 import {
   IAiDetectedEmailOptions,
   IApplicationNotificationEmailOptions,
+  IApplicationStatusEmailOptions,
   IForgotPasswordOtpEmailOptions,
   IVerifyRegistrationEmailOptions,
   IWelcomeEmailOptions,
@@ -14,6 +15,7 @@ import { IEmailService } from './interfaces/email-service.interface';
 import {
   buildAiDetectedEmail,
   buildApplicationNotificationEmail,
+  buildApplicationStatusEmail,
   buildForgotPasswordOtpEmail,
   buildVerifyRegistrationEmail,
   buildWelcomeEmail,
@@ -151,6 +153,35 @@ export class EmailService implements IEmailService {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(
         `[${this.rid}] sendAiDetectedEmail — failed | to: ${to} | error: ${message}`,
+      );
+      throw err;
+    }
+  }
+
+  /**
+   * Sends a status-change email when a business approves or rejects
+   * a consultant's application.
+   */
+  public async sendApplicationStatusEmail(
+    to: string,
+    options: IApplicationStatusEmailOptions,
+  ): Promise<void> {
+    this.logger.log(`[${this.rid}] sendApplicationStatusEmail — start | to: ${to}`);
+    const subject =
+      options.status === 'approved'
+        ? `Application Approved: ${options.projectTitle}`
+        : `Application Update: ${options.projectTitle}`;
+    try {
+      await this.emailProvider.send({
+        to,
+        subject,
+        html: await buildApplicationStatusEmail(options),
+      });
+      this.logger.log(`[${this.rid}] sendApplicationStatusEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `[${this.rid}] sendApplicationStatusEmail — failed | to: ${to} | error: ${message}`,
       );
       throw err;
     }

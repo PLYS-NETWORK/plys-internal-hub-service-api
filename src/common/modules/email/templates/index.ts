@@ -4,6 +4,10 @@ export {
   type IApplicationNotificationTemplateOptions,
 } from './application-notification.template';
 export {
+  buildApplicationStatusEmail,
+  type IApplicationStatusTemplateOptions,
+} from './application-status.template';
+export {
   buildForgotPasswordOtpEmail,
   type IForgotPasswordOtpTemplateOptions,
 } from './forgot-password-otp.template';
