@@ -39,7 +39,7 @@ interface ISettlementResult {
 /**
  * Monthly settlement cron for credit-based businesses.
  *
- * On the 5th of every month at 02:00:
+ * On the 1st of every month at 08:00:
  * 1. Find all CREDIT_PENDING consultant transactions from the previous month
  * 2. Group by business → settle each business atomically:
  *    a. Generate invoice with 25% platform commission ON TOP
@@ -62,7 +62,7 @@ export class BillingSettlementService {
     private readonly env: EnvironmentsService,
   ) {}
 
-  @Cron('0 2 5 * *')
+  @Cron('0 8 1 * *')
   public async settleMonthlyCredits(): Promise<void> {
     this.logger.log('settleMonthlyCredits — start');
 
