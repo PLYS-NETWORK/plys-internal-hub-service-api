@@ -143,7 +143,8 @@ REDIS_TLS_ENABLED=false
 
 # Email (Resend — https://resend.com)
 RESEND_API_KEY=re_xxxxxxxxxxxx
-RESEND_FROM_EMAIL=noreply@yourdomain.com
+RESEND_PLOYOS_EMAIL=noreply@yourdomain.com
+RESEND_LONA_EMAIL=noreply@yourdomain.com
 
 # CORS
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
@@ -156,6 +157,7 @@ LONA_URL=http://localhost:3001
 PAYMENT_PROCESSOR=polar
 POLAR_ACCESS_TOKEN=
 POLAR_WEBHOOK_SECRET=
+POLAR_TOP_UP_PRODUCT_ID=
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 
@@ -175,7 +177,7 @@ docker run -d \
   --name marketplace-postgres \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=your_password \
-  -e POSTGRES_DB=marketplace \
+  -e POSTGRES_DB=marketplace-system-db-dev \
   -p 5432:5432 \
   postgres:15-alpine
 

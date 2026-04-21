@@ -86,6 +86,13 @@ async function main(): Promise<void> {
   await AppDataSource.initialize();
   console.log('DataSource initialized');
 
+  // In development (no migration files), synchronize the schema so tables exist.
+  // Never sync in production — use migrations:run instead.
+  if (process.env.NODE_ENV !== 'production') {
+    await AppDataSource.synchronize();
+    console.log('Schema synchronized');
+  }
+
   try {
     const skillRepo = AppDataSource.getRepository(Skill);
     let inserted = 0;
