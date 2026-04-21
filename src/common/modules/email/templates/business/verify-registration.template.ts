@@ -1,19 +1,14 @@
 import * as ejs from 'ejs';
 import * as path from 'path';
 
-export interface IVerifyRegistrationTemplateOptions {
+export interface IBusinessVerifyRegistrationTemplateOptions {
   readonly userName: string;
   readonly verificationUrl: string;
   readonly expiryHours?: number;
 }
 
-/**
- * Renders the account-verification email using the EJS template.
- * __dirname resolves to the compiled output directory, where the
- * .ejs file is copied by the nest-cli assets configuration.
- */
-export async function buildVerifyRegistrationEmail(
-  options: IVerifyRegistrationTemplateOptions,
+export async function buildBusinessVerifyRegistrationEmail(
+  options: IBusinessVerifyRegistrationTemplateOptions,
 ): Promise<string> {
   const { userName, verificationUrl, expiryHours = 24 } = options;
 

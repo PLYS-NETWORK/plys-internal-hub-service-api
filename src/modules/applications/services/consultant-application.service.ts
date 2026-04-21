@@ -404,44 +404,52 @@ export class ConsultantApplicationService {
         .filter(Boolean)
         .join(', ') || 'N/A';
 
-    const sendToParty = async (
-      email: string,
-      recipientName: string,
-      partyApplicationUrl?: string,
-    ): Promise<void> => {
-      try {
-        await this.emailService.sendApplicationNotificationEmail(email, {
-          recipientName,
-          projectTitle: project.title,
-          consultantFullName: consultantProfile.fullName,
-          matchedSkills: skillNames,
-          consultantAddress: address,
-          applicationUrl: partyApplicationUrl,
-        });
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        this.logger.error(
-          `[${this.rid}] sendNotificationEmails — failed | to: ${email} | error: ${msg}`,
-        );
-      }
-    };
-
-    // Send to business owner
+    // Send to business owner (Ployos brand)
     void (async (): Promise<void> => {
       const businessProfile = await this.uow.businessProfiles.findByActiveId(project.businessId);
       if (businessProfile) {
         const businessUser = await this.uow.users.findByActiveId(businessProfile.userId);
         if (businessUser) {
-          await sendToParty(businessUser.email, businessProfile.companyName, applicationUrl);
+          try {
+            await this.emailService.sendApplicationNotificationToBusinessEmail(businessUser.email, {
+              recipientName: businessProfile.companyName,
+              projectTitle: project.title,
+              consultantFullName: consultantProfile.fullName,
+              matchedSkills: skillNames,
+              consultantAddress: address,
+              applicationUrl,
+            });
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            this.logger.error(
+              `[${this.rid}] sendNotificationEmails — business failed | to: ${businessUser.email} | error: ${msg}`,
+            );
+          }
         }
       }
     })();
 
-    // Send to consultant
+    // Send to consultant (Lona brand)
     void (async (): Promise<void> => {
       const consultantUser = await this.uow.users.findByActiveId(consultantProfile.userId);
       if (consultantUser) {
-        await sendToParty(consultantUser.email, consultantProfile.fullName);
+        try {
+          await this.emailService.sendApplicationNotificationToConsultantEmail(
+            consultantUser.email,
+            {
+              recipientName: consultantProfile.fullName,
+              projectTitle: project.title,
+              consultantFullName: consultantProfile.fullName,
+              matchedSkills: skillNames,
+              consultantAddress: address,
+            },
+          );
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          this.logger.error(
+            `[${this.rid}] sendNotificationEmails — consultant failed | to: ${consultantUser.email} | error: ${msg}`,
+          );
+        }
       }
     })();
   }

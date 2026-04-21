@@ -19,7 +19,8 @@ export default registerAs('app', () => ({
   },
   resend: {
     apiKey: process.env.RESEND_API_KEY ?? '',
-    fromEmail: process.env.RESEND_FROM_EMAIL ?? 'noreply@example.com',
+    ployosEmail: process.env.RESEND_PLOYOS_EMAIL,
+    lonaEmail: process.env.RESEND_LONA_EMAIL,
   },
   payment: {
     // Default to Polar.sh. Set PAYMENT_PROCESSOR=stripe to switch providers.

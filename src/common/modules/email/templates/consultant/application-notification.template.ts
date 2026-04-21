@@ -1,8 +1,8 @@
 import * as ejs from 'ejs';
 import * as path from 'path';
 
-export interface IApplicationNotificationTemplateOptions {
-  /** Recipient name (business company name or consultant full name). */
+export interface IConsultantApplicationNotificationTemplateOptions {
+  /** Consultant's full name. */
   readonly recipientName: string;
   readonly projectTitle: string;
   readonly consultantFullName: string;
@@ -10,21 +10,13 @@ export interface IApplicationNotificationTemplateOptions {
   readonly matchedSkills: string[];
   /** Formatted consultant address string. */
   readonly consultantAddress: string;
-  /** Link to view the application on the business platform. Only provided for business recipients. */
-  readonly applicationUrl?: string;
 }
 
-export async function buildApplicationNotificationEmail(
-  options: IApplicationNotificationTemplateOptions,
+export async function buildConsultantApplicationNotificationEmail(
+  options: IConsultantApplicationNotificationTemplateOptions,
 ): Promise<string> {
-  const {
-    recipientName,
-    projectTitle,
-    consultantFullName,
-    matchedSkills,
-    consultantAddress,
-    applicationUrl,
-  } = options;
+  const { recipientName, projectTitle, consultantFullName, matchedSkills, consultantAddress } =
+    options;
 
   return ejs.renderFile(path.join(__dirname, 'application-notification.template.ejs'), {
     recipientName,
@@ -32,7 +24,6 @@ export async function buildApplicationNotificationEmail(
     consultantFullName,
     matchedSkills,
     consultantAddress,
-    applicationUrl: applicationUrl ?? null,
     year: new Date().getFullYear(),
   });
 }

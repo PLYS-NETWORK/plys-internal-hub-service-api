@@ -1,19 +1,38 @@
+import { ActivePlatform } from '@database/enums/active-platform.enum';
+
 import {
   IAiDetectedEmailOptions,
-  IApplicationNotificationEmailOptions,
   IApplicationStatusEmailOptions,
+  IBusinessApplicationNotificationEmailOptions,
+  IConsultantApplicationNotificationEmailOptions,
   IForgotPasswordOtpEmailOptions,
   IVerifyRegistrationEmailOptions,
   IWelcomeEmailOptions,
 } from './email-send-options.interface';
 
 export interface IEmailService {
-  sendVerificationEmail(to: string, options: IVerifyRegistrationEmailOptions): Promise<void>;
-  sendForgotPasswordOtpEmail(to: string, options: IForgotPasswordOtpEmailOptions): Promise<void>;
-  sendWelcomeEmail(to: string, options: IWelcomeEmailOptions): Promise<void>;
-  sendApplicationNotificationEmail(
+  sendVerificationEmail(
     to: string,
-    options: IApplicationNotificationEmailOptions,
+    options: IVerifyRegistrationEmailOptions,
+    platform: ActivePlatform,
+  ): Promise<void>;
+  sendForgotPasswordOtpEmail(
+    to: string,
+    options: IForgotPasswordOtpEmailOptions,
+    platform: ActivePlatform,
+  ): Promise<void>;
+  sendWelcomeEmail(
+    to: string,
+    options: IWelcomeEmailOptions,
+    platform: ActivePlatform,
+  ): Promise<void>;
+  sendApplicationNotificationToBusinessEmail(
+    to: string,
+    options: IBusinessApplicationNotificationEmailOptions,
+  ): Promise<void>;
+  sendApplicationNotificationToConsultantEmail(
+    to: string,
+    options: IConsultantApplicationNotificationEmailOptions,
   ): Promise<void>;
   sendAiDetectedEmail(to: string, options: IAiDetectedEmailOptions): Promise<void>;
   sendApplicationStatusEmail(to: string, options: IApplicationStatusEmailOptions): Promise<void>;

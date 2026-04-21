@@ -15,16 +15,14 @@ import { Resend } from 'resend';
 export class ResendEmailProvider implements IEmailProvider {
   private readonly logger = new Logger(ResendEmailProvider.name);
   private readonly client: Resend;
-  private readonly fromEmail: string;
 
   constructor(private readonly env: EnvironmentsService) {
     this.client = new Resend(this.env.resendApiKey);
-    this.fromEmail = this.env.resendFromEmail;
   }
 
   public async send(message: IEmailMessage): Promise<void> {
     const { error } = await this.client.emails.send({
-      from: this.fromEmail,
+      from: message.from,
       to: message.to,
       subject: message.subject,
       html: message.html,

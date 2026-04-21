@@ -17,8 +17,8 @@ export interface IWelcomeEmailOptions {
   readonly loginUrl: string;
 }
 
-export interface IApplicationNotificationEmailOptions {
-  /** Recipient name (business company name or consultant full name). */
+export interface IBusinessApplicationNotificationEmailOptions {
+  /** Business owner's company name. */
   readonly recipientName: string;
   readonly projectTitle: string;
   readonly consultantFullName: string;
@@ -26,8 +26,19 @@ export interface IApplicationNotificationEmailOptions {
   readonly matchedSkills: string[];
   /** Formatted consultant address string. */
   readonly consultantAddress: string;
-  /** Link to view the application on the business platform. Only provided for business recipients. */
-  readonly applicationUrl?: string;
+  /** Link to review the application on the Ployos platform. */
+  readonly applicationUrl: string;
+}
+
+export interface IConsultantApplicationNotificationEmailOptions {
+  /** Consultant's full name. */
+  readonly recipientName: string;
+  readonly projectTitle: string;
+  readonly consultantFullName: string;
+  /** Translated skill names that matched. */
+  readonly matchedSkills: string[];
+  /** Formatted consultant address string. */
+  readonly consultantAddress: string;
 }
 
 export interface IAiDetectedEmailOptions {

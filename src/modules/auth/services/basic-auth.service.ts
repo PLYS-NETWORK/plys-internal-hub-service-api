@@ -195,10 +195,11 @@ export class BasicAuthService implements IBasicAuthService {
     // already committed. A delivery failure must not un-verify the account.
     const loginUrl = this.getPlatformUrl(authToken.user.platform) + '/login';
     this.emailService
-      .sendWelcomeEmail(authToken.user.email, {
-        userName: authToken.user.email,
-        loginUrl,
-      })
+      .sendWelcomeEmail(
+        authToken.user.email,
+        { userName: authToken.user.email, loginUrl },
+        authToken.user.platform,
+      )
       .catch((err: Error) =>
         this.logger.error(
           `[${this.rid}] verifyEmail — welcome email failed | error: ${err.message}`,
@@ -410,11 +411,15 @@ export class BasicAuthService implements IBasicAuthService {
 
     // Awaited inside the transaction: if delivery fails the entire transaction
     // rolls back and the API returns an error so the caller knows to retry.
-    await this.emailService.sendVerificationEmail(recipientEmail, {
-      userName: displayName,
-      verificationUrl,
-      expiryHours: EMAIL_VERIFICATION_EXPIRY_HOURS,
-    });
+    await this.emailService.sendVerificationEmail(
+      recipientEmail,
+      {
+        userName: displayName,
+        verificationUrl,
+        expiryHours: EMAIL_VERIFICATION_EXPIRY_HOURS,
+      },
+      platform,
+    );
   }
 
   /**

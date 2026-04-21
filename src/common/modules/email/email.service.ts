@@ -1,24 +1,31 @@
+import { EnvironmentsService } from '@common/modules/environments';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { ActivePlatform } from '@database/enums/active-platform.enum';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { EMAIL_PROVIDER_TOKEN } from './constants';
 import { IEmailProvider } from './interfaces/email-provider.interface';
 import {
   IAiDetectedEmailOptions,
-  IApplicationNotificationEmailOptions,
   IApplicationStatusEmailOptions,
+  IBusinessApplicationNotificationEmailOptions,
+  IConsultantApplicationNotificationEmailOptions,
   IForgotPasswordOtpEmailOptions,
   IVerifyRegistrationEmailOptions,
   IWelcomeEmailOptions,
 } from './interfaces/email-send-options.interface';
 import { IEmailService } from './interfaces/email-service.interface';
 import {
-  buildAiDetectedEmail,
-  buildApplicationNotificationEmail,
-  buildApplicationStatusEmail,
-  buildForgotPasswordOtpEmail,
-  buildVerifyRegistrationEmail,
-  buildWelcomeEmail,
+  buildBusinessApplicationNotificationEmail,
+  buildBusinessForgotPasswordOtpEmail,
+  buildBusinessVerifyRegistrationEmail,
+  buildBusinessWelcomeEmail,
+  buildConsultantAiDetectedEmail,
+  buildConsultantApplicationNotificationEmail,
+  buildConsultantApplicationStatusEmail,
+  buildConsultantForgotPasswordOtpEmail,
+  buildConsultantVerifyRegistrationEmail,
+  buildConsultantWelcomeEmail,
 } from './templates';
 
 /**
@@ -35,26 +42,38 @@ export class EmailService implements IEmailService {
     @Inject(EMAIL_PROVIDER_TOKEN)
     private readonly emailProvider: IEmailProvider,
     private readonly requestContext: RequestContextService,
+    private readonly env: EnvironmentsService,
   ) {}
 
   private get rid(): string {
     return this.requestContext.requestId;
   }
 
-  /**
-   * Sends an account-verification email to a newly registered user.
-   * The caller is responsible for generating the verification URL and token.
-   */
+  private fromEmailForPlatform(platform: ActivePlatform): string {
+    return platform === ActivePlatform.CONSULTANT
+      ? this.env.resendLonaEmail
+      : this.env.resendPloyosEmail;
+  }
+
   public async sendVerificationEmail(
     to: string,
     options: IVerifyRegistrationEmailOptions,
+    platform: ActivePlatform,
   ): Promise<void> {
-    this.logger.log(`[${this.rid}] sendVerificationEmail — start | to: ${to}`);
+    this.logger.log(
+      `[${this.rid}] sendVerificationEmail — start | to: ${to}, platform: ${platform}`,
+    );
     try {
+      const html =
+        platform === ActivePlatform.CONSULTANT
+          ? await buildConsultantVerifyRegistrationEmail(options)
+          : await buildBusinessVerifyRegistrationEmail(options);
+
       await this.emailProvider.send({
+        from: this.fromEmailForPlatform(platform),
         to,
         subject: 'Verify your email address',
-        html: await buildVerifyRegistrationEmail(options),
+        html,
       });
       this.logger.log(`[${this.rid}] sendVerificationEmail — sent | to: ${to}`);
     } catch (err: unknown) {
@@ -66,20 +85,25 @@ export class EmailService implements IEmailService {
     }
   }
 
-  /**
-   * Sends a one-time password to a user who requested a password reset.
-   * The caller is responsible for generating and persisting the OTP.
-   */
   public async sendForgotPasswordOtpEmail(
     to: string,
     options: IForgotPasswordOtpEmailOptions,
+    platform: ActivePlatform,
   ): Promise<void> {
-    this.logger.log(`[${this.rid}] sendForgotPasswordOtpEmail — start | to: ${to}`);
+    this.logger.log(
+      `[${this.rid}] sendForgotPasswordOtpEmail — start | to: ${to}, platform: ${platform}`,
+    );
     try {
+      const html =
+        platform === ActivePlatform.CONSULTANT
+          ? await buildConsultantForgotPasswordOtpEmail(options)
+          : await buildBusinessForgotPasswordOtpEmail(options);
+
       await this.emailProvider.send({
+        from: this.fromEmailForPlatform(platform),
         to,
         subject: 'Your password reset code',
-        html: await buildForgotPasswordOtpEmail(options),
+        html,
       });
       this.logger.log(`[${this.rid}] sendForgotPasswordOtpEmail — sent | to: ${to}`);
     } catch (err: unknown) {
@@ -91,62 +115,96 @@ export class EmailService implements IEmailService {
     }
   }
 
-  /**
-   * Sends a welcome email after a user's account is fully activated
-   * (post email-verification or first SSO login).
-   */
-  public async sendWelcomeEmail(to: string, options: IWelcomeEmailOptions): Promise<void> {
-    this.logger.log(`[${this.rid}] sendWelcomeEmail — start | to: ${to}`);
+  public async sendWelcomeEmail(
+    to: string,
+    options: IWelcomeEmailOptions,
+    platform: ActivePlatform,
+  ): Promise<void> {
+    this.logger.log(
+      `[${this.rid}] sendWelcomeEmail — start | to: ${to}, platform: ${platform}`,
+    );
     try {
+      const html =
+        platform === ActivePlatform.CONSULTANT
+          ? await buildConsultantWelcomeEmail(options)
+          : await buildBusinessWelcomeEmail(options);
+
       await this.emailProvider.send({
+        from: this.fromEmailForPlatform(platform),
         to,
-        subject: 'Welcome to the Platform!',
-        html: await buildWelcomeEmail(options),
+        subject: platform === ActivePlatform.CONSULTANT ? 'Welcome to Lona!' : 'Welcome to Ployos!',
+        html,
       });
       this.logger.log(`[${this.rid}] sendWelcomeEmail — sent | to: ${to}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`[${this.rid}] sendWelcomeEmail — failed | to: ${to} | error: ${message}`);
-      throw err;
-    }
-  }
-
-  /**
-   * Sends a notification email when a consultant applies to a project.
-   * Called once for the business owner and once for the consultant.
-   */
-  public async sendApplicationNotificationEmail(
-    to: string,
-    options: IApplicationNotificationEmailOptions,
-  ): Promise<void> {
-    this.logger.log(`[${this.rid}] sendApplicationNotificationEmail — start | to: ${to}`);
-    try {
-      await this.emailProvider.send({
-        to,
-        subject: `New Application: ${options.projectTitle}`,
-        html: await buildApplicationNotificationEmail(options),
-      });
-      this.logger.log(`[${this.rid}] sendApplicationNotificationEmail — sent | to: ${to}`);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
       this.logger.error(
-        `[${this.rid}] sendApplicationNotificationEmail — failed | to: ${to} | error: ${message}`,
+        `[${this.rid}] sendWelcomeEmail — failed | to: ${to} | error: ${message}`,
       );
       throw err;
     }
   }
 
-  /**
-   * Sends a warning email when a consultant's interview answers are
-   * flagged as AI-generated content.
-   */
+  public async sendApplicationNotificationToBusinessEmail(
+    to: string,
+    options: IBusinessApplicationNotificationEmailOptions,
+  ): Promise<void> {
+    this.logger.log(
+      `[${this.rid}] sendApplicationNotificationToBusinessEmail — start | to: ${to}`,
+    );
+    try {
+      await this.emailProvider.send({
+        from: this.env.resendPloyosEmail,
+        to,
+        subject: `New Application: ${options.projectTitle}`,
+        html: await buildBusinessApplicationNotificationEmail(options),
+      });
+      this.logger.log(
+        `[${this.rid}] sendApplicationNotificationToBusinessEmail — sent | to: ${to}`,
+      );
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `[${this.rid}] sendApplicationNotificationToBusinessEmail — failed | to: ${to} | error: ${message}`,
+      );
+      throw err;
+    }
+  }
+
+  public async sendApplicationNotificationToConsultantEmail(
+    to: string,
+    options: IConsultantApplicationNotificationEmailOptions,
+  ): Promise<void> {
+    this.logger.log(
+      `[${this.rid}] sendApplicationNotificationToConsultantEmail — start | to: ${to}`,
+    );
+    try {
+      await this.emailProvider.send({
+        from: this.env.resendLonaEmail,
+        to,
+        subject: `Application Submitted: ${options.projectTitle}`,
+        html: await buildConsultantApplicationNotificationEmail(options),
+      });
+      this.logger.log(
+        `[${this.rid}] sendApplicationNotificationToConsultantEmail — sent | to: ${to}`,
+      );
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `[${this.rid}] sendApplicationNotificationToConsultantEmail — failed | to: ${to} | error: ${message}`,
+      );
+      throw err;
+    }
+  }
+
   public async sendAiDetectedEmail(to: string, options: IAiDetectedEmailOptions): Promise<void> {
     this.logger.log(`[${this.rid}] sendAiDetectedEmail — start | to: ${to}`);
     try {
       await this.emailProvider.send({
+        from: this.env.resendLonaEmail,
         to,
         subject: `Application Review Notice: ${options.projectTitle}`,
-        html: await buildAiDetectedEmail(options),
+        html: await buildConsultantAiDetectedEmail(options),
       });
       this.logger.log(`[${this.rid}] sendAiDetectedEmail — sent | to: ${to}`);
     } catch (err: unknown) {
@@ -158,10 +216,6 @@ export class EmailService implements IEmailService {
     }
   }
 
-  /**
-   * Sends a status-change email when a business approves or rejects
-   * a consultant's application.
-   */
   public async sendApplicationStatusEmail(
     to: string,
     options: IApplicationStatusEmailOptions,
@@ -173,9 +227,10 @@ export class EmailService implements IEmailService {
         : `Application Update: ${options.projectTitle}`;
     try {
       await this.emailProvider.send({
+        from: this.env.resendLonaEmail,
         to,
         subject,
-        html: await buildApplicationStatusEmail(options),
+        html: await buildConsultantApplicationStatusEmail(options),
       });
       this.logger.log(`[${this.rid}] sendApplicationStatusEmail — sent | to: ${to}`);
     } catch (err: unknown) {

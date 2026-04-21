@@ -63,8 +63,12 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.configService.getOrThrow<string>('app.resend.apiKey');
   }
 
-  public get resendFromEmail(): string {
-    return this.configService.getOrThrow<string>('app.resend.fromEmail');
+  public get resendPloyosEmail(): string {
+    return this.configService.getOrThrow<string>('app.resend.ployosEmail');
+  }
+
+  public get resendLonaEmail(): string {
+    return this.configService.getOrThrow<string>('app.resend.lonaEmail');
   }
 
   public get paymentProcessor(): string {

@@ -184,10 +184,11 @@ export class SsoAuthService implements ISsoAuthService {
           activePlatform === ActivePlatform.CONSULTANT
             ? `${this.envService.lonaUrl}/login`
             : `${this.envService.ployosUrl}/login`;
-        await this.emailService.sendWelcomeEmail(user.email, {
-          userName: userData.displayName || user.email,
-          loginUrl,
-        });
+        await this.emailService.sendWelcomeEmail(
+          user.email,
+          { userName: userData.displayName || user.email, loginUrl },
+          activePlatform,
+        );
       }
 
       this.logger.log(

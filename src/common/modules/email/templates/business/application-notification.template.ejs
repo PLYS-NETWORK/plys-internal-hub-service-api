@@ -21,11 +21,11 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>New Application</h1>
+      <h1>New Application Received</h1>
     </div>
     <div class="body">
       <h2>Hi <%= recipientName %>,</h2>
-      <p>A new application has been submitted for the project <strong><%= projectTitle %></strong>.</p>
+      <p>A consultant has applied to your project <strong><%= projectTitle %></strong>.</p>
 
       <table class="detail-table">
         <tr>
@@ -49,17 +49,15 @@
         </tr>
       </table>
 
-      <% if (applicationUrl) { %>
       <div style="text-align: center; margin: 24px 0;">
         <a href="<%= applicationUrl %>"
            style="display: inline-block; padding: 12px 32px; background: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">
-          View Application
+          Review Application
         </a>
       </div>
-      <% } %>
     </div>
     <div class="footer">
-      <p>&copy; <%= year %> Marketplace. All rights reserved.</p>
+      <p>&copy; <%= year %> Ployos. All rights reserved.</p>
     </div>
   </div>
 </body>

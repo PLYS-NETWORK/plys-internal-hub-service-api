@@ -1,18 +1,18 @@
 import * as ejs from 'ejs';
 import * as path from 'path';
 
-export interface IApplicationStatusTemplateOptions {
+export interface IConsultantApplicationStatusTemplateOptions {
   readonly consultantName: string;
   readonly projectTitle: string;
   readonly status: 'approved' | 'rejected';
   /** Only provided when status is 'rejected'. */
   readonly rejectionReason?: string;
-  /** Link to the project on the consultant platform (Lona). Only for approved. */
+  /** Link to the project on Lona. Only for approved. */
   readonly projectUrl?: string;
 }
 
-export async function buildApplicationStatusEmail(
-  options: IApplicationStatusTemplateOptions,
+export async function buildConsultantApplicationStatusEmail(
+  options: IConsultantApplicationStatusTemplateOptions,
 ): Promise<string> {
   const { consultantName, projectTitle, status, rejectionReason, projectUrl } = options;
 
