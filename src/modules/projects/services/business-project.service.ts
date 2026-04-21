@@ -1,6 +1,7 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
+import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import {
@@ -25,6 +26,7 @@ import {
   UpdateProjectStatusDto,
 } from '../dto/requests';
 import { BusinessProjectResponseDto } from '../dto/responses';
+import { ProjectMemberResponseDto } from '../dto/responses/project-member-response.dto';
 import { PublishValidationResponseDto } from '../dto/responses/publish-validation-response.dto';
 import { IBusinessProjectService } from '../interfaces';
 import { ProjectInterviewQuestionsService } from './project-interview-questions.service';
@@ -297,6 +299,12 @@ export class BusinessProjectService implements IBusinessProjectService {
       }
     }
 
+    // Recall: public → configured. Pre-paid businesses get a refund of the
+    // original PROJECT_PUBLISHED charge. Credit businesses just transition.
+    if (project.status === ProjectStatus.PUBLIC && dto.status === ProjectStatus.CONFIGURED) {
+      return this.handleRecall(project);
+    }
+
     // All other transition rules are enforced by the DB trigger
     // (trg_enforce_project_status). If the transition is illegal the DB will
     // raise an exception which propagates as a DATABASE_* error. We do not
@@ -424,7 +432,140 @@ export class BusinessProjectService implements IBusinessProjectService {
     );
   }
 
+  /** @inheritdoc */
+  public async listProjectMembers(
+    projectId: string,
+    pageOptions: PageOptionsDto,
+  ): Promise<PageDto<ProjectMemberResponseDto>> {
+    const businessId = await this.resolveBusinessId();
+    this.logger.log(
+      `[${this.rid}] listProjectMembers — start | projectId: ${projectId}, page: ${pageOptions.page}`,
+    );
+
+    const project = await this.uow.projects.findByIdAndBusinessId(projectId, businessId);
+    if (!project) {
+      this.logger.warn(
+        `[${this.rid}] listProjectMembers — not found or forbidden | projectId: ${projectId}, businessId: ${businessId}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.project.not_found',
+        errorCode: ERROR_CODES.PROJECT_NOT_FOUND,
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    const [members, itemCount] = await this.uow.projectMembers.findAndCount({
+      where: { projectId },
+      relations: { consultant: true },
+      skip: pageOptions.skip,
+      take: pageOptions.limit,
+      order: { joinedAt: 'ASC' },
+    });
+
+    const data = members.map((m) =>
+      plainToInstance(
+        ProjectMemberResponseDto,
+        {
+          id: m.id,
+          consultant_id: m.consultantId,
+          avatar_url: m.consultant.avatarUrl,
+          full_name: m.consultant.fullName,
+          status: m.status,
+          joined_at: m.joinedAt,
+          address: {
+            address_line: m.consultant.addressLine,
+            city: m.consultant.city,
+            state_province: m.consultant.stateProvince,
+            postal_code: m.consultant.postalCode,
+            country_code: m.consultant.countryCode,
+          },
+        },
+        { excludeExtraneousValues: true },
+      ),
+    );
+
+    const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
+
+    this.logger.log(
+      `[${this.rid}] listProjectMembers — complete | projectId: ${projectId}, returned: ${data.length}, total: ${itemCount}`,
+    );
+    return new PageDto(data, meta);
+  }
+
   // ─── Private helpers ───────────────────────────────────────────────────────
+
+  /**
+   * Handles project recall: public → configured. Pre-paid businesses receive
+   * a refund of the original PROJECT_PUBLISHED charge amount. Credit-based
+   * businesses simply transition without any financial side-effects.
+   *
+   * Why transactional: balance credit + refund transaction + status change must
+   * be atomic to avoid a partial refund leaving the project still public.
+   */
+  private async handleRecall(project: Project): Promise<BusinessProjectResponseDto> {
+    const businessProfile = await this.resolveBusinessProfile();
+    this.logger.log(
+      `[${this.rid}] handleRecall — start | projectId: ${project.id}, businessId: ${businessProfile.id}`,
+    );
+
+    const updatedProject = await this.uow.withTransaction(async (txUow) => {
+      // Pre-paid businesses need a refund of the original publish charge
+      if (!businessProfile.allowPaymentCredit) {
+        const originalTxn = await txUow.businessTransactions.findOne({
+          where: {
+            projectId: project.id,
+            type: BusinessTransactionType.PROJECT_PUBLISHED,
+            status: TransactionStatus.COMPLETED,
+          },
+        });
+
+        if (!originalTxn) {
+          this.logger.warn(
+            `[${this.rid}] handleRecall — original publish transaction not found | projectId: ${project.id}`,
+          );
+          throw new TranslatableException({
+            messageKey: 'error.project.recall_transaction_not_found',
+            errorCode: ERROR_CODES.PROJECT_RECALL_TRANSACTION_NOT_FOUND,
+            status: HttpStatus.UNPROCESSABLE_ENTITY,
+          });
+        }
+
+        const refundAmount = parseFloat(originalTxn.amount);
+        businessProfile.accountBalance = (
+          parseFloat(businessProfile.accountBalance) + refundAmount
+        ).toFixed(2);
+        await txUow.businessProfiles.save(businessProfile);
+
+        const refundTxn = txUow.businessTransactions.create({
+          businessId: businessProfile.id,
+          type: BusinessTransactionType.REFUND,
+          amount: originalTxn.amount,
+          status: TransactionStatus.COMPLETED,
+          projectId: project.id,
+          note: `Project recall refund: ${project.title}`,
+        });
+        await txUow.businessTransactions.save(refundTxn);
+
+        this.logger.log(
+          `[${this.rid}] handleRecall — refund issued | projectId: ${project.id}, amount: ${originalTxn.amount}, newBalance: ${businessProfile.accountBalance}`,
+        );
+      }
+
+      project.status = ProjectStatus.CONFIGURED;
+      return txUow.projects.save(project);
+    });
+
+    const [skills, questions, tasks] = await Promise.all([
+      this.projectRequiredSkillsService.findByProjectId(project.id),
+      this.projectInterviewQuestionsService.findByProjectId(project.id),
+      this.projectTasksService.findByProjectId(project.id),
+    ]);
+
+    this.logger.log(
+      `[${this.rid}] handleRecall — complete | projectId: ${project.id}, status: ${updatedProject.status}`,
+    );
+    return this.toResponseDto(updatedProject, skills, questions, tasks);
+  }
 
   private async resolveBusinessId(): Promise<string> {
     const userId = this.requestContext.userId!;

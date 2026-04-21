@@ -1,4 +1,5 @@
 import { PageDto } from '@common/dto/page.dto';
+import { PageOptionsDto } from '@common/dto/page-options.dto';
 
 import {
   CreateProjectDto,
@@ -7,6 +8,7 @@ import {
   UpdateProjectStatusDto,
 } from '../dto/requests';
 import { BusinessProjectResponseDto } from '../dto/responses';
+import { ProjectMemberResponseDto } from '../dto/responses/project-member-response.dto';
 import { PublishValidationResponseDto } from '../dto/responses/publish-validation-response.dto';
 
 /**
@@ -112,4 +114,20 @@ export interface IBusinessProjectService {
    * @throws TranslatableException (422) — project not eligible for publication.
    */
   confirmPublish(projectId: string): Promise<void>;
+
+  /**
+   * Returns a paginated list of members (consultants) for the given project.
+   *
+   * Ownership is verified before querying. Each member includes the
+   * consultant's avatar, full name, address, membership status, and join date.
+   *
+   * @param projectId   - UUID of the project.
+   * @param pageOptions - Pagination parameters (page, take).
+   * @returns Paginated wrapper containing project member DTOs and page metadata.
+   * @throws TranslatableException (404) — project not found or not owned by caller.
+   */
+  listProjectMembers(
+    projectId: string,
+    pageOptions: PageOptionsDto,
+  ): Promise<PageDto<ProjectMemberResponseDto>>;
 }

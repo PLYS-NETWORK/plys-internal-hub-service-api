@@ -6,7 +6,6 @@ export enum TaskKanbanStatus {
   IN_REVIEW = 'in_review',
   PENDING_APPROVAL = 'pending_approval',
   REVISION_REQUESTED = 'revision_requested',
-  DISPUTED = 'disputed',
   DONE = 'done',
   CANCELLED = 'cancelled',
 }
@@ -19,7 +18,6 @@ export const TASK_KANBAN_STATUSES: readonly TaskKanbanStatus[] = [
   TaskKanbanStatus.IN_REVIEW,
   TaskKanbanStatus.PENDING_APPROVAL,
   TaskKanbanStatus.REVISION_REQUESTED,
-  TaskKanbanStatus.DISPUTED,
   TaskKanbanStatus.DONE,
   TaskKanbanStatus.CANCELLED,
 ];

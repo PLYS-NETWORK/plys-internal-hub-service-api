@@ -2,9 +2,35 @@ import { ProjectStatus } from '@database/enums/project-status.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 
-import { IConsultantProjectResponse } from './interfaces/consultant-project.response.interface';
+import {
+  ICompanyAddressResponse,
+  IConsultantProjectResponse,
+} from './interfaces/consultant-project.response.interface';
 import { ProjectInterviewQuestionResponseDto } from './project-interview-question-response.dto';
 import { ProjectSkillResponseDto } from './project-skill-response.dto';
+
+@Exclude()
+export class CompanyAddressResponseDto implements ICompanyAddressResponse {
+  @Expose()
+  @ApiProperty({ nullable: true, example: '123 Main St' })
+  public readonly address_line!: string | null;
+
+  @Expose()
+  @ApiProperty({ nullable: true, example: 'Istanbul' })
+  public readonly city!: string | null;
+
+  @Expose()
+  @ApiProperty({ nullable: true, example: 'Istanbul' })
+  public readonly state_province!: string | null;
+
+  @Expose()
+  @ApiProperty({ nullable: true, example: '34000' })
+  public readonly postal_code!: string | null;
+
+  @Expose()
+  @ApiProperty({ nullable: true, example: 'TR' })
+  public readonly country_code!: string | null;
+}
 
 @Exclude()
 export class ConsultantProjectResponseDto implements IConsultantProjectResponse {
@@ -43,6 +69,23 @@ export class ConsultantProjectResponseDto implements IConsultantProjectResponse 
   @Expose({ name: 'cancelledAt' })
   @ApiProperty({ name: 'cancelled_at', nullable: true })
   public readonly cancelled_at!: Date | null;
+
+  @Expose()
+  @ApiProperty({ name: 'payment_type', enum: ['per_task', 'monthly'], example: 'per_task' })
+  public readonly payment_type!: 'per_task' | 'monthly';
+
+  @Expose()
+  @ApiProperty({ name: 'company_name', example: 'Acme Corp' })
+  public readonly company_name!: string;
+
+  @Expose()
+  @ApiProperty({ name: 'company_address', type: CompanyAddressResponseDto })
+  @Type(() => CompanyAddressResponseDto)
+  public readonly company_address!: CompanyAddressResponseDto;
+
+  @Expose()
+  @ApiProperty({ name: 'is_partner_platform', example: false })
+  public readonly is_partner_platform!: boolean;
 
   @Expose()
   @ApiProperty({ type: [ProjectSkillResponseDto] })

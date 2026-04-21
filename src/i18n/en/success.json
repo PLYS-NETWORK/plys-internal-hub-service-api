@@ -21,6 +21,15 @@
     "status_updated": "Project status updated successfully.",
     "published": "Project published successfully."
   },
+  "task": {
+    "created": "Task created successfully.",
+    "assigned": "Task assigned successfully.",
+    "claimed": "Task claimed successfully.",
+    "status_updated": "Task status updated successfully.",
+    "comment_created": "Comment created successfully.",
+    "comment_updated": "Comment updated successfully.",
+    "comment_deleted": "Comment deleted successfully."
+  },
   "application": {
     "created": "Application submitted successfully.",
     "approved": "Application approved successfully.",

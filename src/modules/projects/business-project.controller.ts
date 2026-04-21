@@ -1,6 +1,7 @@
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
+import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { ActivePlatform } from '@database/enums/active-platform.enum';
 import { UserRole } from '@database/enums/user-role.enum';
@@ -27,6 +28,7 @@ import {
   UpdateProjectStatusDto,
 } from './dto/requests';
 import { BusinessProjectResponseDto } from './dto/responses';
+import { ProjectMemberResponseDto } from './dto/responses/project-member-response.dto';
 import { PublishValidationResponseDto } from './dto/responses/publish-validation-response.dto';
 import { BusinessProjectService } from './services/business-project.service';
 
@@ -66,6 +68,17 @@ export class BusinessProjectController {
     @Param('id') id: string,
   ): Promise<ITranslatedPayload<PublishValidationResponseDto>> {
     const data = await this.businessProjectService.validatePublish(id);
+    return { messageKey: 'success.ok', data };
+  }
+
+  @Get(':id/members')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List project members (consultants) with profile details' })
+  public async listProjectMembers(
+    @Param('id') id: string,
+    @Query() pageOptions: PageOptionsDto,
+  ): Promise<ITranslatedPayload<PageDto<ProjectMemberResponseDto>>> {
+    const data = await this.businessProjectService.listProjectMembers(id, pageOptions);
     return { messageKey: 'success.ok', data };
   }
 

@@ -29,7 +29,23 @@
     "requires_tasks_for_configured": "Proje yapılandırılmış olarak işaretlenebilmesi için en az bir görev bulunmalıdır.",
     "cannot_be_edited": "Proje mevcut durumunda düzenlenemez.",
     "cannot_publish": "Bu proje mevcut durumunda yayınlanamaz.",
-    "insufficient_balance": "Bu projeyi yayınlamak için yeterli hesap bakiyesi yok."
+    "insufficient_balance": "Bu projeyi yayınlamak için yeterli hesap bakiyesi yok.",
+    "recall_transaction_not_found": "Geri çağırma iadesi için orijinal yayın işlemi bulunamadı."
+  },
+  "task": {
+    "not_found": "Görev bulunamadı.",
+    "invalid_status_transition": "Geçersiz görev durumu geçişi.",
+    "already_assigned": "Bu görev zaten bir danışmana atanmış.",
+    "consultant_not_project_member": "Bu danışman projenin aktif bir üyesi değil.",
+    "project_not_in_progress": "Görevler yalnızca devam eden projeler için yönetilebilir.",
+    "comment_not_found": "Görev yorumu bulunamadı.",
+    "comment_forbidden": "Bu yorum üzerinde işlem yapma yetkiniz yok."
+  },
+  "payment": {
+    "insufficient_balance": "Yetersiz hesap bakiyesi.",
+    "unsupported_platform": "Desteklenmeyen ödeme platformu.",
+    "checkout_failed": "Ödeme işlemi başarısız oldu.",
+    "transfer_failed": "Para transferi başarısız oldu."
   },
   "database": {
     "unique_violation": "Bu değerlere sahip bir kayıt zaten mevcut",

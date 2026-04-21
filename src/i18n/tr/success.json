@@ -21,6 +21,15 @@
     "status_updated": "Proje durumu başarıyla güncellendi.",
     "published": "Proje başarıyla yayınlandı."
   },
+  "task": {
+    "created": "Görev başarıyla oluşturuldu.",
+    "assigned": "Görev başarıyla atandı.",
+    "claimed": "Görev başarıyla alındı.",
+    "status_updated": "Görev durumu başarıyla güncellendi.",
+    "comment_created": "Yorum başarıyla oluşturuldu.",
+    "comment_updated": "Yorum başarıyla güncellendi.",
+    "comment_deleted": "Yorum başarıyla silindi."
+  },
   "application": {
     "created": "Başvuru başarıyla gönderildi.",
     "approved": "Başvuru başarıyla onaylandı.",

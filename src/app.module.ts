@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
@@ -21,11 +22,13 @@ import { AuditSubscriber } from './database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from './database/typeorm.config';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { BusinessProfilesModule } from './modules/business-profiles/business-profiles.module';
 import { ConsultantProfilesModule } from './modules/consultant-profiles/consultant-profiles.module';
 import { PaymentsModule } from './modules/payments';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { SkillsModule } from './modules/skills/skills.module';
+import { TasksModule } from './modules/tasks/tasks.module';
 import { UnitOfWorkModule } from './modules/unit-of-work/unit-of-work.module';
 import { UsersModule } from './modules/users/users.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
@@ -44,6 +47,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
       useFactory: (envService: EnvironmentsService) => getTypeOrmConfig(envService),
     }),
     I18nModule,
+    ScheduleModule.forRoot(),
     RequestContextModule,
     EmailModule,
     CopyleaksModule,
@@ -52,11 +56,13 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     UnitOfWorkModule,
     ApplicationsModule,
     AuthModule,
+    BillingModule,
     PaymentsModule,
     BusinessProfilesModule,
     ConsultantProfilesModule,
     ProjectsModule,
     SkillsModule,
+    TasksModule,
     UsersModule,
     WebhooksModule,
   ],

@@ -34,7 +34,23 @@
     "requires_tasks_for_configured": "Project must have at least one task before it can be marked as configured.",
     "cannot_be_edited": "Project cannot be edited in its current status.",
     "cannot_publish": "This project cannot be published in its current state.",
-    "insufficient_balance": "Insufficient account balance to publish this project."
+    "insufficient_balance": "Insufficient account balance to publish this project.",
+    "recall_transaction_not_found": "Original publication transaction not found for recall refund."
+  },
+  "task": {
+    "not_found": "Task not found.",
+    "invalid_status_transition": "Invalid task status transition.",
+    "already_assigned": "This task is already assigned to a consultant.",
+    "consultant_not_project_member": "This consultant is not an active member of the project.",
+    "project_not_in_progress": "Tasks can only be managed for in-progress projects.",
+    "comment_not_found": "Task comment not found.",
+    "comment_forbidden": "You do not have permission to perform this action on this comment."
+  },
+  "payment": {
+    "insufficient_balance": "Insufficient account balance.",
+    "unsupported_platform": "Unsupported payment platform.",
+    "checkout_failed": "Payment checkout failed.",
+    "transfer_failed": "Payment transfer failed."
   },
   "database": {
     "unique_violation": "A record with these values already exists",
