@@ -193,18 +193,38 @@ export class BasicAuthService implements IBasicAuthService {
 
     // Fire-and-forget: welcome email is non-critical; verification state is
     // already committed. A delivery failure must not un-verify the account.
-    const loginUrl = this.getPlatformUrl(authToken.user.platform) + '/login';
-    this.emailService
-      .sendWelcomeEmail(
-        authToken.user.email,
-        { userName: authToken.user.email, loginUrl },
-        authToken.user.platform,
-      )
-      .catch((err: Error) =>
+    void (async (): Promise<void> => {
+      try {
+        let dashboardUrl = this.getPlatformUrl(authToken.user.platform);
+
+        if (authToken.user.platform === ActivePlatform.BUSINESS) {
+          // For business users, construct URL with business profile ID
+          const businessProfile = await this.uow.businessProfiles.findOne({
+            where: { userId: authToken.userId },
+          });
+
+          if (businessProfile) {
+            dashboardUrl += `/c/${businessProfile.id}/overview`;
+          } else {
+            // Fallback to generic dashboard if business profile not found
+            dashboardUrl += '/dashboard';
+          }
+        } else {
+          // For consultant/admin users, use generic dashboard
+          dashboardUrl += '/dashboard';
+        }
+
+        await this.emailService.sendWelcomeEmail(
+          authToken.user.email,
+          { userName: authToken.user.email, dashboardUrl },
+          authToken.user.platform,
+        );
+      } catch (err: unknown) {
         this.logger.error(
-          `[${this.rid}] verifyEmail — welcome email failed | error: ${err.message}`,
-        ),
-      );
+          `[${this.rid}] verifyEmail — welcome email failed | error: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    })();
 
     return this.sessionService.createSession(
       authToken.user.id,

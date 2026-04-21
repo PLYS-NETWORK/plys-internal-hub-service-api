@@ -1,3 +1,5 @@
+import { EmailModule } from '@common/modules/email';
+import { EnvironmentsModule } from '@common/modules/environments';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
 import { Module } from '@nestjs/common';
 
@@ -10,7 +12,7 @@ import { ProjectRequiredSkillsService } from './services/project-required-skills
 import { ProjectTasksService } from './services/project-tasks.service';
 
 @Module({
-  imports: [UnitOfWorkModule],
+  imports: [UnitOfWorkModule, EmailModule, EnvironmentsModule],
   controllers: [BusinessProjectController, ConsultantProjectController],
   providers: [
     BusinessProjectService,

@@ -3,6 +3,8 @@ import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { EmailService } from '@common/modules/email/email.service';
+import { EnvironmentsService } from '@common/modules/environments';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import {
   BusinessProfile,
@@ -60,6 +62,8 @@ export class BusinessProjectService implements IBusinessProjectService {
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly i18n: I18nService,
+    private readonly emailService: EmailService,
+    private readonly env: EnvironmentsService,
     private readonly projectRequiredSkillsService: ProjectRequiredSkillsService,
     private readonly projectInterviewQuestionsService: ProjectInterviewQuestionsService,
     private readonly projectTasksService: ProjectTasksService,
@@ -430,6 +434,55 @@ export class BusinessProjectService implements IBusinessProjectService {
     this.logger.log(
       `[${this.rid}] confirmPublish — complete | projectId: ${projectId}, status: ${updatedProject.status}`,
     );
+
+    // Send appropriate email based on payment type
+    const user = await this.uow.users.findOne({ where: { id: businessProfile.userId } });
+    if (user?.email) {
+      try {
+        if (eligibility.paymentType === 'pre-paid') {
+          // Send payment receipt email for pre-paid businesses
+          const receiptNumber = `PLY-${Date.now().toString().slice(-8).toUpperCase()}`;
+          const paidDate = new Date().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          });
+          const projectDashboardUrl = `${this.env.ployosUrl}/c/${businessProfile.id}/projects/${projectId}`;
+
+          await this.emailService.sendProjectPublishedReceiptEmail(user.email, {
+            businessName: businessProfile.companyName || 'Business Owner',
+            receiptNumber,
+            paidDate,
+            projectTitle: project.title,
+            paymentMethod: 'Account Balance',
+            amount: eligibility.projectAmount.toFixed(2),
+            projectDashboardUrl,
+          });
+
+          this.logger.log(
+            `[${this.rid}] confirmPublish — receipt email sent | projectId: ${projectId}, email: ${user.email}`,
+          );
+        } else {
+          // Send project published success email for credit-based businesses
+          const projectHubUrl = `${this.env.ployosUrl}/c/${businessProfile.id}/projects/${projectId}`;
+
+          await this.emailService.sendProjectPublishedSuccessEmail(user.email, {
+            businessName: businessProfile.companyName || 'Business Owner',
+            projectTitle: project.title,
+            projectHubUrl,
+          });
+
+          this.logger.log(
+            `[${this.rid}] confirmPublish — success email sent | projectId: ${projectId}, email: ${user.email}`,
+          );
+        }
+      } catch (error) {
+        // Don't fail the project publishing if email fails
+        this.logger.error(
+          `[${this.rid}] confirmPublish — failed to send project email | projectId: ${projectId}, paymentType: ${eligibility.paymentType}, error: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
   }
 
   /** @inheritdoc */

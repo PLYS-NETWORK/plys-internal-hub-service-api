@@ -8,6 +8,14 @@ export {
   type IBusinessForgotPasswordOtpTemplateOptions,
 } from './business/forgot-password-otp.template';
 export {
+  buildBusinessProjectPublishedReceiptEmail,
+  type IBusinessProjectPublishedReceiptTemplateOptions,
+} from './business/project-published-receipt.template';
+export {
+  buildBusinessProjectPublishedSuccessEmail,
+  type IBusinessProjectPublishedSuccessTemplateOptions,
+} from './business/project-published-success.template';
+export {
   buildBusinessVerifyRegistrationEmail,
   type IBusinessVerifyRegistrationTemplateOptions,
 } from './business/verify-registration.template';

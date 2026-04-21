@@ -3,62 +3,140 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>New Application Received</title>
-  <style>
-    body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f4f4f7; }
-    .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .header { background: #4f46e5; padding: 32px; text-align: center; color: #ffffff; }
-    .header h1 { margin: 0; font-size: 24px; }
-    .body { padding: 32px; color: #333333; line-height: 1.6; }
-    .body h2 { margin-top: 0; color: #1a1a1a; }
-    .detail-table { width: 100%; border-collapse: collapse; margin: 16px 0; }
-    .detail-table td { padding: 8px 12px; border-bottom: 1px solid #eee; }
-    .detail-table td:first-child { font-weight: 600; color: #555; width: 140px; }
-    .skill-tag { display: inline-block; padding: 4px 12px; margin: 2px 4px 2px 0; background: #eef2ff; color: #4f46e5; border-radius: 4px; font-size: 13px; }
-    .footer { padding: 24px 32px; text-align: center; font-size: 12px; color: #888888; border-top: 1px solid #eee; }
-  </style>
+  <title>Ployos - New Application</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>New Application Received</h1>
-    </div>
-    <div class="body">
-      <h2>Hi <%= recipientName %>,</h2>
-      <p>A consultant has applied to your project <strong><%= projectTitle %></strong>.</p>
+<body style="margin:0;padding:0;background-color:#f7f9fb;font-family:'Inter',sans-serif;min-height:100vh;padding:32px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
 
-      <table class="detail-table">
-        <tr>
-          <td>Consultant</td>
-          <td><%= consultantFullName %></td>
-        </tr>
-        <tr>
-          <td>Address</td>
-          <td><%= consultantAddress %></td>
-        </tr>
-        <tr>
-          <td>Matched Skills</td>
-          <td>
-            <% matchedSkills.forEach(function(skill) { %>
-              <span class="skill-tag"><%= skill %></span>
-            <% }); %>
-            <% if (matchedSkills.length === 0) { %>
-              <em>No specific skill requirements</em>
-            <% } %>
-          </td>
-        </tr>
-      </table>
+  <!-- Global Email Container -->
+  <table width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:12px;box-shadow:0 12px 32px rgba(25,28,30,0.06);overflow:hidden;">
 
-      <div style="text-align: center; margin: 24px 0;">
-        <a href="<%= applicationUrl %>"
-           style="display: inline-block; padding: 12px 32px; background: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">
-          Review Application
-        </a>
-      </div>
-    </div>
-    <div class="footer">
-      <p>&copy; <%= year %> Ployos. All rights reserved.</p>
-    </div>
-  </div>
+    <!-- Header / Branding -->
+    <tr>
+      <td style="padding:48px 32px 32px;position:relative;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="vertical-align:middle;">
+              <h1 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;letter-spacing:-0.025em;color:#1e3a8a;font-size:24px;">Ployos</h1>
+            </td>
+            <td style="text-align:right;vertical-align:middle;">
+              <span style="display:inline-flex;align-items:center;justify-content:center;background-color:#89f5e7;color:#005049;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;padding:4px 12px;border-radius:12px;">
+                New Activity
+              </span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Main Content Canvas -->
+    <tr>
+      <td style="padding:0 32px 48px;">
+
+        <h2 style="font-family:'Manrope',sans-serif;color:#00236f;font-size:24px;font-weight:700;letter-spacing:-0.025em;margin:0 0 16px;">
+          Great news! You have a new application.
+        </h2>
+
+        <p style="font-family:'Inter',sans-serif;color:#191c1e;font-size:16px;line-height:1.6;margin:0 0 40px;">
+          Hi <strong><%= recipientName %></strong>,<br/><br/>
+          A highly qualified consultant has just submitted their interest for one of your active initiatives. Review their details below to determine if they are the right fit for your architectural vision.
+        </p>
+
+        <!-- Project Details Pocket -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eceef0;border-radius:12px;margin:0 0 24px;">
+          <tr>
+            <td style="padding:24px;">
+              <p style="font-family:'Inter',sans-serif;color:#444651;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin:0 0 8px;">Target Initiative</p>
+              <h3 style="font-family:'Manrope',sans-serif;color:#191c1e;font-size:20px;font-weight:700;margin:0;">
+                <%= projectTitle %>
+              </h3>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Consultant Details Pocket -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f4f6;border-radius:12px;margin:0 0 40px;">
+          <tr>
+            <td style="padding:24px;">
+              <p style="font-family:'Inter',sans-serif;color:#444651;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;margin:0 0 16px;">Applicant Profile</p>
+
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="width:48px;height:48px;background-color:#00236f;border-radius:50%;text-align:center;vertical-align:middle;padding-right:16px;">
+                    <div style="color:#ffffff;font-size:18px;line-height:48px;font-family:'Manrope',sans-serif;font-weight:700;">
+                      <%= consultantFullName.charAt(0).toUpperCase() %>
+                    </div>
+                  </td>
+                  <td style="vertical-align:top;">
+                    <h4 style="font-family:'Manrope',sans-serif;color:#191c1e;font-size:18px;font-weight:700;margin:0 0 4px;"><%= consultantFullName %></h4>
+                    <div style="display:flex;align-items:flex-start;color:#444651;margin-bottom:12px;">
+                      <span style="font-size:14px;margin-right:6px;">📍</span>
+                      <span style="font-family:'Inter',sans-serif;font-size:14px;line-height:1.4;"><%= consultantAddress %></span>
+                    </div>
+
+                    <!-- Skills Section -->
+                    <% if (matchedSkills && matchedSkills.length > 0) { %>
+                      <div style="margin-top:12px;">
+                        <p style="font-family:'Inter',sans-serif;color:#444651;font-size:12px;font-weight:600;margin:0 0 8px;">Matched Skills:</p>
+                        <div>
+                          <% matchedSkills.forEach(function(skill) { %>
+                            <span style="display:inline-block;padding:4px 12px;margin:2px 4px 2px 0;background-color:#dce1ff;color:#00236f;border-radius:6px;font-size:12px;font-family:'Inter',sans-serif;font-weight:500;">
+                              <%= skill %>
+                            </span>
+                          <% }); %>
+                        </div>
+                      </div>
+                    <% } %>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Action -->
+        <table cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="background:linear-gradient(135deg, #00236f 0%, #1e3a8a 100%);border-radius:6px;box-shadow:0 8px 16px rgba(0,35,111,0.15);">
+              <a href="<%= applicationUrl %>" style="display:inline-block;color:#ffffff;font-family:'Manrope',sans-serif;font-size:14px;font-weight:700;padding:14px 32px;text-decoration:none;text-align:center;">
+                Review Application
+              </a>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+
+  </table>
+
+  <!-- Footer -->
+  <table width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;margin:0 auto;margin-top:32px;">
+    <tr>
+      <td style="padding:40px 24px;text-align:center;">
+        <h2 style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:700;color:#1e3a8a;margin:0 0 16px;">Ployos</h2>
+
+        <p style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;margin:0 0 16px;">© <%= year %> Ployos Platform. All rights reserved.</p>
+
+        <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+          <tr>
+            <td style="padding:0 16px;">
+              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;">Privacy Policy</a>
+            </td>
+            <td style="padding:0 16px;">
+              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;">Terms of Service</a>
+            </td>
+            <td style="padding:0 16px;">
+              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;">Unsubscribe</a>
+            </td>
+            <td style="padding:0 16px;">
+              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;">Manage Preferences</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
 </body>
 </html>

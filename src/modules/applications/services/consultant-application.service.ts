@@ -233,7 +233,7 @@ export class ConsultantApplicationService {
     );
 
     // 8. Send notification emails AFTER transaction commits (fire-and-forget)
-    const applicationUrl = `${this.envService.ployosUrl}/projects/${project.id}/applications`;
+    const applicationUrl = `${this.envService.ployosUrl}/c/${project.businessId}/projects/${project.id}`;
     this.sendNotificationEmails(project, consultantProfile, matchedSkills, applicationUrl);
 
     // 9. Build response DTO

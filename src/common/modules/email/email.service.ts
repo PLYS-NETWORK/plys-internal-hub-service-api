@@ -18,6 +18,8 @@ import { IEmailService } from './interfaces/email-service.interface';
 import {
   buildBusinessApplicationNotificationEmail,
   buildBusinessForgotPasswordOtpEmail,
+  buildBusinessProjectPublishedReceiptEmail,
+  buildBusinessProjectPublishedSuccessEmail,
   buildBusinessVerifyRegistrationEmail,
   buildBusinessWelcomeEmail,
   buildConsultantAiDetectedEmail,
@@ -26,6 +28,8 @@ import {
   buildConsultantForgotPasswordOtpEmail,
   buildConsultantVerifyRegistrationEmail,
   buildConsultantWelcomeEmail,
+  type IBusinessProjectPublishedReceiptTemplateOptions,
+  type IBusinessProjectPublishedSuccessTemplateOptions,
 } from './templates';
 
 /**
@@ -120,9 +124,7 @@ export class EmailService implements IEmailService {
     options: IWelcomeEmailOptions,
     platform: ActivePlatform,
   ): Promise<void> {
-    this.logger.log(
-      `[${this.rid}] sendWelcomeEmail — start | to: ${to}, platform: ${platform}`,
-    );
+    this.logger.log(`[${this.rid}] sendWelcomeEmail — start | to: ${to}, platform: ${platform}`);
     try {
       const html =
         platform === ActivePlatform.CONSULTANT
@@ -138,9 +140,7 @@ export class EmailService implements IEmailService {
       this.logger.log(`[${this.rid}] sendWelcomeEmail — sent | to: ${to}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(
-        `[${this.rid}] sendWelcomeEmail — failed | to: ${to} | error: ${message}`,
-      );
+      this.logger.error(`[${this.rid}] sendWelcomeEmail — failed | to: ${to} | error: ${message}`);
       throw err;
     }
   }
@@ -149,9 +149,7 @@ export class EmailService implements IEmailService {
     to: string,
     options: IBusinessApplicationNotificationEmailOptions,
   ): Promise<void> {
-    this.logger.log(
-      `[${this.rid}] sendApplicationNotificationToBusinessEmail — start | to: ${to}`,
-    );
+    this.logger.log(`[${this.rid}] sendApplicationNotificationToBusinessEmail — start | to: ${to}`);
     try {
       await this.emailProvider.send({
         from: this.env.resendPloyosEmail,
@@ -237,6 +235,50 @@ export class EmailService implements IEmailService {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(
         `[${this.rid}] sendApplicationStatusEmail — failed | to: ${to} | error: ${message}`,
+      );
+      throw err;
+    }
+  }
+
+  public async sendProjectPublishedReceiptEmail(
+    to: string,
+    options: IBusinessProjectPublishedReceiptTemplateOptions,
+  ): Promise<void> {
+    this.logger.log(`[${this.rid}] sendProjectPublishedReceiptEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        from: this.env.resendPloyosEmail,
+        to,
+        subject: 'Payment Receipt - Project Published Successfully',
+        html: await buildBusinessProjectPublishedReceiptEmail(options),
+      });
+      this.logger.log(`[${this.rid}] sendProjectPublishedReceiptEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `[${this.rid}] sendProjectPublishedReceiptEmail — failed | to: ${to} | error: ${message}`,
+      );
+      throw err;
+    }
+  }
+
+  public async sendProjectPublishedSuccessEmail(
+    to: string,
+    options: IBusinessProjectPublishedSuccessTemplateOptions,
+  ): Promise<void> {
+    this.logger.log(`[${this.rid}] sendProjectPublishedSuccessEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        from: this.env.resendPloyosEmail,
+        to,
+        subject: 'Your project is officially live',
+        html: await buildBusinessProjectPublishedSuccessEmail(options),
+      });
+      this.logger.log(`[${this.rid}] sendProjectPublishedSuccessEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `[${this.rid}] sendProjectPublishedSuccessEmail — failed | to: ${to} | error: ${message}`,
       );
       throw err;
     }

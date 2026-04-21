@@ -14,7 +14,7 @@ export interface IForgotPasswordOtpEmailOptions {
 
 export interface IWelcomeEmailOptions {
   readonly userName: string;
-  readonly loginUrl: string;
+  readonly dashboardUrl: string;
 }
 
 export interface IBusinessApplicationNotificationEmailOptions {

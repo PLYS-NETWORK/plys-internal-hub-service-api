@@ -3,17 +3,17 @@ import * as path from 'path';
 
 export interface IBusinessWelcomeTemplateOptions {
   readonly userName: string;
-  readonly loginUrl: string;
+  readonly dashboardUrl: string;
 }
 
 export async function buildBusinessWelcomeEmail(
   options: IBusinessWelcomeTemplateOptions,
 ): Promise<string> {
-  const { userName, loginUrl } = options;
+  const { userName, dashboardUrl } = options;
 
   return ejs.renderFile(path.join(__dirname, 'welcome.template.ejs'), {
     userName,
-    loginUrl,
+    dashboardUrl,
     year: new Date().getFullYear(),
   });
 }

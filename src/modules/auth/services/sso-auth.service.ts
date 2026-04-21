@@ -180,13 +180,31 @@ export class SsoAuthService implements ISsoAuthService {
       // rolls back, the user and SSO-link rows are removed, and the API returns
       // an error so the caller knows to retry.
       if (isNewUser) {
-        const loginUrl =
+        let dashboardUrl =
           activePlatform === ActivePlatform.CONSULTANT
-            ? `${this.envService.lonaUrl}/login`
-            : `${this.envService.ployosUrl}/login`;
+            ? `${this.envService.lonaUrl}/dashboard`
+            : this.envService.ployosUrl;
+
+        // For business users, try to get business profile ID for proper dashboard URL
+        if (activePlatform === ActivePlatform.BUSINESS) {
+          try {
+            const businessProfile = await this.uow.businessProfiles.findOne({
+              where: { userId: user.id },
+            });
+
+            if (businessProfile) {
+              dashboardUrl += `/c/${businessProfile.id}/overview`;
+            } else {
+              dashboardUrl += '/dashboard';
+            }
+          } catch {
+            dashboardUrl += '/dashboard';
+          }
+        }
+
         await this.emailService.sendWelcomeEmail(
           user.email,
-          { userName: userData.displayName || user.email, loginUrl },
+          { userName: userData.displayName || user.email, dashboardUrl },
           activePlatform,
         );
       }
