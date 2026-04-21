@@ -1,8 +1,9 @@
 import { TraceableEntity } from '@database/entities/base/traceable.entity';
+import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
 import { Project } from '@database/entities/projects/project.entity';
 import { Task } from '@database/entities/tasks/task.entity';
+import { ConsultantTransactionType } from '@database/enums/consultant-transaction-type.enum';
 import { TransactionStatus } from '@database/enums/transaction-status.enum';
-import { WalletTransactionType } from '@database/enums/wallet-transaction-type.enum';
 import {
   Column,
   Entity,
@@ -13,34 +14,33 @@ import {
   Unique,
 } from 'typeorm';
 
-import { ConsultantWallet } from './consultant-wallet.entity';
 import { Invoice } from './invoice.entity';
 
 // Append-only ledger. Never UPDATE — write a `reversal` row instead.
 // `processor_event_id` is the idempotency key from the payment processor.
-@Entity('wallet_transactions')
-@Unique('uq_wallet_transactions_processor_event_id', ['processorEventId'])
-@Index('idx_wallet_txn_wallet_created', ['walletId'])
-@Index('idx_wallet_txn_project', ['projectId'])
-@Index('idx_wallet_txn_task', ['taskId'])
-export class WalletTransaction extends TraceableEntity {
-  @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_wallet_transactions' })
+@Entity('consultant_transactions')
+@Unique('uq_consultant_transactions_processor_event_id', ['processorEventId'])
+@Index('idx_consultant_txn_consultant_created', ['consultantId'])
+@Index('idx_consultant_txn_project', ['projectId'])
+@Index('idx_consultant_txn_task', ['taskId'])
+export class ConsultantTransaction extends TraceableEntity {
+  @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_consultant_transactions' })
   public readonly id!: string;
 
-  @Column({ name: 'wallet_id', type: 'uuid' })
-  public walletId!: string;
+  @Column({ name: 'consultant_id', type: 'uuid' })
+  public consultantId!: string;
 
-  @ManyToOne(() => ConsultantWallet, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => ConsultantProfile, { onDelete: 'RESTRICT' })
   @JoinColumn({
-    name: 'wallet_id',
-    foreignKeyConstraintName: 'fk_wallet_transactions_to_consultant_wallets',
+    name: 'consultant_id',
+    foreignKeyConstraintName: 'fk_consultant_transactions_to_consultant_profiles',
   })
-  public wallet!: ConsultantWallet;
+  public consultant!: ConsultantProfile;
 
   @Column({ type: 'varchar', length: 20 })
-  public type!: WalletTransactionType;
+  public type!: ConsultantTransactionType;
 
-  @Column({ type: 'numeric', precision: 10, scale: 2 })
+  @Column({ type: 'numeric', precision: 12, scale: 2 })
   public amount!: string;
 
   @Column({ type: 'varchar', length: 20, default: TransactionStatus.COMPLETED })
@@ -52,7 +52,7 @@ export class WalletTransaction extends TraceableEntity {
   @ManyToOne(() => Invoice, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({
     name: 'invoice_id',
-    foreignKeyConstraintName: 'fk_wallet_transactions_to_invoices',
+    foreignKeyConstraintName: 'fk_consultant_transactions_to_invoices',
   })
   public invoice!: Invoice | null;
 
@@ -62,7 +62,7 @@ export class WalletTransaction extends TraceableEntity {
   @ManyToOne(() => Task, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({
     name: 'task_id',
-    foreignKeyConstraintName: 'fk_wallet_transactions_to_tasks',
+    foreignKeyConstraintName: 'fk_consultant_transactions_to_tasks',
   })
   public task!: Task | null;
 
@@ -72,7 +72,7 @@ export class WalletTransaction extends TraceableEntity {
   @ManyToOne(() => Project, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({
     name: 'project_id',
-    foreignKeyConstraintName: 'fk_wallet_transactions_to_projects',
+    foreignKeyConstraintName: 'fk_consultant_transactions_to_projects',
   })
   public project!: Project | null;
 

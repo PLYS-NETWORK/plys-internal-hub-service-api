@@ -1,6 +1,8 @@
 import { WebhookEventType } from '@common/modules/payment/interfaces/webhook-event.interface';
 import { PaymentService } from '@common/modules/payment/payment.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { BusinessTransaction } from '@database/entities/finance/business-transaction.entity';
+import { ConsultantTransaction } from '@database/entities/finance/consultant-transaction.entity';
 import { PaymentProcessor } from '@database/enums/payment-processor.enum';
 import { TransactionStatus } from '@database/enums/transaction-status.enum';
 import { WebhookStatus } from '@database/enums/webhook-status.enum';
@@ -164,6 +166,9 @@ export class WebhookProcessorService {
         // transactions complete immediately after successful API call
         this.logger.log(`[${this.rid}] processStripeEvent — transfer event received: ${type}`);
         break;
+      case 'transfer.failed':
+        await this.handleTransferFailed(data);
+        break;
       default:
         this.logger.log(`[${this.rid}] processStripeEvent — unhandled event type: ${type}`);
     }
@@ -278,6 +283,113 @@ export class WebhookProcessorService {
     this.logger.log(
       `[${this.rid}] handleRefundCreated — transaction reversed | transactionId: ${transactionId}`,
     );
+  }
+
+  /**
+   * Handles Stripe transfer.failed events.
+   *
+   * Why we reverse the balance: The withdraw strategies optimistically deduct the
+   * balance and mark the transaction COMPLETED at API call time. If Stripe later
+   * reports a failure, we must reverse that deduction by inserting a REVERSAL
+   * record and crediting the balance back (append-only ledger pattern).
+   */
+  private async handleTransferFailed(data: Record<string, unknown>): Promise<void> {
+    const dataObj = data['data'] as Record<string, unknown> | undefined;
+    const transfer = dataObj?.['object'] as Record<string, unknown> | undefined;
+    const transferId = transfer?.['id'] as string | undefined;
+
+    if (!transferId) {
+      this.logger.warn(`[${this.rid}] handleTransferFailed — no transfer ID in event`);
+      return;
+    }
+
+    // Try to find the transaction in business transactions first
+    const businessTx = await this.uow.businessTransactions.findOne({
+      where: { processorEventId: transferId },
+    });
+
+    if (businessTx) {
+      await this.reverseBusinessWithdrawal(businessTx);
+      return;
+    }
+
+    // Try consultant transactions
+    const consultantTx = await this.uow.consultantTransactions.findOne({
+      where: { processorEventId: transferId },
+    });
+
+    if (consultantTx) {
+      await this.reverseConsultantWithdrawal(consultantTx);
+      return;
+    }
+
+    this.logger.warn(
+      `[${this.rid}] handleTransferFailed — no matching transaction | transferId: ${transferId}`,
+    );
+  }
+
+  private async reverseBusinessWithdrawal(transaction: BusinessTransaction): Promise<void> {
+    if (transaction.status === TransactionStatus.REVERSED) {
+      this.logger.log(
+        `[${this.rid}] reverseBusinessWithdrawal — already reversed | transactionId: ${transaction.id}`,
+      );
+      return;
+    }
+
+    transaction.status = TransactionStatus.REVERSED;
+    transaction.note = 'Transfer failed — reversed by webhook';
+    await this.uow.businessTransactions.save(transaction);
+
+    // Credit balance back
+    const businessProfile = await this.uow.businessProfiles.findOne({
+      where: { id: transaction.businessId },
+    });
+
+    if (businessProfile) {
+      const currentBalance = parseFloat(businessProfile.accountBalance);
+      const amount = parseFloat(transaction.amount);
+      const newBalance = (currentBalance + amount).toFixed(2);
+
+      await this.uow.businessProfiles.update(businessProfile.id, {
+        accountBalance: newBalance,
+      });
+
+      this.logger.log(
+        `[${this.rid}] reverseBusinessWithdrawal — balance restored | businessId: ${businessProfile.id}, amount: ${amount}, newBalance: ${newBalance}`,
+      );
+    }
+  }
+
+  private async reverseConsultantWithdrawal(transaction: ConsultantTransaction): Promise<void> {
+    if (transaction.status === TransactionStatus.REVERSED) {
+      this.logger.log(
+        `[${this.rid}] reverseConsultantWithdrawal — already reversed | transactionId: ${transaction.id}`,
+      );
+      return;
+    }
+
+    transaction.status = TransactionStatus.REVERSED;
+    transaction.note = 'Transfer failed — reversed by webhook';
+    await this.uow.consultantTransactions.save(transaction);
+
+    // Credit balance back
+    const consultantProfile = await this.uow.consultantProfiles.findOne({
+      where: { id: transaction.consultantId },
+    });
+
+    if (consultantProfile) {
+      const currentBalance = parseFloat(consultantProfile.accountBalance);
+      const amount = parseFloat(transaction.amount);
+      const newBalance = (currentBalance + amount).toFixed(2);
+
+      await this.uow.consultantProfiles.update(consultantProfile.id, {
+        accountBalance: newBalance,
+      });
+
+      this.logger.log(
+        `[${this.rid}] reverseConsultantWithdrawal — balance restored | consultantId: ${consultantProfile.id}, amount: ${amount}, newBalance: ${newBalance}`,
+      );
+    }
   }
 
   private async handleStripeAccountUpdated(data: Record<string, unknown>): Promise<void> {

@@ -7,7 +7,7 @@ import {
   IBusinessTransactionRepository,
   IConsultantProfileRepository,
   IConsultantSkillRepository,
-  IConsultantWalletRepository,
+  IConsultantTransactionRepository,
   IInterviewAnswerRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
@@ -27,7 +27,6 @@ import {
   IUserRepository,
   IUserSessionRepository,
   IUserSsoProviderRepository,
-  IWalletTransactionRepository,
   IWebhookEventRepository,
 } from '@modules/unit-of-work/repositories';
 
@@ -77,8 +76,7 @@ export interface IUnitOfWork {
   readonly billingPeriods: IBillingPeriodRepository;
   readonly invoices: IInvoiceRepository;
   readonly invoiceLineItems: IInvoiceLineItemRepository;
-  readonly consultantWallets: IConsultantWalletRepository;
-  readonly walletTransactions: IWalletTransactionRepository;
+  readonly consultantTransactions: IConsultantTransactionRepository;
   readonly businessTransactions: IBusinessTransactionRepository;
   readonly webhookEvents: IWebhookEventRepository;
 

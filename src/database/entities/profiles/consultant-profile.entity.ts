@@ -63,4 +63,12 @@ export class ConsultantProfile extends AuditableEntity {
 
   @Column({ name: 'account_balance', type: 'numeric', precision: 15, scale: 2, default: 0 })
   public accountBalance!: string;
+
+  @Column({
+    name: 'stripe_connect_account_id',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  public stripeConnectAccountId!: string | null;
 }

@@ -8,11 +8,11 @@ export class CreateWithdrawDto implements ICreateWithdrawRequest {
   @Expose()
   @ApiProperty({
     name: 'amount',
-    example: 50,
-    minimum: 10,
-    description: 'Amount in USD to withdraw',
+    example: 100,
+    minimum: 50,
+    description: 'Amount in USD to withdraw (minimum $50)',
   })
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(10)
+  @Min(50)
   public readonly amount!: number;
 }

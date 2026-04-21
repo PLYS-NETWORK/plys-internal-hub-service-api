@@ -9,7 +9,7 @@ import {
   BusinessTransactionRepository,
   ConsultantProfileRepository,
   ConsultantSkillRepository,
-  ConsultantWalletRepository,
+  ConsultantTransactionRepository,
   InterviewAnswerRepository,
   InvoiceLineItemRepository,
   InvoiceRepository,
@@ -29,7 +29,6 @@ import {
   UserRepository,
   UserSessionRepository,
   UserSsoProviderRepository,
-  WalletTransactionRepository,
   WebhookEventRepository,
 } from './repositories';
 import { UnitOfWorkService } from './unit-of-work.service';
@@ -68,8 +67,7 @@ const repositories = [
   BillingPeriodRepository,
   InvoiceRepository,
   InvoiceLineItemRepository,
-  ConsultantWalletRepository,
-  WalletTransactionRepository,
+  ConsultantTransactionRepository,
   BusinessTransactionRepository,
   WebhookEventRepository,
   ProjectInterviewQuestionRepository,

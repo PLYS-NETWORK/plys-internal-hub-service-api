@@ -21,8 +21,7 @@ received → pending → processing → processed
 
 ## External dependencies
 - **Billing** — invoice payment confirmation.
-- **Wallets** — credit_cleared / debit_pending / reversal entries.
-- **BusinessTransactions** — payment_received / refund_issued / dispute_opened.
+- **Payments** — top-up confirmation credits `business_profiles.account_balance`; `transfer.failed` reverses withdrawals on both `business_transactions` and `consultant_transactions`.
 - **Notifications** — wallet credited, payment received, dispute opened.
 
 ## Critical edge cases

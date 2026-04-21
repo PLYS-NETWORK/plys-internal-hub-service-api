@@ -30,8 +30,7 @@ invoices:  pending → paid
 
 ## External dependencies
 - **Tasks** — `tasks.billing_period_id` is set when a task enters billing. FK added in this domain's migration.
-- **Wallets** — invoice creation / payment confirmation produces `wallet_transactions` (credit_pending → credit_cleared + debit_pending). Transactions live in the Wallets module but are written from this module's services.
-- **BusinessTransactions** — every invoice created / payment received also writes a `business_transactions` row (audit on the business side).
+- **Payments** — invoice creation / payment confirmation produces `consultant_transactions` (credit_pending → credit_cleared + debit_pending) and `business_transactions` rows. Both tables are owned by the Payments module.
 - **Notifications** — invoice generated, payment due, payment received → `billing+` business members.
 - **WebhookEvents** — payment processor confirmations land in `webhook_events` first; this module reads them via the idempotency gate.
 

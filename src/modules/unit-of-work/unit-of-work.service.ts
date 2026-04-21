@@ -12,7 +12,7 @@ import {
   BusinessTransactionRepository,
   ConsultantProfileRepository,
   ConsultantSkillRepository,
-  ConsultantWalletRepository,
+  ConsultantTransactionRepository,
   IAiSessionMessageRepository,
   IAiTaskSessionRepository,
   IAuthTokenRepository,
@@ -21,7 +21,7 @@ import {
   IBusinessTransactionRepository,
   IConsultantProfileRepository,
   IConsultantSkillRepository,
-  IConsultantWalletRepository,
+  IConsultantTransactionRepository,
   IInterviewAnswerRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
@@ -44,7 +44,6 @@ import {
   IUserRepository,
   IUserSessionRepository,
   IUserSsoProviderRepository,
-  IWalletTransactionRepository,
   IWebhookEventRepository,
   NotificationRepository,
   ProjectApplicationRepository,
@@ -62,7 +61,6 @@ import {
   UserRepository,
   UserSessionRepository,
   UserSsoProviderRepository,
-  WalletTransactionRepository,
   WebhookEventRepository,
 } from './repositories';
 
@@ -96,8 +94,7 @@ class TransactionalUnitOfWork implements IUnitOfWork {
     public readonly billingPeriods: IBillingPeriodRepository,
     public readonly invoices: IInvoiceRepository,
     public readonly invoiceLineItems: IInvoiceLineItemRepository,
-    public readonly consultantWallets: IConsultantWalletRepository,
-    public readonly walletTransactions: IWalletTransactionRepository,
+    public readonly consultantTransactions: IConsultantTransactionRepository,
     public readonly businessTransactions: IBusinessTransactionRepository,
     public readonly webhookEvents: IWebhookEventRepository,
   ) {}
@@ -146,8 +143,7 @@ export class UnitOfWorkService implements IUnitOfWork {
     public readonly billingPeriods: BillingPeriodRepository,
     public readonly invoices: InvoiceRepository,
     public readonly invoiceLineItems: InvoiceLineItemRepository,
-    public readonly consultantWallets: ConsultantWalletRepository,
-    public readonly walletTransactions: WalletTransactionRepository,
+    public readonly consultantTransactions: ConsultantTransactionRepository,
     public readonly businessTransactions: BusinessTransactionRepository,
     public readonly webhookEvents: WebhookEventRepository,
   ) {}
@@ -187,8 +183,7 @@ export class UnitOfWorkService implements IUnitOfWork {
         this.billingPeriods.withManager(manager),
         this.invoices.withManager(manager),
         this.invoiceLineItems.withManager(manager),
-        this.consultantWallets.withManager(manager),
-        this.walletTransactions.withManager(manager),
+        this.consultantTransactions.withManager(manager),
         this.businessTransactions.withManager(manager),
         this.webhookEvents.withManager(manager),
       );

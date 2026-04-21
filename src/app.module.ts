@@ -21,9 +21,9 @@ import { AuditSubscriber } from './database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from './database/typeorm.config';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { BusinessPaymentsModule } from './modules/business-payments/business-payments.module';
 import { BusinessProfilesModule } from './modules/business-profiles/business-profiles.module';
 import { ConsultantProfilesModule } from './modules/consultant-profiles/consultant-profiles.module';
+import { PaymentsModule } from './modules/payments';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { SkillsModule } from './modules/skills/skills.module';
 import { UnitOfWorkModule } from './modules/unit-of-work/unit-of-work.module';
@@ -52,7 +52,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     UnitOfWorkModule,
     ApplicationsModule,
     AuthModule,
-    BusinessPaymentsModule,
+    PaymentsModule,
     BusinessProfilesModule,
     ConsultantProfilesModule,
     ProjectsModule,
