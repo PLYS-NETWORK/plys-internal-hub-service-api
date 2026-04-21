@@ -6,6 +6,7 @@ import {
   IBusinessApplicationNotificationEmailOptions,
   IConsultantApplicationNotificationEmailOptions,
   IForgotPasswordOtpEmailOptions,
+  IMonthlyInvoiceEmailOptions,
   IVerifyRegistrationEmailOptions,
   IWelcomeEmailOptions,
 } from './email-send-options.interface';
@@ -36,4 +37,5 @@ export interface IEmailService {
   ): Promise<void>;
   sendAiDetectedEmail(to: string, options: IAiDetectedEmailOptions): Promise<void>;
   sendApplicationStatusEmail(to: string, options: IApplicationStatusEmailOptions): Promise<void>;
+  sendMonthlyInvoiceEmail(to: string, options: IMonthlyInvoiceEmailOptions): Promise<void>;
 }

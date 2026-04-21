@@ -35,5 +35,8 @@
     "approved": "Application approved successfully.",
     "rejected": "Application rejected successfully.",
     "withdrawn": "Application withdrawn successfully."
+  },
+  "billing": {
+    "invoice_checkout_initiated": "Invoice payment initiated."
   }
 }

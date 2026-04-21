@@ -6,6 +6,7 @@ import { ConsultantTransaction } from '@database/entities/finance/consultant-tra
 import { PaymentProcessor } from '@database/enums/payment-processor.enum';
 import { TransactionStatus } from '@database/enums/transaction-status.enum';
 import { WebhookStatus } from '@database/enums/webhook-status.enum';
+import { BillingInvoiceService } from '@modules/billing/services/billing-invoice.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable, Logger } from '@nestjs/common';
 
@@ -21,6 +22,7 @@ export class WebhookProcessorService {
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly paymentService: PaymentService,
+    private readonly billingInvoiceService: BillingInvoiceService,
   ) {}
 
   /**
@@ -175,15 +177,30 @@ export class WebhookProcessorService {
   }
 
   private async handlePaymentSucceeded(data: Record<string, unknown>): Promise<void> {
-    // Extract transaction ID from metadata
+    // Extract transaction ID and payment type from metadata
     const metadata = data['metadata'] as Record<string, string> | undefined;
     const transactionId = metadata?.['transactionId'];
+    const paymentType = metadata?.['type'];
 
     if (!transactionId) {
       this.logger.warn(`[${this.rid}] handlePaymentSucceeded — no transactionId in metadata`);
       return;
     }
 
+    // Route invoice payments to billing module
+    if (paymentType === 'invoice_payment') {
+      const invoiceId = metadata?.['invoiceId'];
+      if (!invoiceId) {
+        this.logger.warn(
+          `[${this.rid}] handlePaymentSucceeded — invoice_payment missing invoiceId | transactionId: ${transactionId}`,
+        );
+        return;
+      }
+      await this.billingInvoiceService.completeInvoicePayment(invoiceId, transactionId);
+      return;
+    }
+
+    // Default: top-up flow
     const transaction = await this.uow.businessTransactions.findOne({
       where: { id: transactionId },
     });

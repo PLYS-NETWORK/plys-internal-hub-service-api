@@ -55,3 +55,15 @@ export interface IApplicationStatusEmailOptions {
   /** Link to the project on the consultant platform. Only for approved. */
   readonly projectUrl?: string;
 }
+
+export interface IMonthlyInvoiceEmailOptions {
+  readonly businessName: string;
+  readonly invoiceNumber: string;
+  readonly billingPeriod: string;
+  readonly dueDate: string;
+  readonly taskTotal: string;
+  readonly commissionAmount: string;
+  readonly invoiceTotal: string;
+  readonly lineItems: ReadonlyArray<{ readonly taskName: string; readonly amount: string }>;
+  readonly payInvoiceUrl: string;
+}

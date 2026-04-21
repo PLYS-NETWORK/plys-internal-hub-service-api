@@ -7,13 +7,19 @@ import { EnvironmentsService } from '@common/modules/environments';
 import { PaymentService } from '@common/modules/payment/payment.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { BusinessTransactionType } from '@database/enums/business-transaction-type.enum';
+import { InvoiceStatus } from '@database/enums/invoice-status.enum';
 import { TransactionStatus } from '@database/enums/transaction-status.enum';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import { CreateTopUpDto } from '../dto/requests/create-top-up.dto';
-import { TopUpResponseDto, TransactionResponseDto } from '../dto/responses';
+import { SettleInvoiceDto } from '../dto/requests/settle-invoice.dto';
+import {
+  SettleInvoiceResponseDto,
+  TopUpResponseDto,
+  TransactionResponseDto,
+} from '../dto/responses';
 import { IBusinessPaymentsService } from './interfaces/business-payments-service.interface';
 
 @Injectable()
@@ -96,6 +102,117 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
       throw new TranslatableException({
         messageKey: 'error.payment.checkout_failed',
         errorCode: ERROR_CODES.PAYMENT_CHECKOUT_FAILED,
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
+    }
+  }
+
+  public async settleInvoice(dto: SettleInvoiceDto): Promise<SettleInvoiceResponseDto> {
+    const userId = this.requestContext.userId!;
+    this.logger.log(
+      `[${this.rid}] settleInvoice — start | userId: ${userId}, invoiceId: ${dto.invoiceId}`,
+    );
+
+    const businessProfile = await this.uow.businessProfiles.findOne({ where: { userId } });
+    if (!businessProfile) {
+      throw new TranslatableException({
+        messageKey: 'error.business_profile.not_found',
+        errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    const invoice = await this.uow.invoices.findOne({ where: { id: dto.invoiceId } });
+    if (!invoice) {
+      throw new TranslatableException({
+        messageKey: 'error.billing.invoice_not_found',
+        errorCode: ERROR_CODES.BILLING_INVOICE_NOT_FOUND,
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    if (invoice.businessId !== businessProfile.id) {
+      throw new TranslatableException({
+        messageKey: 'error.billing.invoice_not_owned',
+        errorCode: ERROR_CODES.BILLING_INVOICE_NOT_OWNED,
+        status: HttpStatus.FORBIDDEN,
+      });
+    }
+
+    if (invoice.status === InvoiceStatus.PAID) {
+      throw new TranslatableException({
+        messageKey: 'error.billing.invoice_already_paid',
+        errorCode: ERROR_CODES.BILLING_INVOICE_ALREADY_PAID,
+        status: HttpStatus.CONFLICT,
+      });
+    }
+
+    // Find the MONTHLY_BILLING business transaction linked to this invoice
+    const businessTxn = await this.uow.businessTransactions.findOne({
+      where: {
+        invoiceId: invoice.id,
+        type: BusinessTransactionType.MONTHLY_BILLING,
+      },
+    });
+
+    if (!businessTxn) {
+      this.logger.error(
+        `[${this.rid}] settleInvoice — no business transaction for invoice | invoiceId: ${invoice.id}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.billing.invoice_not_found',
+        errorCode: ERROR_CODES.BILLING_INVOICE_NOT_FOUND,
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    try {
+      const checkoutSession = await this.paymentService.createCheckoutSession({
+        invoiceId: invoice.id,
+        amount: Math.round(parseFloat(invoice.amount) * 100),
+        currency: invoice.currency,
+        successUrl: dto.successUrl,
+        cancelUrl: dto.cancelUrl,
+        externalProductId: this.env.polarInvoiceProductId,
+        metadata: {
+          transactionId: businessTxn.id,
+          businessId: businessProfile.id,
+          invoiceId: invoice.id,
+          type: 'invoice_payment',
+        },
+      });
+
+      // Save processor IDs on invoice for tracking
+      invoice.processorName = 'polar';
+      invoice.processorInvoiceId = checkoutSession.processorInvoiceId;
+      invoice.processorPaymentIntentId = checkoutSession.processorPaymentIntentId;
+      invoice.processorPaymentUrl = checkoutSession.processorPaymentUrl;
+      await this.uow.invoices.save(invoice);
+
+      // Save processor event ID on business transaction
+      businessTxn.processorEventId = checkoutSession.processorInvoiceId;
+      await this.uow.businessTransactions.save(businessTxn);
+
+      this.logger.log(
+        `[${this.rid}] settleInvoice — complete | invoiceId: ${invoice.id}, redirectUrl: ${checkoutSession.processorPaymentUrl}`,
+      );
+
+      return plainToInstance(
+        SettleInvoiceResponseDto,
+        {
+          invoice_id: invoice.id,
+          redirect_url: checkoutSession.processorPaymentUrl,
+        },
+        { excludeExtraneousValues: true },
+      );
+    } catch (error) {
+      this.logger.error(
+        `[${this.rid}] settleInvoice — failed | invoiceId: ${invoice.id}, error: ${error instanceof Error ? error.message : String(error)}`,
+      );
+
+      throw new TranslatableException({
+        messageKey: 'error.billing.checkout_failed',
+        errorCode: ERROR_CODES.BILLING_CHECKOUT_FAILED,
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       });
     }

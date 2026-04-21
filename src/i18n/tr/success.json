@@ -35,5 +35,8 @@
     "approved": "Başvuru başarıyla onaylandı.",
     "rejected": "Başvuru başarıyla reddedildi.",
     "withdrawn": "Başvuru başarıyla geri çekildi."
+  },
+  "billing": {
+    "invoice_checkout_initiated": "Fatura ödemesi başlatıldı."
   }
 }

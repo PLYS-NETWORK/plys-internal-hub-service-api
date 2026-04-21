@@ -64,5 +64,11 @@
     "cannot_approve": "Bu başvuru mevcut durumunda onaylanamaz.",
     "cannot_reject": "Bu başvuru mevcut durumunda reddedilemez.",
     "cannot_withdraw": "Yalnızca bekleyen başvurular geri çekilebilir."
+  },
+  "billing": {
+    "invoice_not_found": "Fatura bulunamadı.",
+    "invoice_already_paid": "Bu fatura zaten ödenmiş.",
+    "invoice_not_owned": "Bu faturaya erişim yetkiniz yok.",
+    "checkout_failed": "Fatura için ödeme oturumu oluşturulamadı."
   }
 }

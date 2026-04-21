@@ -87,6 +87,10 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.configService.getOrThrow<string>('app.payment.polar.topUpProductId');
   }
 
+  public get polarInvoiceProductId(): string {
+    return this.configService.getOrThrow<string>('app.payment.polar.invoiceProductId');
+  }
+
   public get stripeSecretKey(): string {
     return this.configService.getOrThrow<string>('app.payment.stripe.secretKey');
   }

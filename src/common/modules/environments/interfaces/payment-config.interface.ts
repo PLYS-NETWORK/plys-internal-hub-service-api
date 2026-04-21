@@ -11,6 +11,9 @@ export interface IPaymentConfig {
   /** Polar.sh webhook signing secret used to verify incoming webhook payloads. */
   readonly polarWebhookSecret: string;
 
+  /** Polar.sh pre-created product ID for invoice payments. */
+  readonly polarInvoiceProductId: string;
+
   /** Stripe secret key (`sk_live_*` or `sk_test_*`). Only read when `paymentProcessor === 'stripe'`. */
   readonly stripeSecretKey: string;
 

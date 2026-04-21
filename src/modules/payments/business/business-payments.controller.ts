@@ -20,7 +20,12 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { CreateTopUpDto } from '../dto/requests/create-top-up.dto';
-import { TopUpResponseDto, TransactionResponseDto } from '../dto/responses';
+import { SettleInvoiceDto } from '../dto/requests/settle-invoice.dto';
+import {
+  SettleInvoiceResponseDto,
+  TopUpResponseDto,
+  TransactionResponseDto,
+} from '../dto/responses';
 import { BusinessPaymentsService } from './business-payments.service';
 
 @ApiTags('Business Payments')
@@ -40,6 +45,19 @@ export class BusinessPaymentsController {
   ): Promise<ITranslatedPayload<TopUpResponseDto>> {
     const data = await this.businessPaymentsService.createTopUp(dto);
     return { messageKey: 'success.payment.top_up_initiated', data };
+  }
+
+  @Post('settle-invoice')
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(RolesGuard, PlatformGuard)
+  @Roles(UserRole.USER)
+  @Platform(ActivePlatform.BUSINESS)
+  @ApiOperation({ summary: 'Initiate payment for a billing invoice' })
+  public async settleInvoice(
+    @Body() dto: SettleInvoiceDto,
+  ): Promise<ITranslatedPayload<SettleInvoiceResponseDto>> {
+    const data = await this.businessPaymentsService.settleInvoice(dto);
+    return { messageKey: 'success.billing.invoice_checkout_initiated', data };
   }
 
   @Get('transactions')

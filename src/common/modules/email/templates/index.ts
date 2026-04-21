@@ -8,6 +8,10 @@ export {
   type IBusinessForgotPasswordOtpTemplateOptions,
 } from './business/forgot-password-otp.template';
 export {
+  buildBusinessMonthlyInvoiceEmail,
+  type IBusinessMonthlyInvoiceTemplateOptions,
+} from './business/monthly-invoice.template';
+export {
   buildBusinessProjectPublishedReceiptEmail,
   type IBusinessProjectPublishedReceiptTemplateOptions,
 } from './business/project-published-receipt.template';

@@ -11,6 +11,7 @@ import {
   IBusinessApplicationNotificationEmailOptions,
   IConsultantApplicationNotificationEmailOptions,
   IForgotPasswordOtpEmailOptions,
+  IMonthlyInvoiceEmailOptions,
   IVerifyRegistrationEmailOptions,
   IWelcomeEmailOptions,
 } from './interfaces/email-send-options.interface';
@@ -18,6 +19,7 @@ import { IEmailService } from './interfaces/email-service.interface';
 import {
   buildBusinessApplicationNotificationEmail,
   buildBusinessForgotPasswordOtpEmail,
+  buildBusinessMonthlyInvoiceEmail,
   buildBusinessProjectPublishedReceiptEmail,
   buildBusinessProjectPublishedSuccessEmail,
   buildBusinessVerifyRegistrationEmail,
@@ -28,6 +30,7 @@ import {
   buildConsultantForgotPasswordOtpEmail,
   buildConsultantVerifyRegistrationEmail,
   buildConsultantWelcomeEmail,
+  type IBusinessMonthlyInvoiceTemplateOptions,
   type IBusinessProjectPublishedReceiptTemplateOptions,
   type IBusinessProjectPublishedSuccessTemplateOptions,
 } from './templates';
@@ -279,6 +282,30 @@ export class EmailService implements IEmailService {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(
         `[${this.rid}] sendProjectPublishedSuccessEmail — failed | to: ${to} | error: ${message}`,
+      );
+      throw err;
+    }
+  }
+
+  public async sendMonthlyInvoiceEmail(
+    to: string,
+    options: IMonthlyInvoiceEmailOptions,
+  ): Promise<void> {
+    this.logger.log(`[${this.rid}] sendMonthlyInvoiceEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        from: this.env.resendPloyosEmail,
+        to,
+        subject: `Monthly Invoice - ${options.billingPeriod}`,
+        html: await buildBusinessMonthlyInvoiceEmail(
+          options as IBusinessMonthlyInvoiceTemplateOptions,
+        ),
+      });
+      this.logger.log(`[${this.rid}] sendMonthlyInvoiceEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `[${this.rid}] sendMonthlyInvoiceEmail — failed | to: ${to} | error: ${message}`,
       );
       throw err;
     }
