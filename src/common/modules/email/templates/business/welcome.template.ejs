@@ -1,133 +1,333 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to Ployos</title>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
-</head>
-<body style="margin:0;padding:0;background-color:#f7f9fb;font-family:'Inter',sans-serif;padding:16px 32px;">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome to Ployos</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background-color: #f7f9fb;
+      font-family: 'Inter', sans-serif;
+      padding: 16px 32px;
+    "
+  >
+    <!-- Main Email Container -->
+    <table
+      width="600"
+      cellpadding="0"
+      cellspacing="0"
+      style="
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 12px 32px rgba(25, 28, 30, 0.06);
+      "
+    >
+      <!-- TopAppBar -->
+      <tr>
+        <td style="padding: 48px 24px; text-align: center; background-color: #f7f9fb">
+          <h1
+            style="
+              margin: 0;
+              font-family: 'Manrope', sans-serif;
+              font-size: 24px;
+              font-weight: 800;
+              letter-spacing: -0.025em;
+              color: #00236f;
+            "
+          >
+            Ployos
+          </h1>
+        </td>
+      </tr>
 
-  <!-- Main Email Container -->
-  <table width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 12px 32px rgba(25,28,30,0.06);">
-
-    <!-- TopAppBar -->
-    <tr>
-      <td style="padding:48px 24px;text-align:center;background-color:#f7f9fb;">
-        <h1 style="margin:0;font-family:'Manrope',sans-serif;font-size:24px;font-weight:800;letter-spacing:-0.025em;color:#00236f;">Ployos</h1>
-      </td>
-    </tr>
-
-    <!-- Hero Image -->
-    <tr>
-      <td style="height:192px;background-color:#f2f4f6;position:relative;overflow:hidden;">
-        <div style="width:100%;height:100%;background:linear-gradient(135deg, #f2f4f6 0%, #e6e8ea 100%);display:flex;align-items:center;justify-content:center;">
-          <div style="width:80px;height:80px;background-color:#00236f;border-radius:12px;display:flex;align-items:center;justify-content:center;opacity:0.8;">
-            <div style="color:#ffffff;font-size:32px;line-height:1;">🏗</div>
+      <!-- Hero Image -->
+      <tr>
+        <td style="height: 192px; background-color: #f2f4f6; position: relative; overflow: hidden">
+          <div
+            style="
+              width: 100%;
+              height: 100%;
+              background: linear-gradient(135deg, #f2f4f6 0%, #e6e8ea 100%);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            <div style="width: 100%; height: 200px">
+              <img
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzDDIXuqgIJyRTIqZk2cHiD2uy3gxIVsnE3_tbTWj8JRTnJKOcGgnVIJRG6jc9BTTBwExcT1_M5nMcAiQMcVs2kBuuzFOgYMWf4CVU-YAtvqAnEIRrBlCg4A4w-2jgpxOa7LbchO4iRTYYyDMY3kHXIhE_vaageMCq9twsZUY8NhN74L6YGNLWte00BEtduvPqPXKCPVjQ8Cq5qCxeU7kB9hNcdKMQRK4N_xdkkpO7xFcjhiuUxmTM0JHA1VOmZ1rcvXVttj29VE4F"
+                alt="Welcome Icon"
+                style="width: 100%; height: 100%; object-fit: cover"
+              />
+            </div>
           </div>
-        </div>
-      </td>
-    </tr>
+        </td>
+      </tr>
 
-    <!-- Body Content -->
-    <tr>
-      <td style="padding:48px 32px 32px;">
+      <!-- Body Content -->
+      <tr>
+        <td style="padding: 48px 32px 32px">
+          <h2
+            style="
+              font-family: 'Manrope', sans-serif;
+              font-size: 24px;
+              font-weight: 800;
+              color: #191c1e;
+              letter-spacing: -0.025em;
+              margin: 0 0 16px;
+              line-height: 1.2;
+            "
+          >
+            Welcome to the ledger of your next big endeavor.
+          </h2>
 
-        <h2 style="font-family:'Manrope',sans-serif;font-size:24px;font-weight:800;color:#191c1e;letter-spacing:-0.025em;margin:0 0 16px;line-height:1.2;">
-          Welcome to the ledger of your next big endeavor.
-        </h2>
+          <p
+            style="
+              font-family: 'Inter', sans-serif;
+              font-size: 16px;
+              color: #444651;
+              line-height: 1.6;
+              margin: 0 0 40px;
+            "
+          >
+            Hi <strong><%= userName %></strong>,<br /><br />
+            You've joined Ployos. We've replaced the chaos of traditional project management with a
+            structured, architectural approach to building teams and executing work. Your workspace
+            is ready.
+          </p>
 
-        <p style="font-family:'Inter',sans-serif;font-size:16px;color:#444651;line-height:1.6;margin:0 0 40px;">
-          Hi <strong><%= userName %></strong>,<br/><br/>
-          You've joined Ployos. We've replaced the chaos of traditional project management with a structured, architectural approach to building teams and executing work. Your workspace is ready.
-        </p>
+          <!-- Benefits Sections -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 48px">
+            <!-- Benefit 1 -->
+            <tr>
+              <td
+                style="
+                  background-color: #f2f4f6;
+                  padding: 24px;
+                  border-radius: 8px;
+                  margin-bottom: 24px;
+                "
+              >
+                <table cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="text-align: center; vertical-align: baseline; padding-right: 16px">
+                      <div
+                        style="
+                          line-height: 40px;
+                          width: 40px;
+                          height: 40px;
+                          border-radius: 12px;
+                          background: #ffffff;
+                        "
+                      >
+                        <img
+                          width="30"
+                          height="30"
+                          src="https://img.icons8.com/ios-filled/30/add-administrator.png"
+                          alt="add-administrator"
+                          style="vertical-align: middle"
+                        />
+                      </div>
+                    </td>
+                    <td style="vertical-align: top">
+                      <h3
+                        style="
+                          font-family: 'Manrope', sans-serif;
+                          font-size: 18px;
+                          font-weight: 700;
+                          color: #191c1e;
+                          margin: 0 0 8px;
+                        "
+                      >
+                        Discover Elite Consultants
+                      </h3>
+                      <p
+                        style="
+                          font-family: 'Inter', sans-serif;
+                          font-size: 14px;
+                          color: #444651;
+                          line-height: 1.5;
+                          margin: 0;
+                        "
+                      >
+                        Bypass the noise. Connect directly with vetted professionals whose expertise
+                        aligns perfectly with the structural requirements of your vision.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
 
-        <!-- Benefits Sections -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 48px;">
+            <!-- Spacer -->
+            <tr>
+              <td style="height: 24px"></td>
+            </tr>
 
-          <!-- Benefit 1 -->
-          <tr>
-            <td style="background-color:#f2f4f6;padding:24px;border-radius:8px;margin-bottom:24px;">
-              <table cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="width:40px;height:40px;background-color:#ffffff;border-radius:50%;text-align:center;vertical-align:middle;padding-right:16px;">
-                    <div style="color:#00236f;font-size:20px;line-height:40px;">👥</div>
-                  </td>
-                  <td style="vertical-align:top;">
-                    <h3 style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:700;color:#191c1e;margin:0 0 8px;">Discover Elite Consultants</h3>
-                    <p style="font-family:'Inter',sans-serif;font-size:14px;color:#444651;line-height:1.5;margin:0;">
-                      Bypass the noise. Connect directly with vetted professionals whose expertise aligns perfectly with the structural requirements of your vision.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+            <!-- Benefit 2 -->
+            <tr>
+              <td style="background-color: #f2f4f6; padding: 24px; border-radius: 8px">
+                <table cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="text-align: center; vertical-align: baseline; padding-right: 16px">
+                      <div
+                        style="
+                          line-height: 40px;
+                          width: 40px;
+                          height: 40px;
+                          border-radius: 12px;
+                          background: #ffffff;
+                        "
+                      >
+                        <img
+                          width="30"
+                          height="30"
+                          src="https://img.icons8.com/ios-glyphs/30/drafting-compass2.png"
+                          alt="drafting-compass2"
+                          style="vertical-align: middle"
+                        />
+                      </div>
+                    </td>
+                    <td style="vertical-align: top">
+                      <h3
+                        style="
+                          font-family: 'Manrope', sans-serif;
+                          font-size: 18px;
+                          font-weight: 700;
+                          color: #191c1e;
+                          margin: 0 0 8px;
+                        "
+                      >
+                        Architect Your Projects
+                      </h3>
+                      <p
+                        style="
+                          font-family: 'Inter', sans-serif;
+                          font-size: 14px;
+                          color: #444651;
+                          line-height: 1.5;
+                          margin: 0;
+                        "
+                      >
+                        Draft comprehensive project scopes, set immutable milestones, and construct
+                        your workflow with precision on a clean, distraction-free canvas.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
 
-          <!-- Spacer -->
-          <tr><td style="height:24px;"></td></tr>
+          <!-- CTA Section -->
+          <table cellpadding="0" cellspacing="0" style="margin: 0 0 16px">
+            <tr>
+              <td
+                style="
+                  background: linear-gradient(135deg, #00236f 0%, #1e3a8a 100%);
+                  border-radius: 6px;
+                "
+              >
+                <a
+                  href="<%= dashboardUrl %>"
+                  style="
+                    display: inline-block;
+                    padding: 16px 32px;
+                    color: #ffffff;
+                    font-family: 'Manrope', sans-serif;
+                    font-size: 14px;
+                    font-weight: 700;
+                    text-decoration: none;
+                    letter-spacing: 0.025em;
+                  "
+                >
+                  Access Your Dashboard
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
 
-          <!-- Benefit 2 -->
-          <tr>
-            <td style="background-color:#f2f4f6;padding:24px;border-radius:8px;">
-              <table cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="width:40px;height:40px;background-color:#ffffff;border-radius:50%;text-align:center;vertical-align:middle;padding-right:16px;">
-                    <div style="color:#00236f;font-size:20px;line-height:40px;">🏛</div>
-                  </td>
-                  <td style="vertical-align:top;">
-                    <h3 style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:700;color:#191c1e;margin:0 0 8px;">Architect Your Projects</h3>
-                    <p style="font-family:'Inter',sans-serif;font-size:14px;color:#444651;line-height:1.5;margin:0;">
-                      Draft comprehensive project scopes, set immutable milestones, and construct your workflow with precision on a clean, distraction-free canvas.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+      <!-- Footer -->
+      <tr>
+        <td
+          style="
+            background-color: #f7f9fb;
+            padding: 40px 24px;
+            text-align: center;
+            margin-top: 32px;
+          "
+        >
+          <table cellpadding="0" cellspacing="0" style="margin: 0 auto 16px">
+            <tr>
+              <td style="padding: 0 16px">
+                <a
+                  href="#"
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 12px;
+                    color: #444651;
+                    text-decoration: none;
+                  "
+                  >Privacy Policy</a
+                >
+              </td>
+              <td style="padding: 0 16px">
+                <a
+                  href="#"
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 12px;
+                    color: #444651;
+                    text-decoration: none;
+                  "
+                  >Terms of Service</a
+                >
+              </td>
+              <td style="padding: 0 16px">
+                <a
+                  href="#"
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 12px;
+                    color: #444651;
+                    text-decoration: none;
+                  "
+                  >Unsubscribe</a
+                >
+              </td>
+              <td style="padding: 0 16px">
+                <a
+                  href="#"
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 12px;
+                    color: #444651;
+                    text-decoration: none;
+                  "
+                  >Manage Preferences</a
+                >
+              </td>
+            </tr>
+          </table>
 
-        </table>
-
-        <!-- CTA Section -->
-        <table cellpadding="0" cellspacing="0" style="margin:0 0 16px;">
-          <tr>
-            <td style="background:linear-gradient(135deg, #00236f 0%, #1e3a8a 100%);border-radius:6px;">
-              <a href="<%= dashboardUrl %>" style="display:inline-block;padding:16px 32px;color:#ffffff;font-family:'Manrope',sans-serif;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:0.025em;">
-                Access Your Dashboard
-              </a>
-            </td>
-          </tr>
-        </table>
-
-      </td>
-    </tr>
-
-    <!-- Footer -->
-    <tr>
-      <td style="background-color:#f7f9fb;padding:40px 24px;text-align:center;margin-top:32px;">
-
-        <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px;">
-          <tr>
-            <td style="padding:0 16px;">
-              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;">Privacy Policy</a>
-            </td>
-            <td style="padding:0 16px;">
-              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;">Terms of Service</a>
-            </td>
-            <td style="padding:0 16px;">
-              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;">Unsubscribe</a>
-            </td>
-            <td style="padding:0 16px;">
-              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;">Manage Preferences</a>
-            </td>
-          </tr>
-        </table>
-
-        <p style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;margin:0;">© <%= year %> Ployos Platform. All rights reserved.</p>
-      </td>
-    </tr>
-
-  </table>
-
-</body>
+          <p style="font-family: 'Inter', sans-serif; font-size: 12px; color: #444651; margin: 0">
+            © <%= year %> Ployos Platform. All rights reserved.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
 </html>

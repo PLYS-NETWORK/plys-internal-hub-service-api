@@ -1,110 +1,285 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Email Validation - Ployos</title>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
-</head>
-<body style="margin:0;padding:0;background-color:#f7f9fb;font-family:'Inter',Arial,Helvetica,sans-serif;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:48px 16px;">
-  <!-- Email Container -->
-  <table width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:12px;box-shadow:0 12px 32px rgba(25,28,30,0.06);overflow:hidden;">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Email Validation - Ployos</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background-color: #f7f9fb;
+      font-family: 'Inter', Arial, Helvetica, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 48px 16px;
+    "
+  >
+    <!-- Email Container -->
+    <table
+      width="600"
+      cellpadding="0"
+      cellspacing="0"
+      style="
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 12px 32px rgba(25, 28, 30, 0.06);
+        overflow: hidden;
+      "
+    >
+      <!-- TopAppBar / Header -->
+      <tr>
+        <td style="background-color: #f7f9fb; padding: 48px 24px; text-align: center">
+          <h1
+            style="
+              margin: 0;
+              color: #1e3a8a;
+              font-family: 'Manrope', sans-serif;
+              font-weight: 800;
+              font-size: 24px;
+              letter-spacing: -0.025em;
+            "
+          >
+            Ployos
+          </h1>
+        </td>
+      </tr>
 
-    <!-- TopAppBar / Header -->
-    <tr>
-      <td style="background-color:#f7f9fb;padding:48px 24px;text-align:center;">
-        <h1 style="margin:0;color:#1E3A8A;font-family:'Manrope',sans-serif;font-weight:800;font-size:24px;letter-spacing:-0.025em;">Ployos</h1>
-      </td>
-    </tr>
+      <!-- Main Content Canvas -->
+      <tr>
+        <td style="padding: 40px 48px 56px; background-color: #ffffff">
+          <!-- Graphic/Icon -->
+          <table cellpadding="0" cellspacing="0" style="margin: 0 0 32px">
+            <tr>
+              <td
+                style="
+                  width: 64px;
+                  height: 64px;
+                  background-color: #f2f4f6;
+                  border-radius: 12px;
+                  border: 1px solid rgba(197, 197, 211, 0.15);
+                  text-align: center;
+                  vertical-align: middle;
+                "
+              >
+                <div style="font-size: 32px; color: #00236f; line-height: 64px">✉</div>
+              </td>
+            </tr>
+          </table>
 
-    <!-- Main Content Canvas -->
-    <tr>
-      <td style="padding:40px 48px 56px;background-color:#ffffff;">
+          <!-- Typography & Messaging -->
+          <h2
+            style="
+              font-family: 'Manrope', sans-serif;
+              font-size: 24px;
+              font-weight: 700;
+              color: #191c1e;
+              letter-spacing: -0.025em;
+              margin: 0 0 16px;
+              padding-top: 16px;
+            "
+          >
+            Welcome to the Ledger.
+          </h2>
 
-        <!-- Graphic/Icon -->
-        <table cellpadding="0" cellspacing="0" style="margin:0 0 32px;">
-          <tr>
-            <td style="width:64px;height:64px;background-color:#f2f4f6;border-radius:12px;border:1px solid rgba(197,197,211,0.15);text-align:center;vertical-align:middle;">
-              <div style="font-size:32px;color:#00236f;line-height:64px;">✉</div>
-            </td>
-          </tr>
-        </table>
+          <p
+            style="
+              font-family: 'Inter', sans-serif;
+              font-size: 16px;
+              color: #444651;
+              line-height: 1.6;
+              margin: 0 0 32px;
+            "
+          >
+            Hi <strong><%= userName %></strong>,<br /><br />
+            Thank you for registering with Ployos. To ensure the security of your account and
+            activate your workspace, please verify your email address. This step guarantees you
+            receive important project updates and architectural insights.
+            <br /><br />
+            This link will expire in <strong><%= expiryHours %> hours</strong>.
+          </p>
 
-        <!-- Typography & Messaging -->
-        <h2 style="font-family:'Manrope',sans-serif;font-size:24px;font-weight:700;color:#191c1e;letter-spacing:-0.025em;margin:0 0 16px;padding-top:16px;">Welcome to the Ledger.</h2>
+          <!-- CTA -->
+          <table cellpadding="0" cellspacing="0" style="margin: 0 0 40px">
+            <tr>
+              <td
+                style="
+                  background: linear-gradient(135deg, #00236f 0%, #1e3a8a 100%);
+                  border-radius: 6px;
+                "
+              >
+                <a
+                  href="<%= verificationUrl %>"
+                  style="
+                    display: inline-block;
+                    padding: 16px 32px;
+                    color: #ffffff;
+                    font-family: 'Manrope', sans-serif;
+                    font-size: 14px;
+                    font-weight: 700;
+                    text-decoration: none;
+                    border-radius: 6px;
+                  "
+                >
+                  Verify Email Address
+                </a>
+              </td>
+            </tr>
+          </table>
 
-        <p style="font-family:'Inter',sans-serif;font-size:16px;color:#444651;line-height:1.6;margin:0 0 32px;">
-          Hi <strong><%= userName %></strong>,<br/><br/>
-          Thank you for registering with Ployos. To ensure the security of your account and activate your workspace, please verify your email address. This step guarantees you receive important project updates and architectural insights.
-          <br/><br/>
-          This link will expire in <strong><%= expiryHours %> hours</strong>.
-        </p>
+          <!-- Alternative Link -->
+          <table
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            style="
+              background-color: #f2f4f6;
+              border-radius: 8px;
+              border: 1px solid rgba(197, 197, 211, 0.15);
+              margin: 0 0 48px;
+            "
+          >
+            <tr>
+              <td style="padding: 24px">
+                <p
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 14px;
+                    color: #444651;
+                    margin: 0 0 8px;
+                  "
+                >
+                  If the button above doesn't work, copy and paste this link into your browser:
+                </p>
+                <p
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 14px;
+                    color: #00236f;
+                    word-break: break-all;
+                    margin: 0;
+                  "
+                >
+                  <%= verificationUrl %>
+                </p>
+              </td>
+            </tr>
+          </table>
 
-        <!-- CTA -->
-        <table cellpadding="0" cellspacing="0" style="margin:0 0 40px;">
-          <tr>
-            <td style="background:linear-gradient(135deg, #00236f 0%, #1e3a8a 100%);border-radius:6px;">
-              <a href="<%= verificationUrl %>"
-                 style="display:inline-block;padding:16px 32px;color:#ffffff;font-family:'Manrope',sans-serif;font-size:14px;font-weight:700;text-decoration:none;border-radius:6px;">
-                Verify Email Address
-              </a>
-            </td>
-          </tr>
-        </table>
+          <!-- Sign off -->
+          <table
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            style="border-top: 1px solid rgba(197, 197, 211, 0.15); padding-top: 32px"
+          >
+            <tr>
+              <td>
+                <p
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 16px;
+                    color: #444651;
+                    margin: 0;
+                  "
+                >
+                  Best regards,<br />
+                  <span
+                    style="
+                      font-family: 'Manrope', sans-serif;
+                      font-weight: 700;
+                      color: #191c1e;
+                      display: block;
+                      margin-top: 4px;
+                    "
+                    >The Ployos Team</span
+                  >
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
 
-        <!-- Alternative Link -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f2f4f6;border-radius:8px;border:1px solid rgba(197,197,211,0.15);margin:0 0 48px;">
-          <tr>
-            <td style="padding:24px;">
-              <p style="font-family:'Inter',sans-serif;font-size:14px;color:#444651;margin:0 0 8px;">If the button above doesn't work, copy and paste this link into your browser:</p>
-              <p style="font-family:'Inter',sans-serif;font-size:14px;color:#00236f;word-break:break-all;margin:0;">
-                <%= verificationUrl %>
-              </p>
-            </td>
-          </tr>
-        </table>
+      <!-- Footer -->
+      <tr>
+        <td style="background-color: #f7f9fb; padding: 40px 24px; text-align: center">
+          <h2 style="font-size: 18px; font-weight: 700; color: #1e3a8a; margin: 0 0 16px">
+            Ployos
+          </h2>
 
-        <!-- Sign off -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid rgba(197,197,211,0.15);padding-top:32px;">
-          <tr>
-            <td>
-              <p style="font-family:'Inter',sans-serif;font-size:16px;color:#444651;margin:0;">
-                Best regards,<br/>
-                <span style="font-family:'Manrope',sans-serif;font-weight:700;color:#191c1e;display:block;margin-top:4px;">The Ployos Team</span>
-              </p>
-            </td>
-          </tr>
-        </table>
+          <table cellpadding="0" cellspacing="0" style="margin: 0 auto 16px">
+            <tr>
+              <td style="padding: 0 16px">
+                <a
+                  href="#"
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 12px;
+                    color: #444651;
+                    text-decoration: none;
+                    opacity: 0.9;
+                  "
+                  >Privacy Policy</a
+                >
+              </td>
+              <td style="padding: 0 16px">
+                <a
+                  href="#"
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 12px;
+                    color: #444651;
+                    text-decoration: none;
+                    opacity: 0.9;
+                  "
+                  >Terms of Service</a
+                >
+              </td>
+              <td style="padding: 0 16px">
+                <a
+                  href="#"
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 12px;
+                    color: #444651;
+                    text-decoration: none;
+                    opacity: 0.9;
+                  "
+                  >Unsubscribe</a
+                >
+              </td>
+              <td style="padding: 0 16px">
+                <a
+                  href="#"
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 12px;
+                    color: #444651;
+                    text-decoration: none;
+                    opacity: 0.9;
+                  "
+                  >Manage Preferences</a
+                >
+              </td>
+            </tr>
+          </table>
 
-      </td>
-    </tr>
-
-    <!-- Footer -->
-    <tr>
-      <td style="background-color:#f7f9fb;padding:40px 24px;text-align:center;">
-        <h2 style="font-size:18px;font-weight:700;color:#1E3A8A;margin:0 0 16px;">Ployos</h2>
-
-        <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px;">
-          <tr>
-            <td style="padding:0 16px;">
-              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;opacity:0.9;">Privacy Policy</a>
-            </td>
-            <td style="padding:0 16px;">
-              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;opacity:0.9;">Terms of Service</a>
-            </td>
-            <td style="padding:0 16px;">
-              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;opacity:0.9;">Unsubscribe</a>
-            </td>
-            <td style="padding:0 16px;">
-              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;opacity:0.9;">Manage Preferences</a>
-            </td>
-          </tr>
-        </table>
-
-        <p style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;margin:0;">© <%= year %> Ployos Platform. All rights reserved.</p>
-      </td>
-    </tr>
-
-  </table>
-</body>
+          <p style="font-family: 'Inter', sans-serif; font-size: 12px; color: #444651; margin: 0">
+            © <%= year %> Ployos Platform. All rights reserved.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
 </html>

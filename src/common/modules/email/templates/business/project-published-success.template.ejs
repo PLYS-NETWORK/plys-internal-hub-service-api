@@ -1,191 +1,426 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ployos - Project Published</title>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
-</head>
-<body style="margin:0;padding:0;background-color:#f7f9fb;font-family:'Inter',sans-serif;">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ployos - Project Published</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body style="margin: 0; padding: 0; background-color: #f7f9fb; font-family: 'Inter', sans-serif">
+    <!-- Email Container -->
+    <table
+      width="600"
+      cellpadding="0"
+      cellspacing="0"
+      style="
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #f7f9fb;
+        overflow: hidden;
+      "
+    >
+      <!-- Header -->
+      <tr>
+        <td style="padding: 48px 24px; text-align: center">
+          <h1
+            style="
+              margin: 0;
+              font-size: 24px;
+              font-weight: 800;
+              letter-spacing: -0.025em;
+              color: #1e3a8a;
+              font-family: 'Manrope', sans-serif;
+            "
+          >
+            Ployos
+          </h1>
+        </td>
+      </tr>
 
-  <!-- Email Container -->
-  <table width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;margin:0 auto;background-color:#f7f9fb;overflow:hidden;">
+      <!-- Main Content Area -->
+      <tr>
+        <td style="padding: 0 24px 64px">
+          <!-- Hero Text -->
+          <table cellpadding="0" cellspacing="0" style="margin: 0 0 40px">
+            <tr>
+              <td style="padding: 32px 0 40px">
+                <h2
+                  style="
+                    font-family: 'Manrope', sans-serif;
+                    font-size: 32px;
+                    font-weight: 800;
+                    color: #191c1e;
+                    letter-spacing: -0.025em;
+                    line-height: 1.1;
+                    margin: 0 0 24px;
+                  "
+                >
+                  Your project is officially live.
+                </h2>
+                <p
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 18px;
+                    line-height: 1.6;
+                    color: #444651;
+                    margin: 0;
+                    max-width: 400px;
+                  "
+                >
+                  Hi <strong><%= businessName %></strong>,<br /><br />
+                  The blueprint is set. Your vision is now published on the marketplace and ready
+                  for engagement.
+                </p>
+              </td>
+            </tr>
+          </table>
 
-    <!-- Header -->
-    <tr>
-      <td style="padding:48px 24px;text-align:center;">
-        <h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.025em;color:#1e3a8a;font-family:'Manrope',sans-serif;">Ployos</h1>
-      </td>
-    </tr>
+          <!-- Ledger Card -->
+          <table
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            style="
+              background-color: #ffffff;
+              border-radius: 12px;
+              box-shadow: 0 12px 32px rgba(25, 28, 30, 0.02);
+              margin: 0 0 48px;
+            "
+          >
+            <tr>
+              <td style="padding: 32px">
+                <!-- Status Badge -->
+                <table
+                  cellpadding="0"
+                  cellspacing="0"
+                  style="background-color: #89f5e7; border-radius: 12px; margin: 0 0 32px"
+                >
+                  <tr>
+                    <td style="padding: 6px 12px">
+                      <table cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="padding-right: 8px; vertical-align: middle">
+                            <span style="color: #00201d; font-size: 16px">✓</span>
+                          </td>
+                          <td style="vertical-align: middle">
+                            <span
+                              style="
+                                font-family: 'Inter', sans-serif;
+                                font-size: 12px;
+                                font-weight: 700;
+                                color: #00201d;
+                                letter-spacing: 0.05em;
+                                text-transform: uppercase;
+                              "
+                              >Published</span
+                            >
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
 
-    <!-- Main Content Area -->
-    <tr>
-      <td style="padding:0 24px 64px;">
+                <!-- Project Preview -->
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 32px">
+                  <tr>
+                    <td
+                      style="
+                        height: 192px;
+                        background-color: #eceef0;
+                        border-radius: 8px;
+                        overflow: hidden;
+                        position: relative;
+                      "
+                    >
+                      <div
+                        style="
+                          width: 100%;
+                          height: 100%;
+                          background: linear-gradient(135deg, #eceef0 0%, #d8dadc 100%);
+                          display: flex;
+                          align-items: center;
+                          justify-content: center;
+                        "
+                      >
+                        <div
+                          style="
+                            background-color: #00236f;
+                            border-radius: 8px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            opacity: 0.9;
+                          "
+                        >
+                          <img src="https://img.freepik.com/free-photo/success-new-business-launch-plan-concept_53876-133970.jpg?t=st=1776789038~exp=1776792638~hmac=ff68057685abd0345239b0550613eb02ead89479cc13bf9b75655f4390c60bf3&w=2000" style="object-fit: cover; width: 100%; height: 100%" />
+                        </div>
+                    </td>
+                  </tr>
+                </table>
 
-        <!-- Hero Text -->
-        <table cellpadding="0" cellspacing="0" style="margin:0 0 40px;">
-          <tr>
-            <td style="padding:32px 0 40px;">
-              <h2 style="font-family:'Manrope',sans-serif;font-size:32px;font-weight:800;color:#191c1e;letter-spacing:-0.025em;line-height:1.1;margin:0 0 24px;">
-                Your project is officially live.
-              </h2>
-              <p style="font-family:'Inter',sans-serif;font-size:18px;line-height:1.6;color:#444651;margin:0;max-width:400px;">
-                Hi <strong><%= businessName %></strong>,<br/><br/>
-                The blueprint is set. Your vision is now published on the marketplace and ready for engagement.
-              </p>
-            </td>
-          </tr>
-        </table>
+                <!-- Project Details -->
+                <table cellpadding="0" cellspacing="0" style="margin: 0 0 40px">
+                  <tr>
+                    <td>
+                      <h3
+                        style="
+                          font-family: 'Manrope', sans-serif;
+                          font-size: 20px;
+                          font-weight: 700;
+                          letter-spacing: -0.025em;
+                          color: #191c1e;
+                          margin: 0 0 8px;
+                        "
+                      >
+                        <%= projectTitle %>
+                      </h3>
+                      <p
+                        style="
+                          font-family: 'Inter', sans-serif;
+                          font-size: 16px;
+                          color: #444651;
+                          line-height: 1.6;
+                          margin: 0;
+                        "
+                      >
+                        Your project is now visible to qualified consultants in our marketplace.
+                        Applications and inquiries will appear in your dashboard.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
 
-        <!-- Ledger Card -->
-        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;box-shadow:0 12px 32px rgba(25,28,30,0.02);margin:0 0 48px;">
-          <tr>
-            <td style="padding:32px;">
+                <!-- CTA -->
+                <table cellpadding="0" cellspacing="0" style="width: 100%">
+                  <tr>
+                    <td>
+                      <table
+                        cellpadding="0"
+                        cellspacing="0"
+                        style="
+                          background: linear-gradient(135deg, #00236f 0%, #1e3a8a 100%);
+                          border-radius: 8px;
+                          box-shadow: 0 12px 32px rgba(25, 28, 30, 0.06);
+                        "
+                      >
+                        <tr>
+                          <td style="text-align: center">
+                            <a
+                              href="<%= projectHubUrl %>"
+                              style="
+                                display: inline-block;
+                                color: #ffffff;
+                                font-family: 'Manrope', sans-serif;
+                                font-size: 14px;
+                                font-weight: 700;
+                                padding: 16px 32px;
+                                text-decoration: none;
+                                width: 100%;
+                                box-sizing: border-box;
+                              "
+                            >
+                              Access Project Hub
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
 
-              <!-- Status Badge -->
-              <table cellpadding="0" cellspacing="0" style="background-color:#89f5e7;border-radius:12px;margin:0 0 32px;">
-                <tr>
-                  <td style="padding:6px 12px;">
-                    <table cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="padding-right:8px;vertical-align:middle;">
-                          <span style="color:#00201d;font-size:16px;">✓</span>
-                        </td>
-                        <td style="vertical-align:middle;">
-                          <span style="font-family:'Inter',sans-serif;font-size:12px;font-weight:700;color:#00201d;letter-spacing:0.05em;text-transform:uppercase;">Published</span>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
+          <!-- Next Steps -->
+          <table cellpadding="0" cellspacing="0" style="margin: 0 0 32px">
+            <tr>
+              <td>
+                <h3
+                  style="
+                    font-family: 'Manrope', sans-serif;
+                    font-size: 20px;
+                    font-weight: 700;
+                    color: #191c1e;
+                    margin: 0 0 24px;
+                    letter-spacing: -0.025em;
+                  "
+                >
+                  The Next Phase
+                </h3>
 
-              <!-- Project Preview -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 32px;">
-                <tr>
-                  <td style="height:192px;background-color:#eceef0;border-radius:8px;overflow:hidden;position:relative;">
-                    <div style="width:100%;height:100%;background:linear-gradient(135deg, #eceef0 0%, #d8dadc 100%);display:flex;align-items:center;justify-content:center;">
-                      <div style="width:64px;height:64px;background-color:#00236f;border-radius:8px;display:flex;align-items:center;justify-content:center;opacity:0.9;">
-                        <div style="color:#ffffff;font-size:24px;line-height:1;">📋</div>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              </table>
+                <!-- Item 1 -->
+                <table
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                  style="background-color: #ffffff; border-radius: 8px; margin: 0 0 16px"
+                >
+                  <tr>
+                    <td style="padding: 20px">
+                      <table cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="width: 40px; vertical-align: top; padding-right: 16px">
+                            <div style="margin-top: 2px; color: #1e3a8a; font-size: 20px">📤</div>
+                          </td>
+                          <td style="vertical-align: top">
+                            <h4
+                              style="
+                                font-family: 'Manrope', sans-serif;
+                                font-size: 14px;
+                                font-weight: 700;
+                                color: #191c1e;
+                                margin: 0 0 4px;
+                              "
+                            >
+                              Distribute internally
+                            </h4>
+                            <p
+                              style="
+                                font-family: 'Inter', sans-serif;
+                                font-size: 12px;
+                                color: #444651;
+                                line-height: 1.5;
+                                margin: 0;
+                              "
+                            >
+                              Share the generated link with your key stakeholders for immediate
+                              alignment.
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
 
-              <!-- Project Details -->
-              <table cellpadding="0" cellspacing="0" style="margin:0 0 40px;">
-                <tr>
-                  <td>
-                    <h3 style="font-family:'Manrope',sans-serif;font-size:20px;font-weight:700;letter-spacing:-0.025em;color:#191c1e;margin:0 0 8px;">
-                      <%= projectTitle %>
-                    </h3>
-                    <p style="font-family:'Inter',sans-serif;font-size:16px;color:#444651;line-height:1.6;margin:0;">
-                      Your project is now visible to qualified consultants in our marketplace. Applications and inquiries will appear in your dashboard.
-                    </p>
-                  </td>
-                </tr>
-              </table>
+                <!-- Item 2 -->
+                <table
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                  style="background-color: #ffffff; border-radius: 8px"
+                >
+                  <tr>
+                    <td style="padding: 20px">
+                      <table cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="width: 40px; vertical-align: top; padding-right: 16px">
+                            <div style="margin-top: 2px; color: #1e3a8a; font-size: 20px">📊</div>
+                          </td>
+                          <td style="vertical-align: top">
+                            <h4
+                              style="
+                                font-family: 'Manrope', sans-serif;
+                                font-size: 14px;
+                                font-weight: 700;
+                                color: #191c1e;
+                                margin: 0 0 4px;
+                              "
+                            >
+                              Monitor engagement
+                            </h4>
+                            <p
+                              style="
+                                font-family: 'Inter', sans-serif;
+                                font-size: 12px;
+                                color: #444651;
+                                line-height: 1.5;
+                                margin: 0;
+                              "
+                            >
+                              Track views and inquiries directly from your administrative dashboard.
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
 
-              <!-- CTA -->
-              <table cellpadding="0" cellspacing="0" style="width:100%;">
-                <tr>
-                  <td>
-                    <table cellpadding="0" cellspacing="0" style="background:linear-gradient(135deg, #00236f 0%, #1e3a8a 100%);border-radius:8px;box-shadow:0 12px 32px rgba(25,28,30,0.06);">
-                      <tr>
-                        <td style="text-align:center;">
-                          <a href="<%= projectHubUrl %>" style="display:inline-block;color:#ffffff;font-family:'Manrope',sans-serif;font-size:14px;font-weight:700;padding:16px 32px;text-decoration:none;width:100%;box-sizing:border-box;">
-                            Access Project Hub
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
+      <!-- Footer -->
+      <tr>
+        <td style="padding: 40px 24px; text-align: center; background-color: #f7f9fb">
+          <h2
+            style="
+              font-family: 'Manrope', sans-serif;
+              font-size: 18px;
+              font-weight: 700;
+              color: #1e3a8a;
+              letter-spacing: -0.025em;
+              margin: 0 0 24px;
+            "
+          >
+            Ployos
+          </h2>
 
-            </td>
-          </tr>
-        </table>
+          <table cellpadding="0" cellspacing="0" style="margin: 0 auto 16px">
+            <tr>
+              <td style="padding: 0 16px">
+                <a
+                  href="#"
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 12px;
+                    color: #444651;
+                    text-decoration: none;
+                  "
+                  >Privacy Policy</a
+                >
+              </td>
+              <td style="padding: 0 16px">
+                <a
+                  href="#"
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 12px;
+                    color: #444651;
+                    text-decoration: none;
+                  "
+                  >Terms of Service</a
+                >
+              </td>
+              <td style="padding: 0 16px">
+                <a
+                  href="#"
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 12px;
+                    color: #444651;
+                    text-decoration: none;
+                  "
+                  >Unsubscribe</a
+                >
+              </td>
+              <td style="padding: 0 16px">
+                <a
+                  href="#"
+                  style="
+                    font-family: 'Inter', sans-serif;
+                    font-size: 12px;
+                    color: #444651;
+                    text-decoration: none;
+                  "
+                  >Manage Preferences</a
+                >
+              </td>
+            </tr>
+          </table>
 
-        <!-- Next Steps -->
-        <table cellpadding="0" cellspacing="0" style="margin:0 0 32px;">
-          <tr>
-            <td>
-              <h3 style="font-family:'Manrope',sans-serif;font-size:20px;font-weight:700;color:#191c1e;margin:0 0 24px;letter-spacing:-0.025em;">The Next Phase</h3>
-
-              <!-- Item 1 -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;margin:0 0 16px;">
-                <tr>
-                  <td style="padding:20px;">
-                    <table cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="width:40px;vertical-align:top;padding-right:16px;">
-                          <div style="margin-top:2px;color:#1e3a8a;font-size:20px;">📤</div>
-                        </td>
-                        <td style="vertical-align:top;">
-                          <h4 style="font-family:'Manrope',sans-serif;font-size:14px;font-weight:700;color:#191c1e;margin:0 0 4px;">Distribute internally</h4>
-                          <p style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;line-height:1.5;margin:0;">Share the generated link with your key stakeholders for immediate alignment.</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Item 2 -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;">
-                <tr>
-                  <td style="padding:20px;">
-                    <table cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="width:40px;vertical-align:top;padding-right:16px;">
-                          <div style="margin-top:2px;color:#1e3a8a;font-size:20px;">📊</div>
-                        </td>
-                        <td style="vertical-align:top;">
-                          <h4 style="font-family:'Manrope',sans-serif;font-size:14px;font-weight:700;color:#191c1e;margin:0 0 4px;">Monitor engagement</h4>
-                          <p style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;line-height:1.5;margin:0;">Track views and inquiries directly from your administrative dashboard.</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-            </td>
-          </tr>
-        </table>
-
-      </td>
-    </tr>
-
-    <!-- Footer -->
-    <tr>
-      <td style="padding:40px 24px;text-align:center;background-color:#f7f9fb;">
-        <h2 style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:700;color:#1e3a8a;letter-spacing:-0.025em;margin:0 0 24px;">Ployos</h2>
-
-        <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px;">
-          <tr>
-            <td style="padding:0 16px;">
-              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;">Privacy Policy</a>
-            </td>
-            <td style="padding:0 16px;">
-              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;">Terms of Service</a>
-            </td>
-            <td style="padding:0 16px;">
-              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;">Unsubscribe</a>
-            </td>
-            <td style="padding:0 16px;">
-              <a href="#" style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;text-decoration:none;">Manage Preferences</a>
-            </td>
-          </tr>
-        </table>
-
-        <p style="font-family:'Inter',sans-serif;font-size:11px;color:#757682;margin:0;">© <%= year %> Ployos Platform. All rights reserved.</p>
-      </td>
-    </tr>
-
-  </table>
-
-</body>
+          <p style="font-family: 'Inter', sans-serif; font-size: 11px; color: #757682; margin: 0">
+            © <%= year %> Ployos Platform. All rights reserved.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
 </html>
