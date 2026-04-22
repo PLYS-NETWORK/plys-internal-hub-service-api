@@ -1,5 +1,13 @@
 import { Public } from '@common/decorators/public.decorator';
-import { Controller, Headers, HttpCode, HttpStatus, Post, Req } from '@nestjs/common';
+import {
+  Controller,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Post,
+  RawBodyRequest,
+  Req,
+} from '@nestjs/common';
 import { ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
 import { FastifyRequest } from 'fastify';
 
@@ -15,13 +23,12 @@ export class WebhooksController {
   @Public()
   @ApiExcludeEndpoint()
   public async handlePolarWebhook(
-    @Req() req: FastifyRequest,
+    @Req() req: RawBodyRequest<FastifyRequest>,
     @Headers('webhook-signature') signature: string,
   ): Promise<{ received: boolean }> {
-    // Fastify stores raw body in req.rawBody when configured
-    const rawBody = (req as FastifyRequest & { rawBody?: Buffer }).rawBody;
+    const rawBody = req.rawBody;
     if (!rawBody) {
-      throw new Error('Raw body not available. Ensure rawBody is enabled in Fastify.');
+      throw new Error('Raw body not available. Ensure rawBody is enabled in NestFactory.create.');
     }
 
     await this.webhookProcessorService.processPolarWebhook(rawBody, signature);
@@ -33,12 +40,12 @@ export class WebhooksController {
   @Public()
   @ApiExcludeEndpoint()
   public async handleStripeWebhook(
-    @Req() req: FastifyRequest,
+    @Req() req: RawBodyRequest<FastifyRequest>,
     @Headers('stripe-signature') signature: string,
   ): Promise<{ received: boolean }> {
-    const rawBody = (req as FastifyRequest & { rawBody?: Buffer }).rawBody;
+    const rawBody = req.rawBody;
     if (!rawBody) {
-      throw new Error('Raw body not available. Ensure rawBody is enabled in Fastify.');
+      throw new Error('Raw body not available. Ensure rawBody is enabled in NestFactory.create.');
     }
 
     await this.webhookProcessorService.processStripeWebhook(rawBody, signature);
