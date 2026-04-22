@@ -26,7 +26,7 @@ export interface IPaymentProvider {
    * Validates the webhook signature and returns a normalized IWebhookEvent.
    * Throws if the signature is invalid (security boundary — never skip this).
    */
-  constructWebhookEvent(payload: Buffer, signature: string): IWebhookEvent;
+  constructWebhookEvent(payload: Buffer, headers: Record<string, string>): IWebhookEvent;
 
   /**
    * Creates a transfer/payout to a connected account.

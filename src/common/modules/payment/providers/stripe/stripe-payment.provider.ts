@@ -81,9 +81,10 @@ export class StripePaymentProvider implements IPaymentProvider {
     }
   }
 
-  public constructWebhookEvent(payload: Buffer, signature: string): IWebhookEvent {
+  public constructWebhookEvent(payload: Buffer, headers: Record<string, string>): IWebhookEvent {
     // stripe.webhooks.constructEvent validates the HMAC signature.
     // Must use the raw request body (Buffer) — do not parse to JSON first.
+    const signature = headers['stripe-signature'] ?? '';
     let event;
     try {
       event = this.client.webhooks.constructEvent(payload, signature, this.env.stripeWebhookSecret);

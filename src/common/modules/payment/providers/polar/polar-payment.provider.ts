@@ -20,7 +20,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Polar } from '@polar-sh/sdk';
-import * as crypto from 'crypto';
+import { Webhook, WebhookVerificationError } from 'standardwebhooks';
 
 /**
  * Concrete Strategy: delivers payment operations via the Polar.sh API.
@@ -87,25 +87,29 @@ export class PolarPaymentProvider implements IPaymentProvider {
     }
   }
 
-  public constructWebhookEvent(payload: Buffer, signature: string): IWebhookEvent {
-    // Polar validates webhooks via an HMAC-SHA256 signature sent in the
-    // `webhook-signature` header. Use the raw request body (Buffer) — never
-    // parse to JSON first or the signature check will fail.
-    const expectedSignature = crypto
-      .createHmac('sha256', this.env.polarWebhookSecret)
-      .update(payload)
-      .digest('hex');
+  public constructWebhookEvent(payload: Buffer, headers: Record<string, string>): IWebhookEvent {
+    // Polar uses the Standard Webhooks spec (standardwebhooks library).
+    // The signature covers webhook-id + "." + webhook-timestamp + "." + body,
+    // so all three headers must be present — verifying only the body HMAC fails.
+    // The secret must be base64-encoded before passing to the Webhook constructor.
+    const base64Secret = Buffer.from(this.env.polarWebhookSecret, 'utf-8').toString('base64');
+    const wh = new Webhook(base64Secret);
 
-    if (signature !== expectedSignature) {
-      throw new UnauthorizedException('Invalid Polar webhook signature.');
+    let raw: Record<string, unknown>;
+    try {
+      raw = wh.verify(payload, headers) as Record<string, unknown>;
+    } catch (err) {
+      if (err instanceof WebhookVerificationError) {
+        throw new UnauthorizedException('Invalid Polar webhook signature.');
+      }
+      throw err;
     }
-
-    const raw = JSON.parse(payload.toString('utf8')) as Record<string, unknown>;
 
     return {
       type: this.mapEventType(raw['type'] as string | undefined),
       data: (raw['data'] as Record<string, unknown>) ?? {},
-      processorEventId: (raw['id'] as string) ?? '',
+      // Standard Webhooks uses the webhook-id header as the unique message ID.
+      processorEventId: headers['webhook-id'] ?? '',
     };
   }
 

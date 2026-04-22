@@ -58,6 +58,7 @@
     "reflect-metadata": "^0.1.13",
     "resend": "^4.0.0",
     "rxjs": "^7.8.0",
+    "standardwebhooks": "^1.0.0",
     "stripe": "^22.0.2",
     "typeorm": "^0.3.17"
   },

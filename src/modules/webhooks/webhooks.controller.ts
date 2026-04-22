@@ -24,14 +24,22 @@ export class WebhooksController {
   @ApiExcludeEndpoint()
   public async handlePolarWebhook(
     @Req() req: RawBodyRequest<FastifyRequest>,
-    @Headers('webhook-signature') signature: string,
+    @Headers('webhook-id') webhookId: string,
+    @Headers('webhook-timestamp') webhookTimestamp: string,
+    @Headers('webhook-signature') webhookSignature: string,
   ): Promise<{ received: boolean }> {
     const rawBody = req.rawBody;
     if (!rawBody) {
       throw new Error('Raw body not available. Ensure rawBody is enabled in NestFactory.create.');
     }
 
-    await this.webhookProcessorService.processPolarWebhook(rawBody, signature);
+    const headers: Record<string, string> = {
+      'webhook-id': webhookId,
+      'webhook-timestamp': webhookTimestamp,
+      'webhook-signature': webhookSignature,
+    };
+
+    await this.webhookProcessorService.processPolarWebhook(rawBody, headers);
     return { received: true };
   }
 
@@ -41,14 +49,16 @@ export class WebhooksController {
   @ApiExcludeEndpoint()
   public async handleStripeWebhook(
     @Req() req: RawBodyRequest<FastifyRequest>,
-    @Headers('stripe-signature') signature: string,
+    @Headers('stripe-signature') stripeSignature: string,
   ): Promise<{ received: boolean }> {
     const rawBody = req.rawBody;
     if (!rawBody) {
       throw new Error('Raw body not available. Ensure rawBody is enabled in NestFactory.create.');
     }
 
-    await this.webhookProcessorService.processStripeWebhook(rawBody, signature);
+    await this.webhookProcessorService.processStripeWebhook(rawBody, {
+      'stripe-signature': stripeSignature,
+    });
     return { received: true };
   }
 }
