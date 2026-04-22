@@ -1,5 +1,7 @@
+import { AppLogger } from '@common/modules/logger';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
+import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ConsultantTransaction } from '@database/entities/finance/consultant-transaction.entity';
 import { Invoice } from '@database/entities/finance/invoice.entity';
 import { BillingPeriodStatus } from '@database/enums/billing-period-status.enum';
@@ -8,7 +10,7 @@ import { ConsultantTransactionType } from '@database/enums/consultant-transactio
 import { InvoiceStatus } from '@database/enums/invoice-status.enum';
 import { TransactionStatus } from '@database/enums/transaction-status.enum';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { DataSource } from 'typeorm';
 
@@ -53,14 +55,17 @@ interface ISettlementResult {
  */
 @Injectable()
 export class BillingSettlementService {
-  private readonly logger = new Logger(BillingSettlementService.name);
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly dataSource: DataSource,
     private readonly emailService: EmailService,
     private readonly env: EnvironmentsService,
-  ) {}
+    private readonly requestContext: RequestContextService,
+  ) {
+    this.logger = new AppLogger(BillingSettlementService.name, requestContext);
+  }
 
   @Cron('0 8 1 * *')
   public async settleMonthlyCredits(): Promise<void> {

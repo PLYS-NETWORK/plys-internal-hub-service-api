@@ -3,10 +3,11 @@ import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ProjectMemberStatus } from '@database/enums/project-member-status.enum';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import { CreateTaskCommentDto, UpdateTaskCommentDto } from '../dto/requests';
@@ -15,16 +16,14 @@ import { ITaskCommentsService } from '../interfaces/task-comments.service.interf
 
 @Injectable()
 export class TaskCommentsService implements ITaskCommentsService {
-  private readonly logger = new Logger(TaskCommentsService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(TaskCommentsService.name, requestContext);
+  }
 
   /** Create a comment on a task. Caller must be project owner or ACTIVE member. */
   public async createComment(
@@ -32,7 +31,7 @@ export class TaskCommentsService implements ITaskCommentsService {
     dto: CreateTaskCommentDto,
   ): Promise<TaskCommentResponseDto> {
     const userId = this.requestContext.userId!;
-    this.logger.log(`[${this.rid}] createComment — start | taskId: ${taskId}`);
+    this.logger.log(`createComment — start | taskId: ${taskId}`);
 
     const task = await this.uow.tasks.findOne({
       where: { id: taskId },
@@ -51,9 +50,7 @@ export class TaskCommentsService implements ITaskCommentsService {
     });
     const saved = await this.uow.taskComments.save(comment);
 
-    this.logger.log(
-      `[${this.rid}] createComment — complete | commentId: ${saved.id}, taskId: ${taskId}`,
-    );
+    this.logger.log(`createComment — complete | commentId: ${saved.id}, taskId: ${taskId}`);
     return this.toResponseDto(saved);
   }
 
@@ -80,7 +77,7 @@ export class TaskCommentsService implements ITaskCommentsService {
     dto: UpdateTaskCommentDto,
   ): Promise<TaskCommentResponseDto> {
     const userId = this.requestContext.userId!;
-    this.logger.log(`[${this.rid}] updateComment — start | commentId: ${commentId}`);
+    this.logger.log(`updateComment — start | commentId: ${commentId}`);
 
     const comment = await this.uow.taskComments.findOne({ where: { id: commentId } });
     if (!comment || comment.isDeleted) {
@@ -100,14 +97,14 @@ export class TaskCommentsService implements ITaskCommentsService {
     comment.editedAt = new Date();
     const saved = await this.uow.taskComments.save(comment);
 
-    this.logger.log(`[${this.rid}] updateComment — complete | commentId: ${commentId}`);
+    this.logger.log(`updateComment — complete | commentId: ${commentId}`);
     return this.toResponseDto(saved);
   }
 
   /** Soft-delete own comment. */
   public async deleteComment(commentId: string): Promise<void> {
     const userId = this.requestContext.userId!;
-    this.logger.log(`[${this.rid}] deleteComment — start | commentId: ${commentId}`);
+    this.logger.log(`deleteComment — start | commentId: ${commentId}`);
 
     const comment = await this.uow.taskComments.findOne({ where: { id: commentId } });
     if (!comment || comment.isDeleted) {
@@ -125,7 +122,7 @@ export class TaskCommentsService implements ITaskCommentsService {
     comment.isDeleted = true;
     await this.uow.taskComments.save(comment);
 
-    this.logger.log(`[${this.rid}] deleteComment — complete | commentId: ${commentId}`);
+    this.logger.log(`deleteComment — complete | commentId: ${commentId}`);
   }
 
   // ─── Private helpers ───────────────────────────────────────────────────────
@@ -164,7 +161,7 @@ export class TaskCommentsService implements ITaskCommentsService {
   }
 
   private taskNotFound(taskId: string): TranslatableException {
-    this.logger.warn(`[${this.rid}] comment operation — task not found | taskId: ${taskId}`);
+    this.logger.warn(`comment operation — task not found | taskId: ${taskId}`);
     return new TranslatableException({
       messageKey: 'error.task.not_found',
       errorCode: ERROR_CODES.TASK_NOT_FOUND,
@@ -173,9 +170,7 @@ export class TaskCommentsService implements ITaskCommentsService {
   }
 
   private commentNotFound(commentId: string): TranslatableException {
-    this.logger.warn(
-      `[${this.rid}] comment operation — comment not found | commentId: ${commentId}`,
-    );
+    this.logger.warn(`comment operation — comment not found | commentId: ${commentId}`);
     return new TranslatableException({
       messageKey: 'error.task.comment_not_found',
       errorCode: ERROR_CODES.TASK_COMMENT_NOT_FOUND,

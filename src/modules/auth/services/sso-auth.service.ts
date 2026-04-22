@@ -2,11 +2,12 @@ import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ActivePlatform } from '@database/enums/active-platform.enum';
 import { SsoProvider } from '@database/enums/sso-provider.enum';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { AuthResponseDto } from '../dto/responses/auth-response.dto';
 import {
@@ -23,14 +24,10 @@ import { UserOnboardingService } from './user-onboarding.service';
 
 @Injectable()
 export class SsoAuthService implements ISsoAuthService {
-  private readonly logger = new Logger(SsoAuthService.name);
+  private readonly logger: AppLogger;
 
   /** Map built once at construction for O(1) provider lookup by name. */
   private readonly providerMap: Map<SsoProvider, ISsoTokenProvider>;
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
 
   constructor(
     private readonly uow: UnitOfWorkService,
@@ -41,6 +38,7 @@ export class SsoAuthService implements ISsoAuthService {
     private readonly requestContext: RequestContextService,
     @Inject(SSO_PROVIDERS_TOKEN) providers: ISsoTokenProvider[],
   ) {
+    this.logger = new AppLogger(SsoAuthService.name, requestContext);
     this.providerMap = new Map(providers.map((p) => [p.providerName, p]));
   }
 
@@ -51,13 +49,11 @@ export class SsoAuthService implements ISsoAuthService {
     context: ISessionContext,
   ): Promise<AuthResponseDto> {
     this.logger.log(
-      `[${this.rid}] ssoLogin — start | provider: ${provider}, platform: ${activePlatform}, email: ${userData.email}`,
+      `ssoLogin — start | provider: ${provider}, platform: ${activePlatform}, email: ${userData.email}`,
     );
 
     if (!userData.email) {
-      this.logger.warn(
-        `[${this.rid}] ssoLogin — SSO provider returned no email | provider: ${provider}`,
-      );
+      this.logger.warn(`ssoLogin — SSO provider returned no email | provider: ${provider}`);
       throw new TranslatableException({
         messageKey: 'error.auth.sso_email_missing',
         errorCode: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
@@ -69,7 +65,7 @@ export class SsoAuthService implements ISsoAuthService {
     // provisioned out-of-band and must log in with email/password to guarantee
     // the identity is vetted, not federated through a third-party IdP.
     if (activePlatform === ActivePlatform.ADMIN_PLATFORM) {
-      this.logger.warn(`[${this.rid}] ssoLogin — SSO not allowed for admin platform`);
+      this.logger.warn(`ssoLogin — SSO not allowed for admin platform`);
       throw new TranslatableException({
         messageKey: 'error.auth.sso_not_allowed_for_platform',
         errorCode: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
@@ -95,7 +91,7 @@ export class SsoAuthService implements ISsoAuthService {
       const user = existingLink.user;
 
       if (!user.isActive) {
-        this.logger.warn(`[${this.rid}] ssoLogin — account inactive | userId: ${user.id}`);
+        this.logger.warn(`ssoLogin — account inactive | userId: ${user.id}`);
         throw new TranslatableException({
           messageKey: 'error.auth.account_inactive',
           errorCode: ERROR_CODES.AUTH_ACCOUNT_INACTIVE,
@@ -111,9 +107,7 @@ export class SsoAuthService implements ISsoAuthService {
       user.lastLoginAt = new Date();
       await this.uow.users.save(user);
 
-      this.logger.log(
-        `[${this.rid}] ssoLogin — existing link, session created | userId: ${user.id}`,
-      );
+      this.logger.log(`ssoLogin — existing link, session created | userId: ${user.id}`);
       return this.sessionService.createSession(user.id, user.email, activePlatform, context);
     }
 
@@ -209,9 +203,7 @@ export class SsoAuthService implements ISsoAuthService {
         );
       }
 
-      this.logger.log(
-        `[${this.rid}] ssoLogin — complete | userId: ${user.id}, isNewUser: ${isNewUser}`,
-      );
+      this.logger.log(`ssoLogin — complete | userId: ${user.id}, isNewUser: ${isNewUser}`);
       return this.sessionService.createSession(user.id, user.email, activePlatform, context);
     });
 
@@ -227,12 +219,12 @@ export class SsoAuthService implements ISsoAuthService {
     providerName: SsoProvider,
     idToken: string,
   ): Promise<ISsoUserData> {
-    this.logger.log(`[${this.rid}] verifyProviderToken — start | provider: ${providerName}`);
+    this.logger.log(`verifyProviderToken — start | provider: ${providerName}`);
 
     const provider = this.providerMap.get(providerName);
     if (!provider) {
       this.logger.error(
-        `[${this.rid}] verifyProviderToken — provider not configured | provider: ${providerName}`,
+        `verifyProviderToken — provider not configured | provider: ${providerName}`,
       );
       throw new TranslatableException({
         messageKey: 'error.auth.sso_not_allowed_for_platform',
@@ -242,7 +234,7 @@ export class SsoAuthService implements ISsoAuthService {
     }
 
     const result = await provider.verifyToken(idToken);
-    this.logger.log(`[${this.rid}] verifyProviderToken — complete | provider: ${providerName}`);
+    this.logger.log(`verifyProviderToken — complete | provider: ${providerName}`);
     return result;
   }
 }

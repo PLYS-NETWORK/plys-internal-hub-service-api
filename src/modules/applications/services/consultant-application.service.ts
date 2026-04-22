@@ -2,6 +2,7 @@ import { ERROR_CODES } from '@common/constants/error-codes';
 import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { AppLogger } from '@common/modules/logger';
 import { CopyleaksService } from '@common/modules/copyleaks';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments/environments.service';
@@ -10,7 +11,7 @@ import { ConsultantProfile } from '@database/entities';
 import { ApplicationStatus } from '@database/enums/application-status.enum';
 import { ProjectStatus } from '@database/enums/project-status.enum';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import { ApplyProjectDto, ListMyApplicationsDto } from '../dto/requests';
@@ -24,11 +25,7 @@ const ACCEPTING_STATUSES = new Set<ProjectStatus>([
 
 @Injectable()
 export class ConsultantApplicationService {
-  private readonly logger = new Logger(ConsultantApplicationService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
@@ -36,7 +33,9 @@ export class ConsultantApplicationService {
     private readonly emailService: EmailService,
     private readonly copyleaksService: CopyleaksService,
     private readonly envService: EnvironmentsService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(ConsultantApplicationService.name, requestContext);
+  }
 
   /**
    * Full application flow for a consultant applying to a project.
@@ -52,15 +51,13 @@ export class ConsultantApplicationService {
     const consultantProfile = await this.resolveConsultantProfile();
     const consultantId = consultantProfile.id;
     this.logger.log(
-      `[${this.rid}] applyToProject — start | consultantId: ${consultantId}, projectId: ${dto.projectId}`,
+      `applyToProject — start | consultantId: ${consultantId}, projectId: ${dto.projectId}`,
     );
 
     // 1. Fetch project and verify it accepts applications
     const project = await this.uow.projects.findByActiveId(dto.projectId);
     if (!project || !ACCEPTING_STATUSES.has(project.status)) {
-      this.logger.warn(
-        `[${this.rid}] applyToProject — project not accepting | projectId: ${dto.projectId}`,
-      );
+      this.logger.warn(`applyToProject — project not accepting | projectId: ${dto.projectId}`);
       throw new TranslatableException({
         messageKey: 'error.application.project_not_accepting',
         errorCode: ERROR_CODES.APPLICATION_PROJECT_NOT_ACCEPTING,
@@ -78,7 +75,7 @@ export class ConsultantApplicationService {
     });
     if (existingApplication) {
       this.logger.warn(
-        `[${this.rid}] applyToProject — already applied | projectId: ${dto.projectId}, consultantId: ${consultantId}`,
+        `applyToProject — already applied | projectId: ${dto.projectId}, consultantId: ${consultantId}`,
       );
       throw new TranslatableException({
         messageKey: 'error.application.already_applied',
@@ -107,7 +104,7 @@ export class ConsultantApplicationService {
     // If the project has required skills, at least one must match
     if (projectRequiredSkills.length > 0 && matchedSkills.length === 0) {
       this.logger.warn(
-        `[${this.rid}] applyToProject — no matching skills | projectId: ${dto.projectId}, consultantId: ${consultantId}`,
+        `applyToProject — no matching skills | projectId: ${dto.projectId}, consultantId: ${consultantId}`,
       );
       throw new TranslatableException({
         messageKey: 'error.application.no_matching_skills',
@@ -124,9 +121,7 @@ export class ConsultantApplicationService {
 
     // 5. Cover letter is required when there are no interview questions
     if (interviewQuestions.length === 0 && !dto.coverLetter) {
-      this.logger.warn(
-        `[${this.rid}] applyToProject — cover letter missing | projectId: ${dto.projectId}`,
-      );
+      this.logger.warn(`applyToProject — cover letter missing | projectId: ${dto.projectId}`);
       throw new TranslatableException({
         messageKey: 'error.application.cover_letter_required',
         errorCode: ERROR_CODES.APPLICATION_COVER_LETTER_REQUIRED,
@@ -142,9 +137,7 @@ export class ConsultantApplicationService {
       // Validate all required questions are answered
       const unanswered = requiredQuestions.filter((q) => !answerMap.has(q.id));
       if (unanswered.length > 0) {
-        this.logger.warn(
-          `[${this.rid}] applyToProject — missing answers | unanswered: ${unanswered.length}`,
-        );
+        this.logger.warn(`applyToProject — missing answers | unanswered: ${unanswered.length}`);
         throw new TranslatableException({
           messageKey: 'error.application.missing_answers',
           errorCode: ERROR_CODES.APPLICATION_MISSING_ANSWERS,
@@ -159,7 +152,7 @@ export class ConsultantApplicationService {
 
         if (aiResult.hasAiContent) {
           this.logger.warn(
-            `[${this.rid}] applyToProject — AI content detected | maxAiScore: ${aiResult.maxAiScore}, consultantId: ${consultantId}`,
+            `applyToProject — AI content detected | maxAiScore: ${aiResult.maxAiScore}, consultantId: ${consultantId}`,
           );
 
           // Send warning email to consultant (fire-and-forget — don't block the response)
@@ -172,9 +165,7 @@ export class ConsultantApplicationService {
               })
               .catch((err: unknown) => {
                 const msg = err instanceof Error ? err.message : String(err);
-                this.logger.error(
-                  `[${this.rid}] applyToProject — AI detected email failed | error: ${msg}`,
-                );
+                this.logger.error(`applyToProject — AI detected email failed | error: ${msg}`);
               });
           }
 
@@ -191,7 +182,7 @@ export class ConsultantApplicationService {
         }
         // Copyleaks API failure — block the application to be safe
         const msg = err instanceof Error ? err.message : String(err);
-        this.logger.error(`[${this.rid}] applyToProject — AI check failed | error: ${msg}`);
+        this.logger.error(`applyToProject — AI check failed | error: ${msg}`);
         throw new TranslatableException({
           messageKey: 'error.application.ai_check_failed',
           errorCode: ERROR_CODES.APPLICATION_AI_CHECK_FAILED,
@@ -229,7 +220,7 @@ export class ConsultantApplicationService {
     });
 
     this.logger.log(
-      `[${this.rid}] applyToProject — complete | applicationId: ${application.id}, matchedSkills: ${matchedSkills.length}`,
+      `applyToProject — complete | applicationId: ${application.id}, matchedSkills: ${matchedSkills.length}`,
     );
 
     // 8. Send notification emails AFTER transaction commits (fire-and-forget)
@@ -260,7 +251,7 @@ export class ConsultantApplicationService {
   public async withdrawApplication(applicationId: string): Promise<ApplicationResponseDto> {
     const consultantProfile = await this.resolveConsultantProfile();
     this.logger.log(
-      `[${this.rid}] withdrawApplication — start | applicationId: ${applicationId}, consultantId: ${consultantProfile.id}`,
+      `withdrawApplication — start | applicationId: ${applicationId}, consultantId: ${consultantProfile.id}`,
     );
 
     const application = await this.uow.projectApplications.findOne({
@@ -268,9 +259,7 @@ export class ConsultantApplicationService {
     });
 
     if (!application) {
-      this.logger.warn(
-        `[${this.rid}] withdrawApplication — not found | applicationId: ${applicationId}`,
-      );
+      this.logger.warn(`withdrawApplication — not found | applicationId: ${applicationId}`);
       throw new TranslatableException({
         messageKey: 'error.application.not_found',
         errorCode: ERROR_CODES.APPLICATION_NOT_FOUND,
@@ -280,7 +269,7 @@ export class ConsultantApplicationService {
 
     if (application.status !== ApplicationStatus.PENDING) {
       this.logger.warn(
-        `[${this.rid}] withdrawApplication — invalid status | applicationId: ${applicationId}, currentStatus: ${application.status}`,
+        `withdrawApplication — invalid status | applicationId: ${applicationId}, currentStatus: ${application.status}`,
       );
       throw new TranslatableException({
         messageKey: 'error.application.cannot_withdraw',
@@ -292,9 +281,7 @@ export class ConsultantApplicationService {
     application.status = ApplicationStatus.WITHDRAWN;
     const updated = await this.uow.projectApplications.save(application);
 
-    this.logger.log(
-      `[${this.rid}] withdrawApplication — complete | applicationId: ${applicationId}`,
-    );
+    this.logger.log(`withdrawApplication — complete | applicationId: ${applicationId}`);
 
     return plainToInstance(
       ApplicationResponseDto,
@@ -319,7 +306,7 @@ export class ConsultantApplicationService {
   ): Promise<PageDto<ConsultantApplicationListItemResponseDto>> {
     const consultantProfile = await this.resolveConsultantProfile();
     this.logger.log(
-      `[${this.rid}] listMyApplications — start | consultantId: ${consultantProfile.id}, page: ${dto.page}`,
+      `listMyApplications — start | consultantId: ${consultantProfile.id}, page: ${dto.page}`,
     );
 
     const [applications, itemCount] = await this.uow.projectApplications.findAndCount({
@@ -353,7 +340,7 @@ export class ConsultantApplicationService {
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
 
     this.logger.log(
-      `[${this.rid}] listMyApplications — complete | returned: ${data.length}, total: ${itemCount}`,
+      `listMyApplications — complete | returned: ${data.length}, total: ${itemCount}`,
     );
     return new PageDto(data, meta);
   }
@@ -365,7 +352,7 @@ export class ConsultantApplicationService {
     const profile = await this.uow.consultantProfiles.findByUserId(userId);
 
     if (!profile) {
-      this.logger.warn(`[${this.rid}] resolveConsultantProfile — not found | userId: ${userId}`);
+      this.logger.warn(`resolveConsultantProfile — not found | userId: ${userId}`);
       throw new TranslatableException({
         messageKey: 'error.consultant_profile.not_found',
         errorCode: ERROR_CODES.CONSULTANT_PROFILE_NOT_FOUND,
@@ -422,7 +409,7 @@ export class ConsultantApplicationService {
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             this.logger.error(
-              `[${this.rid}] sendNotificationEmails — business failed | to: ${businessUser.email} | error: ${msg}`,
+              `sendNotificationEmails — business failed | to: ${businessUser.email} | error: ${msg}`,
             );
           }
         }
@@ -447,7 +434,7 @@ export class ConsultantApplicationService {
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
           this.logger.error(
-            `[${this.rid}] sendNotificationEmails — consultant failed | to: ${consultantUser.email} | error: ${msg}`,
+            `sendNotificationEmails — consultant failed | to: ${consultantUser.email} | error: ${msg}`,
           );
         }
       }

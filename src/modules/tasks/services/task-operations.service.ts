@@ -3,6 +3,7 @@ import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { Task } from '@database/entities';
 import { BusinessTransactionType } from '@database/enums/business-transaction-type.enum';
@@ -12,7 +13,7 @@ import { ProjectStatus } from '@database/enums/project-status.enum';
 import { TaskKanbanStatus } from '@database/enums/task-kanban-status.enum';
 import { TransactionStatus } from '@database/enums/transaction-status.enum';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import {
@@ -33,21 +34,19 @@ const CONSULTANT_TRANSITIONS = new Map<TaskKanbanStatus, TaskKanbanStatus[]>([
 
 @Injectable()
 export class TaskOperationsService implements ITaskOperationsService {
-  private readonly logger = new Logger(TaskOperationsService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(TaskOperationsService.name, requestContext);
+  }
 
   /** Create a draft task for an in-progress project. */
   public async createDraftTask(dto: CreateTaskDto): Promise<TaskResponseDto> {
     const businessId = await this.resolveBusinessId();
-    this.logger.log(`[${this.rid}] createDraftTask — start | projectId: ${dto.projectId}`);
+    this.logger.log(`createDraftTask — start | projectId: ${dto.projectId}`);
 
     const project = await this.uow.projects.findByIdAndBusinessId(dto.projectId, businessId);
     if (!project) {
@@ -56,7 +55,7 @@ export class TaskOperationsService implements ITaskOperationsService {
 
     if (project.status !== ProjectStatus.IN_PROGRESS) {
       this.logger.warn(
-        `[${this.rid}] createDraftTask — project not in_progress | projectId: ${dto.projectId}, status: ${project.status}`,
+        `createDraftTask — project not in_progress | projectId: ${dto.projectId}, status: ${project.status}`,
       );
       throw new TranslatableException({
         messageKey: 'error.task.project_not_in_progress',
@@ -75,7 +74,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     });
     const saved = await this.uow.tasks.save(task);
 
-    this.logger.log(`[${this.rid}] createDraftTask — complete | taskId: ${saved.id}`);
+    this.logger.log(`createDraftTask — complete | taskId: ${saved.id}`);
     return this.toResponseDto(saved);
   }
 
@@ -88,9 +87,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     dto: UpdateTaskBusinessStatusDto,
   ): Promise<TaskResponseDto> {
     const businessProfile = await this.resolveBusinessProfile();
-    this.logger.log(
-      `[${this.rid}] updateBusinessStatus — start | taskId: ${taskId}, target: ${dto.status}`,
-    );
+    this.logger.log(`updateBusinessStatus — start | taskId: ${taskId}, target: ${dto.status}`);
 
     const task = await this.findTaskOwnedByBusiness(taskId, businessProfile.id);
 
@@ -106,16 +103,14 @@ export class TaskOperationsService implements ITaskOperationsService {
     // ── draft → to_do: payment gate ──
     if (task.kanbanStatus === TaskKanbanStatus.DRAFT && dto.status === TaskKanbanStatus.TO_DO) {
       const saved = await this.handleDraftToTodo(task, businessProfile);
-      this.logger.log(
-        `[${this.rid}] updateBusinessStatus — draft→to_do complete | taskId: ${taskId}`,
-      );
+      this.logger.log(`updateBusinessStatus — draft→to_do complete | taskId: ${taskId}`);
       return this.toResponseDto(saved);
     }
 
     // ── any → done: consultant payout ──
     if (dto.status === TaskKanbanStatus.DONE) {
       const saved = await this.handleTaskDone(task, businessProfile);
-      this.logger.log(`[${this.rid}] updateBusinessStatus — →done complete | taskId: ${taskId}`);
+      this.logger.log(`updateBusinessStatus — →done complete | taskId: ${taskId}`);
       return this.toResponseDto(saved);
     }
 
@@ -124,7 +119,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     const saved = await this.uow.tasks.save(task);
 
     this.logger.log(
-      `[${this.rid}] updateBusinessStatus — complete | taskId: ${taskId}, status: ${saved.kanbanStatus}`,
+      `updateBusinessStatus — complete | taskId: ${taskId}, status: ${saved.kanbanStatus}`,
     );
     return this.toResponseDto(saved);
   }
@@ -135,9 +130,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     dto: UpdateTaskConsultantStatusDto,
   ): Promise<TaskResponseDto> {
     const consultantProfile = await this.resolveConsultantProfile();
-    this.logger.log(
-      `[${this.rid}] updateConsultantStatus — start | taskId: ${taskId}, target: ${dto.status}`,
-    );
+    this.logger.log(`updateConsultantStatus — start | taskId: ${taskId}, target: ${dto.status}`);
 
     const task = await this.uow.tasks.findOne({ where: { id: taskId } });
     if (!task) {
@@ -147,7 +140,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     // Consultant must be the one assigned to the task
     if (task.assignedTo !== consultantProfile.id) {
       this.logger.warn(
-        `[${this.rid}] updateConsultantStatus — not assigned | taskId: ${taskId}, assignedTo: ${task.assignedTo}, consultantId: ${consultantProfile.id}`,
+        `updateConsultantStatus — not assigned | taskId: ${taskId}, assignedTo: ${task.assignedTo}, consultantId: ${consultantProfile.id}`,
       );
       throw new TranslatableException({
         messageKey: 'error.task.invalid_status_transition',
@@ -159,7 +152,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     const allowed = CONSULTANT_TRANSITIONS.get(task.kanbanStatus);
     if (!allowed || !allowed.includes(dto.status)) {
       this.logger.warn(
-        `[${this.rid}] updateConsultantStatus — invalid transition | taskId: ${taskId}, from: ${task.kanbanStatus}, to: ${dto.status}`,
+        `updateConsultantStatus — invalid transition | taskId: ${taskId}, from: ${task.kanbanStatus}, to: ${dto.status}`,
       );
       throw new TranslatableException({
         messageKey: 'error.task.invalid_status_transition',
@@ -172,7 +165,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     const saved = await this.uow.tasks.save(task);
 
     this.logger.log(
-      `[${this.rid}] updateConsultantStatus — complete | taskId: ${taskId}, status: ${saved.kanbanStatus}`,
+      `updateConsultantStatus — complete | taskId: ${taskId}, status: ${saved.kanbanStatus}`,
     );
     return this.toResponseDto(saved);
   }
@@ -183,9 +176,7 @@ export class TaskOperationsService implements ITaskOperationsService {
    */
   public async claimTask(taskId: string): Promise<TaskResponseDto> {
     const consultantProfile = await this.resolveConsultantProfile();
-    this.logger.log(
-      `[${this.rid}] claimTask — start | taskId: ${taskId}, consultantId: ${consultantProfile.id}`,
-    );
+    this.logger.log(`claimTask — start | taskId: ${taskId}, consultantId: ${consultantProfile.id}`);
 
     const saved = await this.uow.withTransaction(async (txUow) => {
       // Race-free claim via FOR UPDATE SKIP LOCKED
@@ -215,7 +206,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     });
 
     this.logger.log(
-      `[${this.rid}] claimTask — complete | taskId: ${taskId}, consultantId: ${consultantProfile.id}`,
+      `claimTask — complete | taskId: ${taskId}, consultantId: ${consultantProfile.id}`,
     );
     return this.toResponseDto(saved);
   }
@@ -223,15 +214,13 @@ export class TaskOperationsService implements ITaskOperationsService {
   /** Business assigns a consultant to a to_do task. */
   public async assignTask(taskId: string, dto: AssignTaskDto): Promise<TaskResponseDto> {
     const businessProfile = await this.resolveBusinessProfile();
-    this.logger.log(
-      `[${this.rid}] assignTask — start | taskId: ${taskId}, consultantId: ${dto.consultantId}`,
-    );
+    this.logger.log(`assignTask — start | taskId: ${taskId}, consultantId: ${dto.consultantId}`);
 
     const task = await this.findTaskOwnedByBusiness(taskId, businessProfile.id);
 
     if (task.kanbanStatus !== TaskKanbanStatus.TO_DO || task.assignedTo !== null) {
       this.logger.warn(
-        `[${this.rid}] assignTask — task not assignable | taskId: ${taskId}, status: ${task.kanbanStatus}, assignedTo: ${task.assignedTo}`,
+        `assignTask — task not assignable | taskId: ${taskId}, status: ${task.kanbanStatus}, assignedTo: ${task.assignedTo}`,
       );
       throw new TranslatableException({
         messageKey: 'error.task.already_assigned',
@@ -247,9 +236,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     task.kanbanStatus = TaskKanbanStatus.ASSIGNED;
     const saved = await this.uow.tasks.save(task);
 
-    this.logger.log(
-      `[${this.rid}] assignTask — complete | taskId: ${taskId}, consultantId: ${dto.consultantId}`,
-    );
+    this.logger.log(`assignTask — complete | taskId: ${taskId}, consultantId: ${dto.consultantId}`);
     return this.toResponseDto(saved);
   }
 
@@ -450,7 +437,7 @@ export class TaskOperationsService implements ITaskOperationsService {
 
   private projectNotFound(projectId: string, businessId: string): TranslatableException {
     this.logger.warn(
-      `[${this.rid}] task operation — project not found | projectId: ${projectId}, businessId: ${businessId}`,
+      `task operation — project not found | projectId: ${projectId}, businessId: ${businessId}`,
     );
     return new TranslatableException({
       messageKey: 'error.project.not_found',
@@ -460,7 +447,7 @@ export class TaskOperationsService implements ITaskOperationsService {
   }
 
   private taskNotFound(taskId: string): TranslatableException {
-    this.logger.warn(`[${this.rid}] task operation — task not found | taskId: ${taskId}`);
+    this.logger.warn(`task operation — task not found | taskId: ${taskId}`);
     return new TranslatableException({
       messageKey: 'error.task.not_found',
       errorCode: ERROR_CODES.TASK_NOT_FOUND,

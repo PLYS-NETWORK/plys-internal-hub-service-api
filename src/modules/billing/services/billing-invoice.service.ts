@@ -1,10 +1,12 @@
+import { AppLogger } from '@common/modules/logger';
+import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { BillingPeriodStatus } from '@database/enums/billing-period-status.enum';
 import { BusinessTransactionType } from '@database/enums/business-transaction-type.enum';
 import { ConsultantTransactionType } from '@database/enums/consultant-transaction-type.enum';
 import { InvoiceStatus } from '@database/enums/invoice-status.enum';
 import { TransactionStatus } from '@database/enums/transaction-status.enum';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 /**
  * Handles post-payment logic for billing invoices.
@@ -19,9 +21,14 @@ import { Injectable, Logger } from '@nestjs/common';
  */
 @Injectable()
 export class BillingInvoiceService {
-  private readonly logger = new Logger(BillingInvoiceService.name);
+  private readonly logger: AppLogger;
 
-  constructor(private readonly uow: UnitOfWorkService) {}
+  constructor(
+    private readonly uow: UnitOfWorkService,
+    private readonly requestContext: RequestContextService,
+  ) {
+    this.logger = new AppLogger(BillingInvoiceService.name, requestContext);
+  }
 
   /**
    * Completes invoice payment — credits consultants and updates all statuses.

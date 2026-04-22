@@ -1,7 +1,9 @@
+import { AppLogger } from '@common/modules/logger';
 import { IEmailMessage } from '@common/modules/email/interfaces/email-message.interface';
 import { IEmailProvider } from '@common/modules/email/interfaces/email-provider.interface';
 import { EnvironmentsService } from '@common/modules/environments';
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Resend } from 'resend';
 
 /**
@@ -13,10 +15,14 @@ import { Resend } from 'resend';
  */
 @Injectable()
 export class ResendEmailProvider implements IEmailProvider {
-  private readonly logger = new Logger(ResendEmailProvider.name);
+  private readonly logger: AppLogger;
   private readonly client: Resend;
 
-  constructor(private readonly env: EnvironmentsService) {
+  constructor(
+    private readonly env: EnvironmentsService,
+    private readonly requestContext: RequestContextService,
+  ) {
+    this.logger = new AppLogger(ResendEmailProvider.name, requestContext);
     this.client = new Resend(this.env.resendApiKey);
   }
 

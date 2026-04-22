@@ -1,5 +1,6 @@
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 
 import { COPYLEAKS_PROVIDER_TOKEN } from './constants';
 import { ICopyleaksProvider } from './interfaces/copyleaks-provider.interface';
@@ -16,24 +17,18 @@ import {
  */
 @Injectable()
 export class CopyleaksService {
-  private readonly logger = new Logger(CopyleaksService.name);
+  private readonly logger: AppLogger;
 
   constructor(
     @Inject(COPYLEAKS_PROVIDER_TOKEN)
     private readonly provider: ICopyleaksProvider,
     private readonly requestContext: RequestContextService,
-  ) {}
-
-  private get rid(): string {
-    return this.requestContext.requestId;
+  ) {
+    this.logger = new AppLogger(CopyleaksService.name, requestContext);
   }
 
-  /**
-   * Checks multiple text inputs for AI-generated content.
-   * Returns an aggregate result with the highest score and per-text breakdown.
-   */
   public async checkTextsForAi(texts: string[]): Promise<ICopyleaksAggregateResult> {
-    this.logger.log(`[${this.rid}] checkTextsForAi — start | count: ${texts.length}`);
+    this.logger.log(`checkTextsForAi — start | count: ${texts.length}`);
 
     const results: ICopyleaksAiResult[] = [];
 
@@ -49,7 +44,7 @@ export class CopyleaksService {
     const hasAiContent = maxAiScore > 80;
 
     this.logger.log(
-      `[${this.rid}] checkTextsForAi — complete | maxAiScore: ${maxAiScore}, hasAiContent: ${hasAiContent}`,
+      `checkTextsForAi — complete | maxAiScore: ${maxAiScore}, hasAiContent: ${hasAiContent}`,
     );
 
     return { maxAiScore, hasAiContent, results };

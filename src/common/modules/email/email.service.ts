@@ -1,7 +1,8 @@
+import { AppLogger } from '@common/modules/logger';
 import { EnvironmentsService } from '@common/modules/environments';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ActivePlatform } from '@database/enums/active-platform.enum';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 
 import { EMAIL_PROVIDER_TOKEN } from './constants';
 import { IEmailProvider } from './interfaces/email-provider.interface';
@@ -43,17 +44,15 @@ import {
  */
 @Injectable()
 export class EmailService implements IEmailService {
-  private readonly logger = new Logger(EmailService.name);
+  private readonly logger: AppLogger;
 
   constructor(
     @Inject(EMAIL_PROVIDER_TOKEN)
     private readonly emailProvider: IEmailProvider,
     private readonly requestContext: RequestContextService,
     private readonly env: EnvironmentsService,
-  ) {}
-
-  private get rid(): string {
-    return this.requestContext.requestId;
+  ) {
+    this.logger = new AppLogger(EmailService.name, requestContext);
   }
 
   private fromEmailForPlatform(platform: ActivePlatform): string {
@@ -67,9 +66,7 @@ export class EmailService implements IEmailService {
     options: IVerifyRegistrationEmailOptions,
     platform: ActivePlatform,
   ): Promise<void> {
-    this.logger.log(
-      `[${this.rid}] sendVerificationEmail — start | to: ${to}, platform: ${platform}`,
-    );
+    this.logger.log(`sendVerificationEmail — start | to: ${to}, platform: ${platform}`);
     try {
       const html =
         platform === ActivePlatform.CONSULTANT
@@ -82,12 +79,10 @@ export class EmailService implements IEmailService {
         subject: 'Verify your email address',
         html,
       });
-      this.logger.log(`[${this.rid}] sendVerificationEmail — sent | to: ${to}`);
+      this.logger.log(`sendVerificationEmail — sent | to: ${to}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(
-        `[${this.rid}] sendVerificationEmail — failed | to: ${to} | error: ${message}`,
-      );
+      this.logger.error(`sendVerificationEmail — failed | to: ${to} | error: ${message}`);
       throw err;
     }
   }
@@ -97,9 +92,7 @@ export class EmailService implements IEmailService {
     options: IForgotPasswordOtpEmailOptions,
     platform: ActivePlatform,
   ): Promise<void> {
-    this.logger.log(
-      `[${this.rid}] sendForgotPasswordOtpEmail — start | to: ${to}, platform: ${platform}`,
-    );
+    this.logger.log(`sendForgotPasswordOtpEmail — start | to: ${to}, platform: ${platform}`);
     try {
       const html =
         platform === ActivePlatform.CONSULTANT
@@ -112,12 +105,10 @@ export class EmailService implements IEmailService {
         subject: 'Your password reset code',
         html,
       });
-      this.logger.log(`[${this.rid}] sendForgotPasswordOtpEmail — sent | to: ${to}`);
+      this.logger.log(`sendForgotPasswordOtpEmail — sent | to: ${to}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(
-        `[${this.rid}] sendForgotPasswordOtpEmail — failed | to: ${to} | error: ${message}`,
-      );
+      this.logger.error(`sendForgotPasswordOtpEmail — failed | to: ${to} | error: ${message}`);
       throw err;
     }
   }
@@ -127,7 +118,7 @@ export class EmailService implements IEmailService {
     options: IWelcomeEmailOptions,
     platform: ActivePlatform,
   ): Promise<void> {
-    this.logger.log(`[${this.rid}] sendWelcomeEmail — start | to: ${to}, platform: ${platform}`);
+    this.logger.log(`sendWelcomeEmail — start | to: ${to}, platform: ${platform}`);
     try {
       const html =
         platform === ActivePlatform.CONSULTANT
@@ -140,10 +131,10 @@ export class EmailService implements IEmailService {
         subject: platform === ActivePlatform.CONSULTANT ? 'Welcome to Lona!' : 'Welcome to Ployos!',
         html,
       });
-      this.logger.log(`[${this.rid}] sendWelcomeEmail — sent | to: ${to}`);
+      this.logger.log(`sendWelcomeEmail — sent | to: ${to}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`[${this.rid}] sendWelcomeEmail — failed | to: ${to} | error: ${message}`);
+      this.logger.error(`sendWelcomeEmail — failed | to: ${to} | error: ${message}`);
       throw err;
     }
   }
@@ -152,7 +143,7 @@ export class EmailService implements IEmailService {
     to: string,
     options: IBusinessApplicationNotificationEmailOptions,
   ): Promise<void> {
-    this.logger.log(`[${this.rid}] sendApplicationNotificationToBusinessEmail — start | to: ${to}`);
+    this.logger.log(`sendApplicationNotificationToBusinessEmail — start | to: ${to}`);
     try {
       await this.emailProvider.send({
         from: this.env.resendPloyosEmail,
@@ -160,13 +151,11 @@ export class EmailService implements IEmailService {
         subject: `New Application: ${options.projectTitle}`,
         html: await buildBusinessApplicationNotificationEmail(options),
       });
-      this.logger.log(
-        `[${this.rid}] sendApplicationNotificationToBusinessEmail — sent | to: ${to}`,
-      );
+      this.logger.log(`sendApplicationNotificationToBusinessEmail — sent | to: ${to}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(
-        `[${this.rid}] sendApplicationNotificationToBusinessEmail — failed | to: ${to} | error: ${message}`,
+        `sendApplicationNotificationToBusinessEmail — failed | to: ${to} | error: ${message}`,
       );
       throw err;
     }
@@ -176,9 +165,7 @@ export class EmailService implements IEmailService {
     to: string,
     options: IConsultantApplicationNotificationEmailOptions,
   ): Promise<void> {
-    this.logger.log(
-      `[${this.rid}] sendApplicationNotificationToConsultantEmail — start | to: ${to}`,
-    );
+    this.logger.log(`sendApplicationNotificationToConsultantEmail — start | to: ${to}`);
     try {
       await this.emailProvider.send({
         from: this.env.resendLonaEmail,
@@ -186,20 +173,18 @@ export class EmailService implements IEmailService {
         subject: `Application Submitted: ${options.projectTitle}`,
         html: await buildConsultantApplicationNotificationEmail(options),
       });
-      this.logger.log(
-        `[${this.rid}] sendApplicationNotificationToConsultantEmail — sent | to: ${to}`,
-      );
+      this.logger.log(`sendApplicationNotificationToConsultantEmail — sent | to: ${to}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(
-        `[${this.rid}] sendApplicationNotificationToConsultantEmail — failed | to: ${to} | error: ${message}`,
+        `sendApplicationNotificationToConsultantEmail — failed | to: ${to} | error: ${message}`,
       );
       throw err;
     }
   }
 
   public async sendAiDetectedEmail(to: string, options: IAiDetectedEmailOptions): Promise<void> {
-    this.logger.log(`[${this.rid}] sendAiDetectedEmail — start | to: ${to}`);
+    this.logger.log(`sendAiDetectedEmail — start | to: ${to}`);
     try {
       await this.emailProvider.send({
         from: this.env.resendLonaEmail,
@@ -207,12 +192,10 @@ export class EmailService implements IEmailService {
         subject: `Application Review Notice: ${options.projectTitle}`,
         html: await buildConsultantAiDetectedEmail(options),
       });
-      this.logger.log(`[${this.rid}] sendAiDetectedEmail — sent | to: ${to}`);
+      this.logger.log(`sendAiDetectedEmail — sent | to: ${to}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(
-        `[${this.rid}] sendAiDetectedEmail — failed | to: ${to} | error: ${message}`,
-      );
+      this.logger.error(`sendAiDetectedEmail — failed | to: ${to} | error: ${message}`);
       throw err;
     }
   }
@@ -221,7 +204,7 @@ export class EmailService implements IEmailService {
     to: string,
     options: IApplicationStatusEmailOptions,
   ): Promise<void> {
-    this.logger.log(`[${this.rid}] sendApplicationStatusEmail — start | to: ${to}`);
+    this.logger.log(`sendApplicationStatusEmail — start | to: ${to}`);
     const subject =
       options.status === 'approved'
         ? `Application Approved: ${options.projectTitle}`
@@ -233,12 +216,10 @@ export class EmailService implements IEmailService {
         subject,
         html: await buildConsultantApplicationStatusEmail(options),
       });
-      this.logger.log(`[${this.rid}] sendApplicationStatusEmail — sent | to: ${to}`);
+      this.logger.log(`sendApplicationStatusEmail — sent | to: ${to}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(
-        `[${this.rid}] sendApplicationStatusEmail — failed | to: ${to} | error: ${message}`,
-      );
+      this.logger.error(`sendApplicationStatusEmail — failed | to: ${to} | error: ${message}`);
       throw err;
     }
   }
@@ -247,7 +228,7 @@ export class EmailService implements IEmailService {
     to: string,
     options: IBusinessProjectPublishedReceiptTemplateOptions,
   ): Promise<void> {
-    this.logger.log(`[${this.rid}] sendProjectPublishedReceiptEmail — start | to: ${to}`);
+    this.logger.log(`sendProjectPublishedReceiptEmail — start | to: ${to}`);
     try {
       await this.emailProvider.send({
         from: this.env.resendPloyosEmail,
@@ -255,11 +236,11 @@ export class EmailService implements IEmailService {
         subject: 'Payment Receipt - Project Published Successfully',
         html: await buildBusinessProjectPublishedReceiptEmail(options),
       });
-      this.logger.log(`[${this.rid}] sendProjectPublishedReceiptEmail — sent | to: ${to}`);
+      this.logger.log(`sendProjectPublishedReceiptEmail — sent | to: ${to}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(
-        `[${this.rid}] sendProjectPublishedReceiptEmail — failed | to: ${to} | error: ${message}`,
+        `sendProjectPublishedReceiptEmail — failed | to: ${to} | error: ${message}`,
       );
       throw err;
     }
@@ -269,7 +250,7 @@ export class EmailService implements IEmailService {
     to: string,
     options: IBusinessProjectPublishedSuccessTemplateOptions,
   ): Promise<void> {
-    this.logger.log(`[${this.rid}] sendProjectPublishedSuccessEmail — start | to: ${to}`);
+    this.logger.log(`sendProjectPublishedSuccessEmail — start | to: ${to}`);
     try {
       await this.emailProvider.send({
         from: this.env.resendPloyosEmail,
@@ -277,11 +258,11 @@ export class EmailService implements IEmailService {
         subject: 'Your project is officially live',
         html: await buildBusinessProjectPublishedSuccessEmail(options),
       });
-      this.logger.log(`[${this.rid}] sendProjectPublishedSuccessEmail — sent | to: ${to}`);
+      this.logger.log(`sendProjectPublishedSuccessEmail — sent | to: ${to}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(
-        `[${this.rid}] sendProjectPublishedSuccessEmail — failed | to: ${to} | error: ${message}`,
+        `sendProjectPublishedSuccessEmail — failed | to: ${to} | error: ${message}`,
       );
       throw err;
     }
@@ -291,7 +272,7 @@ export class EmailService implements IEmailService {
     to: string,
     options: IMonthlyInvoiceEmailOptions,
   ): Promise<void> {
-    this.logger.log(`[${this.rid}] sendMonthlyInvoiceEmail — start | to: ${to}`);
+    this.logger.log(`sendMonthlyInvoiceEmail — start | to: ${to}`);
     try {
       await this.emailProvider.send({
         from: this.env.resendPloyosEmail,
@@ -301,12 +282,10 @@ export class EmailService implements IEmailService {
           options as IBusinessMonthlyInvoiceTemplateOptions,
         ),
       });
-      this.logger.log(`[${this.rid}] sendMonthlyInvoiceEmail — sent | to: ${to}`);
+      this.logger.log(`sendMonthlyInvoiceEmail — sent | to: ${to}`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(
-        `[${this.rid}] sendMonthlyInvoiceEmail — failed | to: ${to} | error: ${message}`,
-      );
+      this.logger.error(`sendMonthlyInvoiceEmail — failed | to: ${to} | error: ${message}`);
       throw err;
     }
   }

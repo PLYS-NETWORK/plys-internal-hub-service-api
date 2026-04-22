@@ -62,6 +62,29 @@ async function bootstrap(): Promise<void> {
       .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);
+
+    // Inject x-device-id as a required header parameter into every Swagger operation.
+    // This reflects the device-binding check in JwtContextMiddleware — authenticated
+    // requests must carry the same deviceId that was embedded in the JWT at sign-in.
+    for (const pathItem of Object.values(document.paths)) {
+      for (const operation of Object.values(pathItem)) {
+        if (operation && typeof operation === 'object' && 'responses' in operation) {
+          const op = operation as { parameters?: unknown[] };
+          if (!Array.isArray(op.parameters)) {
+            op.parameters = [];
+          }
+          op.parameters.push({
+            name: 'x-device-id',
+            in: 'header',
+            required: true,
+            description:
+              'Device identifier bound to the JWT at sign-in (device-binding security check).',
+            schema: { type: 'string', example: '123' },
+          });
+        }
+      }
+    }
+
     SwaggerModule.setup('api/v1/docs', app, document);
     console.log(`Swagger docs available at http://localhost:${envService.port}/api/v1/docs`);
   }

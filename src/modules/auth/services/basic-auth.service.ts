@@ -2,12 +2,13 @@ import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ActivePlatform } from '@database/enums/active-platform.enum';
 import { AuthTokenType } from '@database/enums/auth-token-type.enum';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { Not } from 'typeorm';
@@ -29,11 +30,7 @@ const EMAIL_VERIFICATION_EXPIRY_HOURS = 24;
 
 @Injectable()
 export class BasicAuthService implements IBasicAuthService {
-  private readonly logger = new Logger(BasicAuthService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
@@ -42,21 +39,19 @@ export class BasicAuthService implements IBasicAuthService {
     private readonly onboardingService: UserOnboardingService,
     private readonly envService: EnvironmentsService,
     private readonly requestContext: RequestContextService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(BasicAuthService.name, requestContext);
+  }
 
   // ─── Register ────────────────────────────────────────────────────────────
 
   public async register(dto: RegisterDto, _context: ISessionContext): Promise<void> {
-    this.logger.log(
-      `[${this.rid}] register — start | email: ${dto.email}, platform: ${dto.active_platform}`,
-    );
+    this.logger.log(`register — start | email: ${dto.email}, platform: ${dto.active_platform}`);
 
     // Defence-in-depth: the DTO already forbids ADMIN via @IsIn, but guard here
     // too so any internal caller that bypasses the DTO cannot create an admin.
     if (dto.active_platform === ActivePlatform.ADMIN_PLATFORM) {
-      this.logger.warn(
-        `[${this.rid}] register — blocked admin self-registration | email: ${dto.email}`,
-      );
+      this.logger.warn(`register — blocked admin self-registration | email: ${dto.email}`);
       throw new TranslatableException({
         messageKey: 'error.auth.admin_self_registration_forbidden',
         errorCode: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
@@ -71,7 +66,7 @@ export class BasicAuthService implements IBasicAuthService {
         // Branch 1: already verified — hard conflict
         if (existing.isEmailVerified) {
           this.logger.warn(
-            `[${this.rid}] register — email already registered | email: ${dto.email}, platform: ${dto.active_platform}`,
+            `register — email already registered | email: ${dto.email}, platform: ${dto.active_platform}`,
           );
           throw new TranslatableException({
             messageKey: 'error.auth.email_already_registered',
@@ -95,9 +90,7 @@ export class BasicAuthService implements IBasicAuthService {
 
         if (hasValidToken) {
           // Branch 2: token still alive — tell the user to check their inbox
-          this.logger.warn(
-            `[${this.rid}] register — email pending verification | email: ${dto.email}`,
-          );
+          this.logger.warn(`register — email pending verification | email: ${dto.email}`);
           throw new TranslatableException({
             messageKey: 'error.auth.email_pending_verification',
             errorCode: ERROR_CODES.AUTH_EMAIL_PENDING_VERIFICATION,
@@ -106,9 +99,7 @@ export class BasicAuthService implements IBasicAuthService {
         }
 
         // Branch 3: all tokens expired — transparently re-issue a new token
-        this.logger.log(
-          `[${this.rid}] register — re-issuing verification token | email: ${dto.email}`,
-        );
+        this.logger.log(`register — re-issuing verification token | email: ${dto.email}`);
         await this.issueVerificationToken(
           tx,
           existing.id,
@@ -136,13 +127,13 @@ export class BasicAuthService implements IBasicAuthService {
       await this.issueVerificationToken(tx, user.id, displayName, dto.email, dto.active_platform);
     });
 
-    this.logger.log(`[${this.rid}] register — complete | email: ${dto.email}`);
+    this.logger.log(`register — complete | email: ${dto.email}`);
   }
 
   // ─── Verify Email ────────────────────────────────────────────────────────
 
   public async verifyEmail(token: string, context: ISessionContext): Promise<AuthResponseDto> {
-    this.logger.log(`[${this.rid}] verifyEmail — start`);
+    this.logger.log(`verifyEmail — start`);
     const tokenHash = sha256(token);
 
     const authToken = await this.uow.authTokens.findOne({
@@ -151,7 +142,7 @@ export class BasicAuthService implements IBasicAuthService {
     });
 
     if (!authToken) {
-      this.logger.warn(`[${this.rid}] verifyEmail — token not found`);
+      this.logger.warn(`verifyEmail — token not found`);
       throw new TranslatableException({
         messageKey: 'error.auth.token_invalid',
         errorCode: ERROR_CODES.AUTH_TOKEN_INVALID,
@@ -160,9 +151,7 @@ export class BasicAuthService implements IBasicAuthService {
     }
 
     if (authToken.usedAt) {
-      this.logger.warn(
-        `[${this.rid}] verifyEmail — token already used | userId: ${authToken.userId}`,
-      );
+      this.logger.warn(`verifyEmail — token already used | userId: ${authToken.userId}`);
       throw new TranslatableException({
         messageKey: 'error.auth.token_already_used',
         errorCode: ERROR_CODES.AUTH_TOKEN_ALREADY_USED,
@@ -171,7 +160,7 @@ export class BasicAuthService implements IBasicAuthService {
     }
 
     if (authToken.expiresAt < new Date()) {
-      this.logger.warn(`[${this.rid}] verifyEmail — token expired | userId: ${authToken.userId}`);
+      this.logger.warn(`verifyEmail — token expired | userId: ${authToken.userId}`);
       throw new TranslatableException({
         messageKey: 'error.auth.token_expired',
         errorCode: ERROR_CODES.AUTH_TOKEN_EXPIRED,
@@ -189,7 +178,7 @@ export class BasicAuthService implements IBasicAuthService {
       await tx.users.save(authToken.user);
     });
 
-    this.logger.log(`[${this.rid}] verifyEmail — complete | userId: ${authToken.userId}`);
+    this.logger.log(`verifyEmail — complete | userId: ${authToken.userId}`);
 
     // Fire-and-forget: welcome email is non-critical; verification state is
     // already committed. A delivery failure must not un-verify the account.
@@ -221,7 +210,7 @@ export class BasicAuthService implements IBasicAuthService {
         );
       } catch (err: unknown) {
         this.logger.error(
-          `[${this.rid}] verifyEmail — welcome email failed | error: ${err instanceof Error ? err.message : String(err)}`,
+          `verifyEmail — welcome email failed | error: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
     })();
@@ -237,15 +226,13 @@ export class BasicAuthService implements IBasicAuthService {
   // ─── Login ───────────────────────────────────────────────────────────────
 
   public async login(dto: LoginDto, context: ISessionContext): Promise<AuthResponseDto> {
-    this.logger.log(
-      `[${this.rid}] login — start | email: ${dto.email}, platform: ${dto.active_platform}`,
-    );
+    this.logger.log(`login — start | email: ${dto.email}, platform: ${dto.active_platform}`);
 
     const user = await this.uow.users.findUserByEmailAndPlatform(dto.email, dto.active_platform);
 
     // Use generic "invalid credentials" to prevent user enumeration
     if (!user) {
-      this.logger.warn(`[${this.rid}] login — user not found | email: ${dto.email}`);
+      this.logger.warn(`login — user not found | email: ${dto.email}`);
       throw new TranslatableException({
         messageKey: 'error.auth.invalid_credentials',
         errorCode: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
@@ -254,7 +241,7 @@ export class BasicAuthService implements IBasicAuthService {
     }
 
     if (!user.isActive) {
-      this.logger.warn(`[${this.rid}] login — account inactive | userId: ${user.id}`);
+      this.logger.warn(`login — account inactive | userId: ${user.id}`);
       throw new TranslatableException({
         messageKey: 'error.auth.account_inactive',
         errorCode: ERROR_CODES.AUTH_ACCOUNT_INACTIVE,
@@ -264,7 +251,7 @@ export class BasicAuthService implements IBasicAuthService {
 
     if (!user.passwordHash) {
       // No password on this account — cannot authenticate via email/password flow
-      this.logger.warn(`[${this.rid}] login — no password set | userId: ${user.id}`);
+      this.logger.warn(`login — no password set | userId: ${user.id}`);
       throw new TranslatableException({
         messageKey: 'error.auth.invalid_credentials',
         errorCode: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
@@ -274,7 +261,7 @@ export class BasicAuthService implements IBasicAuthService {
 
     const passwordValid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordValid) {
-      this.logger.warn(`[${this.rid}] login — invalid password | userId: ${user.id}`);
+      this.logger.warn(`login — invalid password | userId: ${user.id}`);
       throw new TranslatableException({
         messageKey: 'error.auth.invalid_credentials',
         errorCode: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
@@ -283,7 +270,7 @@ export class BasicAuthService implements IBasicAuthService {
     }
 
     if (!user.isEmailVerified) {
-      this.logger.warn(`[${this.rid}] login — email not verified | userId: ${user.id}`);
+      this.logger.warn(`login — email not verified | userId: ${user.id}`);
 
       // Credentials are valid but the account is unverified. Re-issue a fresh
       // verification token so the user can unblock themselves without needing
@@ -293,11 +280,11 @@ export class BasicAuthService implements IBasicAuthService {
         await this.uow.withTransaction(async (tx) => {
           await this.issueVerificationToken(tx, user.id, user.email, user.email, user.platform);
         });
-        this.logger.log(`[${this.rid}] login — re-issued verification email | userId: ${user.id}`);
+        this.logger.log(`login — re-issued verification email | userId: ${user.id}`);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         this.logger.error(
-          `[${this.rid}] login — failed to re-issue verification email | userId: ${user.id} | error: ${message}`,
+          `login — failed to re-issue verification email | userId: ${user.id} | error: ${message}`,
         );
       }
 
@@ -311,7 +298,7 @@ export class BasicAuthService implements IBasicAuthService {
     user.lastLoginAt = new Date();
     await this.uow.users.save(user);
 
-    this.logger.log(`[${this.rid}] login — complete | userId: ${user.id}`);
+    this.logger.log(`login — complete | userId: ${user.id}`);
     return this.sessionService.createSession(user.id, user.email, dto.active_platform, context);
   }
 
@@ -320,14 +307,12 @@ export class BasicAuthService implements IBasicAuthService {
   public async changePassword(dto: ChangePasswordDto): Promise<void> {
     const userId = this.requestContext.userId;
     const currentSessionId = this.requestContext.sessionId;
-    this.logger.log(`[${this.rid}] changePassword — start | userId: ${userId}`);
+    this.logger.log(`changePassword — start | userId: ${userId}`);
 
     const user = userId ? await this.uow.users.findByActiveId(userId) : null;
 
     if (!user || !user.isActive) {
-      this.logger.warn(
-        `[${this.rid}] changePassword — user not found or inactive | userId: ${userId}`,
-      );
+      this.logger.warn(`changePassword — user not found or inactive | userId: ${userId}`);
       throw new TranslatableException({
         messageKey: 'error.auth.user_not_found',
         errorCode: ERROR_CODES.AUTH_USER_NOT_FOUND,
@@ -337,7 +322,7 @@ export class BasicAuthService implements IBasicAuthService {
 
     if (!user.passwordHash) {
       // Account has no password — cannot change what does not exist
-      this.logger.warn(`[${this.rid}] changePassword — no password set | userId: ${user.id}`);
+      this.logger.warn(`changePassword — no password set | userId: ${user.id}`);
       throw new TranslatableException({
         messageKey: 'error.auth.invalid_credentials',
         errorCode: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
@@ -347,9 +332,7 @@ export class BasicAuthService implements IBasicAuthService {
 
     const passwordValid = await bcrypt.compare(dto.current_password, user.passwordHash);
     if (!passwordValid) {
-      this.logger.warn(
-        `[${this.rid}] changePassword — current password incorrect | userId: ${user.id}`,
-      );
+      this.logger.warn(`changePassword — current password incorrect | userId: ${user.id}`);
       throw new TranslatableException({
         messageKey: 'error.auth.invalid_credentials',
         errorCode: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
@@ -370,14 +353,14 @@ export class BasicAuthService implements IBasicAuthService {
       }
     });
 
-    this.logger.log(`[${this.rid}] changePassword — complete | userId: ${user.id}`);
+    this.logger.log(`changePassword — complete | userId: ${user.id}`);
   }
 
   // ─── Resend Verification ─────────────────────────────────────────────────
 
   public async resendVerification(dto: ResendVerificationDto): Promise<void> {
     this.logger.log(
-      `[${this.rid}] resendVerification — start | email: ${dto.email}, platform: ${dto.active_platform}`,
+      `resendVerification — start | email: ${dto.email}, platform: ${dto.active_platform}`,
     );
 
     // Always return success to prevent user enumeration. The actual send
@@ -387,7 +370,7 @@ export class BasicAuthService implements IBasicAuthService {
     if (!user || user.isEmailVerified) {
       // No account, or account already verified — silently succeed
       this.logger.warn(
-        `[${this.rid}] resendVerification — noop (not found or already verified) | email: ${dto.email}`,
+        `resendVerification — noop (not found or already verified) | email: ${dto.email}`,
       );
       return;
     }
@@ -398,7 +381,7 @@ export class BasicAuthService implements IBasicAuthService {
       await this.issueVerificationToken(tx, user.id, user.email, user.email, user.platform);
     });
 
-    this.logger.log(`[${this.rid}] resendVerification — complete | email: ${dto.email}`);
+    this.logger.log(`resendVerification — complete | email: ${dto.email}`);
   }
 
   // ─── Private helpers ─────────────────────────────────────────────────────

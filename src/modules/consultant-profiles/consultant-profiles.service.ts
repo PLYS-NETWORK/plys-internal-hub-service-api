@@ -1,9 +1,10 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ConsultantProfile, ConsultantSkill } from '@database/entities';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import { OnboardConsultantProfileDto, UpdateConsultantProfileDto } from './dto/requests';
@@ -13,25 +14,23 @@ import { ConsultantSkillsService } from './services/consultant-skills.service';
 
 @Injectable()
 export class ConsultantProfilesService implements IConsultantProfilesService {
-  private readonly logger = new Logger(ConsultantProfilesService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly consultantSkillsService: ConsultantSkillsService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(ConsultantProfilesService.name, requestContext);
+  }
 
   public async getProfile(): Promise<ConsultantProfileResponseDto> {
     const userId = this.requestContext.userId!;
-    this.logger.log(`[${this.rid}] getProfile — start | userId: ${userId}`);
+    this.logger.log(`getProfile — start | userId: ${userId}`);
     const profile = await this.uow.consultantProfiles.findByUserId(userId);
 
     if (!profile) {
-      this.logger.warn(`[${this.rid}] getProfile — profile not found | userId: ${userId}`);
+      this.logger.warn(`getProfile — profile not found | userId: ${userId}`);
       throw new TranslatableException({
         messageKey: 'error.consultant_profile.not_found',
         errorCode: ERROR_CODES.CONSULTANT_PROFILE_NOT_FOUND,
@@ -40,21 +39,17 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
     }
 
     const skills = await this.consultantSkillsService.findByConsultantId(profile.id);
-    this.logger.log(
-      `[${this.rid}] getProfile — complete | userId: ${userId}, skills: ${skills.length}`,
-    );
+    this.logger.log(`getProfile — complete | userId: ${userId}, skills: ${skills.length}`);
     return this.toResponseDto(profile, skills);
   }
 
   public async onboard(dto: OnboardConsultantProfileDto): Promise<ConsultantProfileResponseDto> {
     const userId = this.requestContext.userId!;
-    this.logger.log(
-      `[${this.rid}] onboard — start | userId: ${userId}, fullName: ${dto.full_name}`,
-    );
+    this.logger.log(`onboard — start | userId: ${userId}, fullName: ${dto.full_name}`);
     const existing = await this.uow.consultantProfiles.findByUserId(userId);
 
     if (existing) {
-      this.logger.warn(`[${this.rid}] onboard — profile already exists | userId: ${userId}`);
+      this.logger.warn(`onboard — profile already exists | userId: ${userId}`);
       throw new TranslatableException({
         messageKey: 'error.consultant_profile.already_exists',
         errorCode: ERROR_CODES.CONSULTANT_PROFILE_ALREADY_EXISTS,
@@ -87,7 +82,7 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
     });
 
     this.logger.log(
-      `[${this.rid}] onboard — complete | userId: ${userId}, profileId: ${profile.id}, skills: ${skills.length}`,
+      `onboard — complete | userId: ${userId}, profileId: ${profile.id}, skills: ${skills.length}`,
     );
     return this.toResponseDto(profile, skills);
   }
@@ -96,11 +91,11 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
     dto: UpdateConsultantProfileDto,
   ): Promise<ConsultantProfileResponseDto> {
     const userId = this.requestContext.userId!;
-    this.logger.log(`[${this.rid}] updateProfile — start | userId: ${userId}`);
+    this.logger.log(`updateProfile — start | userId: ${userId}`);
     const profile = await this.uow.consultantProfiles.findByUserId(userId);
 
     if (!profile) {
-      this.logger.warn(`[${this.rid}] updateProfile — profile not found | userId: ${userId}`);
+      this.logger.warn(`updateProfile — profile not found | userId: ${userId}`);
       throw new TranslatableException({
         messageKey: 'error.consultant_profile.not_found',
         errorCode: ERROR_CODES.CONSULTANT_PROFILE_NOT_FOUND,
@@ -137,17 +132,17 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
     });
 
     this.logger.log(
-      `[${this.rid}] updateProfile — complete | userId: ${userId}, profileId: ${updatedProfile.id}, skills: ${skills.length}`,
+      `updateProfile — complete | userId: ${userId}, profileId: ${updatedProfile.id}, skills: ${skills.length}`,
     );
     return this.toResponseDto(updatedProfile, skills);
   }
 
   public async verify(profileId: string): Promise<void> {
-    this.logger.log(`[${this.rid}] verify — start | profileId: ${profileId}`);
+    this.logger.log(`verify — start | profileId: ${profileId}`);
     const profile = await this.uow.consultantProfiles.findOne({ where: { id: profileId } });
 
     if (!profile) {
-      this.logger.warn(`[${this.rid}] verify — profile not found | profileId: ${profileId}`);
+      this.logger.warn(`verify — profile not found | profileId: ${profileId}`);
       throw new TranslatableException({
         messageKey: 'error.consultant_profile.not_found',
         errorCode: ERROR_CODES.CONSULTANT_PROFILE_NOT_FOUND,
@@ -157,7 +152,7 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
 
     profile.isVerified = true;
     await this.uow.consultantProfiles.save(profile);
-    this.logger.log(`[${this.rid}] verify — complete | profileId: ${profileId}`);
+    this.logger.log(`verify — complete | profileId: ${profileId}`);
   }
 
   private toResponseDto(

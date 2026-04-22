@@ -4,8 +4,9 @@ import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { AppLogger } from '@common/modules/logger';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import { ConsultantTransactionResponseDto } from '../dto/responses';
@@ -13,23 +14,21 @@ import { IConsultantPaymentsService } from './interfaces/consultant-payments-ser
 
 @Injectable()
 export class ConsultantPaymentsService implements IConsultantPaymentsService {
-  private readonly logger = new Logger(ConsultantPaymentsService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(ConsultantPaymentsService.name, requestContext);
+  }
 
   public async listTransactions(
     dto: PageOptionsDto,
   ): Promise<PageDto<ConsultantTransactionResponseDto>> {
     const userId = this.requestContext.userId!;
     this.logger.log(
-      `[${this.rid}] listTransactions — start | userId: ${userId}, page: ${dto.page}, limit: ${dto.limit}`,
+      `listTransactions — start | userId: ${userId}, page: ${dto.page}, limit: ${dto.limit}`,
     );
 
     const consultantProfile = await this.uow.consultantProfiles.findOne({ where: { userId } });
@@ -67,7 +66,7 @@ export class ConsultantPaymentsService implements IConsultantPaymentsService {
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
 
     this.logger.log(
-      `[${this.rid}] listTransactions — complete | count: ${transactions.length}, total: ${itemCount}`,
+      `listTransactions — complete | count: ${transactions.length}, total: ${itemCount}`,
     );
 
     return new PageDto(data, meta);

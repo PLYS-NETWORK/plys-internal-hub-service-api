@@ -4,11 +4,12 @@ import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments/environments.service';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ApplicationStatus } from '@database/enums/application-status.enum';
 import { ProjectMemberStatus } from '@database/enums/project-member-status.enum';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import { ListProjectApplicationsDto, ReviewApplicationDto } from '../dto/requests';
@@ -16,18 +17,16 @@ import { ApplicationResponseDto, BusinessApplicationListItemResponseDto } from '
 
 @Injectable()
 export class BusinessApplicationService {
-  private readonly logger = new Logger(BusinessApplicationService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly emailService: EmailService,
     private readonly envService: EnvironmentsService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(BusinessApplicationService.name, requestContext);
+  }
 
   /**
    * Lists all applications for a specific project owned by the current business.
@@ -39,14 +38,14 @@ export class BusinessApplicationService {
   ): Promise<PageDto<BusinessApplicationListItemResponseDto>> {
     const businessId = await this.resolveBusinessId();
     this.logger.log(
-      `[${this.rid}] listProjectApplications — start | businessId: ${businessId}, projectId: ${projectId}, page: ${dto.page}`,
+      `listProjectApplications — start | businessId: ${businessId}, projectId: ${projectId}, page: ${dto.page}`,
     );
 
     // Verify project belongs to this business
     const project = await this.uow.projects.findByIdAndBusinessId(projectId, businessId);
     if (!project) {
       this.logger.warn(
-        `[${this.rid}] listProjectApplications — project not found | projectId: ${projectId}, businessId: ${businessId}`,
+        `listProjectApplications — project not found | projectId: ${projectId}, businessId: ${businessId}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.not_found',
@@ -86,7 +85,7 @@ export class BusinessApplicationService {
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
 
     this.logger.log(
-      `[${this.rid}] listProjectApplications — complete | returned: ${data.length}, total: ${itemCount}`,
+      `listProjectApplications — complete | returned: ${data.length}, total: ${itemCount}`,
     );
     return new PageDto(data, meta);
   }
@@ -104,7 +103,7 @@ export class BusinessApplicationService {
     const businessId = await this.resolveBusinessId();
     const userId = this.requestContext.userId!;
     this.logger.log(
-      `[${this.rid}] reviewApplication — start | applicationId: ${applicationId}, action: ${dto.action}`,
+      `reviewApplication — start | applicationId: ${applicationId}, action: ${dto.action}`,
     );
 
     // Fetch application with project relation and verify ownership
@@ -115,7 +114,7 @@ export class BusinessApplicationService {
 
     if (!application || application.project.businessId !== businessId) {
       this.logger.warn(
-        `[${this.rid}] reviewApplication — not found or forbidden | applicationId: ${applicationId}`,
+        `reviewApplication — not found or forbidden | applicationId: ${applicationId}`,
       );
       throw new TranslatableException({
         messageKey: 'error.application.not_found',
@@ -135,7 +134,7 @@ export class BusinessApplicationService {
           ? 'error.application.cannot_approve'
           : 'error.application.cannot_reject';
       this.logger.warn(
-        `[${this.rid}] reviewApplication — invalid status | applicationId: ${applicationId}, currentStatus: ${application.status}`,
+        `reviewApplication — invalid status | applicationId: ${applicationId}, currentStatus: ${application.status}`,
       );
       throw new TranslatableException({
         messageKey,
@@ -171,7 +170,7 @@ export class BusinessApplicationService {
     });
 
     this.logger.log(
-      `[${this.rid}] reviewApplication — complete | applicationId: ${applicationId}, newStatus: ${newStatus}`,
+      `reviewApplication — complete | applicationId: ${applicationId}, newStatus: ${newStatus}`,
     );
 
     // Send status email to consultant (fire-and-forget)
@@ -198,7 +197,7 @@ export class BusinessApplicationService {
     const profile = await this.uow.businessProfiles.findByUserId(userId);
 
     if (!profile) {
-      this.logger.warn(`[${this.rid}] resolveBusinessId — not found | userId: ${userId}`);
+      this.logger.warn(`resolveBusinessId — not found | userId: ${userId}`);
       throw new TranslatableException({
         messageKey: 'error.business_profile.not_found',
         errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
@@ -239,7 +238,7 @@ export class BusinessApplicationService {
         });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        this.logger.error(`[${this.rid}] sendStatusEmail — failed | error: ${msg}`);
+        this.logger.error(`sendStatusEmail — failed | error: ${msg}`);
       }
     })();
   }

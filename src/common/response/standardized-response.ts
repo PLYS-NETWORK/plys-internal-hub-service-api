@@ -19,12 +19,20 @@ export class StandardizedResponse<T> {
   @ApiProperty({ example: '/api/v1/products' })
   public readonly path: string;
 
+  @ApiProperty({ example: 'reqId-550e8400-e29b-41d4-a716-446655440000' })
+  public readonly request_id: string;
+
+  @ApiProperty({ example: '123', nullable: true })
+  public readonly device_id: string | null;
+
   constructor(
     statusCode: number,
     message: string,
     data: T | null,
     path: string,
     errorCode: string | null = null,
+    requestId: string = '',
+    deviceId: string | null = null,
   ) {
     this.statusCode = statusCode;
     this.message = message;
@@ -32,5 +40,7 @@ export class StandardizedResponse<T> {
     this.data = data;
     this.timestamp = new Date().toISOString();
     this.path = path;
+    this.request_id = requestId;
+    this.device_id = deviceId;
   }
 }

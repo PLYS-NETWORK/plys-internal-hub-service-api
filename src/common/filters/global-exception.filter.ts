@@ -1,27 +1,23 @@
+import { AppLogger } from '@common/modules/logger';
 import { ERROR_CODES, ErrorCode } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { StandardizedResponse } from '@common/response/standardized-response';
-import {
-  ArgumentsHost,
-  Catch,
-  ExceptionFilter,
-  HttpException,
-  HttpStatus,
-  Logger,
-} from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { I18nService } from 'nestjs-i18n';
 import { QueryFailedError } from 'typeorm';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(GlobalExceptionFilter.name);
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly i18n: I18nService,
     private readonly requestContext: RequestContextService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(GlobalExceptionFilter.name, requestContext);
+  }
 
   public catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
@@ -82,7 +78,17 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       exception instanceof Error ? exception.stack : String(exception),
     );
 
-    const body = new StandardizedResponse<null>(status, message, null, request.url, errorCode);
+    const requestId = this.requestContext.requestId;
+    const deviceId = (request.headers as Record<string, string | undefined>)['x-device-id'] ?? null;
+    const body = new StandardizedResponse<null>(
+      status,
+      message,
+      null,
+      request.url,
+      errorCode,
+      requestId,
+      deviceId,
+    );
     response.status(status).send(body);
   }
 

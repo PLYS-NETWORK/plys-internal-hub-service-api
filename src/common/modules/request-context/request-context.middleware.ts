@@ -16,7 +16,7 @@ export class RequestContextMiddleware implements NestMiddleware {
 
   public use(req: FastifyRequest, _res: FastifyReply, next: () => void): void {
     const context: IRequestContext = {
-      requestId: `reqId-${randomUUID()}${req.id ? `-reqFastifyId-${req.id}` : ''}`,
+      requestId: randomUUID(),
       userId: null,
       email: null,
       userRole: null,

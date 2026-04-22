@@ -5,6 +5,7 @@ import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import {
   BusinessProfile,
@@ -17,7 +18,7 @@ import { ProjectStatus } from '@database/enums';
 import { BusinessTransactionType } from '@database/enums/business-transaction-type.enum';
 import { TransactionStatus } from '@database/enums/transaction-status.enum';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { I18nService } from 'nestjs-i18n';
 
@@ -52,11 +53,7 @@ const LOCKED_STATUSES = new Set<ProjectStatus>([
 
 @Injectable()
 export class BusinessProjectService implements IBusinessProjectService {
-  private readonly logger = new Logger(BusinessProjectService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
@@ -67,14 +64,14 @@ export class BusinessProjectService implements IBusinessProjectService {
     private readonly projectRequiredSkillsService: ProjectRequiredSkillsService,
     private readonly projectInterviewQuestionsService: ProjectInterviewQuestionsService,
     private readonly projectTasksService: ProjectTasksService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(BusinessProjectService.name, requestContext);
+  }
 
   /** @inheritdoc */
   public async createProject(dto: CreateProjectDto): Promise<BusinessProjectResponseDto> {
     const businessId = await this.resolveBusinessId();
-    this.logger.log(
-      `[${this.rid}] createProject — start | businessId: ${businessId}, title: ${dto.title}`,
-    );
+    this.logger.log(`createProject — start | businessId: ${businessId}, title: ${dto.title}`);
 
     const requiredConsultants = dto.required_consultants ?? 1;
     const status = this.deriveInitialStatus();
@@ -107,7 +104,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     });
 
     this.logger.log(
-      `[${this.rid}] createProject — complete | businessId: ${businessId}, projectId: ${project.id}, status: ${project.status}, skills: ${skills.length}, questions: ${questions.length}, tasks: ${tasks.length}`,
+      `createProject — complete | businessId: ${businessId}, projectId: ${project.id}, status: ${project.status}, skills: ${skills.length}, questions: ${questions.length}, tasks: ${tasks.length}`,
     );
     return this.toResponseDto(project, skills, questions, tasks);
   }
@@ -116,7 +113,7 @@ export class BusinessProjectService implements IBusinessProjectService {
   public async listMyProjects(dto: ListProjectsDto): Promise<PageDto<BusinessProjectResponseDto>> {
     const businessId = await this.resolveBusinessId();
     this.logger.log(
-      `[${this.rid}] listMyProjects — start | businessId: ${businessId}, page: ${dto.page}, keywords: ${dto.keywords ?? 'none'}`,
+      `listMyProjects — start | businessId: ${businessId}, page: ${dto.page}, keywords: ${dto.keywords ?? 'none'}`,
     );
 
     const [projects, itemCount] = await this.uow.projects.findByBusinessId(
@@ -146,7 +143,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
 
     this.logger.log(
-      `[${this.rid}] listMyProjects — complete | businessId: ${businessId}, returned: ${data.length}, total: ${itemCount}`,
+      `listMyProjects — complete | businessId: ${businessId}, returned: ${data.length}, total: ${itemCount}`,
     );
     return new PageDto(data, meta);
   }
@@ -154,12 +151,12 @@ export class BusinessProjectService implements IBusinessProjectService {
   /** @inheritdoc */
   public async getProject(id: string): Promise<BusinessProjectResponseDto> {
     const businessId = await this.resolveBusinessId();
-    this.logger.log(`[${this.rid}] getProject — start | projectId: ${id}`);
+    this.logger.log(`getProject — start | projectId: ${id}`);
 
     const project = await this.uow.projects.findByIdAndBusinessId(id, businessId);
     if (!project) {
       this.logger.warn(
-        `[${this.rid}] getProject — not found or forbidden | projectId: ${id}, businessId: ${businessId}`,
+        `getProject — not found or forbidden | projectId: ${id}, businessId: ${businessId}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.not_found',
@@ -174,7 +171,7 @@ export class BusinessProjectService implements IBusinessProjectService {
       this.projectTasksService.findByProjectId(id),
     ]);
     this.logger.log(
-      `[${this.rid}] getProject — complete | projectId: ${id}, skills: ${skills.length}, questions: ${questions.length}, tasks: ${tasks.length}`,
+      `getProject — complete | projectId: ${id}, skills: ${skills.length}, questions: ${questions.length}, tasks: ${tasks.length}`,
     );
     return this.toResponseDto(project, skills, questions, tasks);
   }
@@ -185,12 +182,12 @@ export class BusinessProjectService implements IBusinessProjectService {
     dto: UpdateProjectDto,
   ): Promise<BusinessProjectResponseDto> {
     const businessId = await this.resolveBusinessId();
-    this.logger.log(`[${this.rid}] updateProject — start | projectId: ${id}`);
+    this.logger.log(`updateProject — start | projectId: ${id}`);
 
     const project = await this.uow.projects.findByIdAndBusinessId(id, businessId);
     if (!project) {
       this.logger.warn(
-        `[${this.rid}] updateProject — not found or forbidden | projectId: ${id}, businessId: ${businessId}`,
+        `updateProject — not found or forbidden | projectId: ${id}, businessId: ${businessId}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.not_found',
@@ -201,7 +198,7 @@ export class BusinessProjectService implements IBusinessProjectService {
 
     if (LOCKED_STATUSES.has(project.status)) {
       this.logger.warn(
-        `[${this.rid}] updateProject — locked status | projectId: ${id}, status: ${project.status}`,
+        `updateProject — locked status | projectId: ${id}, status: ${project.status}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.cannot_be_edited',
@@ -260,7 +257,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     );
 
     this.logger.log(
-      `[${this.rid}] updateProject — complete | projectId: ${updatedProject.id}, status: ${updatedProject.status}, skills: ${skills.length}, questions: ${questions.length}, tasks: ${tasks.length}`,
+      `updateProject — complete | projectId: ${updatedProject.id}, status: ${updatedProject.status}, skills: ${skills.length}, questions: ${questions.length}, tasks: ${tasks.length}`,
     );
     return this.toResponseDto(updatedProject, skills, questions, tasks);
   }
@@ -271,14 +268,12 @@ export class BusinessProjectService implements IBusinessProjectService {
     dto: UpdateProjectStatusDto,
   ): Promise<BusinessProjectResponseDto> {
     const businessId = await this.resolveBusinessId();
-    this.logger.log(
-      `[${this.rid}] updateStatus — start | projectId: ${id}, targetStatus: ${dto.status}`,
-    );
+    this.logger.log(`updateStatus — start | projectId: ${id}, targetStatus: ${dto.status}`);
 
     const project = await this.uow.projects.findByIdAndBusinessId(id, businessId);
     if (!project) {
       this.logger.warn(
-        `[${this.rid}] updateStatus — not found or forbidden | projectId: ${id}, businessId: ${businessId}`,
+        `updateStatus — not found or forbidden | projectId: ${id}, businessId: ${businessId}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.not_found',
@@ -292,9 +287,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     if (dto.status === ProjectStatus.CONFIGURED) {
       const taskCount = await this.uow.tasks.count({ where: { projectId: id } as never });
       if (taskCount === 0) {
-        this.logger.warn(
-          `[${this.rid}] updateStatus — configured requires tasks | projectId: ${id}`,
-        );
+        this.logger.warn(`updateStatus — configured requires tasks | projectId: ${id}`);
         throw new TranslatableException({
           messageKey: 'error.project.requires_tasks_for_configured',
           errorCode: ERROR_CODES.PROJECT_REQUIRES_TASKS_FOR_CONFIGURED,
@@ -321,9 +314,7 @@ export class BusinessProjectService implements IBusinessProjectService {
       this.projectInterviewQuestionsService.findByProjectId(id),
       this.projectTasksService.findByProjectId(id),
     ]);
-    this.logger.log(
-      `[${this.rid}] updateStatus — complete | projectId: ${id}, status: ${updatedProject.status}`,
-    );
+    this.logger.log(`updateStatus — complete | projectId: ${id}, status: ${updatedProject.status}`);
     return this.toResponseDto(updatedProject, skills, questions, tasks);
   }
 
@@ -331,14 +322,12 @@ export class BusinessProjectService implements IBusinessProjectService {
   public async validatePublish(projectId: string): Promise<PublishValidationResponseDto> {
     const businessProfile = await this.resolveBusinessProfile();
     this.logger.log(
-      `[${this.rid}] validatePublish — start | projectId: ${projectId}, businessId: ${businessProfile.id}`,
+      `validatePublish — start | projectId: ${projectId}, businessId: ${businessProfile.id}`,
     );
 
     const project = await this.uow.projects.findByIdAndBusinessId(projectId, businessProfile.id);
     if (!project) {
-      this.logger.warn(
-        `[${this.rid}] validatePublish — not found or forbidden | projectId: ${projectId}`,
-      );
+      this.logger.warn(`validatePublish — not found or forbidden | projectId: ${projectId}`);
       throw new TranslatableException({
         messageKey: 'error.project.not_found',
         errorCode: ERROR_CODES.PROJECT_NOT_FOUND,
@@ -349,7 +338,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     const result = await this.evaluatePublishEligibility(project, businessProfile);
 
     this.logger.log(
-      `[${this.rid}] validatePublish — complete | projectId: ${projectId}, canPublish: ${result.canPublish}, paymentType: ${result.paymentType}`,
+      `validatePublish — complete | projectId: ${projectId}, canPublish: ${result.canPublish}, paymentType: ${result.paymentType}`,
     );
 
     return plainToInstance(
@@ -370,14 +359,12 @@ export class BusinessProjectService implements IBusinessProjectService {
   public async confirmPublish(projectId: string): Promise<void> {
     const businessProfile = await this.resolveBusinessProfile();
     this.logger.log(
-      `[${this.rid}] confirmPublish — start | projectId: ${projectId}, businessId: ${businessProfile.id}`,
+      `confirmPublish — start | projectId: ${projectId}, businessId: ${businessProfile.id}`,
     );
 
     const project = await this.uow.projects.findByIdAndBusinessId(projectId, businessProfile.id);
     if (!project) {
-      this.logger.warn(
-        `[${this.rid}] confirmPublish — not found or forbidden | projectId: ${projectId}`,
-      );
+      this.logger.warn(`confirmPublish — not found or forbidden | projectId: ${projectId}`);
       throw new TranslatableException({
         messageKey: 'error.project.not_found',
         errorCode: ERROR_CODES.PROJECT_NOT_FOUND,
@@ -390,7 +377,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     if (!eligibility.canPublish) {
       if (eligibility.reasonCode === 'INSUFFICIENT_BALANCE') {
         this.logger.warn(
-          `[${this.rid}] confirmPublish — insufficient balance | projectId: ${projectId}, balance: ${eligibility.accountBalance}, required: ${eligibility.projectAmount}`,
+          `confirmPublish — insufficient balance | projectId: ${projectId}, balance: ${eligibility.accountBalance}, required: ${eligibility.projectAmount}`,
         );
         throw new TranslatableException({
           messageKey: 'error.project.insufficient_balance',
@@ -400,7 +387,7 @@ export class BusinessProjectService implements IBusinessProjectService {
       }
 
       this.logger.warn(
-        `[${this.rid}] confirmPublish — cannot publish | projectId: ${projectId}, reasonCode: ${eligibility.reasonCode}`,
+        `confirmPublish — cannot publish | projectId: ${projectId}, reasonCode: ${eligibility.reasonCode}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.cannot_publish',
@@ -432,7 +419,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     });
 
     this.logger.log(
-      `[${this.rid}] confirmPublish — complete | projectId: ${projectId}, status: ${updatedProject.status}`,
+      `confirmPublish — complete | projectId: ${projectId}, status: ${updatedProject.status}`,
     );
 
     // Send appropriate email based on payment type
@@ -460,7 +447,7 @@ export class BusinessProjectService implements IBusinessProjectService {
           });
 
           this.logger.log(
-            `[${this.rid}] confirmPublish — receipt email sent | projectId: ${projectId}, email: ${user.email}`,
+            `confirmPublish — receipt email sent | projectId: ${projectId}, email: ${user.email}`,
           );
         } else {
           // Send project published success email for credit-based businesses
@@ -473,13 +460,13 @@ export class BusinessProjectService implements IBusinessProjectService {
           });
 
           this.logger.log(
-            `[${this.rid}] confirmPublish — success email sent | projectId: ${projectId}, email: ${user.email}`,
+            `confirmPublish — success email sent | projectId: ${projectId}, email: ${user.email}`,
           );
         }
       } catch (error) {
         // Don't fail the project publishing if email fails
         this.logger.error(
-          `[${this.rid}] confirmPublish — failed to send project email | projectId: ${projectId}, paymentType: ${eligibility.paymentType}, error: ${error instanceof Error ? error.message : String(error)}`,
+          `confirmPublish — failed to send project email | projectId: ${projectId}, paymentType: ${eligibility.paymentType}, error: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }
@@ -492,13 +479,13 @@ export class BusinessProjectService implements IBusinessProjectService {
   ): Promise<PageDto<ProjectMemberResponseDto>> {
     const businessId = await this.resolveBusinessId();
     this.logger.log(
-      `[${this.rid}] listProjectMembers — start | projectId: ${projectId}, page: ${pageOptions.page}`,
+      `listProjectMembers — start | projectId: ${projectId}, page: ${pageOptions.page}`,
     );
 
     const project = await this.uow.projects.findByIdAndBusinessId(projectId, businessId);
     if (!project) {
       this.logger.warn(
-        `[${this.rid}] listProjectMembers — not found or forbidden | projectId: ${projectId}, businessId: ${businessId}`,
+        `listProjectMembers — not found or forbidden | projectId: ${projectId}, businessId: ${businessId}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.not_found',
@@ -540,7 +527,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
 
     this.logger.log(
-      `[${this.rid}] listProjectMembers — complete | projectId: ${projectId}, returned: ${data.length}, total: ${itemCount}`,
+      `listProjectMembers — complete | projectId: ${projectId}, returned: ${data.length}, total: ${itemCount}`,
     );
     return new PageDto(data, meta);
   }
@@ -558,7 +545,7 @@ export class BusinessProjectService implements IBusinessProjectService {
   private async handleRecall(project: Project): Promise<BusinessProjectResponseDto> {
     const businessProfile = await this.resolveBusinessProfile();
     this.logger.log(
-      `[${this.rid}] handleRecall — start | projectId: ${project.id}, businessId: ${businessProfile.id}`,
+      `handleRecall — start | projectId: ${project.id}, businessId: ${businessProfile.id}`,
     );
 
     const updatedProject = await this.uow.withTransaction(async (txUow) => {
@@ -574,7 +561,7 @@ export class BusinessProjectService implements IBusinessProjectService {
 
         if (!originalTxn) {
           this.logger.warn(
-            `[${this.rid}] handleRecall — original publish transaction not found | projectId: ${project.id}`,
+            `handleRecall — original publish transaction not found | projectId: ${project.id}`,
           );
           throw new TranslatableException({
             messageKey: 'error.project.recall_transaction_not_found',
@@ -600,7 +587,7 @@ export class BusinessProjectService implements IBusinessProjectService {
         await txUow.businessTransactions.save(refundTxn);
 
         this.logger.log(
-          `[${this.rid}] handleRecall — refund issued | projectId: ${project.id}, amount: ${originalTxn.amount}, newBalance: ${businessProfile.accountBalance}`,
+          `handleRecall — refund issued | projectId: ${project.id}, amount: ${originalTxn.amount}, newBalance: ${businessProfile.accountBalance}`,
         );
       }
 
@@ -615,7 +602,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     ]);
 
     this.logger.log(
-      `[${this.rid}] handleRecall — complete | projectId: ${project.id}, status: ${updatedProject.status}`,
+      `handleRecall — complete | projectId: ${project.id}, status: ${updatedProject.status}`,
     );
     return this.toResponseDto(updatedProject, skills, questions, tasks);
   }
@@ -625,9 +612,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     const profile = await this.uow.businessProfiles.findByUserId(userId);
 
     if (!profile) {
-      this.logger.warn(
-        `[${this.rid}] resolveBusinessId — business profile not found | userId: ${userId}`,
-      );
+      this.logger.warn(`resolveBusinessId — business profile not found | userId: ${userId}`);
       throw new TranslatableException({
         messageKey: 'error.business_profile.not_found',
         errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
@@ -643,7 +628,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     const profile = await this.uow.businessProfiles.findByUserId(userId);
 
     if (!profile) {
-      this.logger.warn(`[${this.rid}] resolveBusinessProfile — not found | userId: ${userId}`);
+      this.logger.warn(`resolveBusinessProfile — not found | userId: ${userId}`);
       throw new TranslatableException({
         messageKey: 'error.business_profile.not_found',
         errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,

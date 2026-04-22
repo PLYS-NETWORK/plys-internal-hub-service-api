@@ -1,23 +1,22 @@
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ProjectRequiredSkill } from '@database/entities';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 import { IProjectRequiredSkillsService } from '../interfaces';
 
 @Injectable()
 export class ProjectRequiredSkillsService implements IProjectRequiredSkillsService {
-  private readonly logger = new Logger(ProjectRequiredSkillsService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(ProjectRequiredSkillsService.name, requestContext);
+  }
 
   public async findByProjectId(
     projectId: string,
@@ -37,7 +36,7 @@ export class ProjectRequiredSkillsService implements IProjectRequiredSkillsServi
     if (skillIds.length === 0) return [];
 
     this.logger.log(
-      `[${this.rid}] createForProject — start | projectId: ${projectId}, count: ${skillIds.length}`,
+      `createForProject — start | projectId: ${projectId}, count: ${skillIds.length}`,
     );
 
     const entities = skillIds.map((skillId) =>
@@ -52,7 +51,7 @@ export class ProjectRequiredSkillsService implements IProjectRequiredSkillsServi
     });
 
     this.logger.log(
-      `[${this.rid}] createForProject — complete | projectId: ${projectId}, inserted: ${saved.length}`,
+      `createForProject — complete | projectId: ${projectId}, inserted: ${saved.length}`,
     );
     return saved;
   }
@@ -63,14 +62,14 @@ export class ProjectRequiredSkillsService implements IProjectRequiredSkillsServi
     uow: IUnitOfWork,
   ): Promise<ProjectRequiredSkill[]> {
     this.logger.log(
-      `[${this.rid}] replaceForProject — start | projectId: ${projectId}, count: ${skillIds.length}`,
+      `replaceForProject — start | projectId: ${projectId}, count: ${skillIds.length}`,
     );
 
     await uow.projectRequiredSkills.delete({ projectId });
     const result = await this.createForProject(projectId, skillIds, uow);
 
     this.logger.log(
-      `[${this.rid}] replaceForProject — complete | projectId: ${projectId}, inserted: ${result.length}`,
+      `replaceForProject — complete | projectId: ${projectId}, inserted: ${result.length}`,
     );
     return result;
   }

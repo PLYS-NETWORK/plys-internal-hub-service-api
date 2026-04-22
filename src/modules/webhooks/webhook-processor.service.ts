@@ -1,3 +1,4 @@
+import { AppLogger } from '@common/modules/logger';
 import { WebhookEventType } from '@common/modules/payment/interfaces/webhook-event.interface';
 import { PaymentService } from '@common/modules/payment/payment.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
@@ -8,28 +9,26 @@ import { TransactionStatus } from '@database/enums/transaction-status.enum';
 import { WebhookStatus } from '@database/enums/webhook-status.enum';
 import { BillingInvoiceService } from '@modules/billing/services/billing-invoice.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class WebhookProcessorService {
-  private readonly logger = new Logger(WebhookProcessorService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly paymentService: PaymentService,
     private readonly billingInvoiceService: BillingInvoiceService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(WebhookProcessorService.name, requestContext);
+  }
 
   /**
    * Processes an incoming Polar webhook.
    */
   public async processPolarWebhook(payload: Buffer, signature: string): Promise<void> {
-    this.logger.log(`[${this.rid}] processPolarWebhook — start`);
+    this.logger.log(`processPolarWebhook — start`);
 
     const event = this.paymentService.constructWebhookEvent(payload, signature);
 
@@ -40,7 +39,7 @@ export class WebhookProcessorService {
 
     if (existingEvent) {
       this.logger.log(
-        `[${this.rid}] processPolarWebhook — duplicate event, skipping | eventId: ${event.processorEventId}`,
+        `processPolarWebhook — duplicate event, skipping | eventId: ${event.processorEventId}`,
       );
       return;
     }
@@ -63,7 +62,7 @@ export class WebhookProcessorService {
       await this.uow.webhookEvents.save(webhookEvent);
 
       this.logger.log(
-        `[${this.rid}] processPolarWebhook — complete | eventId: ${event.processorEventId}, type: ${event.type}`,
+        `processPolarWebhook — complete | eventId: ${event.processorEventId}, type: ${event.type}`,
       );
     } catch (error) {
       webhookEvent.status = WebhookStatus.FAILED;
@@ -72,7 +71,7 @@ export class WebhookProcessorService {
       await this.uow.webhookEvents.save(webhookEvent);
 
       this.logger.error(
-        `[${this.rid}] processPolarWebhook — failed | eventId: ${event.processorEventId}, error: ${webhookEvent.lastError}`,
+        `processPolarWebhook — failed | eventId: ${event.processorEventId}, error: ${webhookEvent.lastError}`,
       );
       throw error;
     }
@@ -82,7 +81,7 @@ export class WebhookProcessorService {
    * Processes an incoming Stripe webhook.
    */
   public async processStripeWebhook(payload: Buffer, _signature: string): Promise<void> {
-    this.logger.log(`[${this.rid}] processStripeWebhook — start`);
+    this.logger.log(`processStripeWebhook — start`);
 
     // Use Stripe provider to construct the event
     // Note: This would need a separate method or the PaymentService to handle Stripe specifically
@@ -97,9 +96,7 @@ export class WebhookProcessorService {
     });
 
     if (existingEvent) {
-      this.logger.log(
-        `[${this.rid}] processStripeWebhook — duplicate event, skipping | eventId: ${eventId}`,
-      );
+      this.logger.log(`processStripeWebhook — duplicate event, skipping | eventId: ${eventId}`);
       return;
     }
 
@@ -120,9 +117,7 @@ export class WebhookProcessorService {
       webhookEvent.processedAt = new Date();
       await this.uow.webhookEvents.save(webhookEvent);
 
-      this.logger.log(
-        `[${this.rid}] processStripeWebhook — complete | eventId: ${eventId}, type: ${eventType}`,
-      );
+      this.logger.log(`processStripeWebhook — complete | eventId: ${eventId}, type: ${eventType}`);
     } catch (error) {
       webhookEvent.status = WebhookStatus.FAILED;
       webhookEvent.lastError = error instanceof Error ? error.message : String(error);
@@ -130,7 +125,7 @@ export class WebhookProcessorService {
       await this.uow.webhookEvents.save(webhookEvent);
 
       this.logger.error(
-        `[${this.rid}] processStripeWebhook — failed | eventId: ${eventId}, error: ${webhookEvent.lastError}`,
+        `processStripeWebhook — failed | eventId: ${eventId}, error: ${webhookEvent.lastError}`,
       );
       throw error;
     }
@@ -153,7 +148,7 @@ export class WebhookProcessorService {
         await this.handleRefundCreated(data);
         break;
       default:
-        this.logger.log(`[${this.rid}] processEvent — unknown event type: ${type}`);
+        this.logger.log(`processEvent — unknown event type: ${type}`);
     }
   }
 
@@ -166,13 +161,13 @@ export class WebhookProcessorService {
       case 'transfer.paid':
         // Transfer events are informational — no action needed as we mark
         // transactions complete immediately after successful API call
-        this.logger.log(`[${this.rid}] processStripeEvent — transfer event received: ${type}`);
+        this.logger.log(`processStripeEvent — transfer event received: ${type}`);
         break;
       case 'transfer.failed':
         await this.handleTransferFailed(data);
         break;
       default:
-        this.logger.log(`[${this.rid}] processStripeEvent — unhandled event type: ${type}`);
+        this.logger.log(`processStripeEvent — unhandled event type: ${type}`);
     }
   }
 
@@ -183,7 +178,7 @@ export class WebhookProcessorService {
     const paymentType = metadata?.['type'];
 
     if (!transactionId) {
-      this.logger.warn(`[${this.rid}] handlePaymentSucceeded — no transactionId in metadata`);
+      this.logger.warn(`handlePaymentSucceeded — no transactionId in metadata`);
       return;
     }
 
@@ -192,7 +187,7 @@ export class WebhookProcessorService {
       const invoiceId = metadata?.['invoiceId'];
       if (!invoiceId) {
         this.logger.warn(
-          `[${this.rid}] handlePaymentSucceeded — invoice_payment missing invoiceId | transactionId: ${transactionId}`,
+          `handlePaymentSucceeded — invoice_payment missing invoiceId | transactionId: ${transactionId}`,
         );
         return;
       }
@@ -207,14 +202,14 @@ export class WebhookProcessorService {
 
     if (!transaction) {
       this.logger.warn(
-        `[${this.rid}] handlePaymentSucceeded — transaction not found | transactionId: ${transactionId}`,
+        `handlePaymentSucceeded — transaction not found | transactionId: ${transactionId}`,
       );
       return;
     }
 
     if (transaction.status === TransactionStatus.COMPLETED) {
       this.logger.log(
-        `[${this.rid}] handlePaymentSucceeded — already completed | transactionId: ${transactionId}`,
+        `handlePaymentSucceeded — already completed | transactionId: ${transactionId}`,
       );
       return;
     }
@@ -238,7 +233,7 @@ export class WebhookProcessorService {
       });
 
       this.logger.log(
-        `[${this.rid}] handlePaymentSucceeded — balance updated | businessId: ${businessProfile.id}, oldBalance: ${currentBalance}, newBalance: ${newBalance}`,
+        `handlePaymentSucceeded — balance updated | businessId: ${businessProfile.id}, oldBalance: ${currentBalance}, newBalance: ${newBalance}`,
       );
     }
   }
@@ -248,7 +243,7 @@ export class WebhookProcessorService {
     const transactionId = metadata?.['transactionId'];
 
     if (!transactionId) {
-      this.logger.warn(`[${this.rid}] handlePaymentFailed — no transactionId in metadata`);
+      this.logger.warn(`handlePaymentFailed — no transactionId in metadata`);
       return;
     }
 
@@ -258,7 +253,7 @@ export class WebhookProcessorService {
 
     if (!transaction) {
       this.logger.warn(
-        `[${this.rid}] handlePaymentFailed — transaction not found | transactionId: ${transactionId}`,
+        `handlePaymentFailed — transaction not found | transactionId: ${transactionId}`,
       );
       return;
     }
@@ -268,7 +263,7 @@ export class WebhookProcessorService {
     await this.uow.businessTransactions.save(transaction);
 
     this.logger.log(
-      `[${this.rid}] handlePaymentFailed — transaction marked failed | transactionId: ${transactionId}`,
+      `handlePaymentFailed — transaction marked failed | transactionId: ${transactionId}`,
     );
   }
 
@@ -278,7 +273,7 @@ export class WebhookProcessorService {
     const transactionId = metadata?.['transactionId'];
 
     if (!transactionId) {
-      this.logger.warn(`[${this.rid}] handleRefundCreated — no transactionId in metadata`);
+      this.logger.warn(`handleRefundCreated — no transactionId in metadata`);
       return;
     }
 
@@ -288,7 +283,7 @@ export class WebhookProcessorService {
 
     if (!originalTransaction) {
       this.logger.warn(
-        `[${this.rid}] handleRefundCreated — original transaction not found | transactionId: ${transactionId}`,
+        `handleRefundCreated — original transaction not found | transactionId: ${transactionId}`,
       );
       return;
     }
@@ -297,9 +292,7 @@ export class WebhookProcessorService {
     originalTransaction.status = TransactionStatus.REVERSED;
     await this.uow.businessTransactions.save(originalTransaction);
 
-    this.logger.log(
-      `[${this.rid}] handleRefundCreated — transaction reversed | transactionId: ${transactionId}`,
-    );
+    this.logger.log(`handleRefundCreated — transaction reversed | transactionId: ${transactionId}`);
   }
 
   /**
@@ -316,7 +309,7 @@ export class WebhookProcessorService {
     const transferId = transfer?.['id'] as string | undefined;
 
     if (!transferId) {
-      this.logger.warn(`[${this.rid}] handleTransferFailed — no transfer ID in event`);
+      this.logger.warn(`handleTransferFailed — no transfer ID in event`);
       return;
     }
 
@@ -340,15 +333,13 @@ export class WebhookProcessorService {
       return;
     }
 
-    this.logger.warn(
-      `[${this.rid}] handleTransferFailed — no matching transaction | transferId: ${transferId}`,
-    );
+    this.logger.warn(`handleTransferFailed — no matching transaction | transferId: ${transferId}`);
   }
 
   private async reverseBusinessWithdrawal(transaction: BusinessTransaction): Promise<void> {
     if (transaction.status === TransactionStatus.REVERSED) {
       this.logger.log(
-        `[${this.rid}] reverseBusinessWithdrawal — already reversed | transactionId: ${transaction.id}`,
+        `reverseBusinessWithdrawal — already reversed | transactionId: ${transaction.id}`,
       );
       return;
     }
@@ -372,7 +363,7 @@ export class WebhookProcessorService {
       });
 
       this.logger.log(
-        `[${this.rid}] reverseBusinessWithdrawal — balance restored | businessId: ${businessProfile.id}, amount: ${amount}, newBalance: ${newBalance}`,
+        `reverseBusinessWithdrawal — balance restored | businessId: ${businessProfile.id}, amount: ${amount}, newBalance: ${newBalance}`,
       );
     }
   }
@@ -380,7 +371,7 @@ export class WebhookProcessorService {
   private async reverseConsultantWithdrawal(transaction: ConsultantTransaction): Promise<void> {
     if (transaction.status === TransactionStatus.REVERSED) {
       this.logger.log(
-        `[${this.rid}] reverseConsultantWithdrawal — already reversed | transactionId: ${transaction.id}`,
+        `reverseConsultantWithdrawal — already reversed | transactionId: ${transaction.id}`,
       );
       return;
     }
@@ -404,7 +395,7 @@ export class WebhookProcessorService {
       });
 
       this.logger.log(
-        `[${this.rid}] reverseConsultantWithdrawal — balance restored | consultantId: ${consultantProfile.id}, amount: ${amount}, newBalance: ${newBalance}`,
+        `reverseConsultantWithdrawal — balance restored | consultantId: ${consultantProfile.id}, amount: ${amount}, newBalance: ${newBalance}`,
       );
     }
   }
@@ -415,7 +406,7 @@ export class WebhookProcessorService {
     const accountId = account?.['id'] as string | undefined;
 
     if (!accountId) {
-      this.logger.warn(`[${this.rid}] handleStripeAccountUpdated — no account ID in event`);
+      this.logger.warn(`handleStripeAccountUpdated — no account ID in event`);
       return;
     }
 
@@ -425,7 +416,7 @@ export class WebhookProcessorService {
 
     if (!chargesEnabled || !payoutsEnabled) {
       this.logger.log(
-        `[${this.rid}] handleStripeAccountUpdated — account not fully enabled | accountId: ${accountId}`,
+        `handleStripeAccountUpdated — account not fully enabled | accountId: ${accountId}`,
       );
       return;
     }
@@ -439,7 +430,7 @@ export class WebhookProcessorService {
 
     if (existingBusiness) {
       this.logger.log(
-        `[${this.rid}] handleStripeAccountUpdated — account already linked | businessId: ${existingBusiness.id}`,
+        `handleStripeAccountUpdated — account already linked | businessId: ${existingBusiness.id}`,
       );
       return;
     }
@@ -447,7 +438,7 @@ export class WebhookProcessorService {
     // Note: In production, you'd handle the OAuth callback flow separately
     // which would link the account ID to the business profile
     this.logger.log(
-      `[${this.rid}] handleStripeAccountUpdated — account ready for linking | accountId: ${accountId}`,
+      `handleStripeAccountUpdated — account ready for linking | accountId: ${accountId}`,
     );
   }
 }

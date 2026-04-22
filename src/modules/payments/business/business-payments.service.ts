@@ -9,8 +9,9 @@ import { RequestContextService } from '@common/modules/request-context/request-c
 import { BusinessTransactionType } from '@database/enums/business-transaction-type.enum';
 import { InvoiceStatus } from '@database/enums/invoice-status.enum';
 import { TransactionStatus } from '@database/enums/transaction-status.enum';
+import { AppLogger } from '@common/modules/logger';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import { CreateTopUpDto } from '../dto/requests/create-top-up.dto';
@@ -24,22 +25,20 @@ import { IBusinessPaymentsService } from './interfaces/business-payments-service
 
 @Injectable()
 export class BusinessPaymentsService implements IBusinessPaymentsService {
-  private readonly logger = new Logger(BusinessPaymentsService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly paymentService: PaymentService,
     private readonly env: EnvironmentsService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(BusinessPaymentsService.name, requestContext);
+  }
 
   public async createTopUp(dto: CreateTopUpDto): Promise<TopUpResponseDto> {
     const userId = this.requestContext.userId!;
-    this.logger.log(`[${this.rid}] createTopUp — start | userId: ${userId}, amount: ${dto.amount}`);
+    this.logger.log(`createTopUp — start | userId: ${userId}, amount: ${dto.amount}`);
 
     const businessProfile = await this.uow.businessProfiles.findOne({ where: { userId } });
     if (!businessProfile) {
@@ -79,7 +78,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
       await this.uow.businessTransactions.save(savedTransaction);
 
       this.logger.log(
-        `[${this.rid}] createTopUp — complete | transactionId: ${savedTransaction.id}, redirectUrl: ${checkoutSession.processorPaymentUrl}`,
+        `createTopUp — complete | transactionId: ${savedTransaction.id}, redirectUrl: ${checkoutSession.processorPaymentUrl}`,
       );
 
       return plainToInstance(
@@ -96,7 +95,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
       await this.uow.businessTransactions.save(savedTransaction);
 
       this.logger.error(
-        `[${this.rid}] createTopUp — failed | transactionId: ${savedTransaction.id}, error: ${error instanceof Error ? error.message : String(error)}`,
+        `createTopUp — failed | transactionId: ${savedTransaction.id}, error: ${error instanceof Error ? error.message : String(error)}`,
       );
 
       throw new TranslatableException({
@@ -109,9 +108,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
 
   public async settleInvoice(dto: SettleInvoiceDto): Promise<SettleInvoiceResponseDto> {
     const userId = this.requestContext.userId!;
-    this.logger.log(
-      `[${this.rid}] settleInvoice — start | userId: ${userId}, invoiceId: ${dto.invoiceId}`,
-    );
+    this.logger.log(`settleInvoice — start | userId: ${userId}, invoiceId: ${dto.invoiceId}`);
 
     const businessProfile = await this.uow.businessProfiles.findOne({ where: { userId } });
     if (!businessProfile) {
@@ -157,7 +154,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
 
     if (!businessTxn) {
       this.logger.error(
-        `[${this.rid}] settleInvoice — no business transaction for invoice | invoiceId: ${invoice.id}`,
+        `settleInvoice — no business transaction for invoice | invoiceId: ${invoice.id}`,
       );
       throw new TranslatableException({
         messageKey: 'error.billing.invoice_not_found',
@@ -194,7 +191,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
       await this.uow.businessTransactions.save(businessTxn);
 
       this.logger.log(
-        `[${this.rid}] settleInvoice — complete | invoiceId: ${invoice.id}, redirectUrl: ${checkoutSession.processorPaymentUrl}`,
+        `settleInvoice — complete | invoiceId: ${invoice.id}, redirectUrl: ${checkoutSession.processorPaymentUrl}`,
       );
 
       return plainToInstance(
@@ -207,7 +204,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
       );
     } catch (error) {
       this.logger.error(
-        `[${this.rid}] settleInvoice — failed | invoiceId: ${invoice.id}, error: ${error instanceof Error ? error.message : String(error)}`,
+        `settleInvoice — failed | invoiceId: ${invoice.id}, error: ${error instanceof Error ? error.message : String(error)}`,
       );
 
       throw new TranslatableException({
@@ -221,7 +218,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
   public async listTransactions(dto: PageOptionsDto): Promise<PageDto<TransactionResponseDto>> {
     const userId = this.requestContext.userId!;
     this.logger.log(
-      `[${this.rid}] listTransactions — start | userId: ${userId}, page: ${dto.page}, limit: ${dto.limit}`,
+      `listTransactions — start | userId: ${userId}, page: ${dto.page}, limit: ${dto.limit}`,
     );
 
     const businessProfile = await this.uow.businessProfiles.findOne({ where: { userId } });
@@ -258,7 +255,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
 
     this.logger.log(
-      `[${this.rid}] listTransactions — complete | count: ${transactions.length}, total: ${itemCount}`,
+      `listTransactions — complete | count: ${transactions.length}, total: ${itemCount}`,
     );
 
     return new PageDto(data, meta);

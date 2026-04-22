@@ -1,8 +1,9 @@
+import { AppLogger } from '@common/modules/logger';
 import { RedisService } from '@common/modules/redis/redis.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { Skill } from '@database/entities';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { I18nService } from 'nestjs-i18n';
 
@@ -13,43 +14,39 @@ const SKILLS_CACHE_TTL_SECONDS = 3600;
 
 @Injectable()
 export class SkillsService {
-  private readonly logger = new Logger(SkillsService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly i18n: I18nService,
     private readonly requestContext: RequestContextService,
     private readonly redis: RedisService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(SkillsService.name, requestContext);
+  }
 
   public async getAll(): Promise<SkillResponseDto[]> {
     const lang = this.requestContext.lang;
     const cacheKey = `skills:${lang}`;
 
-    this.logger.log(`[${this.rid}] getAll — start`);
+    this.logger.log(`getAll — start`);
 
     // Try the cache first. Redis errors are treated as a miss so the endpoint
     // stays available even when Redis is temporarily unreachable.
     try {
       const cached = await this.redis.get(cacheKey);
       if (cached !== null) {
-        this.logger.log(`[${this.rid}] getAll — cache hit | key: ${cacheKey}`);
+        this.logger.log(`getAll — cache hit | key: ${cacheKey}`);
         return JSON.parse(cached) as SkillResponseDto[];
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.warn(
-        `[${this.rid}] getAll — cache read failed, falling through to DB | error: ${message}`,
-      );
+      this.logger.warn(`getAll — cache read failed, falling through to DB | error: ${message}`);
     }
 
     const skills = await this.uow.skills.find({ order: { name: 'ASC' } });
     if (skills.length === 0) {
-      this.logger.warn(`[${this.rid}] getAll — result is empty`);
+      this.logger.warn(`getAll — result is empty`);
     }
 
     const result = skills.map((skill) => this.toResponseDto(skill, lang));
@@ -57,12 +54,10 @@ export class SkillsService {
     // Persist to cache. Failure is non-fatal.
     try {
       await this.redis.set(cacheKey, JSON.stringify(result), SKILLS_CACHE_TTL_SECONDS);
-      this.logger.log(
-        `[${this.rid}] getAll — cached | key: ${cacheKey}, ttl: ${SKILLS_CACHE_TTL_SECONDS}s`,
-      );
+      this.logger.log(`getAll — cached | key: ${cacheKey}, ttl: ${SKILLS_CACHE_TTL_SECONDS}s`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.warn(`[${this.rid}] getAll — cache write failed | error: ${message}`);
+      this.logger.warn(`getAll — cache write failed | error: ${message}`);
     }
 
     return result;

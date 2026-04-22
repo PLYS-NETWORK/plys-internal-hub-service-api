@@ -1,25 +1,24 @@
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ConsultantSkill } from '@database/entities';
 import { ProficiencyLevel } from '@database/enums/proficiency-level.enum';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 import { ConsultantSkillInputDto } from '../dto/requests';
 import { IConsultantSkillsService } from '../interfaces/consultant-skills-service.interface';
 
 @Injectable()
 export class ConsultantSkillsService implements IConsultantSkillsService {
-  private readonly logger = new Logger(ConsultantSkillsService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(ConsultantSkillsService.name, requestContext);
+  }
 
   public async findByConsultantId(
     consultantId: string,
@@ -36,7 +35,7 @@ export class ConsultantSkillsService implements IConsultantSkillsService {
     if (skills.length === 0) return [];
 
     this.logger.log(
-      `[${this.rid}] createForConsultant — start | consultantId: ${consultantId}, count: ${skills.length}`,
+      `createForConsultant — start | consultantId: ${consultantId}, count: ${skills.length}`,
     );
 
     const entities = skills.map((s) =>
@@ -51,7 +50,7 @@ export class ConsultantSkillsService implements IConsultantSkillsService {
     const saved = (await uow.consultantSkills.save(entities)) as ConsultantSkill[];
 
     this.logger.log(
-      `[${this.rid}] createForConsultant — complete | consultantId: ${consultantId}, inserted: ${saved.length}`,
+      `createForConsultant — complete | consultantId: ${consultantId}, inserted: ${saved.length}`,
     );
     return saved;
   }
@@ -62,14 +61,14 @@ export class ConsultantSkillsService implements IConsultantSkillsService {
     uow: IUnitOfWork,
   ): Promise<ConsultantSkill[]> {
     this.logger.log(
-      `[${this.rid}] replaceForConsultant — start | consultantId: ${consultantId}, count: ${skills.length}`,
+      `replaceForConsultant — start | consultantId: ${consultantId}, count: ${skills.length}`,
     );
 
     await uow.consultantSkills.delete({ consultantId });
     const result = await this.createForConsultant(consultantId, skills, uow);
 
     this.logger.log(
-      `[${this.rid}] replaceForConsultant — complete | consultantId: ${consultantId}, inserted: ${result.length}`,
+      `replaceForConsultant — complete | consultantId: ${consultantId}, inserted: ${result.length}`,
     );
     return result;
   }

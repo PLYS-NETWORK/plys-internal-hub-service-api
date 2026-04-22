@@ -1,24 +1,23 @@
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ProjectInterviewQuestion } from '@database/entities';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 import { InterviewQuestionItemDto } from '../dto/requests/interview-question-item.dto';
 import { IProjectInterviewQuestionsService } from '../interfaces';
 
 @Injectable()
 export class ProjectInterviewQuestionsService implements IProjectInterviewQuestionsService {
-  private readonly logger = new Logger(ProjectInterviewQuestionsService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(ProjectInterviewQuestionsService.name, requestContext);
+  }
 
   public async findByProjectId(
     projectId: string,
@@ -37,9 +36,7 @@ export class ProjectInterviewQuestionsService implements IProjectInterviewQuesti
   ): Promise<ProjectInterviewQuestion[]> {
     if (items.length === 0) return [];
 
-    this.logger.log(
-      `[${this.rid}] createForProject — start | projectId: ${projectId}, count: ${items.length}`,
-    );
+    this.logger.log(`createForProject — start | projectId: ${projectId}, count: ${items.length}`);
 
     const entities = items.map((item, index) =>
       uow.projectInterviewQuestions.create({
@@ -52,7 +49,7 @@ export class ProjectInterviewQuestionsService implements IProjectInterviewQuesti
     const saved = await uow.projectInterviewQuestions.save(entities);
 
     this.logger.log(
-      `[${this.rid}] createForProject — complete | projectId: ${projectId}, inserted: ${saved.length}`,
+      `createForProject — complete | projectId: ${projectId}, inserted: ${saved.length}`,
     );
     return saved;
   }
@@ -62,15 +59,13 @@ export class ProjectInterviewQuestionsService implements IProjectInterviewQuesti
     items: InterviewQuestionItemDto[],
     uow: IUnitOfWork,
   ): Promise<ProjectInterviewQuestion[]> {
-    this.logger.log(
-      `[${this.rid}] replaceForProject — start | projectId: ${projectId}, count: ${items.length}`,
-    );
+    this.logger.log(`replaceForProject — start | projectId: ${projectId}, count: ${items.length}`);
 
     await uow.projectInterviewQuestions.delete({ projectId });
     const result = await this.createForProject(projectId, items, uow);
 
     this.logger.log(
-      `[${this.rid}] replaceForProject — complete | projectId: ${projectId}, inserted: ${result.length}`,
+      `replaceForProject — complete | projectId: ${projectId}, inserted: ${result.length}`,
     );
     return result;
   }

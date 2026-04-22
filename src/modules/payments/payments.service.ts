@@ -1,8 +1,9 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ActivePlatform } from '@database/enums/active-platform.enum';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 
 import { BusinessWithdrawStrategy } from './business/business-withdraw.strategy';
 import { ConsultantWithdrawStrategy } from './consultant/consultant-withdraw.strategy';
@@ -12,27 +13,23 @@ import { IWithdrawStrategy } from './shared/withdraw-strategy.interface';
 
 @Injectable()
 export class PaymentsService {
-  private readonly logger = new Logger(PaymentsService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly requestContext: RequestContextService,
     private readonly businessWithdraw: BusinessWithdrawStrategy,
     private readonly consultantWithdraw: ConsultantWithdrawStrategy,
-  ) {}
+  ) {
+    this.logger = new AppLogger(PaymentsService.name, requestContext);
+  }
 
   public async createWithdraw(dto: CreateWithdrawDto): Promise<WithdrawResponseDto> {
-    this.logger.log(`[${this.rid}] createWithdraw — start | amount: ${dto.amount}`);
+    this.logger.log(`createWithdraw — start | amount: ${dto.amount}`);
 
     const strategy = this.getWithdrawStrategy();
     const result = await strategy.execute(dto.amount);
 
-    this.logger.log(
-      `[${this.rid}] createWithdraw — complete | is_connected: ${result.is_connected}`,
-    );
+    this.logger.log(`createWithdraw — complete | is_connected: ${result.is_connected}`);
 
     return result;
   }

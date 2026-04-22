@@ -1,7 +1,9 @@
+import { ERROR_CODES } from '@common/constants/error-codes';
+import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
 import { EnvironmentsService } from '@common/modules/environments';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { Injectable, NestMiddleware } from '@nestjs/common';
+import { HttpStatus, Injectable, NestMiddleware } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { FastifyReply, FastifyRequest } from 'fastify';
 
@@ -28,8 +30,11 @@ export class JwtContextMiddleware implements NestMiddleware {
         // Device-binding: if the JWT declares a deviceId the request must originate from the same device.
         const requestDeviceId = (req.headers as Record<string, string>)['x-device-id'] ?? null;
         if (payload.deviceId && requestDeviceId !== payload.deviceId) {
-          // Device mismatch — leave userId null so JwtAuthGuard rejects the request.
-          return next();
+          throw new TranslatableException({
+            messageKey: 'error.auth.device_mismatch',
+            errorCode: ERROR_CODES.AUTH_DEVICE_MISMATCH,
+            status: HttpStatus.UNAUTHORIZED,
+          });
         }
 
         this.requestContext.setUser(
@@ -40,9 +45,27 @@ export class JwtContextMiddleware implements NestMiddleware {
           payload.deviceId,
           payload.activePlatform,
         );
-      } catch {
-        // Invalid or expired token — context userId stays null.
-        // JwtAuthGuard will reject protected routes.
+      } catch (err) {
+        if (err instanceof TranslatableException) {
+          throw err;
+        }
+        // jsonwebtoken is a transitive dep — check by error name to avoid a direct import.
+        if (err instanceof Error && err.name === 'TokenExpiredError') {
+          throw new TranslatableException({
+            messageKey: 'error.auth.token_expired',
+            errorCode: ERROR_CODES.AUTH_TOKEN_EXPIRED,
+            status: HttpStatus.UNAUTHORIZED,
+          });
+        }
+        if (err instanceof Error && err.name === 'JsonWebTokenError') {
+          throw new TranslatableException({
+            messageKey: 'error.auth.token_invalid',
+            errorCode: ERROR_CODES.AUTH_TOKEN_INVALID,
+            status: HttpStatus.UNAUTHORIZED,
+          });
+        }
+        // Unexpected error — rethrow so GlobalExceptionFilter logs it.
+        throw err;
       }
     }
     next();

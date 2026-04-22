@@ -45,6 +45,10 @@ export class TransformResponseInterceptor<T> implements NestInterceptor<
     return next.handle().pipe(
       map((payload: T | ITranslatedPayload<T>) => {
         const lang = this.requestContext.lang;
+        const requestId = this.requestContext.requestId;
+        const deviceId =
+          (request.headers as Record<string, string | undefined>)['x-device-id'] ?? null;
+
         if (isTranslatedPayload<T>(payload)) {
           const message = this.translate(payload.messageKey, lang, payload.args);
           // errorCode is null on all success paths — it is only populated by GlobalExceptionFilter.
@@ -54,6 +58,8 @@ export class TransformResponseInterceptor<T> implements NestInterceptor<
             payload.data,
             request.url,
             null,
+            requestId,
+            deviceId,
           );
         }
         // No explicit messageKey — fall back to the translated default success.
@@ -64,6 +70,8 @@ export class TransformResponseInterceptor<T> implements NestInterceptor<
           payload as T,
           request.url,
           null,
+          requestId,
+          deviceId,
         );
       }),
     );

@@ -3,6 +3,7 @@ import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import {
   BusinessProfile,
@@ -11,7 +12,7 @@ import {
   ProjectRequiredSkill,
 } from '@database/entities';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { I18nService } from 'nestjs-i18n';
 import { In } from 'typeorm';
@@ -21,17 +22,15 @@ import { IConsultantProjectService } from '../interfaces/consultant-project-serv
 
 @Injectable()
 export class ConsultantProjectService implements IConsultantProjectService {
-  private readonly logger = new Logger(ConsultantProjectService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly i18n: I18nService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(ConsultantProjectService.name, requestContext);
+  }
 
   // Returns paginated public projects that require at least one skill the
   // calling consultant possesses. Projects with no skill overlap are excluded.
@@ -41,7 +40,7 @@ export class ConsultantProjectService implements IConsultantProjectService {
   ): Promise<PageDto<ConsultantProjectResponseDto>> {
     const consultantId = await this.resolveConsultantId();
     this.logger.log(
-      `[${this.rid}] findMatchingProjects — start | consultantId: ${consultantId}, page: ${pageOptions.page}`,
+      `findMatchingProjects — start | consultantId: ${consultantId}, page: ${pageOptions.page}`,
     );
 
     // Fetch consultant's skills once — all subsequent filtering is done in DB.
@@ -50,7 +49,7 @@ export class ConsultantProjectService implements IConsultantProjectService {
 
     if (skillIds.length === 0) {
       this.logger.warn(
-        `[${this.rid}] findMatchingProjects — consultant has no skills | consultantId: ${consultantId}`,
+        `findMatchingProjects — consultant has no skills | consultantId: ${consultantId}`,
       );
       return new PageDto([], new PageMetaDto({ pageOptionsDto: pageOptions, itemCount: 0 }));
     }
@@ -81,7 +80,7 @@ export class ConsultantProjectService implements IConsultantProjectService {
     const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
 
     this.logger.log(
-      `[${this.rid}] findMatchingProjects — complete | consultantId: ${consultantId}, returned: ${data.length}, total: ${itemCount}`,
+      `findMatchingProjects — complete | consultantId: ${consultantId}, returned: ${data.length}, total: ${itemCount}`,
     );
     return new PageDto(data, meta);
   }
@@ -93,9 +92,7 @@ export class ConsultantProjectService implements IConsultantProjectService {
     const profile = await this.uow.consultantProfiles.findByUserId(userId);
 
     if (!profile) {
-      this.logger.warn(
-        `[${this.rid}] resolveConsultantId — consultant profile not found | userId: ${userId}`,
-      );
+      this.logger.warn(`resolveConsultantId — consultant profile not found | userId: ${userId}`);
       throw new TranslatableException({
         messageKey: 'error.consultant_profile.not_found',
         errorCode: ERROR_CODES.CONSULTANT_PROFILE_NOT_FOUND,

@@ -1,3 +1,4 @@
+import { AppLogger } from '@common/modules/logger';
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EnvironmentsService } from '@common/modules/environments';
@@ -6,7 +7,7 @@ import { RequestContextService } from '@common/modules/request-context/request-c
 import { ConsultantTransactionType } from '@database/enums/consultant-transaction-type.enum';
 import { TransactionStatus } from '@database/enums/transaction-status.enum';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import { WithdrawResponseDto } from '../dto/responses/withdraw-response.dto';
@@ -14,22 +15,20 @@ import { IWithdrawStrategy } from '../shared/withdraw-strategy.interface';
 
 @Injectable()
 export class ConsultantWithdrawStrategy implements IWithdrawStrategy {
-  private readonly logger = new Logger(ConsultantWithdrawStrategy.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly paymentService: PaymentService,
     private readonly env: EnvironmentsService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(ConsultantWithdrawStrategy.name, requestContext);
+  }
 
   public async execute(amount: number): Promise<WithdrawResponseDto> {
     const userId = this.requestContext.userId!;
-    this.logger.log(`[${this.rid}] execute — start | userId: ${userId}, amount: ${amount}`);
+    this.logger.log(`execute — start | userId: ${userId}, amount: ${amount}`);
 
     const consultantProfile = await this.uow.consultantProfiles.findOne({ where: { userId } });
     if (!consultantProfile) {
@@ -43,7 +42,7 @@ export class ConsultantWithdrawStrategy implements IWithdrawStrategy {
     // If Stripe Connect not linked, return onboarding URL
     if (!consultantProfile.stripeConnectAccountId) {
       this.logger.log(
-        `[${this.rid}] execute — stripe not connected, returning onboarding URL | consultantId: ${consultantProfile.id}`,
+        `execute — stripe not connected, returning onboarding URL | consultantId: ${consultantProfile.id}`,
       );
 
       const redirectUri = `${this.env.ployosUrl}/payments/connect/callback`;
@@ -71,7 +70,7 @@ export class ConsultantWithdrawStrategy implements IWithdrawStrategy {
     const currentBalance = parseFloat(consultantProfile.accountBalance);
     if (currentBalance < amount) {
       this.logger.warn(
-        `[${this.rid}] execute — insufficient balance | consultantId: ${consultantProfile.id}, balance: ${currentBalance}, requested: ${amount}`,
+        `execute — insufficient balance | consultantId: ${consultantProfile.id}, balance: ${currentBalance}, requested: ${amount}`,
       );
       throw new TranslatableException({
         messageKey: 'error.payment.insufficient_balance',
@@ -113,7 +112,7 @@ export class ConsultantWithdrawStrategy implements IWithdrawStrategy {
         return await txUow.consultantTransactions.save(saved);
       } catch (error) {
         this.logger.error(
-          `[${this.rid}] execute — transfer failed | transactionId: ${saved.id}, error: ${error instanceof Error ? error.message : String(error)}`,
+          `execute — transfer failed | transactionId: ${saved.id}, error: ${error instanceof Error ? error.message : String(error)}`,
         );
 
         throw new TranslatableException({
@@ -124,7 +123,7 @@ export class ConsultantWithdrawStrategy implements IWithdrawStrategy {
       }
     });
 
-    this.logger.log(`[${this.rid}] execute — complete | transactionId: ${savedTransaction.id}`);
+    this.logger.log(`execute — complete | transactionId: ${savedTransaction.id}`);
 
     return plainToInstance(
       WithdrawResponseDto,

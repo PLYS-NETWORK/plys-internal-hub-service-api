@@ -1,6 +1,8 @@
+import { AppLogger } from '@common/modules/logger';
 import { EnvironmentsService } from '@common/modules/environments';
+import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { PaymentProcessor } from '@database/enums/payment-processor.enum';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 import { IPaymentProvider } from './interfaces';
 import {
@@ -24,12 +26,15 @@ import { PaymentProviderRegistry } from './payment-provider.registry';
  */
 @Injectable()
 export class PaymentService implements IPaymentService {
-  private readonly logger = new Logger(PaymentService.name);
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly registry: PaymentProviderRegistry,
     private readonly env: EnvironmentsService,
-  ) {}
+    private readonly requestContext: RequestContextService,
+  ) {
+    this.logger = new AppLogger(PaymentService.name, requestContext);
+  }
 
   /**
    * Creates a hosted checkout session for the given invoice.

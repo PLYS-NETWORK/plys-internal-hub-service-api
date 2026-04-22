@@ -1,11 +1,12 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
+import { AppLogger } from '@common/modules/logger';
 import { EnvironmentsService } from '@common/modules/environments';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ActivePlatform } from '@database/enums/active-platform.enum';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { plainToInstance } from 'class-transformer';
 import { randomBytes } from 'crypto';
@@ -17,27 +18,25 @@ import { parseDuration, sha256 } from '../utils/auth.utils';
 
 @Injectable()
 export class SessionService implements ISessionService {
-  private readonly logger = new Logger(SessionService.name);
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly jwtService: JwtService,
     private readonly envService: EnvironmentsService,
     private readonly requestContext: RequestContextService,
-  ) {}
+  ) {
+    this.logger = new AppLogger(SessionService.name, requestContext);
+  }
 
   public async me(): Promise<UserResponseDto> {
     const userId = this.requestContext.userId;
-    this.logger.log(`[${this.rid}] me — start | userId: ${userId}`);
+    this.logger.log(`me — start | userId: ${userId}`);
 
     const user = userId ? await this.uow.users.findByActiveId(userId) : null;
 
     if (!user || !user.isActive) {
-      this.logger.warn(`[${this.rid}] me — user not found or inactive | userId: ${userId}`);
+      this.logger.warn(`me — user not found or inactive | userId: ${userId}`);
       throw new TranslatableException({
         messageKey: 'error.auth.user_not_found',
         errorCode: ERROR_CODES.AUTH_USER_NOT_FOUND,
@@ -49,7 +48,7 @@ export class SessionService implements ISessionService {
   }
 
   public async refresh(refreshToken: string, context: ISessionContext): Promise<AuthResponseDto> {
-    this.logger.log(`[${this.rid}] refresh — start`);
+    this.logger.log(`refresh — start`);
     const tokenHash = sha256(refreshToken);
 
     const session = await this.uow.userSessions.findOne({
@@ -58,7 +57,7 @@ export class SessionService implements ISessionService {
     });
 
     if (!session) {
-      this.logger.warn(`[${this.rid}] refresh — session not found`);
+      this.logger.warn(`refresh — session not found`);
       throw new TranslatableException({
         messageKey: 'error.auth.token_invalid',
         errorCode: ERROR_CODES.AUTH_TOKEN_INVALID,
@@ -67,7 +66,7 @@ export class SessionService implements ISessionService {
     }
 
     if (session.expiresAt < new Date()) {
-      this.logger.warn(`[${this.rid}] refresh — session expired | sessionId: ${session.id}`);
+      this.logger.warn(`refresh — session expired | sessionId: ${session.id}`);
       // Clean up expired session
       await this.uow.userSessions.remove(session);
       throw new TranslatableException({
@@ -83,19 +82,19 @@ export class SessionService implements ISessionService {
     // The platform is re-read from the user (the session no longer carries it).
     await this.uow.userSessions.remove(session);
 
-    this.logger.log(`[${this.rid}] refresh — complete | userId: ${userId}`);
+    this.logger.log(`refresh — complete | userId: ${userId}`);
     return this.createSession(userId, user.email, user.platform, context);
   }
 
   public async logout(): Promise<void> {
     const sessionId = this.requestContext.sessionId;
-    this.logger.log(`[${this.rid}] logout — start | sessionId: ${sessionId}`);
+    this.logger.log(`logout — start | sessionId: ${sessionId}`);
     if (sessionId) {
       await this.uow.userSessions.delete({ id: sessionId });
     } else {
-      this.logger.warn(`[${this.rid}] logout — no active session to invalidate`);
+      this.logger.warn(`logout — no active session to invalidate`);
     }
-    this.logger.log(`[${this.rid}] logout — complete`);
+    this.logger.log(`logout — complete`);
   }
 
   public async createSession(
