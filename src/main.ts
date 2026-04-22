@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { I18nValidationExceptionFilter, I18nValidationPipe } from 'nestjs-i18n';
+import { Readable } from 'stream';
 
 import { AppModule } from './app.module';
 
@@ -12,6 +13,25 @@ async function bootstrap(): Promise<void> {
     AppModule,
     new FastifyAdapter({ logger: false }),
   );
+
+  // Use preParsing hook to capture the raw body buffer for webhook HMAC
+  // verification (Polar / Stripe). This hook fires BEFORE the content-type
+  // parser, so there is no registration conflict with Fastify's built-in
+  // 'application/json' parser. We consume the incoming stream, store the raw
+  // bytes on the request, then return a new Readable so the JSON parser can
+  // still parse req.body normally for all other routes.
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .addHook('preParsing', async (request, _reply, payload) => {
+      const chunks: Buffer[] = [];
+      for await (const chunk of payload as unknown as AsyncIterable<Buffer | string>) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
+      }
+      const rawBody = Buffer.concat(chunks);
+      (request as unknown as Record<string, unknown>)['rawBody'] = rawBody;
+      return Readable.from(rawBody);
+    });
 
   // Security & compression plugins
   await app.register(import('@fastify/helmet') as never);
