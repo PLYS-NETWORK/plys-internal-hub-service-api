@@ -1,8 +1,8 @@
-import { AppLogger } from '../logger';
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import Redis from 'ioredis';
 
 import { EnvironmentsService } from '../environments';
+import { AppLogger } from '../logger';
 import { RequestContextService } from '../request-context';
 import { IRedisService } from './interfaces';
 
