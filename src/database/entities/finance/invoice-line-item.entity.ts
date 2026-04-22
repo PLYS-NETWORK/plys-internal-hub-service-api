@@ -1,4 +1,4 @@
-import { TraceableEntity } from '@database/entities/base/traceable.entity';
+import { Traceable, TraceableEntity } from '@database/entities/base/traceable.entity';
 import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
 import { Project } from '@database/entities/projects/project.entity';
 import { Task } from '@database/entities/tasks/task.entity';
@@ -18,6 +18,7 @@ import { Invoice } from './invoice.entity';
 // Snapshot of task pricing at billing time. CHECK ensures
 // `amount = platform_fee_amount + consultant_payout` so the snapshot stays
 // internally consistent (§M8 fix).
+@Traceable()
 @Entity('invoice_line_items')
 @Unique('uq_invoice_line_items_invoice_task', ['invoiceId', 'taskId'])
 @Check(

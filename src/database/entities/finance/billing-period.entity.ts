@@ -1,4 +1,4 @@
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { BusinessProfile } from '@database/entities/profiles/business-profile.entity';
 import { BillingPeriodStatus } from '@database/enums/billing-period-status.enum';
 import {
@@ -14,6 +14,7 @@ import {
 // Monthly window per business. Always create / fetch via the SQL function
 // `get_or_create_billing_period(business_id, year, month)` to prevent races
 // when two tasks of the same month finalize concurrently.
+@Auditable()
 @Entity('billing_periods')
 @Unique('uq_billing_periods_business_period_start', ['businessId', 'periodStart'])
 @Check('ck_billing_periods_period_dates_valid', '"period_end" >= "period_start"')

@@ -1,4 +1,4 @@
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 // Normalized skill taxonomy, shared across the platform.
@@ -8,6 +8,7 @@ import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 //
 // Case-insensitive uniqueness is enforced at the DB level via a functional
 // unique index on LOWER(name) in the domain-2 migration.
+@Auditable()
 @Entity('skills')
 export class Skill extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_skills' })

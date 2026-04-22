@@ -1,4 +1,4 @@
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import {
   Column,
   Entity,
@@ -14,6 +14,7 @@ import { User } from './user.entity';
 // One row per active browser/device session. The session token is an opaque
 // secret stored in an HTTP-only cookie. The owning user's platform is read
 // from `user.platform` on refresh — no denormalized copy lives here.
+@Auditable()
 @Entity('user_sessions')
 @Unique('uq_user_sessions_session_token', ['sessionToken'])
 @Index('idx_user_sessions_user_id', ['userId'])

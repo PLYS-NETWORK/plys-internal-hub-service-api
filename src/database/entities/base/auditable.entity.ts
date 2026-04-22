@@ -17,7 +17,7 @@ export abstract class AuditableEntity {
 // Class decorators always run after property decorators, so these columns
 // appear at the end of the table regardless of decorator stack position.
 export function Auditable(): ClassDecorator {
-  return (target: Function) => {
+  return (target) => {
     CreateDateColumn({ name: 'created_at', type: 'timestamptz' })(target.prototype, 'createdAt');
     UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })(target.prototype, 'updatedAt');
     DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })(

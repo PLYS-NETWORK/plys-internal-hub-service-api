@@ -26,7 +26,7 @@ export class ConsultantWithdrawStrategy implements IWithdrawStrategy {
     this.logger = new AppLogger(ConsultantWithdrawStrategy.name, requestContext);
   }
 
-  public async execute(amount: number): Promise<WithdrawResponseDto> {
+  public async execute(amount: number, successUrl: string, cancelUrl: string): Promise<WithdrawResponseDto> {
     const userId = this.requestContext.userId!;
     this.logger.log(`execute — start | userId: ${userId}, amount: ${amount}`);
 
@@ -45,6 +45,11 @@ export class ConsultantWithdrawStrategy implements IWithdrawStrategy {
         `execute — stripe not connected, returning onboarding URL | consultantId: ${consultantProfile.id}`,
       );
 
+      // Encode profileId + redirect URLs in state so the frontend callback can
+      // redirect the user to the correct page after OAuth completes.
+      const state = encodeURIComponent(
+        JSON.stringify({ profileId: consultantProfile.id, successUrl, cancelUrl }),
+      );
       const redirectUri = `${this.env.ployosUrl}/payments/connect/callback`;
       const onboardingUrl =
         `https://connect.stripe.com/oauth/authorize?` +
@@ -52,7 +57,7 @@ export class ConsultantWithdrawStrategy implements IWithdrawStrategy {
         `client_id=${this.env.stripeConnectClientId}&` +
         `scope=read_write&` +
         `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-        `state=${consultantProfile.id}`;
+        `state=${state}`;
 
       return plainToInstance(
         WithdrawResponseDto,

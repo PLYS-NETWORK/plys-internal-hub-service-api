@@ -1,4 +1,4 @@
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
 import { Project } from '@database/entities/projects/project.entity';
 import { ProjectMemberStatus } from '@database/enums/project-member-status.enum';
@@ -17,6 +17,7 @@ import { ProjectApplication } from './project-application.entity';
 // Authoritative roster of consultants on a project. Insertion is rate-limited
 // per consultant by trg_enforce_consultant_project_limit (§C5 race-fix uses
 // FOR UPDATE on consultant_profiles row).
+@Auditable()
 @Entity('project_members')
 @Unique('uq_project_members_project_consultant', ['projectId', 'consultantId'])
 @Index('idx_project_members_project_id', ['projectId'])

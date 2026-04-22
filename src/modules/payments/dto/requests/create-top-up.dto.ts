@@ -17,7 +17,7 @@ export class CreateTopUpDto implements ICreateTopUpRequest {
     example: 'https://example.com/payment/success',
     description: 'URL to redirect after successful payment',
   })
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   public readonly successUrl!: string;
 
   @Expose({ name: 'cancel_url' })
@@ -26,6 +26,6 @@ export class CreateTopUpDto implements ICreateTopUpRequest {
     example: 'https://example.com/payment/cancel',
     description: 'URL to redirect if payment is cancelled',
   })
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   public readonly cancelUrl!: string;
 }

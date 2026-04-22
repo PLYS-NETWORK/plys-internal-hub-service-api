@@ -1,4 +1,4 @@
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { BusinessProfile } from '@database/entities/profiles/business-profile.entity';
 import { ProjectStatus } from '@database/enums/project-status.enum';
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
@@ -8,6 +8,7 @@ import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } 
 // IMPORTANT: status transitions and hiring_mode are enforced by DB triggers
 // (see Domain 3 migration). Application code should NOT validate transitions
 // itself — let the DB raise so behaviour is consistent across services.
+@Auditable()
 @Entity('projects')
 @Index('idx_projects_business_id', ['businessId'])
 @Index('idx_projects_status', ['status'])

@@ -27,7 +27,7 @@ export class PaymentsService {
     this.logger.log(`createWithdraw — start | amount: ${dto.amount}`);
 
     const strategy = this.getWithdrawStrategy();
-    const result = await strategy.execute(dto.amount);
+    const result = await strategy.execute(dto.amount, dto.successUrl, dto.cancelUrl);
 
     this.logger.log(`createWithdraw — complete | is_connected: ${result.is_connected}`);
 

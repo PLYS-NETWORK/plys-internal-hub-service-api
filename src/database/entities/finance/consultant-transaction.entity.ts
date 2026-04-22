@@ -1,4 +1,4 @@
-import { TraceableEntity } from '@database/entities/base/traceable.entity';
+import { Traceable, TraceableEntity } from '@database/entities/base/traceable.entity';
 import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
 import { Project } from '@database/entities/projects/project.entity';
 import { Task } from '@database/entities/tasks/task.entity';
@@ -18,6 +18,7 @@ import { Invoice } from './invoice.entity';
 
 // Append-only ledger. Never UPDATE — write a `reversal` row instead.
 // `processor_event_id` is the idempotency key from the payment processor.
+@Traceable()
 @Entity('consultant_transactions')
 @Unique('uq_consultant_transactions_processor_event_id', ['processorEventId'])
 @Index('idx_consultant_txn_consultant_created', ['consultantId'])

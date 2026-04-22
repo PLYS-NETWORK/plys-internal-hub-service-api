@@ -1,8 +1,9 @@
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 import { Project } from './project.entity';
 
+@Auditable()
 @Entity('project_interview_questions')
 @Index('idx_project_interview_questions_project_id', ['projectId'])
 export class ProjectInterviewQuestion extends AuditableEntity {

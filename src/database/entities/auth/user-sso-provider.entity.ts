@@ -1,4 +1,4 @@
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { ActivePlatform } from '@database/enums/active-platform.enum';
 import { SsoProvider } from '@database/enums/sso-provider.enum';
 import {
@@ -21,6 +21,7 @@ import { User } from './user.entity';
 // SECURITY: access_token and refresh_token must be encrypted at rest.
 // Current implementation stores plaintext with a TODO — see schema fix §H8.
 // Replace with pgcrypto (`pgp_sym_encrypt` wrapper) or external secret store.
+@Auditable()
 @Entity('user_sso_providers')
 @Unique('uq_user_sso_providers_platform_provider_identity', [
   'platform',

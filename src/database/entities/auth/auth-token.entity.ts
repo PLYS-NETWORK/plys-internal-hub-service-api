@@ -1,4 +1,4 @@
-import { TraceableEntity } from '@database/entities/base/traceable.entity';
+import { Traceable, TraceableEntity } from '@database/entities/base/traceable.entity';
 import { AuthTokenType } from '@database/enums/auth-token-type.enum';
 import {
   Column,
@@ -15,6 +15,7 @@ import { User } from './user.entity';
 // Append-only audit of short-lived credentials. Raw tokens are never stored —
 // only their SHA-256 hash. The raw token is sent to the user's email and
 // discarded. Consumption marks the row with `used_at`, never deletes it.
+@Traceable()
 @Entity('auth_tokens')
 @Unique('uq_auth_tokens_token_hash', ['tokenHash'])
 @Index('idx_auth_tokens_user_id', ['userId'])

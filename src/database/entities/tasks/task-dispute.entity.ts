@@ -1,5 +1,5 @@
 import { User } from '@database/entities/auth/user.entity';
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { TaskDisputeStatus } from '@database/enums/task-dispute-status.enum';
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
@@ -7,6 +7,7 @@ import { Task } from './task.entity';
 
 // Opened when business rejects work at pending_approval. Side-effect on
 // `tasks.kanban_status` is handled by trg_sync_task_dispute_status (§H5).
+@Auditable()
 @Entity('task_disputes')
 @Index('idx_task_disputes_task_id', ['taskId'])
 export class TaskDispute extends AuditableEntity {

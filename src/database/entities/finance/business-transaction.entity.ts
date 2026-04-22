@@ -1,4 +1,4 @@
-import { TraceableEntity } from '@database/entities/base/traceable.entity';
+import { Traceable, TraceableEntity } from '@database/entities/base/traceable.entity';
 import { BusinessProfile } from '@database/entities/profiles/business-profile.entity';
 import { Project } from '@database/entities/projects/project.entity';
 import { Task } from '@database/entities/tasks/task.entity';
@@ -16,6 +16,7 @@ import {
 
 import { Invoice } from './invoice.entity';
 
+@Traceable()
 @Entity('business_transactions')
 @Unique('uq_business_transactions_processor_event_id', ['processorEventId'])
 @Index('idx_business_txn_business', ['businessId'])

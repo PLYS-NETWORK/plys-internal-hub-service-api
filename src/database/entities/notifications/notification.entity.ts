@@ -1,6 +1,6 @@
 import { ProjectApplication } from '@database/entities/applications/project-application.entity';
 import { User } from '@database/entities/auth/user.entity';
-import { TraceableEntity } from '@database/entities/base/traceable.entity';
+import { Traceable, TraceableEntity } from '@database/entities/base/traceable.entity';
 import { Project } from '@database/entities/projects/project.entity';
 import { Task } from '@database/entities/tasks/task.entity';
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
@@ -11,6 +11,7 @@ import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } 
 //
 // `ref_invoice_id` FK is added by the Domain 8 migration (forward reference,
 // fixes §C1 of the original schema where it was inline-declared).
+@Traceable()
 @Entity('notifications')
 @Index('idx_notifications_user_id', ['userId'])
 export class Notification extends TraceableEntity {

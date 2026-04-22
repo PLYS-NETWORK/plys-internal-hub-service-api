@@ -1,5 +1,5 @@
 import { User } from '@database/entities/auth/user.entity';
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 import { Task } from './task.entity';
@@ -7,6 +7,7 @@ import { Task } from './task.entity';
 // Flat comment model. Soft-delete via `is_deleted` flag — body preserved for
 // audit. The AuditableEntity `deletedAt`/`deletedBy` columns also apply when
 // using TypeORM's softRemove path.
+@Auditable()
 @Entity('task_comments')
 @Index('idx_task_comments_task_id', ['taskId'])
 export class TaskComment extends AuditableEntity {

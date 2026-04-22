@@ -1,4 +1,4 @@
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { BusinessProfile } from '@database/entities/profiles/business-profile.entity';
 import { InvoiceStatus } from '@database/enums/invoice-status.enum';
 import {
@@ -14,6 +14,7 @@ import {
 
 import { BillingPeriod } from './billing-period.entity';
 
+@Auditable()
 @Entity('invoices')
 @Unique('uq_invoices_processor_invoice_id', ['processorInvoiceId'])
 @Index('idx_invoices_business_id', ['businessId'])

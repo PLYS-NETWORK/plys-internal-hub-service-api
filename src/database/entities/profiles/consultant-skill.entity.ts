@@ -1,4 +1,4 @@
-import { TraceableEntity } from '@database/entities/base/traceable.entity';
+import { Traceable, TraceableEntity } from '@database/entities/base/traceable.entity';
 import { ProficiencyLevel } from '@database/enums/proficiency-level.enum';
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 
@@ -7,6 +7,7 @@ import { Skill } from './skill.entity';
 
 // Junction table (composite PK) — extends TraceableEntity (createdAt + createdBy only).
 // Full audit (updated*/deleted*) is meaningless for a link row without an identity.
+@Traceable()
 @Entity('consultant_skills')
 @Index('idx_consultant_skills_skill_id', ['skillId'])
 export class ConsultantSkill extends TraceableEntity {

@@ -1,4 +1,4 @@
-import { TraceableEntity } from '@database/entities/base/traceable.entity';
+import { Traceable, TraceableEntity } from '@database/entities/base/traceable.entity';
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
 import { ProjectInterviewQuestion } from '../projects/project-interview-question.entity';
@@ -7,6 +7,7 @@ import { ProjectApplication } from './project-application.entity';
 // Stores a consultant's answer to a project interview question.
 // `question_text_snapshot` preserves the exact wording at submission time,
 // mirroring the pattern used by ApplicationAnswer for ScreeningQuestion.
+@Traceable()
 @Entity('interview_answers')
 @Unique('uq_interview_answers_application_question', ['applicationId', 'questionId'])
 export class InterviewAnswer extends TraceableEntity {

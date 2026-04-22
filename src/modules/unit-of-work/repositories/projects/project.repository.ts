@@ -13,10 +13,10 @@ import { IProjectRepository } from './interfaces';
 const SORTABLE_COLUMNS: Record<string, string> = {
   title: 'project.title',
   status: 'project.status',
-  required_consultants: 'project.required_consultants',
-  created_at: 'project.created_at',
+  required_consultants: 'project.requiredConsultants',
+  created_at: 'project.createdAt',
 };
-const DEFAULT_SORT_COLUMN = 'project.created_at';
+const DEFAULT_SORT_COLUMN = 'project.createdAt';
 
 @Injectable()
 export class ProjectRepository extends AbstractRepository<Project> implements IProjectRepository {

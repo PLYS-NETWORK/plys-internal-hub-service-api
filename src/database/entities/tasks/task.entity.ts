@@ -1,5 +1,5 @@
 import { User } from '@database/entities/auth/user.entity';
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
 import { Project } from '@database/entities/projects/project.entity';
 import { TaskCreationMode } from '@database/enums/task-creation-mode.enum';
@@ -35,6 +35,7 @@ import {
 //
 // `billing_period_id` FK is added by the Domain 8 migration once
 // `billing_periods` exists.
+@Auditable()
 @Entity('tasks')
 @Index('idx_tasks_project_status', ['projectId', 'kanbanStatus'])
 @Index('idx_tasks_billing_period', ['billingPeriodId'])

@@ -1,4 +1,4 @@
-import { TraceableEntity } from '@database/entities/base/traceable.entity';
+import { Traceable, TraceableEntity } from '@database/entities/base/traceable.entity';
 import { Task } from '@database/entities/tasks/task.entity';
 import { AiMessageRole } from '@database/enums/ai-message-role.enum';
 import {
@@ -16,6 +16,7 @@ import { AiTaskSession } from './ai-task-session.entity';
 // Append-only conversation log. Optional `linked_task_id` connects a message
 // to the task it produced. `message_order` is uniquely scoped to a session
 // (§M4 fix — was previously only soft-ordered).
+@Traceable()
 @Entity('ai_session_messages')
 @Unique('uq_ai_session_messages_session_order', ['sessionId', 'messageOrder'])
 @Index('idx_ai_messages_session_order', ['sessionId', 'messageOrder'])

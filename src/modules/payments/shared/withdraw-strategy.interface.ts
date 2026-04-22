@@ -9,5 +9,5 @@ import { WithdrawResponseDto } from '../dto/responses/withdraw-response.dto';
  * `PaymentsService` delegate without knowing the concrete platform.
  */
 export interface IWithdrawStrategy {
-  execute(amount: number): Promise<WithdrawResponseDto>;
+  execute(amount: number, successUrl: string, cancelUrl: string): Promise<WithdrawResponseDto>;
 }

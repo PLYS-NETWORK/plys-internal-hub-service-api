@@ -1,4 +1,4 @@
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { ActivePlatform } from '@database/enums/active-platform.enum';
 import { UserRole } from '@database/enums/user-role.enum';
 import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
@@ -9,6 +9,7 @@ import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 // Email uniqueness is enforced at the DB level via a functional unique index on
 // (platform, LOWER(email)) — defined below with synchronize:false so TypeORM
 // emits the expression form. Never rely on a column-level UNIQUE.
+@Auditable()
 @Entity('users')
 @Index('uq_users_platform_email_lower', { synchronize: false })
 export class User extends AuditableEntity {

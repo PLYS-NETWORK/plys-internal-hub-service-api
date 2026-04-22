@@ -1,10 +1,11 @@
 import { User } from '@database/entities/auth/user.entity';
-import { AuditableEntity } from '@database/entities/base/auditable.entity';
+import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
 // One business profile per user. The creating user is automatically the
 // `owner` in business_members — that table is the authoritative source for
 // permission checks, never business_profiles.user_id.
+@Auditable()
 @Entity('business_profiles')
 @Unique('uq_business_profiles_user_id', ['userId'])
 export class BusinessProfile extends AuditableEntity {
