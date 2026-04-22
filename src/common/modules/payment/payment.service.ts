@@ -63,8 +63,8 @@ export class PaymentService implements IPaymentService {
    * Validates the incoming webhook signature and returns a normalized event.
    * Must be called with the raw request body (Buffer) before any JSON parsing.
    */
-  public constructWebhookEvent(payload: Buffer, signature: string): IWebhookEvent {
-    return this.activeProvider().constructWebhookEvent(payload, signature);
+  public constructWebhookEvent(payload: Buffer, headers: Record<string, string>): IWebhookEvent {
+    return this.activeProvider().constructWebhookEvent(payload, headers);
   }
 
   /**
