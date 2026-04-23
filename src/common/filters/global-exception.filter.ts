@@ -1,6 +1,6 @@
-import { AppLogger } from '@common/modules/logger';
 import { ERROR_CODES, ErrorCode } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { StandardizedResponse } from '@common/response/standardized-response';
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
@@ -89,7 +89,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       requestId,
       deviceId,
     );
-    response.status(status).send(body);
+    response.code(status).send(body);
   }
 
   private mapHttpStatusToErrorCode(status: number): ErrorCode {
