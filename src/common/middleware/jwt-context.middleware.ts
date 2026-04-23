@@ -27,9 +27,11 @@ export class JwtContextMiddleware implements NestMiddleware {
           secret: this.envService.jwtAccessSecret,
         });
 
-        // Device-binding: if the JWT declares a deviceId the request must originate from the same device.
+        // Device-binding: reject only when the client sends x-device-id but it doesn't match
+        // the JWT. If the header is absent (e.g. browser clients) the check is skipped —
+        // enforcement requires the client to opt in by sending the header.
         const requestDeviceId = (req.headers as Record<string, string>)['x-device-id'] ?? null;
-        if (payload.deviceId && requestDeviceId !== payload.deviceId) {
+        if (payload.deviceId && requestDeviceId !== null && requestDeviceId !== payload.deviceId) {
           throw new TranslatableException({
             messageKey: 'error.auth.device_mismatch',
             errorCode: ERROR_CODES.AUTH_DEVICE_MISMATCH,
