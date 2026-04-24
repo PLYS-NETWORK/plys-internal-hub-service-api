@@ -33,4 +33,17 @@ export interface IConsultantProjectService {
    * @throws TranslatableException (403) — caller has no consultant profile.
    */
   findMatchingProjects(pageOptions: PageOptionsDto): Promise<PageDto<ConsultantProjectResponseDto>>;
+
+  /**
+   * Returns the detail of a single `public` project by ID.
+   *
+   * Any verified consultant may view any public project regardless of skill
+   * overlap — this is a direct lookup, not a matching query.
+   *
+   * @param id - UUID of the project.
+   * @returns Full project DTO including company info, skills, and interview questions.
+   * @throws TranslatableException (403) — caller has no consultant profile.
+   * @throws TranslatableException (404) — project not found or not in `public` status.
+   */
+  getProjectDetail(id: string): Promise<ConsultantProjectResponseDto>;
 }

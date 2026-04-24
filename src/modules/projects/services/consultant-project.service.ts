@@ -85,6 +85,38 @@ export class ConsultantProjectService implements IConsultantProjectService {
     return new PageDto(data, meta);
   }
 
+  /** @inheritdoc */
+  public async getProjectDetail(id: string): Promise<ConsultantProjectResponseDto> {
+    const consultantId = await this.resolveConsultantId();
+    this.logger.log(`getProjectDetail — start | projectId: ${id}, consultantId: ${consultantId}`);
+
+    const project = await this.uow.projects.findPublicById(id);
+    if (!project) {
+      this.logger.warn(`getProjectDetail — not found or not public | projectId: ${id}`);
+      throw new TranslatableException({
+        messageKey: 'error.project.not_found',
+        errorCode: ERROR_CODES.PROJECT_NOT_FOUND,
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    const [skills, questions, businessProfiles] = await Promise.all([
+      this.loadSkillsForProjects([id]),
+      this.loadQuestionsForProjects([id]),
+      this.loadBusinessProfiles([project.businessId]),
+    ]);
+
+    const dto = this.toResponseDto(
+      project,
+      skills.get(id) ?? [],
+      questions.get(id) ?? [],
+      businessProfiles.get(project.businessId),
+    );
+
+    this.logger.log(`getProjectDetail — complete | projectId: ${id}`);
+    return dto;
+  }
+
   // ─── Private helpers ───────────────────────────────────────────────────────
 
   private async resolveConsultantId(): Promise<string> {

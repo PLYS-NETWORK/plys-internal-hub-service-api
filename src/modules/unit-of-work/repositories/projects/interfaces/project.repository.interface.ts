@@ -17,4 +17,5 @@ export interface IProjectRepository extends AbstractRepository<Project> {
     skip: number,
     take: number,
   ): Promise<[Project[], number]>;
+  findPublicById(id: string): Promise<Project | null>;
 }

@@ -1,7 +1,6 @@
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
-import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { PlatformGuard } from '@common/guards/platform.guard';
 import { RolesGuard } from '@common/guards/roles.guard';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
@@ -10,6 +9,7 @@ import { UserRole } from '@database/enums/user-role.enum';
 import { Controller, Get, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+import { ListConsultantTransactionsDto } from '../dto/requests/list-consultant-transactions.dto';
 import { ConsultantTransactionResponseDto } from '../dto/responses';
 import { ConsultantPaymentsService } from './consultant-payments.service';
 
@@ -26,7 +26,7 @@ export class ConsultantPaymentsController {
   @Platform(ActivePlatform.CONSULTANT)
   @ApiOperation({ summary: 'List own consultant transactions' })
   public async listTransactions(
-    @Query() dto: PageOptionsDto,
+    @Query() dto: ListConsultantTransactionsDto,
   ): Promise<ITranslatedPayload<PageDto<ConsultantTransactionResponseDto>>> {
     const data = await this.consultantPaymentsService.listTransactions(dto);
     return { messageKey: 'success.ok', data };

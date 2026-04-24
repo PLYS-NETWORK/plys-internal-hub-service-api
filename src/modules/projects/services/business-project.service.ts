@@ -532,6 +532,38 @@ export class BusinessProjectService implements IBusinessProjectService {
     return new PageDto(data, meta);
   }
 
+  /** @inheritdoc */
+  public async deleteProject(id: string): Promise<void> {
+    const businessId = await this.resolveBusinessId();
+    this.logger.log(`deleteProject — start | projectId: ${id}`);
+
+    const project = await this.uow.projects.findByIdAndBusinessId(id, businessId);
+    if (!project) {
+      this.logger.warn(
+        `deleteProject — not found or forbidden | projectId: ${id}, businessId: ${businessId}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.project.not_found',
+        errorCode: ERROR_CODES.PROJECT_NOT_FOUND,
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    if (!SETUP_STATUSES.has(project.status)) {
+      this.logger.warn(
+        `deleteProject — status prevents deletion | projectId: ${id}, status: ${project.status}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.project.cannot_be_deleted',
+        errorCode: ERROR_CODES.PROJECT_CANNOT_BE_DELETED,
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+      });
+    }
+
+    await this.uow.projects.softDelete(id);
+    this.logger.log(`deleteProject — complete | projectId: ${id}`);
+  }
+
   // ─── Private helpers ───────────────────────────────────────────────────────
 
   /**

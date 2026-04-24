@@ -1,7 +1,6 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
-import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { AppLogger } from '@common/modules/logger';
@@ -9,6 +8,7 @@ import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
+import { ListConsultantTransactionsDto } from '../dto/requests/list-consultant-transactions.dto';
 import { ConsultantTransactionResponseDto } from '../dto/responses';
 import { IConsultantPaymentsService } from './interfaces/consultant-payments-service.interface';
 
@@ -24,7 +24,7 @@ export class ConsultantPaymentsService implements IConsultantPaymentsService {
   }
 
   public async listTransactions(
-    dto: PageOptionsDto,
+    dto: ListConsultantTransactionsDto,
   ): Promise<PageDto<ConsultantTransactionResponseDto>> {
     const userId = this.requestContext.userId!;
     this.logger.log(
@@ -40,8 +40,12 @@ export class ConsultantPaymentsService implements IConsultantPaymentsService {
       });
     }
 
+    const where: Record<string, unknown> = { consultantId: consultantProfile.id };
+    if (dto.type) where['type'] = dto.type;
+    if (dto.status) where['status'] = dto.status;
+
     const [transactions, itemCount] = await this.uow.consultantTransactions.findAndCount({
-      where: { consultantId: consultantProfile.id },
+      where,
       order: { createdAt: 'DESC' },
       skip: dto.skip,
       take: dto.limit,

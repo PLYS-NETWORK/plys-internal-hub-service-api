@@ -130,4 +130,16 @@ export interface IBusinessProjectService {
     projectId: string,
     pageOptions: PageOptionsDto,
   ): Promise<PageDto<ProjectMemberResponseDto>>;
+
+  /**
+   * Soft-deletes a project owned by the calling business.
+   *
+   * Only projects in `draft`, `setting_up`, or `configured` status may be
+   * deleted. Once a project is published or beyond, deletion is forbidden.
+   *
+   * @param id - UUID of the project to delete.
+   * @throws TranslatableException (404) — project not found or not owned by caller.
+   * @throws TranslatableException (422) — project status does not allow deletion.
+   */
+  deleteProject(id: string): Promise<void>;
 }

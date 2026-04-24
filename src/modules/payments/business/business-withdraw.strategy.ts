@@ -26,7 +26,11 @@ export class BusinessWithdrawStrategy implements IWithdrawStrategy {
     this.logger = new AppLogger(BusinessWithdrawStrategy.name, requestContext);
   }
 
-  public async execute(amount: number, successUrl: string, cancelUrl: string): Promise<WithdrawResponseDto> {
+  public async execute(
+    amount: number,
+    successUrl: string,
+    cancelUrl: string,
+  ): Promise<WithdrawResponseDto> {
     const userId = this.requestContext.userId!;
     this.logger.log(`execute — start | userId: ${userId}, amount: ${amount}`);
 

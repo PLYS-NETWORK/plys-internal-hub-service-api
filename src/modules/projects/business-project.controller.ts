@@ -8,6 +8,7 @@ import { UserRole } from '@database/enums/user-role.enum';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -109,6 +110,13 @@ export class BusinessProjectController {
   ): Promise<ITranslatedPayload<BusinessProjectResponseDto>> {
     const data = await this.businessProjectService.updateProject(id, dto);
     return { messageKey: 'success.project.updated', data };
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a draft, setting-up, or configured project' })
+  public async deleteProject(@Param('id') id: string): Promise<void> {
+    await this.businessProjectService.deleteProject(id);
   }
 
   @Patch(':id/status')

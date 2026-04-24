@@ -1,7 +1,6 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
-import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EnvironmentsService } from '@common/modules/environments';
 import { PaymentService } from '@common/modules/payment/payment.service';
@@ -15,6 +14,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import { CreateTopUpDto } from '../dto/requests/create-top-up.dto';
+import { ListBusinessTransactionsDto } from '../dto/requests/list-business-transactions.dto';
 import { SettleInvoiceDto } from '../dto/requests/settle-invoice.dto';
 import {
   SettleInvoiceResponseDto,
@@ -215,7 +215,9 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
     }
   }
 
-  public async listTransactions(dto: PageOptionsDto): Promise<PageDto<TransactionResponseDto>> {
+  public async listTransactions(
+    dto: ListBusinessTransactionsDto,
+  ): Promise<PageDto<TransactionResponseDto>> {
     const userId = this.requestContext.userId!;
     this.logger.log(
       `listTransactions — start | userId: ${userId}, page: ${dto.page}, limit: ${dto.limit}`,
@@ -230,8 +232,12 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
       });
     }
 
+    const where: Record<string, unknown> = { businessId: businessProfile.id };
+    if (dto.type) where['type'] = dto.type;
+    if (dto.status) where['status'] = dto.status;
+
     const [transactions, itemCount] = await this.uow.businessTransactions.findAndCount({
-      where: { businessId: businessProfile.id },
+      where,
       order: { createdAt: 'DESC' },
       skip: dto.skip,
       take: dto.limit,

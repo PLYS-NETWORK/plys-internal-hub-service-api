@@ -1,8 +1,10 @@
 import { PageDto } from '@common/dto/page.dto';
-import { PageOptionsDto } from '@common/dto/page-options.dto';
 
+import { ListConsultantTransactionsDto } from '../../dto/requests/list-consultant-transactions.dto';
 import { ConsultantTransactionResponseDto } from '../../dto/responses';
 
 export interface IConsultantPaymentsService {
-  listTransactions(dto: PageOptionsDto): Promise<PageDto<ConsultantTransactionResponseDto>>;
+  listTransactions(
+    dto: ListConsultantTransactionsDto,
+  ): Promise<PageDto<ConsultantTransactionResponseDto>>;
 }

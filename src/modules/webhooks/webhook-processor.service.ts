@@ -27,7 +27,10 @@ export class WebhookProcessorService {
   /**
    * Processes an incoming Polar webhook.
    */
-  public async processPolarWebhook(payload: Buffer, headers: Record<string, string>): Promise<void> {
+  public async processPolarWebhook(
+    payload: Buffer,
+    headers: Record<string, string>,
+  ): Promise<void> {
     this.logger.log(`processPolarWebhook — start`);
 
     const event = this.paymentService.constructWebhookEvent(payload, headers);
@@ -80,7 +83,10 @@ export class WebhookProcessorService {
   /**
    * Processes an incoming Stripe webhook.
    */
-  public async processStripeWebhook(payload: Buffer, headers: Record<string, string>): Promise<void> {
+  public async processStripeWebhook(
+    payload: Buffer,
+    headers: Record<string, string>,
+  ): Promise<void> {
     this.logger.log(`processStripeWebhook — start`);
 
     // Use Stripe provider to construct the event

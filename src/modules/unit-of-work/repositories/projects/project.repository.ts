@@ -86,4 +86,8 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
 
     return qb.getManyAndCount();
   }
+
+  public async findPublicById(id: string): Promise<Project | null> {
+    return this.findOne({ where: { id, status: ProjectStatus.PUBLIC } });
+  }
 }

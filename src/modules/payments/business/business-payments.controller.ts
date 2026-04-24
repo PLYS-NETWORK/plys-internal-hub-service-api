@@ -1,7 +1,6 @@
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
-import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { PlatformGuard } from '@common/guards/platform.guard';
 import { RolesGuard } from '@common/guards/roles.guard';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
@@ -20,6 +19,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { CreateTopUpDto } from '../dto/requests/create-top-up.dto';
+import { ListBusinessTransactionsDto } from '../dto/requests/list-business-transactions.dto';
 import { SettleInvoiceDto } from '../dto/requests/settle-invoice.dto';
 import {
   SettleInvoiceResponseDto,
@@ -67,7 +67,7 @@ export class BusinessPaymentsController {
   @Platform(ActivePlatform.BUSINESS)
   @ApiOperation({ summary: 'List own transactions' })
   public async listTransactions(
-    @Query() dto: PageOptionsDto,
+    @Query() dto: ListBusinessTransactionsDto,
   ): Promise<ITranslatedPayload<PageDto<TransactionResponseDto>>> {
     const data = await this.businessPaymentsService.listTransactions(dto);
     return { messageKey: 'success.ok', data };
