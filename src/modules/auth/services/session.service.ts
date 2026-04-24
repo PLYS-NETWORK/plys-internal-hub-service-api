@@ -1,10 +1,10 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
-import { AppLogger } from '@common/modules/logger';
 import { EnvironmentsService } from '@common/modules/environments';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { ActivePlatform } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';

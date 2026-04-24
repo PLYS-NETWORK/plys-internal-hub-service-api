@@ -1,5 +1,5 @@
 import { User } from '@database/entities/auth/user.entity';
-import { ProjectStatus } from '@database/enums/project-status.enum';
+import { ProjectStatus } from '@database/enums';
 import {
   Column,
   CreateDateColumn,

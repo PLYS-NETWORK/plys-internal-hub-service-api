@@ -1,7 +1,7 @@
-import { AppLogger } from '@common/modules/logger';
 import { EnvironmentsService } from '@common/modules/environments';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { ActivePlatform } from '@database/enums';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { EMAIL_PROVIDER_TOKEN } from './constants';

@@ -1,5 +1,5 @@
 import { EnvironmentsService } from '@common/modules/environments';
-import { PaymentProcessor } from '@database/enums/payment-processor.enum';
+import { PaymentProcessor } from '@database/enums';
 import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { IPaymentProvider } from './interfaces/payment-provider.interface';

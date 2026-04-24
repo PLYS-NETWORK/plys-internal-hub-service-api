@@ -6,8 +6,16 @@ export interface IBusinessProjectPublishedReceiptTemplateOptions {
   readonly receiptNumber: string;
   readonly paidDate: string;
   readonly projectTitle: string;
+  /** How the business paid — e.g. 'Account Balance', 'Credit Card'. Never hardcode at call site. */
   readonly paymentMethod: string;
+  /** Task subtotal before commission. */
   readonly amount: string;
+  /** Commission rate as a display percentage string, e.g. '25.00'. */
+  readonly commissionRate: string;
+  /** Commission amount charged on top of the task subtotal. */
+  readonly commissionAmount: string;
+  /** Total amount charged = amount + commissionAmount. */
+  readonly totalAmount: string;
   readonly projectDashboardUrl: string;
   readonly invoiceDownloadUrl?: string;
 }
@@ -22,6 +30,9 @@ export async function buildBusinessProjectPublishedReceiptEmail(
     projectTitle,
     paymentMethod,
     amount,
+    commissionRate,
+    commissionAmount,
+    totalAmount,
     projectDashboardUrl,
     invoiceDownloadUrl = '#',
   } = options;
@@ -33,6 +44,9 @@ export async function buildBusinessProjectPublishedReceiptEmail(
     projectTitle,
     paymentMethod,
     amount,
+    commissionRate,
+    commissionAmount,
+    totalAmount,
     projectDashboardUrl,
     invoiceDownloadUrl,
     year: new Date().getFullYear(),

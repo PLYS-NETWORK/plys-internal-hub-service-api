@@ -1,7 +1,7 @@
 import { Order } from '@common/dto/page-options.dto';
 import { AbstractRepository } from '@common/repositories';
 import { Project } from '@database/entities';
-import { ProjectStatus } from '@database/enums/project-status.enum';
+import { ProjectStatus } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';

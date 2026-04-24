@@ -1,11 +1,10 @@
-import { AppLogger } from '@common/modules/logger';
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EnvironmentsService } from '@common/modules/environments';
+import { AppLogger } from '@common/modules/logger';
 import { PaymentService } from '@common/modules/payment/payment.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { BusinessTransactionType } from '@database/enums/business-transaction-type.enum';
-import { TransactionStatus } from '@database/enums/transaction-status.enum';
+import { BusinessTransactionType, Currency, TransactionStatus } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -108,7 +107,7 @@ export class BusinessWithdrawStrategy implements IWithdrawStrategy {
       try {
         const transferResult = await this.paymentService.createTransfer({
           amount: Math.round(amount * 100),
-          currency: 'USD',
+          currency: Currency.USD,
           destinationAccountId: businessProfile.stripeConnectAccountId!,
           transactionId: saved.id,
           description: `Withdrawal for business ${businessProfile.id}`,

@@ -1,4 +1,4 @@
-import { TaskDifficulty } from '@database/enums/task-difficulty.enum';
+import { TaskDifficulty } from '@database/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { IsEnum, IsInt, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';

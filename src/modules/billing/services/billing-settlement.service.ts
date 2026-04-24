@@ -1,18 +1,20 @@
-import { AppLogger } from '@common/modules/logger';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ConsultantTransaction } from '@database/entities/finance/consultant-transaction.entity';
 import { Invoice } from '@database/entities/finance/invoice.entity';
-import { BillingPeriodStatus } from '@database/enums/billing-period-status.enum';
-import { BusinessTransactionType } from '@database/enums/business-transaction-type.enum';
-import { ConsultantTransactionType } from '@database/enums/consultant-transaction-type.enum';
-import { InvoiceStatus } from '@database/enums/invoice-status.enum';
-import { TransactionStatus } from '@database/enums/transaction-status.enum';
+import {
+  BillingPeriodStatus,
+  BusinessTransactionType,
+  ConsultantTransactionType,
+  InvoiceStatus,
+  TransactionStatus,
+} from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { DataSource } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
 
 const MONTH_NAMES = [
   'January',
@@ -32,6 +34,7 @@ const MONTH_NAMES = [
 interface ISettlementResult {
   readonly invoice: Invoice;
   readonly taskTotal: number;
+  readonly commissionRate: number;
   readonly commissionAmount: number;
   readonly invoiceTotal: number;
   readonly dueDate: Date;
@@ -41,14 +44,15 @@ interface ISettlementResult {
 /**
  * Monthly settlement cron for credit-based businesses.
  *
- * On the 1st of every month at 08:00:
- * 1. Find all CREDIT_PENDING consultant transactions from the previous month
- * 2. Group by business → settle each business atomically:
- *    a. Generate invoice with 25% platform commission ON TOP
- *    b. Link consultant transactions to the invoice (keep PENDING)
- *    c. Create business transaction for the invoice total
- *    d. Set billing period to FINALIZED
- *    e. Send email notification to business
+ * On the 1st of every month at 08:00, runs two phases:
+ *
+ * Phase 1 — createMonthlyInvoices: for every business with CREDIT_PENDING
+ *   consultant transactions in the previous month, atomically creates:
+ *   invoice, line items, business transaction, billing period finalisation.
+ *
+ * Phase 2 — dispatchPendingInvoiceEmails: queries invoices from that period
+ *   where notifiedAt IS NULL and attempts email delivery. Each success stamps
+ *   notifiedAt, making the phase idempotent and retryable.
  *
  * Consultants are NOT credited here — they receive payment only after the
  * business settles the invoice via the payment checkout flow.
@@ -56,6 +60,10 @@ interface ISettlementResult {
 @Injectable()
 export class BillingSettlementService {
   private readonly logger: AppLogger;
+
+  private get rid(): string {
+    return this.requestContext.requestId;
+  }
 
   constructor(
     private readonly uow: UnitOfWorkService,
@@ -69,14 +77,29 @@ export class BillingSettlementService {
 
   @Cron('0 8 1 * *')
   public async settleMonthlyCredits(): Promise<void> {
-    this.logger.log('settleMonthlyCredits — start');
-
     const now = new Date();
     const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
     const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
 
-    // Find all pending consultant transactions from previous month linked to
-    // tasks in in_progress projects owned by credit-based businesses
+    // Phase 1: create all invoices for the period
+    await this.runSettlement(prevYear, prevMonth);
+
+    // Phase 2: send emails for invoices without a notifiedAt stamp
+    await this.dispatchPendingInvoiceEmails(prevYear, prevMonth);
+  }
+
+  /**
+   * Core settlement logic — shared by the cron and the admin manual trigger.
+   *
+   * @param year  Full year (e.g. 2026)
+   * @param month 0-indexed month (0 = January … 11 = December)
+   * @param businessId Optional: settle only this business; if omitted settle all.
+   */
+  public async runSettlement(year: number, month: number, businessId?: string): Promise<void> {
+    this.logger.log(
+      `[${this.rid}] runSettlement — start | year: ${year}, month: ${month + 1}${businessId ? `, businessId: ${businessId}` : ''}`,
+    );
+
     const pendingTxns = await this.uow.consultantTransactions.find({
       where: {
         type: ConsultantTransactionType.CREDIT_PENDING,
@@ -85,7 +108,7 @@ export class BillingSettlementService {
       relations: { task: { project: true } },
     });
 
-    // Filter to previous month and group by business
+    // Filter to requested period and optionally to a single business
     const byBusiness = new Map<string, typeof pendingTxns>();
 
     for (const txn of pendingTxns) {
@@ -93,30 +116,170 @@ export class BillingSettlementService {
 
       const createdMonth = txn.createdAt.getMonth();
       const createdYear = txn.createdAt.getFullYear();
-      if (createdMonth !== prevMonth || createdYear !== prevYear) continue;
+      if (createdMonth !== month || createdYear !== year) continue;
 
-      const businessId = txn.task.project.businessId;
-      const list = byBusiness.get(businessId) ?? [];
+      const bid = txn.task.project.businessId;
+      if (businessId && bid !== businessId) continue;
+
+      const list = byBusiness.get(bid) ?? [];
       list.push(txn);
-      byBusiness.set(businessId, list);
+      byBusiness.set(bid, list);
     }
 
     this.logger.log(
-      `settleMonthlyCredits — found ${pendingTxns.length} pending transactions across ${byBusiness.size} businesses`,
+      `[${this.rid}] runSettlement — found ${pendingTxns.length} pending transactions across ${byBusiness.size} businesses`,
     );
 
-    for (const [businessId, txns] of byBusiness) {
+    for (const [bid, txns] of byBusiness) {
+      // Idempotency guard: skip businesses that already have an invoice for this period
+      const sqlMonth = month + 1;
+      const periodStart = `${year}-${String(sqlMonth).padStart(2, '0')}-01`;
+      const existing = await this.uow.invoices.findOne({
+        where: { billingPeriod: { businessId: bid, periodStart } },
+        relations: { billingPeriod: true },
+      });
+      if (existing) {
+        this.logger.warn(
+          `[${this.rid}] runSettlement — invoice already exists, skipping | businessId: ${bid}`,
+        );
+        continue;
+      }
+
       try {
-        await this.settleBusinessCredits(businessId, txns, prevYear, prevMonth);
+        await this.settleBusinessCredits(bid, txns, year, month);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         this.logger.error(
-          `settleMonthlyCredits — failed for business ${businessId} | error: ${message}`,
+          `[${this.rid}] runSettlement — failed for business ${bid} | error: ${message}`,
         );
       }
     }
 
-    this.logger.log('settleMonthlyCredits — complete');
+    this.logger.log(`[${this.rid}] runSettlement — complete`);
+  }
+
+  /**
+   * Sends the monthly invoice email for a single invoice.
+   * Sets invoice.notifiedAt on success. Failures are logged but not thrown.
+   * Called by both the cron phase 2 and the admin manual send endpoint.
+   */
+  public async sendInvoiceEmail(invoice: Invoice): Promise<void> {
+    const invoiceWithRelations = await this.uow.invoices.findOne({
+      where: { id: invoice.id },
+      relations: { billingPeriod: true },
+    });
+
+    if (!invoiceWithRelations?.billingPeriod) {
+      this.logger.warn(
+        `[${this.rid}] sendInvoiceEmail — billingPeriod not found | invoiceId: ${invoice.id}`,
+      );
+      return;
+    }
+
+    const businessProfile = await this.uow.businessProfiles.findOne({
+      where: { id: invoiceWithRelations.businessId },
+      relations: { user: true },
+    });
+
+    if (!businessProfile?.user?.email) {
+      this.logger.warn(
+        `[${this.rid}] sendInvoiceEmail — no email for business | businessId: ${invoiceWithRelations.businessId}`,
+      );
+      return;
+    }
+
+    // Load line items with task titles for the email body
+    const lineItems = await this.uow.invoiceLineItems.find({
+      where: { invoiceId: invoiceWithRelations.id },
+      relations: { task: true },
+    });
+
+    // Derive month/year from billing period start date (format: YYYY-MM-DD)
+    const periodStart = new Date(invoiceWithRelations.billingPeriod.periodStart);
+    const month = periodStart.getMonth(); // 0-indexed
+    const year = periodStart.getFullYear();
+
+    const dueDate = invoiceWithRelations.dueDate
+      ? new Date(invoiceWithRelations.dueDate).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })
+      : '';
+
+    // Use the snapshotted breakdown stored on the invoice — no reverse-computation needed.
+    const taskTotal = invoiceWithRelations.taskTotal;
+    const commissionAmount = invoiceWithRelations.commissionAmount;
+
+    try {
+      await this.emailService.sendMonthlyInvoiceEmail(businessProfile.user.email, {
+        businessName: businessProfile.companyName,
+        invoiceNumber: invoiceWithRelations.id,
+        billingPeriod: `${MONTH_NAMES[month]} ${year}`,
+        dueDate,
+        taskTotal,
+        commissionAmount,
+        invoiceTotal: invoiceWithRelations.amount,
+        lineItems: lineItems.map((item) => ({
+          taskName: item.task?.title ?? 'Task settlement',
+          amount: item.amount,
+        })),
+        payInvoiceUrl: `${this.env.ployosUrl}/billing/invoices/${invoiceWithRelations.id}/pay`,
+      });
+
+      // Stamp notifiedAt so this invoice is skipped in future dispatch runs
+      await this.uow.invoices.update(invoiceWithRelations.id, { notifiedAt: new Date() });
+
+      this.logger.log(
+        `[${this.rid}] sendInvoiceEmail — complete | invoiceId: ${invoiceWithRelations.id}`,
+      );
+    } catch (emailError) {
+      const message = emailError instanceof Error ? emailError.message : String(emailError);
+      this.logger.error(
+        `[${this.rid}] sendInvoiceEmail — failed | invoiceId: ${invoiceWithRelations.id}, error: ${message}`,
+      );
+    }
+  }
+
+  /**
+   * Phase 2 of the monthly cron: sends emails for all invoices in the given period
+   * that have not yet received a notification (notifiedAt IS NULL).
+   * Idempotent — safe to run multiple times; already-notified invoices are skipped.
+   */
+  public async dispatchPendingInvoiceEmails(year: number, month: number): Promise<void> {
+    const sqlMonth = month + 1;
+    const periodStart = `${year}-${String(sqlMonth).padStart(2, '0')}-01`;
+
+    this.logger.log(`[${this.rid}] dispatchPendingInvoiceEmails — start | period: ${periodStart}`);
+
+    const unnotifiedInvoices = await this.uow.invoices.find({
+      where: {
+        notifiedAt: IsNull(),
+        status: InvoiceStatus.PENDING,
+        billingPeriod: { periodStart },
+      },
+      relations: { billingPeriod: true },
+    });
+
+    this.logger.log(
+      `[${this.rid}] dispatchPendingInvoiceEmails — found ${unnotifiedInvoices.length} unnotified invoices`,
+    );
+
+    let sent = 0;
+    let failed = 0;
+
+    for (const invoice of unnotifiedInvoices) {
+      try {
+        await this.sendInvoiceEmail(invoice);
+        sent++;
+      } catch {
+        failed++;
+      }
+    }
+
+    this.logger.log(
+      `[${this.rid}] dispatchPendingInvoiceEmails — complete | sent: ${sent}, failed: ${failed}`,
+    );
   }
 
   private async settleBusinessCredits(
@@ -126,14 +289,18 @@ export class BillingSettlementService {
     month: number,
   ): Promise<void> {
     this.logger.log(
-      `settleBusinessCredits — start | businessId: ${businessId}, transactions: ${pendingTxns.length}`,
+      `[${this.rid}] settleBusinessCredits — start | businessId: ${businessId}, transactions: ${pendingTxns.length}`,
     );
 
-    // Why transaction returns data: email is sent after commit so a failure
-    // does not roll back the invoice. The transaction block returns all data
-    // needed for the notification.
-    const result = await this.uow.withTransaction(async (txUow) => {
-      // 1. Calculate invoice totals
+    await this.uow.withTransaction(async (txUow) => {
+      // 1. Load the business commission rate — snapshot at invoice creation time
+      // so future rate changes don't alter historical invoices.
+      const businessProfile = await txUow.businessProfiles.findOne({
+        where: { id: businessId },
+      });
+      const commissionRate = Number(businessProfile?.commissionRate ?? 0.25);
+
+      // 2. Calculate invoice totals
       // taskTotal = sum of task prices (what the business owes for completed tasks)
       // Why non-null assertions: caller filters out transactions with null task/project
       let taskTotal = 0;
@@ -141,10 +308,10 @@ export class BillingSettlementService {
         taskTotal += Number(txn.task!.price);
       }
 
-      const commissionAmount = taskTotal * 0.25; // 25% platform fee ON TOP
+      const commissionAmount = taskTotal * commissionRate;
       const invoiceTotal = taskTotal + commissionAmount;
 
-      // 2. Get or create billing period via SQL function (race-safe)
+      // 3. Get or create billing period via SQL function (race-safe)
       // month is 0-indexed from JS, SQL function expects 1-indexed
       const sqlMonth = month + 1;
       const periodResult = await this.dataSource.query(
@@ -153,18 +320,21 @@ export class BillingSettlementService {
       );
       const billingPeriodId = periodResult[0].id as string;
 
-      // 3. Create invoice
+      // 4. Create invoice — store the rate snapshot and full breakdown explicitly
       const dueDate = new Date(year, month + 1, 15); // 15th of current month
       const invoice = txUow.invoices.create({
         billingPeriodId,
         businessId,
+        taskTotal: taskTotal.toFixed(2),
+        commissionRate: commissionRate.toFixed(4),
+        commissionAmount: commissionAmount.toFixed(2),
         amount: invoiceTotal.toFixed(2),
         status: InvoiceStatus.PENDING,
         dueDate: dueDate.toISOString().split('T')[0],
       });
       const savedInvoice = await txUow.invoices.save(invoice);
 
-      // 4. Link consultant transactions to this invoice (keep PENDING)
+      // 5. Link consultant transactions to this invoice (keep PENDING)
       // Why: consultant transactions stay PENDING until the business pays the
       // invoice. The webhook handler uses invoiceId to find and credit them.
       for (const txn of pendingTxns) {
@@ -175,7 +345,7 @@ export class BillingSettlementService {
         }
       }
 
-      // 5. Create line items per settled task
+      // 6. Create line items per settled task
       for (const txn of pendingTxns) {
         const lineItem = txUow.invoiceLineItems.create({
           invoiceId: savedInvoice.id,
@@ -190,18 +360,18 @@ export class BillingSettlementService {
         await txUow.invoiceLineItems.save(lineItem);
       }
 
-      // 6. Create business transaction for the invoice
+      // 7. Create business transaction for the invoice
       const businessTxn = txUow.businessTransactions.create({
         businessId,
         type: BusinessTransactionType.MONTHLY_BILLING,
         amount: invoiceTotal.toFixed(2),
         status: TransactionStatus.PENDING,
         invoiceId: savedInvoice.id,
-        note: `Monthly billing: ${year}-${String(sqlMonth).padStart(2, '0')} (tasks: ${taskTotal.toFixed(2)} + commission: ${commissionAmount.toFixed(2)})`,
+        note: `Monthly billing: ${year}-${String(sqlMonth).padStart(2, '0')} (tasks: ${taskTotal.toFixed(2)} + commission ${(commissionRate * 100).toFixed(0)}%: ${commissionAmount.toFixed(2)})`,
       });
       await txUow.businessTransactions.save(businessTxn);
 
-      // 7. Update billing period
+      // 8. Update billing period
       const billingPeriod = await txUow.billingPeriods.findOne({
         where: { id: billingPeriodId },
       });
@@ -215,6 +385,7 @@ export class BillingSettlementService {
       return {
         invoice: savedInvoice,
         taskTotal,
+        commissionRate,
         commissionAmount,
         invoiceTotal,
         dueDate,
@@ -222,56 +393,6 @@ export class BillingSettlementService {
       } satisfies ISettlementResult;
     });
 
-    // Send email notification after transaction commits (best-effort)
-    await this.sendInvoiceNotification(businessId, result, year, month);
-
-    this.logger.log(`settleBusinessCredits — complete | businessId: ${businessId}`);
-  }
-
-  /**
-   * Sends the monthly invoice email to the business owner.
-   * Failures are logged but do not propagate — the invoice is already persisted.
-   */
-  private async sendInvoiceNotification(
-    businessId: string,
-    settlement: ISettlementResult,
-    year: number,
-    month: number,
-  ): Promise<void> {
-    const businessProfile = await this.uow.businessProfiles.findOne({
-      where: { id: businessId },
-      relations: { user: true },
-    });
-
-    if (!businessProfile?.user?.email) {
-      this.logger.warn(`settleBusinessCredits — no email for business | businessId: ${businessId}`);
-      return;
-    }
-
-    try {
-      await this.emailService.sendMonthlyInvoiceEmail(businessProfile.user.email, {
-        businessName: businessProfile.companyName,
-        invoiceNumber: settlement.invoice.id,
-        billingPeriod: `${MONTH_NAMES[month]} ${year}`,
-        dueDate: settlement.dueDate.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        }),
-        taskTotal: settlement.taskTotal.toFixed(2),
-        commissionAmount: settlement.commissionAmount.toFixed(2),
-        invoiceTotal: settlement.invoiceTotal.toFixed(2),
-        lineItems: settlement.pendingTxns.map((txn) => ({
-          taskName: txn.task?.title ?? 'Task settlement',
-          amount: Number(txn.task!.price).toFixed(2),
-        })),
-        payInvoiceUrl: `${this.env.ployosUrl}/billing/invoices/${settlement.invoice.id}/pay`,
-      });
-    } catch (emailError) {
-      const message = emailError instanceof Error ? emailError.message : String(emailError);
-      this.logger.error(
-        `settleBusinessCredits — email failed | businessId: ${businessId}, error: ${message}`,
-      );
-    }
+    this.logger.log(`[${this.rid}] settleBusinessCredits — complete | businessId: ${businessId}`);
   }
 }

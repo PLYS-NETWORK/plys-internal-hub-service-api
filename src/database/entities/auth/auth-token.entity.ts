@@ -1,5 +1,5 @@
 import { Traceable, TraceableEntity } from '@database/entities/base/traceable.entity';
-import { AuthTokenType } from '@database/enums/auth-token-type.enum';
+import { AuthTokenType } from '@database/enums';
 import {
   Column,
   Entity,

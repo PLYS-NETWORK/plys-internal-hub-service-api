@@ -67,6 +67,7 @@
     "cannot_withdraw": "Yalnızca bekleyen başvurular geri çekilebilir."
   },
   "billing": {
+    "period_not_found": "Faturalama dönemi bulunamadı.",
     "invoice_not_found": "Fatura bulunamadı.",
     "invoice_already_paid": "Bu fatura zaten ödenmiş.",
     "invoice_not_owned": "Bu faturaya erişim yetkiniz yok.",

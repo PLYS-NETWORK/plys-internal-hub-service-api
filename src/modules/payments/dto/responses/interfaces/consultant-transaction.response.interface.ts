@@ -1,5 +1,4 @@
-import { ConsultantTransactionType } from '@database/enums/consultant-transaction-type.enum';
-import { TransactionStatus } from '@database/enums/transaction-status.enum';
+import { ConsultantTransactionType, TransactionStatus } from '@database/enums';
 
 export interface IConsultantTransactionResponse {
   id: string;

@@ -2,8 +2,7 @@ import { Traceable, TraceableEntity } from '@database/entities/base/traceable.en
 import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
 import { Project } from '@database/entities/projects/project.entity';
 import { Task } from '@database/entities/tasks/task.entity';
-import { ConsultantTransactionType } from '@database/enums/consultant-transaction-type.enum';
-import { TransactionStatus } from '@database/enums/transaction-status.enum';
+import { ConsultantTransactionType, TransactionStatus } from '@database/enums';
 import {
   Column,
   Entity,
@@ -41,8 +40,21 @@ export class ConsultantTransaction extends TraceableEntity {
   @Column({ type: 'varchar', length: 20 })
   public type!: ConsultantTransactionType;
 
+  /** Consultant payout amount (after platform fee deduction). */
   @Column({ type: 'numeric', precision: 12, scale: 2 })
   public amount!: string;
+
+  /** Platform commission rate for this transaction (default 0; populated for future use). */
+  @Column({ name: 'commission_rate', type: 'numeric', precision: 5, scale: 4, default: 0 })
+  public commissionRate!: string;
+
+  /** Commission amount withheld (default 0; populated for future use). */
+  @Column({ name: 'commission_amount', type: 'numeric', precision: 12, scale: 2, default: 0 })
+  public commissionAmount!: string;
+
+  /** Gross amount before commission = amount + commission_amount (default 0). */
+  @Column({ name: 'total_amount', type: 'numeric', precision: 12, scale: 2, default: 0 })
+  public totalAmount!: string;
 
   @Column({ type: 'varchar', length: 20, default: TransactionStatus.COMPLETED })
   public status!: TransactionStatus;

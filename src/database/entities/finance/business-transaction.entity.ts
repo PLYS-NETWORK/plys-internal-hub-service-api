@@ -2,8 +2,7 @@ import { Traceable, TraceableEntity } from '@database/entities/base/traceable.en
 import { BusinessProfile } from '@database/entities/profiles/business-profile.entity';
 import { Project } from '@database/entities/projects/project.entity';
 import { Task } from '@database/entities/tasks/task.entity';
-import { BusinessTransactionType } from '@database/enums/business-transaction-type.enum';
-import { TransactionStatus } from '@database/enums/transaction-status.enum';
+import { BusinessTransactionType, TransactionStatus } from '@database/enums';
 import {
   Column,
   Entity,
@@ -40,8 +39,21 @@ export class BusinessTransaction extends TraceableEntity {
   @Column({ type: 'varchar', length: 25 })
   public type!: BusinessTransactionType;
 
+  /** Base/subtotal amount before commission (e.g. task prices sum, top-up value). */
   @Column({ type: 'numeric', precision: 12, scale: 2 })
   public amount!: string;
+
+  /** Commission rate snapshot; null for transaction types where commission does not apply. */
+  @Column({ name: 'commission_rate', type: 'numeric', precision: 5, scale: 4, nullable: true })
+  public commissionRate!: string | null;
+
+  /** Commission amount = amount × commission_rate; null when commission does not apply. */
+  @Column({ name: 'commission_amount', type: 'numeric', precision: 12, scale: 2, nullable: true })
+  public commissionAmount!: string | null;
+
+  /** Total charged = amount + commission_amount (equals amount when commission is null). */
+  @Column({ name: 'total_amount', type: 'numeric', precision: 12, scale: 2 })
+  public totalAmount!: string;
 
   @Column({ type: 'varchar', length: 20, default: TransactionStatus.COMPLETED })
   public status!: TransactionStatus;

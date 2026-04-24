@@ -1,6 +1,5 @@
 import { PageOptionsDto } from '@common/dto/page-options.dto';
-import { ConsultantTransactionType } from '@database/enums/consultant-transaction-type.enum';
-import { TransactionStatus } from '@database/enums/transaction-status.enum';
+import { ConsultantTransactionType, TransactionStatus } from '@database/enums';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional } from 'class-validator';
 

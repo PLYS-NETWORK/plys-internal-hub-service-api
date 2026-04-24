@@ -4,8 +4,7 @@ import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { ActivePlatform } from '@database/enums/active-platform.enum';
-import { SsoProvider } from '@database/enums/sso-provider.enum';
+import { ActivePlatform, SsoProvider } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 

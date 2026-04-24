@@ -1,178 +1,202 @@
 # Billing — Business Context
 
 ## Purpose
-Owns monthly billing periods per business, the invoice generated for each period, and the per-task line items that make up that invoice. Runs the monthly credit settlement cron that generates invoices for credit-based businesses. Consultants are NOT paid during settlement — they are credited only after the business pays the invoice. Real money is processed by Polar — this module is a ledger.
+Owns the monthly credit-based billing cycle for businesses that do not pay upfront. Each month the system closes a billing period, creates an invoice with a line-item breakdown of settled tasks, sends the invoice by email, and processes payment via the Payments module when the business pays. Also exposes admin-only endpoints for manual operations.
 
 ## Tables owned
-- `billing_periods` — monthly window per business; status moves through `open → finalized → paid`.
-- `invoices` — one per billing period; carries the processor's invoice id + payment URL for reconciliation.
-- `invoice_line_items` — one per approved task; stores `amount`, `platform_fee_amount`, `consultant_payout` snapshot.
+- `billing_periods` — one row per business per calendar month; tracks open/finalized/paid state.
+- `invoices` — one invoice per billing period; holds amounts, commission snapshot, processor IDs, payment status.
+- `invoice_line_items` — one row per settled task; snapshot of task pricing, platform fee, and consultant payout at settlement time.
+
+---
+
+## Key entities
+
+### BillingPeriod
+| Field | Notes |
+|---|---|
+| `business_id` | FK to `business_profiles` |
+| `period_start` | First day of the month (`YYYY-MM-DD`) |
+| `period_end` | Last day of the month |
+| `status` | `OPEN → FINALIZED → PAID` (or `OVERDUE`, `DISPUTED`) |
+| `total_amount` | Sum of all settled task amounts in the period |
+| `finalized_at` | Timestamp when the period was closed by the cron |
+
+### Invoice
+| Field | Notes |
+|---|---|
+| `billing_period_id` | 1:1 FK (unique) |
+| `business_id` | Denormalized for query convenience |
+| `task_total` | Sum of task prices — subtotal before commission |
+| `commission_rate` | Snapshotted from `business_profiles.commission_rate` at invoice creation |
+| `commission_amount` | `task_total × commission_rate` |
+| `amount` | Total charged = `task_total + commission_amount` |
+| `currency` | `Currency.USD` (default) |
+| `status` | `PENDING → PAID` (or `OVERDUE`, `CANCELLED`, `REFUNDED`) |
+| `due_date` | Payment deadline |
+| `paid_at` | Timestamp when webhook confirmed payment |
+| `notified_at` | Timestamp when invoice email was successfully delivered (null = not yet sent) |
+| `processor_name` | `PaymentProcessor.POLAR` or `STRIPE` |
+| `processor_invoice_id` | Polar checkout ID / Stripe session ID (unique idempotency key) |
+| `processor_payment_url` | Hosted checkout URL shown to the business |
+
+### InvoiceLineItem
+| Field | Notes |
+|---|---|
+| `invoice_id` | FK to invoice |
+| `task_id` | FK to task (`SET NULL` on delete — snapshot survives task deletion) |
+| `consultant_id` | Consultant who completed the task |
+| `project_id` | Project the task belongs to |
+| `amount` | Full task price (= platform_fee_amount + consultant_payout) |
+| `platform_fee_amount` | Platform's share |
+| `consultant_payout` | Consultant's share |
+| DB CHECK | `amount = platform_fee_amount + consultant_payout` enforced at DB level |
+
+---
+
+## Monthly settlement flow (cron)
+
+**Schedule:** `@Cron('0 8 1 * *')` — 08:00 on the 1st of every month.
+
+Runs in two independent phases to make email delivery retryable:
+
+### Phase 1 — `createMonthlyInvoices(year, month)` (via `runSettlement`)
+For each credit-based business with tasks settled in the previous month:
+1. Load (or create) the `BillingPeriod` for `(businessId, year, month)`.
+2. Collect all `InvoiceLineItem` rows for that period.
+3. Compute:
+   - `taskTotal` = sum of line-item amounts.
+   - `commissionRate` = `businessProfile.commissionRate` (snapshotted now).
+   - `commissionAmount` = `taskTotal × commissionRate`.
+   - `invoiceTotal` = `taskTotal + commissionAmount`.
+4. Create `Invoice` with all amounts, `status: PENDING`, `notifiedAt: null`.
+5. Create `BusinessTransaction` (`type: MONTHLY_BILLING`, `status: PENDING`, `invoiceId` linked).
+6. Set `billingPeriod.status = FINALIZED`, stamp `finalizedAt`.
+
+### Phase 2 — `dispatchPendingInvoiceEmails(year, month)`
+Query invoices in that period where `notifiedAt IS NULL` AND `status = PENDING`:
+- Call `sendInvoiceEmail(invoice)` for each.
+- On success: stamp `invoice.notifiedAt = new Date()` and save.
+- On failure: log error, continue (individual failures do not abort the batch).
+- Log sent/failed counts at the end.
+
+**Why two phases?** If the mailer is down, `notifiedAt` stays null. The next cron (or admin manual resend) retries only the unsent invoices without re-creating transactions.
+
+---
+
+## `sendInvoiceEmail(invoice)` — shared helper
+Used by Phase 2 and the admin `POST /admin/bills/:invoiceId/send` endpoint.
+
+1. Load `billingPeriod`, `businessProfile`, `user`, and `lineItems` from the invoice.
+2. Build the email template with full amounts + line-item breakdown.
+3. Call `EmailService.sendMonthlyInvoiceEmail`.
+4. On success: set `invoice.notifiedAt = new Date()` and save.
+5. Throws on failure — caller decides whether to catch or propagate.
+
+---
+
+## Invoice payment flow
+
+1. Business sees a `PENDING` invoice; calls `POST /payments/business/settle-invoice`.
+2. PaymentsModule creates a Polar checkout session; saves `processorInvoiceId` + `processorPaymentUrl` on the invoice.
+3. Business pays at the Polar checkout URL.
+4. Polar fires `order.paid` → WebhooksModule → `BillingInvoiceService.completeInvoicePayment(invoiceId, transactionId, processorInvoiceId)`.
+5. `completeInvoicePayment`:
+   - Loads invoice; asserts `invoice.processorInvoiceId === processorInvoiceId` (anti-forgery check — mismatch is logged as error and silently skipped to avoid webhook retry storm).
+   - In a DB transaction:
+     - Set `invoice.status = PAID`, stamp `invoice.paidAt`.
+     - Update `BusinessTransaction` → `status: COMPLETED`.
+     - Set `billingPeriod.status = PAID`.
+
+---
+
+## Admin API (`BillingController` — `admin/bills`)
+
+All endpoints require `@Roles(UserRole.ADMIN_PLATFORM)`.
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/admin/bills` | Paginated list of billing periods with invoice summary. Filter by `status`, `business_id`. |
+| GET | `/admin/bills/:invoiceId` | Full invoice detail with commission breakdown and line items (task title, project title). |
+| POST | `/admin/bills/trigger-settlement` | Manually trigger settlement for a `year`/`month` (and optionally one `business_id`). |
+| POST | `/admin/bills/:invoiceId/send` | Manually (re)send the invoice email. Always updates `notifiedAt`. |
+
+### Bill detail response structure
+```json
+{
+  "id": "<billingPeriodId>",
+  "business_id": "...",
+  "period_start": "2026-04-01",
+  "period_end": "2026-04-30",
+  "status": "finalized",
+  "total_amount": "1250.00",
+  "finalized_at": "2026-05-01T08:00:00.000Z",
+  "invoice": {
+    "id": "<invoiceId>",
+    "task_total": "1000.00",
+    "commission_rate": "0.2500",
+    "commission_amount": "250.00",
+    "amount": "1250.00",
+    "currency": "USD",
+    "status": "pending",
+    "due_date": "2026-05-15",
+    "paid_at": null,
+    "notified_at": "2026-05-01T08:10:00.000Z",
+    "processor_name": "polar",
+    "processor_payment_url": "https://checkout.polar.sh/...",
+    "line_items": [
+      {
+        "task_id": "...",
+        "task_title": "Implement auth module",
+        "project_id": "...",
+        "project_title": "E-commerce Platform",
+        "consultant_id": "...",
+        "amount": "500.00",
+        "platform_fee_amount": "125.00",
+        "consultant_payout": "375.00"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## BillingPeriodStatus state machine
+```
+OPEN → FINALIZED → PAID
+              ↘ OVERDUE
+              ↘ DISPUTED
+```
+| Status | Meaning |
+|---|---|
+| `OPEN` | Period is accumulating task settlements. |
+| `FINALIZED` | Cron closed the period; invoice created and email pending. |
+| `PAID` | Invoice paid; webhook confirmed. |
+| `OVERDUE` | Past due date and not paid. |
+| `DISPUTED` | Manually flagged by admin. |
+
+---
+
+## Commission model
+- Rate stored on `business_profiles.commission_rate` (numeric 5,4; default `0.2500` = 25%).
+- **Snapshotted** into `invoices.commission_rate` at invoice creation — historical invoices remain correct if the rate changes later.
+- `commission_amount = task_total × commission_rate`.
+- `amount = task_total + commission_amount`.
+- Commission does NOT apply to pre-paid businesses (charged at project publish time via ProjectsModule).
+
+---
 
 ## Key invariants
-- **Always create periods via `get_or_create_billing_period(business_id, year, month)`.** Direct INSERTs race; the function uses `ON CONFLICT DO NOTHING`.
-- **One invoice per billing period.** `billing_period_id` UNIQUE on `invoices`.
-- **`processor_invoice_id` UNIQUE.** Polar will not let two invoices share an id. Webhook handlers rely on this for idempotent lookups.
-- **Line item math is consistent.** CHECK `amount = platform_fee_amount + consultant_payout` enforces internal consistency of the snapshot.
-- **`(invoice_id, task_id)` UNIQUE** on `invoice_line_items` — a task is billed at most once.
-- **`period_end >= period_start`** — CHECK constraint.
-- **25% platform commission ON TOP.** Invoice total = task total + (task total * 0.25). The commission is added on top of task prices, not deducted from them.
-
-## Monthly Credit Settlement
-
-### Schedule
-`@Cron('0 8 1 * *')` — runs on the 1st of every month at 08:00 AM.
-
-### Service: `BillingSettlementService`
-
-#### `settleMonthlyCredits()` — Cron Entry Point
-```
-1. Compute previous month (handles January → December year rollover)
-2. Find all ConsultantTransactions where:
-   - type = CREDIT_PENDING
-   - status = PENDING
-   - relations: task → project (for business grouping)
-3. Filter to transactions created in the previous month
-4. Group by businessId (derived from task.project.businessId)
-5. For each business: call settleBusinessCredits() in try/catch
-   - Failure for one business does not block others
-   - Errors are logged, not thrown
-```
-
-#### `settleBusinessCredits(businessId, pendingTxns, year, month)` — Per-Business Settlement
-All steps run inside a single `uow.withTransaction()` for atomicity.
-**Consultant crediting does NOT happen here** — it happens in the webhook handler after the business pays.
-
-```
-1. Calculate invoice totals
-   - taskTotal = SUM(task.price) for all settled tasks
-   - commissionAmount = taskTotal * 0.25  (25% platform fee ON TOP)
-   - invoiceTotal = taskTotal + commissionAmount
-
-2. Get or create billing period
-   - SQL: get_or_create_billing_period(businessId, year, month+1)
-   - Note: JS months are 0-indexed, SQL function expects 1-indexed
-
-3. Create invoice
-   - billingPeriodId, businessId, amount = invoiceTotal
-   - status = PENDING, dueDate = 15th of current month
-
-4. Link consultant transactions to invoice (keep PENDING)
-   - Set invoiceId on each ConsultantTransaction
-   - Status stays PENDING — consultants are credited on payment
-
-5. Create line items (one per settled task)
-   - Snapshot: amount (task.price), platformFeeAmount, consultantPayout
-   - Links: invoiceId, taskId, consultantId, projectId
-
-6. Create business transaction
-   - type = MONTHLY_BILLING, amount = invoiceTotal, status = PENDING
-   - invoiceId linked, note includes breakdown
-
-7. Update billing period
-   - status = FINALIZED, totalAmount = invoiceTotal, finalizedAt = NOW()
-```
-
-After the transaction commits (best-effort, failure does not roll back):
-```
-8. Send email notification to business
-   - Loads businessProfile with user relation for email
-   - Email includes: business name, billing period, due date, line items,
-     subtotal, commission, total, and "Pay Invoice" CTA link
-```
-
-## Invoice Payment Flow
-
-### API: `POST /payments/business/settle-invoice`
-Lives in the **payments module** (same pattern as top-up checkout).
-
-```
-1. Validate business ownership of invoice
-2. Reject if already PAID
-3. Find linked MONTHLY_BILLING business transaction
-4. Create Polar checkout session (invoiceProductId)
-   - metadata: { transactionId, businessId, invoiceId, type: 'invoice_payment' }
-5. Save processor IDs on invoice
-6. Return { invoice_id, redirect_url }
-```
-
-### Webhook: `handlePaymentSucceeded` (type = 'invoice_payment')
-Routes to `BillingInvoiceService.completeInvoicePayment()`.
-
-### Service: `BillingInvoiceService.completeInvoicePayment(invoiceId, transactionId)`
-All steps run inside a single `uow.withTransaction()` for atomicity. Idempotent — returns early if invoice is already PAID.
-
-```
-1. Mark invoice status = PAID, paidAt = NOW()
-2. Mark business transaction status = COMPLETED
-3. Mark billing period status = PAID
-4. Find all PENDING consultant transactions linked to this invoice
-5. Aggregate payout amounts by consultant
-6. Mark each consultant transaction status = COMPLETED
-7. Credit each consultant's accountBalance
-```
-
-### Settlement & Payment Flow Diagram
-```
-BillingSettlementService (cron: 1st of month, 08:00)
-  │
-  ├─ Find CREDIT_PENDING ConsultantTransactions from previous month
-  ├─ Group by business
-  │
-  └─ Per business (atomic transaction):
-       ├─ Calculate: taskTotal + 25% commission = invoiceTotal
-       ├─ get_or_create_billing_period(businessId, year, month)
-       ├─ Create Invoice (PENDING, due 15th)
-       ├─ Link ConsultantTransactions to invoice (keep PENDING)
-       ├─ Create InvoiceLineItem per task (snapshot)
-       ├─ Create BusinessTransaction (MONTHLY_BILLING, PENDING)
-       ├─ Finalize BillingPeriod
-       └─ Send email to business (best-effort, after commit)
-
-Business pays invoice:
-  POST /payments/business/settle-invoice
-  │
-  ├─ Validate ownership & status
-  ├─ Create Polar checkout session
-  └─ Return redirect URL
-
-Polar webhook (checkout.completed, type=invoice_payment):
-  BillingInvoiceService.completeInvoicePayment()
-  │
-  ├─ Mark Invoice PAID
-  ├─ Mark BusinessTransaction COMPLETED
-  ├─ Mark BillingPeriod PAID
-  ├─ Mark ConsultantTransactions COMPLETED
-  └─ Credit each consultant's accountBalance
-```
-
-## State machines
-```
-billing_periods:  open → finalized → paid
-                                  ↘ overdue → paid
-                                  ↘ disputed
-
-invoices:  pending → paid
-                  → overdue → paid
-                  → cancelled
-                  → refunded
-```
+- **`notifiedAt` is the email audit flag.** Phase 2 and admin resend query `notifiedAt IS NULL` to find unsent invoices. Never use any other field for this.
+- **`processorInvoiceId` cross-check.** Webhook completion asserts this matches the stored value — prevents a forged-metadata attack from marking an unrelated invoice paid.
+- **Commission snapshotted.** `invoices.commission_rate` never changes after creation.
+- **Line items are immutable.** Created once during settlement; never updated or deleted (task FK is `SET NULL` on task deletion, but the line item row survives).
+- **One invoice per billing period.** `uq_invoices_billing_period_id` enforces uniqueness at the DB level.
+- **Credit businesses only.** Pre-paid businesses (`allowPaymentCredit = false`) are charged at project publish time; they never appear in the billing cycle.
 
 ## External dependencies
-- **Tasks** — `tasks.billing_period_id` is set when a task enters billing. FK added in this domain's migration. Settlement reads `task.price`, `task.platformFeeAmount`, `task.consultantPayout` for line item snapshots.
-- **ConsultantProfiles** — `accountBalance` credited during invoice payment (NOT during settlement).
-- **ConsultantTransactions** — source data for settlement (CREDIT_PENDING, linked to invoice). Credited to COMPLETED on invoice payment. Owned by Payments module.
-- **BusinessTransactions** — MONTHLY_BILLING entries created during settlement. Owned by Payments module.
-- **Payments** — `POST /payments/business/settle-invoice` creates Polar checkout. Webhook routes `invoice_payment` type to `BillingInvoiceService`.
-- **Notifications** — invoice generated email sent during settlement (best-effort).
-- **WebhookEvents** — payment processor confirmations land in `webhook_events` first; webhook handler routes by `metadata.type`.
-- **DataSource** — direct SQL query for `get_or_create_billing_period()` function (race-safe upsert).
-
-## Critical edge cases
-- **Concurrent task approvals at month boundary.** Two tasks approved at 23:59:59 and 00:00:00 land in different periods — `get_or_create_billing_period` ensures the right one for each.
-- **January rollover.** `settleMonthlyCredits()` explicitly handles month 0 → previous December of prior year.
-- **Partial business failure.** If settlement fails for one business (e.g., missing data), other businesses are still settled. The failed business is logged and skipped.
-- **No pending transactions.** If a business has no CREDIT_PENDING transactions for the previous month, it is skipped entirely — no empty invoice created.
-- **Email failure.** If the email notification fails after settlement, the invoice is still persisted — email is best-effort.
-- **Invoice payment idempotency.** `completeInvoicePayment()` returns early if invoice is already PAID, preventing double crediting.
-- **Currency mismatch.** All line items in one invoice should share `currency`. No DB CHECK; service layer enforces.
-- **Null task/project on ConsultantTransaction.** The cron filters out transactions with null `task` or `task.project` (possible if task was deleted). Non-null assertions in `settleBusinessCredits()` rely on this pre-filtering.
+- **TasksModule** — tasks are marked settled (assigned to a `billing_period_id`) by the task settlement process; billing reads these.
+- **PaymentsModule** — `settleInvoice` creates the checkout; the webhook calls `completeInvoicePayment` back into billing.
+- **EmailService** — `sendMonthlyInvoiceEmail` sends the invoice notification email.
+- **BusinessProfile** — `commission_rate` read at invoice creation; `account_balance` is NOT touched by billing.

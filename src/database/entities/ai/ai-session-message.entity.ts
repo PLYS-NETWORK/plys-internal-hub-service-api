@@ -1,6 +1,6 @@
 import { Traceable, TraceableEntity } from '@database/entities/base/traceable.entity';
 import { Task } from '@database/entities/tasks/task.entity';
-import { AiMessageRole } from '@database/enums/ai-message-role.enum';
+import { AiMessageRole } from '@database/enums';
 import {
   Column,
   Entity,

@@ -1,8 +1,7 @@
 import { Public } from '@common/decorators/public.decorator';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { ActivePlatform } from '@database/enums/active-platform.enum';
-import { SsoProvider } from '@database/enums/sso-provider.enum';
+import { ActivePlatform, SsoProvider } from '@database/enums';
 import {
   Body,
   Controller,

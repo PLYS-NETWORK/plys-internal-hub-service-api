@@ -3,12 +3,17 @@ import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EnvironmentsService } from '@common/modules/environments';
+import { AppLogger } from '@common/modules/logger';
 import { PaymentService } from '@common/modules/payment/payment.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { BusinessTransactionType } from '@database/enums/business-transaction-type.enum';
-import { InvoiceStatus } from '@database/enums/invoice-status.enum';
-import { TransactionStatus } from '@database/enums/transaction-status.enum';
-import { AppLogger } from '@common/modules/logger';
+import {
+  BusinessTransactionType,
+  CheckoutPaymentType,
+  Currency,
+  InvoiceStatus,
+  PaymentProcessor,
+  TransactionStatus,
+} from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -63,14 +68,14 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
       const checkoutSession = await this.paymentService.createCheckoutSession({
         invoiceId: savedTransaction.id,
         amount: Math.round(dto.amount * 100), // Convert to cents
-        currency: 'USD',
+        currency: Currency.USD,
         successUrl: dto.successUrl,
         cancelUrl: dto.cancelUrl,
         externalProductId: this.env.polarTopUpProductId,
         metadata: {
           transactionId: savedTransaction.id,
           businessId: businessProfile.id,
-          type: 'top_up',
+          type: CheckoutPaymentType.TOP_UP,
         },
       });
 
@@ -175,12 +180,12 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
           transactionId: businessTxn.id,
           businessId: businessProfile.id,
           invoiceId: invoice.id,
-          type: 'invoice_payment',
+          type: CheckoutPaymentType.INVOICE_PAYMENT,
         },
       });
 
       // Save processor IDs on invoice for tracking
-      invoice.processorName = 'polar';
+      invoice.processorName = PaymentProcessor.POLAR;
       invoice.processorInvoiceId = checkoutSession.processorInvoiceId;
       invoice.processorPaymentIntentId = checkoutSession.processorPaymentIntentId;
       invoice.processorPaymentUrl = checkoutSession.processorPaymentUrl;

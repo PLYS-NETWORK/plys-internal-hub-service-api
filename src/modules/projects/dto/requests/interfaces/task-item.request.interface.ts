@@ -1,4 +1,4 @@
-import { TaskDifficulty } from '@database/enums/task-difficulty.enum';
+import { TaskDifficulty } from '@database/enums';
 
 export interface ITaskItemRequest {
   title: string;

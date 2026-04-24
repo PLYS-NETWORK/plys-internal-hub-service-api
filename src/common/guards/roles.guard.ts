@@ -1,6 +1,6 @@
 import { ROLES_KEY } from '@common/decorators/roles.decorator';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { UserRole } from '@database/enums/user-role.enum';
+import { UserRole } from '@database/enums';
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 

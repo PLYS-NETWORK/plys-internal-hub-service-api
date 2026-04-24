@@ -1,4 +1,4 @@
-import { TransactionStatus } from '@database/enums/transaction-status.enum';
+import { TransactionStatus } from '@database/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 

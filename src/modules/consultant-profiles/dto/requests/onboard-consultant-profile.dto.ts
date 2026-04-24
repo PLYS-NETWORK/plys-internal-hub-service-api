@@ -1,4 +1,4 @@
-import { ConsultantAvailability } from '@database/enums/consultant-availability.enum';
+import { ConsultantAvailability } from '@database/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import {

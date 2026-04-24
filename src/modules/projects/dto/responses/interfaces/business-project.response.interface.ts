@@ -1,4 +1,4 @@
-import { ProjectStatus } from '@database/enums/project-status.enum';
+import { ProjectStatus } from '@database/enums';
 
 import { IProjectInterviewQuestionResponse } from './project-interview-question.response.interface';
 import { IProjectSkillResponse } from './project-skill.response.interface';

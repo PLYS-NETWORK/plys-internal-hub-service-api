@@ -26,6 +26,18 @@ export class PublishValidationResponseDto implements IPublishValidationResponse 
   public readonly project_amount!: number;
 
   @Expose()
+  @ApiProperty({ example: 0.25, description: 'Commission rate as a decimal. Always 0 for credit businesses.' })
+  public readonly commission_rate!: number;
+
+  @Expose()
+  @ApiProperty({ example: 1250, description: 'Commission amount = project_amount × commission_rate.' })
+  public readonly commission_amount!: number;
+
+  @Expose()
+  @ApiProperty({ example: 6250, description: 'Total charged = project_amount + commission_amount.' })
+  public readonly total_amount!: number;
+
+  @Expose()
   @ApiProperty({ example: 'pre-paid', enum: ['credit', 'pre-paid'] })
   public readonly payment_type!: 'credit' | 'pre-paid';
 }

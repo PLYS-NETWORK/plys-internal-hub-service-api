@@ -52,8 +52,8 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
     // To add Apple/Microsoft: create the provider class and add it here.
     {
       provide: SSO_PROVIDERS_TOKEN,
-      useFactory: (google: GoogleSsoProvider | null) => {
-        return [google].filter(Boolean);
+      useFactory: (google: GoogleSsoProvider | null): GoogleSsoProvider[] => {
+        return [google].filter(Boolean) as GoogleSsoProvider[];
       },
       inject: [GoogleSsoProvider],
     },

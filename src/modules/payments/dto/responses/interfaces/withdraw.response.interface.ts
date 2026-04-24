@@ -1,4 +1,4 @@
-import { TransactionStatus } from '@database/enums/transaction-status.enum';
+import { TransactionStatus } from '@database/enums';
 
 export interface IWithdrawResponse {
   is_connected: boolean;

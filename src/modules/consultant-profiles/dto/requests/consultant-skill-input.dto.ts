@@ -1,4 +1,4 @@
-import { ProficiencyLevel } from '@database/enums/proficiency-level.enum';
+import { ProficiencyLevel } from '@database/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, IsUUID, Min } from 'class-validator';

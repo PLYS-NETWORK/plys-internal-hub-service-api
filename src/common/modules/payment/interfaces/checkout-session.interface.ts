@@ -1,10 +1,20 @@
 /**
  * Represents the normalized checkout session returned by any payment provider.
  * Maps directly to the processor_* columns on the Invoice entity.
+ *
+ * CONTRACT: `amount` is always the final, non-editable charge in minor units (cents).
+ * Payment provider implementations MUST enforce this — the customer must never be
+ * able to change the amount in the checkout UI.
  */
 export interface ICreateCheckoutSessionParams {
   /** Internal invoice ID — used as the order reference passed to the processor. */
   readonly invoiceId: string;
+  /**
+   * Final charge amount in minor currency units (e.g. cents).
+   * This value is enforced server-side — providers must reject any configuration
+   * that would allow the customer to alter it (e.g. editable amount on Polar
+   * requires the product to be custom-price type).
+   */
   readonly amount: number;
   /** ISO 4217 currency code, e.g. 'USD'. */
   readonly currency: string;
@@ -18,6 +28,11 @@ export interface ICreateCheckoutSessionParams {
    * Not required for Stripe (which creates line items from amount + currency).
    */
   readonly externalProductId?: string;
+  /**
+   * Human-readable description shown in the checkout UI as the line item name.
+   * Falls back to `Invoice <invoiceId>` when omitted.
+   */
+  readonly lineDescription?: string;
   /** Optional free-form metadata forwarded to the processor. */
   readonly metadata?: Record<string, string>;
 }

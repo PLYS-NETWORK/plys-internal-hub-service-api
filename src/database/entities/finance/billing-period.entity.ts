@@ -1,6 +1,6 @@
 import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { BusinessProfile } from '@database/entities/profiles/business-profile.entity';
-import { BillingPeriodStatus } from '@database/enums/billing-period-status.enum';
+import { BillingPeriodStatus } from '@database/enums';
 import {
   Check,
   Column,

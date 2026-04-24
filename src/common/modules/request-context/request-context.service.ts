@@ -1,5 +1,4 @@
-import { ActivePlatform } from '@database/enums/active-platform.enum';
-import { UserRole } from '@database/enums/user-role.enum';
+import { ActivePlatform, UserRole } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 import { AsyncLocalStorage } from 'async_hooks';
 

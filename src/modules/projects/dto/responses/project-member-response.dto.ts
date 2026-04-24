@@ -1,4 +1,4 @@
-import { ProjectMemberStatus } from '@database/enums/project-member-status.enum';
+import { ProjectMemberStatus } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 

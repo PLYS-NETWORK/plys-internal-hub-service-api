@@ -1,7 +1,7 @@
 import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
 import { Project } from '@database/entities/projects/project.entity';
-import { ProjectMemberStatus } from '@database/enums/project-member-status.enum';
+import { ProjectMemberStatus } from '@database/enums';
 import {
   Column,
   Entity,

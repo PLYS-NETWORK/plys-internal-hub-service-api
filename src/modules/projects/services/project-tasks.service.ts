@@ -1,9 +1,7 @@
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { Task } from '@database/entities';
-import { TaskCreationMode } from '@database/enums/task-creation-mode.enum';
-import { TaskDifficulty } from '@database/enums/task-difficulty.enum';
-import { TaskKanbanStatus } from '@database/enums/task-kanban-status.enum';
+import { TaskCreationMode, TaskDifficulty, TaskKanbanStatus } from '@database/enums';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable } from '@nestjs/common';

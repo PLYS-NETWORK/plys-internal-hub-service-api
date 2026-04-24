@@ -1,5 +1,12 @@
 import { AbstractRepository } from '@common/repositories';
 import { BillingPeriod } from '@database/entities';
+import { BillingPeriodStatus } from '@database/enums';
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface IBillingPeriodRepository extends AbstractRepository<BillingPeriod> {}
+export interface IBillingPeriodRepository extends AbstractRepository<BillingPeriod> {
+  findWithInvoice(
+    skip: number,
+    take: number,
+    status?: BillingPeriodStatus,
+    businessId?: string,
+  ): Promise<[BillingPeriod[], number]>;
+}

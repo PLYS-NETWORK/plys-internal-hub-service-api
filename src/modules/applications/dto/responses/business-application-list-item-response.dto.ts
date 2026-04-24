@@ -1,4 +1,4 @@
-import { ApplicationStatus } from '@database/enums/application-status.enum';
+import { ApplicationStatus } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 

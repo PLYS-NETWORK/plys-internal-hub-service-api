@@ -2,6 +2,7 @@ import { Traceable, TraceableEntity } from '@database/entities/base/traceable.en
 import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
 import { Project } from '@database/entities/projects/project.entity';
 import { Task } from '@database/entities/tasks/task.entity';
+import { Currency } from '@database/enums';
 import {
   Check,
   Column,
@@ -77,8 +78,8 @@ export class InvoiceLineItem extends TraceableEntity {
   @Column({ type: 'text', nullable: true })
   public description!: string | null;
 
-  @Column({ type: 'char', length: 3, default: 'USD' })
-  public currency!: string;
+  @Column({ type: 'char', length: 3, default: Currency.USD })
+  public currency!: Currency;
 
   @Column({ type: 'numeric', precision: 10, scale: 2 })
   public amount!: string;

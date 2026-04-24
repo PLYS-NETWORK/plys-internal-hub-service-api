@@ -1,4 +1,4 @@
-import { SsoProvider } from '@database/enums/sso-provider.enum';
+import { SsoProvider } from '@database/enums';
 
 import { ISsoUserData } from '../../interfaces/auth-service.interface';
 

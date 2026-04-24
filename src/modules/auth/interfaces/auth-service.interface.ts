@@ -1,5 +1,4 @@
-import { ActivePlatform } from '@database/enums/active-platform.enum';
-import { SsoProvider } from '@database/enums/sso-provider.enum';
+import { ActivePlatform, SsoProvider } from '@database/enums';
 import {
   AuthResponseDto,
   ChangePasswordDto,

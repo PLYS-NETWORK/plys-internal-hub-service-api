@@ -1,6 +1,6 @@
 import { User } from '@database/entities/auth/user.entity';
 import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
-import { TaskDisputeStatus } from '@database/enums/task-dispute-status.enum';
+import { TaskDisputeStatus } from '@database/enums';
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 import { Task } from './task.entity';

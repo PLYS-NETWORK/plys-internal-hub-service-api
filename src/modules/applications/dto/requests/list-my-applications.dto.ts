@@ -1,5 +1,5 @@
 import { PageOptionsDto } from '@common/dto/page-options.dto';
-import { ApplicationStatus } from '@database/enums/application-status.enum';
+import { ApplicationStatus } from '@database/enums';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { IsEnum, IsOptional } from 'class-validator';

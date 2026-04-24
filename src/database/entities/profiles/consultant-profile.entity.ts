@@ -1,6 +1,6 @@
 import { User } from '@database/entities/auth/user.entity';
 import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
-import { ConsultantAvailability } from '@database/enums/consultant-availability.enum';
+import { ConsultantAvailability } from '@database/enums';
 import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
 // One consultant profile per user. `max_concurrent_projects` is enforced by

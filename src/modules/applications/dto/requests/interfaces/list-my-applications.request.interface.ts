@@ -1,4 +1,4 @@
-import { ApplicationStatus } from '@database/enums/application-status.enum';
+import { ApplicationStatus } from '@database/enums';
 
 export interface IListMyApplicationsRequest {
   readonly status?: ApplicationStatus;

@@ -1,4 +1,4 @@
-import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { ActivePlatform } from '@database/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import {

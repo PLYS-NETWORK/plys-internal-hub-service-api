@@ -1,9 +1,9 @@
-import { AppLogger } from '@common/modules/logger';
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EnvironmentsService } from '@common/modules/environments';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { SsoProvider } from '@database/enums/sso-provider.enum';
+import { SsoProvider } from '@database/enums';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { OAuth2Client } from 'google-auth-library';
 

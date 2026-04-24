@@ -72,6 +72,7 @@
     "cannot_withdraw": "Only pending applications can be withdrawn."
   },
   "billing": {
+    "period_not_found": "Billing period not found.",
     "invoice_not_found": "Invoice not found.",
     "invoice_already_paid": "This invoice has already been paid.",
     "invoice_not_owned": "You do not have access to this invoice.",

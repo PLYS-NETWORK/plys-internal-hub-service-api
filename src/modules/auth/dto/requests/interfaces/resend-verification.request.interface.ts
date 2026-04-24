@@ -1,4 +1,4 @@
-import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { ActivePlatform } from '@database/enums';
 
 export interface IResendVerificationRequest {
   readonly email: string;

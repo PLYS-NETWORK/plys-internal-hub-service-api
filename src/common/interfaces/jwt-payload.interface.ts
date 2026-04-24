@@ -1,5 +1,4 @@
-import { ActivePlatform } from '@database/enums/active-platform.enum';
-import { UserRole } from '@database/enums/user-role.enum';
+import { ActivePlatform, UserRole } from '@database/enums';
 
 export interface JwtPayload {
   readonly sub: string;

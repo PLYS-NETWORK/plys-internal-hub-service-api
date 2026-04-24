@@ -1,5 +1,5 @@
 import { Traceable, TraceableEntity } from '@database/entities/base/traceable.entity';
-import { ProficiencyLevel } from '@database/enums/proficiency-level.enum';
+import { ProficiencyLevel } from '@database/enums';
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 
 import { ConsultantProfile } from './consultant-profile.entity';

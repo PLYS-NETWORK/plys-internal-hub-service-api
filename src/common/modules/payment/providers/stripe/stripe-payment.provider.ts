@@ -39,8 +39,12 @@ export class StripePaymentProvider implements IPaymentProvider {
           {
             price_data: {
               currency: params.currency.toLowerCase(),
+              // unit_amount is fixed — Stripe does not allow customer edits for
+              // inline price_data line items (no editable amount input in checkout UI).
               unit_amount: params.amount,
-              product_data: { name: `Invoice ${params.invoiceId}` },
+              product_data: {
+                name: params.lineDescription ?? `Invoice ${params.invoiceId}`,
+              },
             },
             quantity: 1,
           },

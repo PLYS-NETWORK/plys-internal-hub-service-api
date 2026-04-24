@@ -1,4 +1,4 @@
-import { PROJECT_STATUSES, ProjectStatus } from '@database/enums/project-status.enum';
+import { PROJECT_STATUSES, ProjectStatus } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { IsEnum } from 'class-validator';

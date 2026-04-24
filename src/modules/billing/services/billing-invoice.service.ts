@@ -1,27 +1,34 @@
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { BillingPeriodStatus } from '@database/enums/billing-period-status.enum';
-import { BusinessTransactionType } from '@database/enums/business-transaction-type.enum';
-import { ConsultantTransactionType } from '@database/enums/consultant-transaction-type.enum';
-import { InvoiceStatus } from '@database/enums/invoice-status.enum';
-import { TransactionStatus } from '@database/enums/transaction-status.enum';
+import {
+  BillingPeriodStatus,
+  BusinessTransactionType,
+  ConsultantTransactionType,
+  InvoiceStatus,
+  TransactionStatus,
+} from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable } from '@nestjs/common';
 
 /**
  * Handles post-payment logic for billing invoices.
  *
- * Called by the webhook handler after Polar confirms a successful invoice
+ * Called by the webhook handler after Polar/Stripe confirms a successful invoice
  * payment. Runs inside a single transaction to atomically:
- * 1. Mark invoice as PAID
- * 2. Mark the business transaction as COMPLETED
- * 3. Mark the billing period as PAID
- * 4. Credit each consultant whose tasks appear on the invoice
- * 5. Mark consultant transactions as COMPLETED
+ * 1. Verify processorInvoiceId matches to prevent metadata-forgery attacks
+ * 2. Mark invoice as PAID
+ * 3. Mark the business transaction as COMPLETED
+ * 4. Mark the billing period as PAID
+ * 5. Credit each consultant whose tasks appear on the invoice
+ * 6. Mark consultant transactions as COMPLETED
  */
 @Injectable()
 export class BillingInvoiceService {
   private readonly logger: AppLogger;
+
+  private get rid(): string {
+    return this.requestContext.requestId;
+  }
 
   constructor(
     private readonly uow: UnitOfWorkService,
@@ -33,33 +40,55 @@ export class BillingInvoiceService {
   /**
    * Completes invoice payment — credits consultants and updates all statuses.
    * Idempotent: returns early if the invoice is already PAID.
+   *
+   * @param invoiceId         Internal invoice UUID from webhook metadata.
+   * @param transactionId     Internal business transaction UUID from webhook metadata.
+   * @param processorInvoiceId The checkout/session ID issued by the processor.
+   *                          Must match the stored processorInvoiceId to prevent
+   *                          a forged metadata attack from marking an unrelated invoice paid.
    */
-  public async completeInvoicePayment(invoiceId: string, transactionId: string): Promise<void> {
+  public async completeInvoicePayment(
+    invoiceId: string,
+    transactionId: string,
+    processorInvoiceId: string,
+  ): Promise<void> {
     this.logger.log(
-      `completeInvoicePayment — start | invoiceId: ${invoiceId}, transactionId: ${transactionId}`,
+      `[${this.rid}] completeInvoicePayment — start | invoiceId: ${invoiceId}, transactionId: ${transactionId}`,
     );
 
     await this.uow.withTransaction(async (txUow) => {
       // 1. Find and validate invoice
       const invoice = await txUow.invoices.findOne({ where: { id: invoiceId } });
       if (!invoice) {
-        this.logger.warn(`completeInvoicePayment — invoice not found | invoiceId: ${invoiceId}`);
+        this.logger.warn(
+          `[${this.rid}] completeInvoicePayment — invoice not found | invoiceId: ${invoiceId}`,
+        );
         return;
       }
 
       if (invoice.status === InvoiceStatus.PAID) {
         this.logger.log(
-          `completeInvoicePayment — already paid, skipping | invoiceId: ${invoiceId}`,
+          `[${this.rid}] completeInvoicePayment — already paid, skipping | invoiceId: ${invoiceId}`,
         );
         return;
       }
 
-      // 2. Mark invoice as PAID
+      // 2. Verify processorInvoiceId to guard against metadata-forgery attacks.
+      // An attacker could craft a webhook with a valid processor event but swap the
+      // invoiceId in metadata — this check ties the processor checkout to this invoice.
+      if (invoice.processorInvoiceId !== processorInvoiceId) {
+        this.logger.error(
+          `[${this.rid}] completeInvoicePayment — processorInvoiceId mismatch, aborting | invoiceId: ${invoiceId}, expected: ${invoice.processorInvoiceId}, received: ${processorInvoiceId}`,
+        );
+        return;
+      }
+
+      // 3. Mark invoice as PAID
       invoice.status = InvoiceStatus.PAID;
       invoice.paidAt = new Date();
       await txUow.invoices.save(invoice);
 
-      // 3. Mark business transaction as COMPLETED
+      // 4. Mark business transaction as COMPLETED
       const businessTxn = await txUow.businessTransactions.findOne({
         where: {
           id: transactionId,
@@ -72,7 +101,7 @@ export class BillingInvoiceService {
         await txUow.businessTransactions.save(businessTxn);
       }
 
-      // 4. Mark billing period as PAID
+      // 5. Mark billing period as PAID
       const billingPeriod = await txUow.billingPeriods.findOne({
         where: { id: invoice.billingPeriodId },
       });
@@ -82,7 +111,7 @@ export class BillingInvoiceService {
         await txUow.billingPeriods.save(billingPeriod);
       }
 
-      // 5. Find all PENDING consultant transactions linked to this invoice
+      // 6. Find all PENDING consultant transactions linked to this invoice
       const consultantTxns = await txUow.consultantTransactions.find({
         where: {
           invoiceId: invoice.id,
@@ -91,7 +120,7 @@ export class BillingInvoiceService {
         },
       });
 
-      // 6. Aggregate payout amounts by consultant and credit balances
+      // 7. Aggregate payout amounts by consultant and credit balances
       // Why aggregate first: avoids multiple DB writes per consultant when
       // a single invoice contains multiple tasks for the same consultant.
       const creditsByConsultant = new Map<string, number>();
@@ -101,13 +130,13 @@ export class BillingInvoiceService {
         creditsByConsultant.set(txn.consultantId, current + Number(txn.amount));
       }
 
-      // 7. Mark each consultant transaction as COMPLETED
+      // 8. Mark each consultant transaction as COMPLETED
       for (const txn of consultantTxns) {
         txn.status = TransactionStatus.COMPLETED;
         await txUow.consultantTransactions.save(txn);
       }
 
-      // 8. Credit each consultant's account balance
+      // 9. Credit each consultant's account balance
       for (const [consultantId, totalCredit] of creditsByConsultant) {
         const consultantProfile = await txUow.consultantProfiles.findOne({
           where: { id: consultantId },
@@ -122,14 +151,14 @@ export class BillingInvoiceService {
           });
 
           this.logger.log(
-            `completeInvoicePayment — consultant credited | consultantId: ${consultantId}, amount: ${totalCredit.toFixed(2)}, newBalance: ${newBalance}`,
+            `[${this.rid}] completeInvoicePayment — consultant credited | consultantId: ${consultantId}, amount: ${totalCredit.toFixed(2)}, newBalance: ${newBalance}`,
           );
         }
       }
     });
 
     this.logger.log(
-      `completeInvoicePayment — complete | invoiceId: ${invoiceId}, transactionId: ${transactionId}`,
+      `[${this.rid}] completeInvoicePayment — complete | invoiceId: ${invoiceId}, transactionId: ${transactionId}`,
     );
   }
 }

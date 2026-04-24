@@ -1,5 +1,4 @@
-import { TaskDifficulty } from '@database/enums/task-difficulty.enum';
-import { TaskKanbanStatus } from '@database/enums/task-kanban-status.enum';
+import { TaskDifficulty, TaskKanbanStatus } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 

@@ -72,4 +72,18 @@ export class BusinessProfile extends AuditableEntity {
 
   @Column({ name: 'stripe_connect_account_id', type: 'varchar', length: 255, nullable: true })
   public stripeConnectAccountId!: string | null;
+
+  /**
+   * Platform commission rate applied to this business's monthly invoices (e.g. 0.25 = 25%).
+   * Stored per business so different tiers or partner rates can be configured independently.
+   * Default 0.25 matches the original hardcoded rate.
+   */
+  @Column({
+    name: 'commission_rate',
+    type: 'numeric',
+    precision: 5,
+    scale: 4,
+    default: 0.25,
+  })
+  public commissionRate!: string;
 }

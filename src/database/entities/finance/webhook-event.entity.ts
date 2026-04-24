@@ -1,5 +1,4 @@
-import { PaymentProcessor } from '@database/enums/payment-processor.enum';
-import { WebhookStatus } from '@database/enums/webhook-status.enum';
+import { PaymentProcessor, WebhookStatus } from '@database/enums';
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
 // Idempotency log of incoming payment processor webhooks. The unique

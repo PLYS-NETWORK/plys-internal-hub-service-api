@@ -1,6 +1,6 @@
 import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { BusinessProfile } from '@database/entities/profiles/business-profile.entity';
-import { InvoiceStatus } from '@database/enums/invoice-status.enum';
+import { Currency, InvoiceStatus } from '@database/enums';
 import {
   Column,
   Entity,
@@ -43,11 +43,24 @@ export class Invoice extends AuditableEntity {
   })
   public business!: BusinessProfile;
 
+  /** Total invoice amount = task_total + commission_amount */
   @Column({ type: 'numeric', precision: 12, scale: 2 })
   public amount!: string;
 
-  @Column({ type: 'char', length: 3, default: 'USD' })
-  public currency!: string;
+  /** Task subtotal before commission is applied */
+  @Column({ name: 'task_total', type: 'numeric', precision: 12, scale: 2, default: 0 })
+  public taskTotal!: string;
+
+  /** Commission rate snapshot at invoice creation time (e.g. 0.2500 = 25%) */
+  @Column({ name: 'commission_rate', type: 'numeric', precision: 5, scale: 4, default: 0.25 })
+  public commissionRate!: string;
+
+  /** Commission amount = task_total × commission_rate */
+  @Column({ name: 'commission_amount', type: 'numeric', precision: 12, scale: 2, default: 0 })
+  public commissionAmount!: string;
+
+  @Column({ type: 'char', length: 3, default: Currency.USD })
+  public currency!: Currency;
 
   @Column({ type: 'varchar', length: 20, default: InvoiceStatus.PENDING })
   public status!: InvoiceStatus;
@@ -79,4 +92,7 @@ export class Invoice extends AuditableEntity {
 
   @Column({ name: 'paid_at', type: 'timestamptz', nullable: true })
   public paidAt!: Date | null;
+
+  @Column({ name: 'notified_at', type: 'timestamptz', nullable: true, default: null })
+  public notifiedAt!: Date | null;
 }

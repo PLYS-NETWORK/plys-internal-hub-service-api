@@ -1,7 +1,7 @@
-import { AppLogger } from '@common/modules/logger';
 import { IEmailMessage } from '@common/modules/email/interfaces/email-message.interface';
 import { IEmailProvider } from '@common/modules/email/interfaces/email-provider.interface';
 import { EnvironmentsService } from '@common/modules/environments';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Resend } from 'resend';

@@ -1,4 +1,4 @@
-import { TaskKanbanStatus } from '@database/enums/task-kanban-status.enum';
+import { TaskKanbanStatus } from '@database/enums';
 
 export interface IUpdateTaskConsultantStatusRequest {
   readonly status: TaskKanbanStatus;

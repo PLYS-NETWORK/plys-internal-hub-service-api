@@ -4,9 +4,12 @@ import { PaymentService } from '@common/modules/payment/payment.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { BusinessTransaction } from '@database/entities/finance/business-transaction.entity';
 import { ConsultantTransaction } from '@database/entities/finance/consultant-transaction.entity';
-import { PaymentProcessor } from '@database/enums/payment-processor.enum';
-import { TransactionStatus } from '@database/enums/transaction-status.enum';
-import { WebhookStatus } from '@database/enums/webhook-status.enum';
+import {
+  CheckoutPaymentType,
+  PaymentProcessor,
+  TransactionStatus,
+  WebhookStatus,
+} from '@database/enums';
 import { BillingInvoiceService } from '@modules/billing/services/billing-invoice.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable } from '@nestjs/common';
@@ -14,6 +17,10 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class WebhookProcessorService {
   private readonly logger: AppLogger;
+
+  private get rid(): string {
+    return this.requestContext.requestId;
+  }
 
   constructor(
     private readonly uow: UnitOfWorkService,
@@ -31,7 +38,7 @@ export class WebhookProcessorService {
     payload: Buffer,
     headers: Record<string, string>,
   ): Promise<void> {
-    this.logger.log(`processPolarWebhook — start`);
+    this.logger.log(`[${this.rid}] processPolarWebhook — start`);
 
     const event = this.paymentService.constructWebhookEvent(payload, headers);
 
@@ -85,9 +92,9 @@ export class WebhookProcessorService {
    */
   public async processStripeWebhook(
     payload: Buffer,
-    headers: Record<string, string>,
+    _headers: Record<string, string>,
   ): Promise<void> {
-    this.logger.log(`processStripeWebhook — start`);
+    this.logger.log(`[${this.rid}] processStripeWebhook — start`);
 
     // Use Stripe provider to construct the event
     // Note: This would need a separate method or the PaymentService to handle Stripe specifically
@@ -189,7 +196,7 @@ export class WebhookProcessorService {
     }
 
     // Route invoice payments to billing module
-    if (paymentType === 'invoice_payment') {
+    if (paymentType === CheckoutPaymentType.INVOICE_PAYMENT) {
       const invoiceId = metadata?.['invoiceId'];
       if (!invoiceId) {
         this.logger.warn(
@@ -197,7 +204,19 @@ export class WebhookProcessorService {
         );
         return;
       }
-      await this.billingInvoiceService.completeInvoicePayment(invoiceId, transactionId);
+
+      // Extract the processor's own checkout/session ID from the event payload.
+      // Polar order.paid: data.checkoutId; Stripe checkout.session.completed: data.id.
+      // This is cross-checked against invoice.processorInvoiceId to prevent a forged-
+      // metadata attack from marking an unrelated invoice paid.
+      const processorInvoiceId =
+        (data['checkoutId'] as string | undefined) ?? (data['id'] as string | undefined) ?? '';
+
+      await this.billingInvoiceService.completeInvoicePayment(
+        invoiceId,
+        transactionId,
+        processorInvoiceId,
+      );
       return;
     }
 

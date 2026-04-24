@@ -1,7 +1,7 @@
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ConsultantSkill } from '@database/entities';
-import { ProficiencyLevel } from '@database/enums/proficiency-level.enum';
+import { ProficiencyLevel } from '@database/enums';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable } from '@nestjs/common';

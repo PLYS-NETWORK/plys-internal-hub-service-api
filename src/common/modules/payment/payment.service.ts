@@ -1,7 +1,7 @@
-import { AppLogger } from '@common/modules/logger';
 import { EnvironmentsService } from '@common/modules/environments';
+import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { PaymentProcessor } from '@database/enums/payment-processor.enum';
+import { PaymentProcessor } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 
 import { IPaymentProvider } from './interfaces';

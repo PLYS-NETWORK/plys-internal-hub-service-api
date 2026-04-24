@@ -2,7 +2,7 @@ import { User } from '@database/entities/auth/user.entity';
 import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
 import { Project } from '@database/entities/projects/project.entity';
-import { ApplicationStatus } from '@database/enums/application-status.enum';
+import { ApplicationStatus } from '@database/enums';
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 // Re-application allowed after rejection/withdraw — partial unique index in

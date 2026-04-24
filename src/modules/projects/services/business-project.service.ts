@@ -14,9 +14,12 @@ import {
   ProjectRequiredSkill,
   Task,
 } from '@database/entities';
-import { ProjectStatus } from '@database/enums';
-import { BusinessTransactionType } from '@database/enums/business-transaction-type.enum';
-import { TransactionStatus } from '@database/enums/transaction-status.enum';
+import {
+  BusinessTransactionType,
+  PaymentMethod,
+  ProjectStatus,
+  TransactionStatus,
+} from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -349,6 +352,9 @@ export class BusinessProjectService implements IBusinessProjectService {
         account_balance: result.accountBalance,
         project_title: project.title,
         project_amount: result.projectAmount,
+        commission_rate: result.commissionRate,
+        commission_amount: result.commissionAmount,
+        total_amount: result.totalAmount,
         payment_type: result.paymentType,
       },
       { excludeExtraneousValues: true },
@@ -377,7 +383,7 @@ export class BusinessProjectService implements IBusinessProjectService {
     if (!eligibility.canPublish) {
       if (eligibility.reasonCode === 'INSUFFICIENT_BALANCE') {
         this.logger.warn(
-          `confirmPublish — insufficient balance | projectId: ${projectId}, balance: ${eligibility.accountBalance}, required: ${eligibility.projectAmount}`,
+          `confirmPublish — insufficient balance | projectId: ${projectId}, balance: ${eligibility.accountBalance}, required: ${eligibility.totalAmount}`,
         );
         throw new TranslatableException({
           messageKey: 'error.project.insufficient_balance',
@@ -399,17 +405,22 @@ export class BusinessProjectService implements IBusinessProjectService {
     const updatedProject = await this.uow.withTransaction(async (txUow) => {
       // Deduct balance and record transaction for pre-paid businesses
       if (eligibility.paymentType === 'pre-paid') {
-        const newBalance = parseFloat(businessProfile.accountBalance) - eligibility.projectAmount;
+        const { projectAmount, commissionRate, commissionAmount, totalAmount } = eligibility;
+
+        const newBalance = parseFloat(businessProfile.accountBalance) - totalAmount;
         businessProfile.accountBalance = newBalance.toFixed(2);
         await txUow.businessProfiles.save(businessProfile);
 
         const txn = txUow.businessTransactions.create({
           businessId: businessProfile.id,
           type: BusinessTransactionType.PROJECT_PUBLISHED,
-          amount: eligibility.projectAmount.toFixed(2),
+          amount: projectAmount.toFixed(2),
+          commissionRate: commissionRate.toFixed(4),
+          commissionAmount: commissionAmount.toFixed(2),
+          totalAmount: totalAmount.toFixed(2),
           status: TransactionStatus.COMPLETED,
           projectId,
-          note: `Pre-paid project publication: ${project.title}`,
+          note: `Pre-paid project publication: ${project.title} (tasks: ${projectAmount.toFixed(2)} + commission ${(commissionRate * 100).toFixed(0)}%: ${commissionAmount.toFixed(2)})`,
         });
         await txUow.businessTransactions.save(txn);
       }
@@ -428,6 +439,7 @@ export class BusinessProjectService implements IBusinessProjectService {
       try {
         if (eligibility.paymentType === 'pre-paid') {
           // Send payment receipt email for pre-paid businesses
+          const { projectAmount, commissionRate, commissionAmount, totalAmount } = eligibility;
           const receiptNumber = `PLY-${Date.now().toString().slice(-8).toUpperCase()}`;
           const paidDate = new Date().toLocaleDateString('en-US', {
             year: 'numeric',
@@ -441,8 +453,11 @@ export class BusinessProjectService implements IBusinessProjectService {
             receiptNumber,
             paidDate,
             projectTitle: project.title,
-            paymentMethod: 'Account Balance',
-            amount: eligibility.projectAmount.toFixed(2),
+            paymentMethod: PaymentMethod.ACCOUNT_BALANCE,
+            amount: projectAmount.toFixed(2),
+            commissionRate: (commissionRate * 100).toFixed(2),
+            commissionAmount: commissionAmount.toFixed(2),
+            totalAmount: totalAmount.toFixed(2),
             projectDashboardUrl,
           });
 
@@ -683,6 +698,9 @@ export class BusinessProjectService implements IBusinessProjectService {
     reasonCode: string | null;
     accountBalance: number;
     projectAmount: number;
+    commissionRate: number;
+    commissionAmount: number;
+    totalAmount: number;
     paymentType: 'credit' | 'pre-paid';
   }> {
     const accountBalance = parseFloat(businessProfile.accountBalance);
@@ -690,32 +708,36 @@ export class BusinessProjectService implements IBusinessProjectService {
       ? 'credit'
       : 'pre-paid';
 
+    const tasks = await this.uow.tasks.find({ where: { projectId: project.id } });
+    const projectAmount = tasks.reduce((sum, t) => sum + Number(t.price), 0);
+
+    // Commission only applies to pre-paid businesses
+    const commissionRate = paymentType === 'pre-paid' ? Number(businessProfile.commissionRate ?? 0.25) : 0;
+    const commissionAmount = projectAmount * commissionRate;
+    const totalAmount = projectAmount + commissionAmount;
+
     // Project must be in CONFIGURED status to be published
     if (project.status !== ProjectStatus.CONFIGURED) {
-      const tasks = await this.uow.tasks.find({ where: { projectId: project.id } });
-      const projectAmount = tasks.reduce((sum, t) => sum + Number(t.price), 0);
-
       return {
         canPublish: false,
         reasonCode: 'NOT_CONFIGURED',
         accountBalance,
         projectAmount,
+        commissionRate,
+        commissionAmount,
+        totalAmount,
         paymentType,
       };
     }
 
-    // Compute total project amount from task prices
-    const tasks = await this.uow.tasks.find({ where: { projectId: project.id } });
-    const projectAmount = tasks.reduce((sum, t) => sum + Number(t.price), 0);
-
-    // Credit-based businesses can always publish
+    // Credit-based businesses can always publish (invoiced monthly)
     if (paymentType === 'credit') {
-      return { canPublish: true, reasonCode: null, accountBalance, projectAmount, paymentType };
+      return { canPublish: true, reasonCode: null, accountBalance, projectAmount, commissionRate: 0, commissionAmount: 0, totalAmount: projectAmount, paymentType };
     }
 
-    // Pre-paid: check balance covers project amount
-    if (accountBalance >= projectAmount) {
-      return { canPublish: true, reasonCode: null, accountBalance, projectAmount, paymentType };
+    // Pre-paid: check balance covers totalAmount (task subtotal + commission)
+    if (accountBalance >= totalAmount) {
+      return { canPublish: true, reasonCode: null, accountBalance, projectAmount, commissionRate, commissionAmount, totalAmount, paymentType };
     }
 
     return {
@@ -723,6 +745,9 @@ export class BusinessProjectService implements IBusinessProjectService {
       reasonCode: 'INSUFFICIENT_BALANCE',
       accountBalance,
       projectAmount,
+      commissionRate,
+      commissionAmount,
+      totalAmount,
       paymentType,
     };
   }

@@ -1,4 +1,4 @@
-import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { ActivePlatform } from '@database/enums';
 import { SetMetadata } from '@nestjs/common';
 
 export const PLATFORM_KEY = 'platform';

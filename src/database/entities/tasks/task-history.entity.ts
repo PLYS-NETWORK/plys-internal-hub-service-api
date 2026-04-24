@@ -1,7 +1,6 @@
 import { User } from '@database/entities/auth/user.entity';
 import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
-import { TaskHistoryChangeType } from '@database/enums/task-history-change.enum';
-import { TaskKanbanStatus } from '@database/enums/task-kanban-status.enum';
+import { TaskHistoryChangeType, TaskKanbanStatus } from '@database/enums';
 import {
   Column,
   CreateDateColumn,

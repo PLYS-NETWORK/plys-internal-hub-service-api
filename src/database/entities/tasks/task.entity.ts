@@ -2,9 +2,7 @@ import { User } from '@database/entities/auth/user.entity';
 import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
 import { Project } from '@database/entities/projects/project.entity';
-import { TaskCreationMode } from '@database/enums/task-creation-mode.enum';
-import { TaskDifficulty } from '@database/enums/task-difficulty.enum';
-import { TaskKanbanStatus } from '@database/enums/task-kanban-status.enum';
+import { TaskCreationMode, TaskDifficulty, TaskKanbanStatus } from '@database/enums';
 import {
   Column,
   Entity,

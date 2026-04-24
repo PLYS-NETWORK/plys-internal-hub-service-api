@@ -1,5 +1,4 @@
-import { BusinessTransactionType } from '@database/enums/business-transaction-type.enum';
-import { TransactionStatus } from '@database/enums/transaction-status.enum';
+import { BusinessTransactionType, TransactionStatus } from '@database/enums';
 
 export interface ITransactionResponse {
   id: string;

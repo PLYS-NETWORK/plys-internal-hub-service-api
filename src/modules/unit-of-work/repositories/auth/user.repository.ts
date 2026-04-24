@@ -1,6 +1,6 @@
 import { AbstractRepository } from '@common/repositories';
 import { User } from '@database/entities';
-import { ActivePlatform } from '@database/enums/active-platform.enum';
+import { ActivePlatform } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
