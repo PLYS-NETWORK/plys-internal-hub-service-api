@@ -712,7 +712,8 @@ export class BusinessProjectService implements IBusinessProjectService {
     const projectAmount = tasks.reduce((sum, t) => sum + Number(t.price), 0);
 
     // Commission only applies to pre-paid businesses
-    const commissionRate = paymentType === 'pre-paid' ? Number(businessProfile.commissionRate ?? 0.25) : 0;
+    const commissionRate =
+      paymentType === 'pre-paid' ? Number(businessProfile.commissionRate ?? 0.25) : 0;
     const commissionAmount = projectAmount * commissionRate;
     const totalAmount = projectAmount + commissionAmount;
 
@@ -732,12 +733,30 @@ export class BusinessProjectService implements IBusinessProjectService {
 
     // Credit-based businesses can always publish (invoiced monthly)
     if (paymentType === 'credit') {
-      return { canPublish: true, reasonCode: null, accountBalance, projectAmount, commissionRate: 0, commissionAmount: 0, totalAmount: projectAmount, paymentType };
+      return {
+        canPublish: true,
+        reasonCode: null,
+        accountBalance,
+        projectAmount,
+        commissionRate: 0,
+        commissionAmount: 0,
+        totalAmount: projectAmount,
+        paymentType,
+      };
     }
 
     // Pre-paid: check balance covers totalAmount (task subtotal + commission)
     if (accountBalance >= totalAmount) {
-      return { canPublish: true, reasonCode: null, accountBalance, projectAmount, commissionRate, commissionAmount, totalAmount, paymentType };
+      return {
+        canPublish: true,
+        reasonCode: null,
+        accountBalance,
+        projectAmount,
+        commissionRate,
+        commissionAmount,
+        totalAmount,
+        paymentType,
+      };
     }
 
     return {
