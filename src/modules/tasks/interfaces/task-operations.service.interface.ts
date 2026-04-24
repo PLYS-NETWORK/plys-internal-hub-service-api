@@ -4,10 +4,11 @@ import { PageOptionsDto } from '@common/dto/page-options.dto';
 import {
   AssignTaskDto,
   CreateTaskDto,
+  ReorderTasksDto,
   UpdateTaskBusinessStatusDto,
   UpdateTaskConsultantStatusDto,
 } from '../dto/requests';
-import { TaskResponseDto } from '../dto/responses';
+import { ConsultantTaskResponseDto, TaskResponseDto } from '../dto/responses';
 
 export interface ITaskOperationsService {
   createDraftTask(dto: CreateTaskDto): Promise<TaskResponseDto>;
@@ -22,4 +23,9 @@ export interface ITaskOperationsService {
     projectId: string,
     pageOptions: PageOptionsDto,
   ): Promise<PageDto<TaskResponseDto>>;
+  reorderTasks(dto: ReorderTasksDto): Promise<void>;
+  listProjectTasksForConsultant(
+    projectId: string,
+    pageOptions: PageOptionsDto,
+  ): Promise<PageDto<ConsultantTaskResponseDto>>;
 }

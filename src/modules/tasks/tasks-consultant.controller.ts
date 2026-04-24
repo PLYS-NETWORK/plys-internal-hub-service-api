@@ -27,7 +27,11 @@ import {
   UpdateTaskCommentDto,
   UpdateTaskConsultantStatusDto,
 } from './dto/requests';
-import { TaskCommentResponseDto, TaskResponseDto } from './dto/responses';
+import {
+  ConsultantTaskResponseDto,
+  TaskCommentResponseDto,
+  TaskResponseDto,
+} from './dto/responses';
 import { TaskCommentsService } from './services/task-comments.service';
 import { TaskOperationsService } from './services/task-operations.service';
 
@@ -42,6 +46,17 @@ export class TasksConsultantController {
     private readonly taskOps: TaskOperationsService,
     private readonly taskComments: TaskCommentsService,
   ) {}
+
+  @Get('by-project/:projectId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List tasks for a project the consultant is a member of (paginated)' })
+  public async listProjectTasks(
+    @Param('projectId') projectId: string,
+    @Query() pageOptions: PageOptionsDto,
+  ): Promise<ITranslatedPayload<PageDto<ConsultantTaskResponseDto>>> {
+    const data = await this.taskOps.listProjectTasksForConsultant(projectId, pageOptions);
+    return { messageKey: 'success.ok', data };
+  }
 
   @Post(':id/claim')
   @HttpCode(HttpStatus.OK)

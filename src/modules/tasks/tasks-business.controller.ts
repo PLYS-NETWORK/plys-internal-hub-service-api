@@ -26,6 +26,7 @@ import {
   AssignTaskDto,
   CreateTaskCommentDto,
   CreateTaskDto,
+  ReorderTasksDto,
   UpdateTaskBusinessStatusDto,
   UpdateTaskCommentDto,
 } from './dto/requests';
@@ -64,6 +65,13 @@ export class TasksBusinessController {
   ): Promise<ITranslatedPayload<TaskResponseDto>> {
     const data = await this.taskOps.assignTask(id, dto);
     return { messageKey: 'success.task.assigned', data };
+  }
+
+  @Patch('reorder')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Bulk-update display order for a set of tasks' })
+  public async reorderTasks(@Body() dto: ReorderTasksDto): Promise<void> {
+    await this.taskOps.reorderTasks(dto);
   }
 
   @Patch(':id/business-status')

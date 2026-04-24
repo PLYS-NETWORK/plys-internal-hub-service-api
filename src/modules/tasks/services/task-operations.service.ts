@@ -19,10 +19,11 @@ import { plainToInstance } from 'class-transformer';
 import {
   AssignTaskDto,
   CreateTaskDto,
+  ReorderTasksDto,
   UpdateTaskBusinessStatusDto,
   UpdateTaskConsultantStatusDto,
 } from '../dto/requests';
-import { TaskResponseDto } from '../dto/responses';
+import { ConsultantTaskResponseDto, TaskResponseDto } from '../dto/responses';
 import { ITaskOperationsService } from '../interfaces/task-operations.service.interface';
 
 /** Allowed consultant-driven status transitions. */
@@ -254,6 +255,81 @@ export class TaskOperationsService implements ITaskOperationsService {
 
     const data = tasks.map((t) => this.toResponseDto(t));
     const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
+    return new PageDto(data, meta);
+  }
+
+  /** Bulk-updates displayOrder for a set of tasks owned by the calling business. */
+  public async reorderTasks(dto: ReorderTasksDto): Promise<void> {
+    const businessId = await this.resolveBusinessId();
+    this.logger.log(`reorderTasks — start | count: ${dto.tasks.length}`);
+
+    const ids = dto.tasks.map((t) => t.id);
+    const tasks = await this.uow.tasks.find({
+      where: ids.map((id) => ({ id })),
+      relations: { project: true },
+    });
+
+    if (tasks.length !== ids.length) {
+      throw this.taskNotFound('one or more tasks');
+    }
+
+    for (const task of tasks) {
+      if (task.project.businessId !== businessId) {
+        throw this.taskNotFound(task.id);
+      }
+    }
+
+    await this.uow.withTransaction(async (txUow) => {
+      for (const item of dto.tasks) {
+        await txUow.tasks.update(item.id, { displayOrder: item.displayOrder });
+      }
+    });
+
+    this.logger.log(`reorderTasks — complete | count: ${dto.tasks.length}`);
+  }
+
+  /** Paginated task list for a project, scoped to the consultant platform. */
+  public async listProjectTasksForConsultant(
+    projectId: string,
+    pageOptions: PageOptionsDto,
+  ): Promise<PageDto<ConsultantTaskResponseDto>> {
+    const consultantProfile = await this.resolveConsultantProfile();
+    this.logger.log(
+      `listProjectTasksForConsultant — start | projectId: ${projectId}, consultantId: ${consultantProfile.id}`,
+    );
+
+    await this.verifyProjectMembership(projectId, consultantProfile.id);
+
+    const [tasks, itemCount] = await this.uow.tasks.findAndCount({
+      where: { projectId },
+      order: { displayOrder: 'ASC' },
+      skip: pageOptions.skip,
+      take: pageOptions.limit,
+    });
+
+    const data = tasks.map((t) =>
+      plainToInstance(
+        ConsultantTaskResponseDto,
+        {
+          id: t.id,
+          project_id: t.projectId,
+          title: t.title,
+          description: t.description,
+          difficulty_level: t.difficultyLevel,
+          kanban_status: t.kanbanStatus,
+          assigned_to: t.assignedTo,
+          assigned_at: t.assignedAt,
+          display_order: t.displayOrder,
+          created_at: t.createdAt,
+        },
+        { excludeExtraneousValues: true },
+      ),
+    );
+
+    const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
+    this.logger.log(
+      `listProjectTasksForConsultant — complete | projectId: ${projectId}, returned: ${data.length}, total: ${itemCount}`,
+    );
     return new PageDto(data, meta);
   }
 
