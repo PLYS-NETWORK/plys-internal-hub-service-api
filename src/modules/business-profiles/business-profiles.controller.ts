@@ -1,4 +1,3 @@
-import { HEADERS } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
@@ -14,7 +13,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { PlatformGuard } from '../../common/guards/platform.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -25,7 +24,6 @@ import { BusinessProfileResponseDto } from './dto/responses/business-profile-res
 
 @ApiTags('Business Profiles')
 @ApiBearerAuth()
-@ApiHeader({ name: HEADERS.X_DEVICE_ID, required: false, description: 'Unique device identifier for session binding' })
 @Controller('business-profiles')
 export class BusinessProfilesController {
   constructor(private readonly businessProfilesService: BusinessProfilesService) {}

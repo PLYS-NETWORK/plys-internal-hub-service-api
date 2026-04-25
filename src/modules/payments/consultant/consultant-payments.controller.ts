@@ -1,4 +1,3 @@
-import { HEADERS } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
@@ -7,7 +6,7 @@ import { RolesGuard } from '@common/guards/roles.guard';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { ActivePlatform, UserRole } from '@database/enums';
 import { Controller, Get, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { ListConsultantTransactionsDto } from '../dto/requests/list-consultant-transactions.dto';
 import { ConsultantTransactionResponseDto } from '../dto/responses';
@@ -15,7 +14,6 @@ import { ConsultantPaymentsService } from './consultant-payments.service';
 
 @ApiTags('Consultant Payments')
 @ApiBearerAuth()
-@ApiHeader({ name: HEADERS.X_DEVICE_ID, required: false, description: 'Unique device identifier for session binding' })
 @Controller('payments/consultant')
 export class ConsultantPaymentsController {
   constructor(private readonly consultantPaymentsService: ConsultantPaymentsService) {}
