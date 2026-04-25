@@ -1,3 +1,4 @@
+import { HEADERS } from '@common/constants';
 import { Public } from '@common/decorators/public.decorator';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { EnvironmentsService } from '@common/modules/environments';
@@ -16,7 +17,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { FastifyReply, FastifyRequest } from 'fastify';
 
@@ -61,10 +62,20 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new user with email/password' })
+  @ApiHeader({
+    name: HEADERS.X_DEVICE_ID,
+    required: false,
+    description: 'Unique device identifier for session binding',
+  })
+  @ApiHeader({
+    name: HEADERS.X_FINGERPRINT,
+    required: false,
+    description: 'Client fingerprint for enhanced device binding',
+  })
   public async register(
     @Body() dto: RegisterDto,
-    @Headers('x-device-id') deviceId?: string,
-    @Headers('x-fingerprint') fingerprint?: string,
+    @Headers(HEADERS.X_DEVICE_ID) deviceId?: string,
+    @Headers(HEADERS.X_FINGERPRINT) fingerprint?: string,
   ): Promise<ITranslatedPayload<null>> {
     const context = this.buildSessionContext(deviceId, fingerprint);
     await this.authService.register(dto, context);
@@ -76,10 +87,20 @@ export class AuthController {
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify email with token from verification link' })
+  @ApiHeader({
+    name: HEADERS.X_DEVICE_ID,
+    required: false,
+    description: 'Unique device identifier for session binding',
+  })
+  @ApiHeader({
+    name: HEADERS.X_FINGERPRINT,
+    required: false,
+    description: 'Client fingerprint for enhanced device binding',
+  })
   public async verifyEmail(
     @Body() dto: VerifyEmailDto,
-    @Headers('x-device-id') deviceId?: string,
-    @Headers('x-fingerprint') fingerprint?: string,
+    @Headers(HEADERS.X_DEVICE_ID) deviceId?: string,
+    @Headers(HEADERS.X_FINGERPRINT) fingerprint?: string,
   ): Promise<ITranslatedPayload<AuthResponseDto>> {
     const context = this.buildSessionContext(deviceId, fingerprint);
     const data = await this.authService.verifyEmail(dto.token, context);
@@ -107,10 +128,20 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email/password' })
+  @ApiHeader({
+    name: HEADERS.X_DEVICE_ID,
+    required: false,
+    description: 'Unique device identifier for session binding',
+  })
+  @ApiHeader({
+    name: HEADERS.X_FINGERPRINT,
+    required: false,
+    description: 'Client fingerprint for enhanced device binding',
+  })
   public async login(
     @Body() dto: LoginDto,
-    @Headers('x-device-id') deviceId?: string,
-    @Headers('x-fingerprint') fingerprint?: string,
+    @Headers(HEADERS.X_DEVICE_ID) deviceId?: string,
+    @Headers(HEADERS.X_FINGERPRINT) fingerprint?: string,
   ): Promise<ITranslatedPayload<AuthResponseDto>> {
     const context = this.buildSessionContext(deviceId, fingerprint);
     const data = await this.authService.login(dto, context);
@@ -123,10 +154,20 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token using refresh token' })
+  @ApiHeader({
+    name: HEADERS.X_DEVICE_ID,
+    required: false,
+    description: 'Unique device identifier for session binding',
+  })
+  @ApiHeader({
+    name: HEADERS.X_FINGERPRINT,
+    required: false,
+    description: 'Client fingerprint for enhanced device binding',
+  })
   public async refresh(
     @Body() dto: RefreshTokenDto,
-    @Headers('x-device-id') deviceId?: string,
-    @Headers('x-fingerprint') fingerprint?: string,
+    @Headers(HEADERS.X_DEVICE_ID) deviceId?: string,
+    @Headers(HEADERS.X_FINGERPRINT) fingerprint?: string,
   ): Promise<ITranslatedPayload<AuthResponseDto>> {
     const context = this.buildSessionContext(deviceId, fingerprint);
     const data = await this.authService.refresh(dto.refresh_token, context);
@@ -220,11 +261,21 @@ export class AuthController {
     description:
       'Validates the CSRF state nonce, then redirects to the frontend with a single-use exchange code (NO tokens in URL).',
   })
+  @ApiHeader({
+    name: HEADERS.X_DEVICE_ID,
+    required: false,
+    description: 'Unique device identifier for session binding',
+  })
+  @ApiHeader({
+    name: HEADERS.X_FINGERPRINT,
+    required: false,
+    description: 'Client fingerprint for enhanced device binding',
+  })
   public async ssoGoogleCallback(
     @Req() request: FastifyRequest & { user: GoogleProfile },
     @Res() reply: FastifyReply,
-    @Headers('x-device-id') deviceId?: string,
-    @Headers('x-fingerprint') fingerprint?: string,
+    @Headers(HEADERS.X_DEVICE_ID) deviceId?: string,
+    @Headers(HEADERS.X_FINGERPRINT) fingerprint?: string,
   ): Promise<void> {
     const context = this.buildSessionContext(deviceId, fingerprint);
     const queryState = (request.query as Record<string, string>)?.['state'];
@@ -276,10 +327,20 @@ export class AuthController {
   @Post('sso/google/token')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Exchange Google ID token for platform tokens (SPA/mobile)' })
+  @ApiHeader({
+    name: HEADERS.X_DEVICE_ID,
+    required: false,
+    description: 'Unique device identifier for session binding',
+  })
+  @ApiHeader({
+    name: HEADERS.X_FINGERPRINT,
+    required: false,
+    description: 'Client fingerprint for enhanced device binding',
+  })
   public async ssoGoogleToken(
     @Body() dto: SsoTokenDto,
-    @Headers('x-device-id') deviceId?: string,
-    @Headers('x-fingerprint') fingerprint?: string,
+    @Headers(HEADERS.X_DEVICE_ID) deviceId?: string,
+    @Headers(HEADERS.X_FINGERPRINT) fingerprint?: string,
   ): Promise<ITranslatedPayload<AuthResponseDto>> {
     const context = this.buildSessionContext(deviceId, fingerprint);
 

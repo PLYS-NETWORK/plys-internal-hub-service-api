@@ -1,3 +1,4 @@
+import { HEADERS } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
@@ -14,7 +15,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { PlatformGuard } from '../../common/guards/platform.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -24,6 +25,7 @@ import { BusinessApplicationService } from './services/business-application.serv
 
 @ApiTags('Applications - Business')
 @ApiBearerAuth()
+@ApiHeader({ name: HEADERS.X_DEVICE_ID, required: false, description: 'Unique device identifier for session binding' })
 @Controller('applications-business')
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)

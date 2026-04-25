@@ -1,3 +1,4 @@
+import { HEADERS } from '@common/constants';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
@@ -13,7 +14,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { ListBillsDto } from './dto/requests/list-bills.dto';
 import { TriggerSettlementDto } from './dto/requests/trigger-settlement.dto';
@@ -24,6 +25,7 @@ import { BillingAdminService } from './services/billing-admin.service';
 
 @ApiTags('Admin - Billing')
 @ApiBearerAuth()
+@ApiHeader({ name: HEADERS.X_DEVICE_ID, required: false, description: 'Unique device identifier for session binding' })
 @Controller('admin/bills')
 @Roles(UserRole.ADMIN_PLATFORM)
 export class BillingController {

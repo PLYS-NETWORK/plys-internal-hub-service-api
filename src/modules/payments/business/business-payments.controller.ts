@@ -1,3 +1,4 @@
+import { HEADERS } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
@@ -15,7 +16,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { CreateTopUpDto } from '../dto/requests/create-top-up.dto';
 import { ListBusinessTransactionsDto } from '../dto/requests/list-business-transactions.dto';
@@ -29,6 +30,7 @@ import { BusinessPaymentsService } from './business-payments.service';
 
 @ApiTags('Business Payments')
 @ApiBearerAuth()
+@ApiHeader({ name: HEADERS.X_DEVICE_ID, required: false, description: 'Unique device identifier for session binding' })
 @Controller('payments/business')
 export class BusinessPaymentsController {
   constructor(private readonly businessPaymentsService: BusinessPaymentsService) {}
