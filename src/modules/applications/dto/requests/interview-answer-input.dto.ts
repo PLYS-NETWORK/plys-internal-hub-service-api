@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsObject, IsUUID } from 'class-validator';
 
 import { IInterviewAnswerInput } from './interfaces';
 
@@ -13,12 +13,20 @@ export class InterviewAnswerInputDto implements IInterviewAnswerInput {
   @IsUUID('4')
   public readonly questionId!: string;
 
-  @Expose({ name: 'answer_text' })
+  @Expose()
   @ApiProperty({
-    name: 'answer_text',
-    example: 'I have 5 years of experience in this field...',
+    type: 'object',
+    additionalProperties: true,
+    example: {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'I have 5 years of experience in this field...' }],
+        },
+      ],
+    },
   })
-  @IsString()
-  @IsNotEmpty()
-  public readonly answerText!: string;
+  @IsObject()
+  public readonly answer!: Record<string, unknown>;
 }

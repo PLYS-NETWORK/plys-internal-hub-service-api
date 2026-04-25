@@ -131,10 +131,10 @@ export class ConsultantApplicationService {
     // 6. If project has interview questions — validate answers + AI check
     if (interviewQuestions.length > 0) {
       const requiredQuestions = interviewQuestions.filter((q) => q.isRequired);
-      const answerMap = new Map((dto.answers ?? []).map((a) => [a.questionId, a.answerText]));
+      const answeredIds = new Set((dto.answers ?? []).map((a) => a.questionId));
 
       // Validate all required questions are answered
-      const unanswered = requiredQuestions.filter((q) => !answerMap.has(q.id));
+      const unanswered = requiredQuestions.filter((q) => !answeredIds.has(q.id));
       if (unanswered.length > 0) {
         this.logger.warn(`applyToProject — missing answers | unanswered: ${unanswered.length}`);
         throw new TranslatableException({
@@ -144,8 +144,10 @@ export class ConsultantApplicationService {
         });
       }
 
-      // AI content detection via Copyleaks
-      const answerTexts = (dto.answers ?? []).map((a) => a.answerText);
+      // AI content detection via Copyleaks. The answer is now a rich-text JSON
+      // document — flatten each one to plain text before sending so Copyleaks
+      // sees the human-authored prose, not the editor's structural metadata.
+      const answerTexts = (dto.answers ?? []).map((a) => extractPlainText(a.answer));
       try {
         const aiResult = await this.copyleaksService.checkTextsForAi(answerTexts);
 
@@ -209,7 +211,7 @@ export class ConsultantApplicationService {
             applicationId: savedApplication.id,
             questionId: a.questionId,
             questionTextSnapshot: question?.questionText ?? '',
-            answerText: a.answerText,
+            answer: a.answer,
           });
         });
         await txUow.interviewAnswers.save(answerEntities);
@@ -439,4 +441,21 @@ export class ConsultantApplicationService {
       }
     })();
   }
+}
+
+// Walks a TipTap/ProseMirror document tree and concatenates every `text` leaf
+// into a single string. Used to feed Copyleaks the human-authored prose
+// without the editor's structural metadata.
+function extractPlainText(doc: Record<string, unknown>): string {
+  const parts: string[] = [];
+  const walk = (node: unknown): void => {
+    if (!node || typeof node !== 'object') return;
+    const n = node as Record<string, unknown>;
+    if (typeof n.text === 'string') parts.push(n.text);
+    if (Array.isArray(n.content)) {
+      for (const child of n.content) walk(child);
+    }
+  };
+  walk(doc);
+  return parts.join(' ').trim();
 }

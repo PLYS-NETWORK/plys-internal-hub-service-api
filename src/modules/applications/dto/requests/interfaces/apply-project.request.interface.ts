@@ -1,6 +1,7 @@
 export interface IInterviewAnswerInput {
   readonly questionId: string;
-  readonly answerText: string;
+  /** Rich-text editor JSON document (TipTap/ProseMirror tree). */
+  readonly answer: Record<string, unknown>;
 }
 
 export interface IApplyProjectRequest {

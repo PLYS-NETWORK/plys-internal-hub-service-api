@@ -37,6 +37,9 @@ export class InterviewAnswer extends TraceableEntity {
   @Column({ name: 'question_text_snapshot', type: 'text' })
   public questionTextSnapshot!: string;
 
-  @Column({ name: 'answer_text', type: 'text' })
-  public answerText!: string;
+  // Rich-text editor JSON document (TipTap/ProseMirror tree) persisted verbatim
+  // as `jsonb` — the server never parses or interprets the structure except
+  // when extracting plain text for downstream AI-content checks.
+  @Column({ name: 'answer', type: 'jsonb' })
+  public answer!: Record<string, unknown>;
 }
