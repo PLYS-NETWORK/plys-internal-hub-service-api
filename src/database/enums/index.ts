@@ -8,6 +8,7 @@ export { CheckoutPaymentType } from './checkout-payment-type.enum';
 export { CONSULTANT_AVAILABILITIES, ConsultantAvailability } from './consultant-availability.enum';
 export { ConsultantTransactionType } from './consultant-transaction-type.enum';
 export { Currency } from './currency.enum';
+export { FileStorageProvider } from './file-storage-provider.enum';
 export { InvoiceStatus } from './invoice-status.enum';
 export { PaymentMethod } from './payment-method.enum';
 export { PaymentProcessor } from './payment-processor.enum';

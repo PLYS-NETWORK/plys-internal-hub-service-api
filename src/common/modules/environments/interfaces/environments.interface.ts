@@ -1,6 +1,7 @@
 import { IAppConfig } from './app-config.interface';
 import { ICopyleaksConfig } from './copyleaks-config.interface';
 import { IDataConnection } from './data-connection.interface';
+import { IFilesConfig } from './files-config.interface';
 import { IGoogleConfig } from './google-config.interface';
 import { IJwtConfig } from './jwt-config.interface';
 import { IPaymentConfig } from './payment-config.interface';
@@ -13,6 +14,7 @@ export interface IEnvironmentsService
     IAppConfig,
     ICopyleaksConfig,
     IDataConnection,
+    IFilesConfig,
     IJwtConfig,
     IResendConfig,
     IPaymentConfig,

@@ -10,6 +10,7 @@ import { ApplicationStatus, ProjectMemberStatus } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
+import { Not } from 'typeorm';
 
 import { ListProjectApplicationsDto, ReviewApplicationDto } from '../dto/requests';
 import { ApplicationResponseDto, BusinessApplicationListItemResponseDto } from '../dto/responses';
@@ -54,7 +55,10 @@ export class BusinessApplicationService {
     }
 
     const [applications, itemCount] = await this.uow.projectApplications.findAndCount({
-      where: { projectId, ...(dto.status && { status: dto.status }) },
+      where: {
+        projectId,
+        status: dto.status ?? Not(ApplicationStatus.WITHDRAWN),
+      },
       relations: ['consultant'],
       order: { appliedAt: 'DESC' },
       skip: dto.skip,

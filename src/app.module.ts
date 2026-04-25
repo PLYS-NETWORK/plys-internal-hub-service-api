@@ -13,6 +13,7 @@ import { JwtContextMiddleware } from './common/middleware/jwt-context.middleware
 import { CopyleaksModule } from './common/modules/copyleaks';
 import { EmailModule } from './common/modules/email';
 import { EnvironmentsModule, EnvironmentsService } from './common/modules/environments';
+import { FilesModule } from './common/modules/files';
 import { I18nModule } from './common/modules/i18n';
 import { PaymentModule } from './common/modules/payment';
 import { RedisModule } from './common/modules/redis';
@@ -54,6 +55,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     RedisModule,
     PaymentModule,
     UnitOfWorkModule,
+    FilesModule,
     ApplicationsModule,
     AuthModule,
     BillingModule,

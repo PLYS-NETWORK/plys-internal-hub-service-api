@@ -81,5 +81,16 @@
     "invoice_already_paid": "Bu fatura zaten ödenmiş.",
     "invoice_not_owned": "Bu faturaya erişim yetkiniz yok.",
     "checkout_failed": "Fatura için ödeme oturumu oluşturulamadı."
+  },
+  "file": {
+    "not_found": "Dosya bulunamadı.",
+    "upload_failed": "Dosya yükleme başarısız oldu.",
+    "invalid_type": "Dosya türüne izin verilmiyor.",
+    "size_exceeded": "Dosya, izin verilen maksimum boyutu aşıyor.",
+    "storage_error": "Dosya depolama arka ucu başarısız oldu.",
+    "delete_failed": "Dosya silinemedi.",
+    "quota_exceeded": "Depolama kotanız aşıldı.",
+    "forbidden": "Bu dosyaya erişim yetkiniz yok.",
+    "dimensions_exceeded": "Görüntü boyutları izin verilen maksimumu aşıyor."
   }
 }

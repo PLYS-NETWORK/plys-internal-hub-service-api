@@ -2,6 +2,7 @@ export * from './ai';
 export * from './applications';
 export * from './auth';
 export * from './base';
+export * from './files';
 export * from './finance';
 export * from './notifications';
 export * from './profiles';

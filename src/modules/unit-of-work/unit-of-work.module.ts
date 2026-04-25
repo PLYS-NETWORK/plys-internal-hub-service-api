@@ -10,6 +10,7 @@ import {
   ConsultantProfileRepository,
   ConsultantSkillRepository,
   ConsultantTransactionRepository,
+  FileRepository,
   InterviewAnswerRepository,
   InvoiceLineItemRepository,
   InvoiceRepository,
@@ -71,6 +72,8 @@ const repositories = [
   BusinessTransactionRepository,
   WebhookEventRepository,
   ProjectInterviewQuestionRepository,
+  // Domain 9 — Files
+  FileRepository,
 ];
 
 @Module({

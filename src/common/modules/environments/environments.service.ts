@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { IEnvironmentsService } from './interfaces';
+import { FilesStorageProviderName, IEnvironmentsService } from './interfaces';
 
 @Injectable()
 export class EnvironmentsService implements IEnvironmentsService {
@@ -192,5 +192,41 @@ export class EnvironmentsService implements IEnvironmentsService {
 
   public get copyleaksApiKey(): string {
     return this.configService.getOrThrow<string>('app.copyleaks.apiKey');
+  }
+
+  public get filesStorageProvider(): FilesStorageProviderName {
+    return this.configService.getOrThrow<FilesStorageProviderName>('app.files.storageProvider');
+  }
+
+  public get filesMaxSizeBytes(): number {
+    return this.configService.getOrThrow<number>('app.files.maxSizeBytes');
+  }
+
+  public get filesAllowedMimeList(): string[] {
+    return this.configService.getOrThrow<string[]>('app.files.allowedMimeList');
+  }
+
+  public get filesUserQuotaBytes(): number {
+    return this.configService.getOrThrow<number>('app.files.userQuotaBytes');
+  }
+
+  public get filesUserMaxCount(): number {
+    return this.configService.getOrThrow<number>('app.files.userMaxCount');
+  }
+
+  public get filesPurgeAfterDays(): number {
+    return this.configService.getOrThrow<number>('app.files.purgeAfterDays');
+  }
+
+  public get filesMaxImagePixels(): number | null {
+    return this.configService.get<number | null>('app.files.maxImagePixels') ?? null;
+  }
+
+  public get filesLocalPath(): string {
+    return this.configService.getOrThrow<string>('app.files.local.path');
+  }
+
+  public get filesLocalPublicBaseUrl(): string {
+    return this.configService.getOrThrow<string>('app.files.local.publicBaseUrl');
   }
 }

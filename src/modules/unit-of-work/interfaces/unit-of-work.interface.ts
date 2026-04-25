@@ -8,6 +8,7 @@ import {
   IConsultantProfileRepository,
   IConsultantSkillRepository,
   IConsultantTransactionRepository,
+  IFileRepository,
   IInterviewAnswerRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
@@ -79,6 +80,9 @@ export interface IUnitOfWork {
   readonly consultantTransactions: IConsultantTransactionRepository;
   readonly businessTransactions: IBusinessTransactionRepository;
   readonly webhookEvents: IWebhookEventRepository;
+
+  // Domain 9 — Files
+  readonly files: IFileRepository;
 
   withTransaction<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T>;
 }

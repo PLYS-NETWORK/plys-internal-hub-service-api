@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { SwaggerModule } from '@nestjs/swagger';
 import { I18nValidationExceptionFilter, I18nValidationPipe } from 'nestjs-i18n';
+import * as path from 'path';
 
 import { AppModule } from './app.module';
 import { swaggerConfig } from './config/swagger.config';
@@ -30,6 +31,26 @@ async function bootstrap(): Promise<void> {
   await app.register(import('@fastify/cookie') as never);
 
   const envService = app.get(EnvironmentsService);
+
+  // Multipart upload — limits.fileSize aborts the stream the instant the
+  // configured cap is exceeded, so bytes never reach memory or disk.
+  await app.register(import('@fastify/multipart') as never, {
+    limits: {
+      fileSize: envService.filesMaxSizeBytes,
+      files: 1,
+      fields: 10,
+      fieldNameSize: 100,
+    },
+  });
+
+  // Serve files written by the local storage provider. The base URL
+  // matches FILES_LOCAL_PUBLIC_BASE_URL so the URLs handed back from
+  // FilesService.getById resolve correctly.
+  await app.register(import('@fastify/static') as never, {
+    root: path.resolve(envService.filesLocalPath),
+    prefix: '/uploads/',
+    decorateReply: false,
+  });
 
   // CORS
   app.enableCors({

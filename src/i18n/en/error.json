@@ -85,5 +85,16 @@
     "invoice_already_paid": "This invoice has already been paid.",
     "invoice_not_owned": "You do not have access to this invoice.",
     "checkout_failed": "Failed to create payment session for invoice."
+  },
+  "file": {
+    "not_found": "File not found.",
+    "upload_failed": "File upload failed.",
+    "invalid_type": "File type is not allowed.",
+    "size_exceeded": "File exceeds the maximum allowed size.",
+    "storage_error": "File storage backend failed.",
+    "delete_failed": "Failed to delete file.",
+    "quota_exceeded": "Your storage quota has been exceeded.",
+    "forbidden": "You do not have permission to access this file.",
+    "dimensions_exceeded": "Image dimensions exceed the maximum allowed."
   }
 }
