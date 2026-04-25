@@ -12,6 +12,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -65,7 +66,7 @@ export class BusinessProjectController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Check whether a project can be published' })
   public async validatePublish(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ): Promise<ITranslatedPayload<PublishValidationResponseDto>> {
     const data = await this.businessProjectService.validatePublish(id);
     return { messageKey: 'success.ok', data };
@@ -75,7 +76,7 @@ export class BusinessProjectController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'List project members (consultants) with profile details' })
   public async listProjectMembers(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Query() pageOptions: PageOptionsDto,
   ): Promise<ITranslatedPayload<PageDto<ProjectMemberResponseDto>>> {
     const data = await this.businessProjectService.listProjectMembers(id, pageOptions);
@@ -85,7 +86,9 @@ export class BusinessProjectController {
   @Patch(':id/publish')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Confirm and publish the project' })
-  public async confirmPublish(@Param('id') id: string): Promise<ITranslatedPayload<null>> {
+  public async confirmPublish(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ITranslatedPayload<null>> {
     await this.businessProjectService.confirmPublish(id);
     return { messageKey: 'success.project.published', data: null };
   }
@@ -94,7 +97,7 @@ export class BusinessProjectController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get own project by ID' })
   public async getProject(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ): Promise<ITranslatedPayload<BusinessProjectResponseDto>> {
     const data = await this.businessProjectService.getProject(id);
     return { messageKey: 'success.ok', data };
@@ -104,7 +107,7 @@ export class BusinessProjectController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update project fields (replaces skills and questions when provided)' })
   public async updateProject(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateProjectDto,
   ): Promise<ITranslatedPayload<BusinessProjectResponseDto>> {
     const data = await this.businessProjectService.updateProject(id, dto);
@@ -114,7 +117,7 @@ export class BusinessProjectController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a draft, setting-up, or configured project' })
-  public async deleteProject(@Param('id') id: string): Promise<void> {
+  public async deleteProject(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.businessProjectService.deleteProject(id);
   }
 
@@ -126,7 +129,7 @@ export class BusinessProjectController {
       'Status transitions are enforced by a DB trigger. Invalid transitions will return a database error.',
   })
   public async updateStatus(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateProjectStatusDto,
   ): Promise<ITranslatedPayload<BusinessProjectResponseDto>> {
     const data = await this.businessProjectService.updateStatus(id, dto);

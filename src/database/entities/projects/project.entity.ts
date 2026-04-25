@@ -12,6 +12,9 @@ import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } 
 @Entity('projects')
 @Index('idx_projects_business_id', ['businessId'])
 @Index('idx_projects_status', ['status'])
+// Drives the consultant discovery query (status = 'PUBLIC' ORDER BY published_at DESC).
+// A composite index avoids a sort step on the filtered set.
+@Index('idx_projects_status_published_at', ['status', 'publishedAt'])
 export class Project extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_projects' })
   public readonly id!: string;

@@ -25,4 +25,11 @@ export class BusinessProfileRepository
   public async findByUserId(userId: string): Promise<BusinessProfile | null> {
     return this.findOne({ where: { userId } });
   }
+
+  public async findByIdForUpdate(id: string): Promise<BusinessProfile | null> {
+    return this.createQueryBuilder('bp')
+      .where('bp.id = :id', { id })
+      .setLock('pessimistic_write')
+      .getOne();
+  }
 }

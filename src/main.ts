@@ -2,10 +2,11 @@ import { EnvironmentsService } from '@common/modules/environments';
 import { VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { SwaggerModule } from '@nestjs/swagger';
 import { I18nValidationExceptionFilter, I18nValidationPipe } from 'nestjs-i18n';
 
 import { AppModule } from './app.module';
+import { swaggerConfig } from './config/swagger.config';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -52,19 +53,6 @@ async function bootstrap(): Promise<void> {
   );
 
   if (!envService.isProduction) {
-    const swaggerConfig = new DocumentBuilder()
-      .setTitle('Marketplace API')
-      .setDescription('Marketplace backend API documentation')
-      .setVersion('1.0')
-      .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
-      .addTag('Auth')
-      .addTag('Users')
-      .addTag('Business Profiles')
-      .addTag('Consultant Profiles')
-      .addTag('Projects - Business')
-      .addTag('Projects - Consultant')
-      .build();
-
     const document = SwaggerModule.createDocument(app, swaggerConfig);
 
     SwaggerModule.setup('api/v1/docs', app, document);

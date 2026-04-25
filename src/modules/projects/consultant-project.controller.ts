@@ -4,7 +4,16 @@ import { PageDto } from '@common/dto/page.dto';
 import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { ActivePlatform, UserRole } from '@database/enums';
-import { Controller, Get, HttpCode, HttpStatus, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { PlatformGuard } from '../../common/guards/platform.guard';
@@ -37,7 +46,7 @@ export class ConsultantProjectController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get public project detail by ID' })
   public async getProjectDetail(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ): Promise<ITranslatedPayload<ConsultantProjectResponseDto>> {
     const data = await this.consultantProjectService.getProjectDetail(id);
     return { messageKey: 'success.ok', data };

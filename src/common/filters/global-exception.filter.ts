@@ -47,7 +47,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           : (typed.message ?? typed.error ?? exception.message);
       }
     } else if (exception instanceof QueryFailedError) {
-      const driverError = exception.driverError as { code?: string };
+      const driverError = exception.driverError as { code?: string; message?: string };
       switch (driverError?.code) {
         case '23505':
           status = HttpStatus.CONFLICT;
@@ -64,6 +64,22 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           message = this.translate('error.database.not_null_violation', lang);
           errorCode = ERROR_CODES.DATABASE_NOT_NULL_VIOLATION;
           break;
+        // P0001 — `RAISE EXCEPTION` from a PL/pgSQL trigger. Used by
+        // `trg_enforce_project_status` to reject illegal status transitions.
+        // Surface as a domain error so callers see a stable code.
+        case 'P0001': {
+          const triggerMessage = driverError?.message ?? '';
+          if (/project.*status/i.test(triggerMessage)) {
+            status = HttpStatus.UNPROCESSABLE_ENTITY;
+            message = this.translate('error.project.invalid_status_transition', lang);
+            errorCode = ERROR_CODES.PROJECT_INVALID_STATUS_TRANSITION;
+          } else {
+            status = HttpStatus.UNPROCESSABLE_ENTITY;
+            message = this.translate('error.generic.bad_request', lang);
+            errorCode = ERROR_CODES.GENERIC_BAD_REQUEST;
+          }
+          break;
+        }
         default:
           status = HttpStatus.UNPROCESSABLE_ENTITY;
           message = this.translate('error.generic.bad_request', lang);

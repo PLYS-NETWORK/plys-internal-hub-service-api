@@ -13,7 +13,7 @@ export class BusinessProjectResponseDto implements IBusinessProjectResponse {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   public readonly id!: string;
 
-  @Expose({ name: 'businessId' })
+  @Expose()
   @ApiProperty({ name: 'business_id', example: '550e8400-e29b-41d4-a716-446655440000' })
   public readonly business_id!: string;
 
@@ -29,27 +29,27 @@ export class BusinessProjectResponseDto implements IBusinessProjectResponse {
   @ApiProperty({ enum: ProjectStatus, example: ProjectStatus.DRAFT })
   public readonly status!: ProjectStatus;
 
-  @Expose({ name: 'requiredConsultants' })
+  @Expose()
   @ApiProperty({ name: 'required_consultants', example: 2 })
   public readonly required_consultants!: number;
 
-  @Expose({ name: 'publishedAt' })
+  @Expose()
   @ApiProperty({ name: 'published_at', nullable: true })
   public readonly published_at!: Date | null;
 
-  @Expose({ name: 'startedAt' })
+  @Expose()
   @ApiProperty({ name: 'started_at', nullable: true })
   public readonly started_at!: Date | null;
 
-  @Expose({ name: 'completedAt' })
+  @Expose()
   @ApiProperty({ name: 'completed_at', nullable: true })
   public readonly completed_at!: Date | null;
 
-  @Expose({ name: 'cancelledAt' })
+  @Expose()
   @ApiProperty({ name: 'cancelled_at', nullable: true })
   public readonly cancelled_at!: Date | null;
 
-  @Expose({ name: 'createdAt' })
+  @Expose()
   @ApiProperty({ name: 'created_at' })
   public readonly created_at!: Date;
 

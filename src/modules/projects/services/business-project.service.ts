@@ -7,6 +7,7 @@ import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { Money } from '@common/utils/money';
 import {
   BusinessProfile,
   Project,
@@ -23,6 +24,7 @@ import {
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
+import { randomUUID } from 'crypto';
 import { I18nService } from 'nestjs-i18n';
 
 import {
@@ -53,6 +55,23 @@ const LOCKED_STATUSES = new Set<ProjectStatus>([
   ProjectStatus.DONE,
   ProjectStatus.CANCELLED,
 ]);
+
+/** Default platform commission applied to pre-paid publications when the
+ * business profile has no override (`commission_rate` IS NULL). */
+const DEFAULT_COMMISSION_RATE = '0.25';
+
+type PaymentType = 'credit' | 'pre-paid';
+
+interface PublishEligibility {
+  canPublish: boolean;
+  reasonCode: string | null;
+  accountBalance: Money;
+  projectAmount: Money;
+  commissionRate: string;
+  commissionAmount: Money;
+  totalAmount: Money;
+  paymentType: PaymentType;
+}
 
 @Injectable()
 export class BusinessProjectService implements IBusinessProjectService {
@@ -135,12 +154,17 @@ export class BusinessProjectService implements IBusinessProjectService {
       this.loadTasksForProjects(projectIds),
     ]);
 
+    const allSkills: ProjectRequiredSkill[] = [];
+    for (const list of skills.values()) allSkills.push(...list);
+    const skillTranslations = this.translateSkillKeys(allSkills);
+
     const data = projects.map((p) =>
       this.toResponseDto(
         p,
         skills.get(p.id) ?? [],
         questions.get(p.id) ?? [],
         tasks.get(p.id) ?? [],
+        skillTranslations,
       ),
     );
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
@@ -307,8 +331,7 @@ export class BusinessProjectService implements IBusinessProjectService {
 
     // All other transition rules are enforced by the DB trigger
     // (trg_enforce_project_status). If the transition is illegal the DB will
-    // raise an exception which propagates as a DATABASE_* error. We do not
-    // duplicate that logic here.
+    // raise P0001, which the global filter maps to PROJECT_INVALID_STATUS_TRANSITION.
     project.status = dto.status;
     const updatedProject = await this.uow.projects.save(project);
 
@@ -349,12 +372,12 @@ export class BusinessProjectService implements IBusinessProjectService {
       {
         can_publish: result.canPublish,
         reason_code: result.reasonCode,
-        account_balance: result.accountBalance,
+        account_balance: result.accountBalance.toNumber(),
         project_title: project.title,
-        project_amount: result.projectAmount,
-        commission_rate: result.commissionRate,
-        commission_amount: result.commissionAmount,
-        total_amount: result.totalAmount,
+        project_amount: result.projectAmount.toNumber(),
+        commission_rate: Number(result.commissionRate),
+        commission_amount: result.commissionAmount.toNumber(),
+        total_amount: result.totalAmount.toNumber(),
         payment_type: result.paymentType,
       },
       { excludeExtraneousValues: true },
@@ -378,12 +401,13 @@ export class BusinessProjectService implements IBusinessProjectService {
       });
     }
 
-    const eligibility = await this.evaluatePublishEligibility(project, businessProfile);
-
-    if (!eligibility.canPublish) {
-      if (eligibility.reasonCode === 'INSUFFICIENT_BALANCE') {
+    // First-pass eligibility outside the transaction — quick reject for
+    // unaffordable / mis-statused projects without taking row locks.
+    const preview = await this.evaluatePublishEligibility(project, businessProfile);
+    if (!preview.canPublish) {
+      if (preview.reasonCode === 'INSUFFICIENT_BALANCE') {
         this.logger.warn(
-          `confirmPublish — insufficient balance | projectId: ${projectId}, balance: ${eligibility.accountBalance}, required: ${eligibility.totalAmount}`,
+          `confirmPublish — insufficient balance | projectId: ${projectId}, balance: ${preview.accountBalance.toFixedString()}, required: ${preview.totalAmount.toFixedString()}`,
         );
         throw new TranslatableException({
           messageKey: 'error.project.insufficient_balance',
@@ -393,7 +417,7 @@ export class BusinessProjectService implements IBusinessProjectService {
       }
 
       this.logger.warn(
-        `confirmPublish — cannot publish | projectId: ${projectId}, reasonCode: ${eligibility.reasonCode}`,
+        `confirmPublish — cannot publish | projectId: ${projectId}, reasonCode: ${preview.reasonCode}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.cannot_publish',
@@ -402,31 +426,74 @@ export class BusinessProjectService implements IBusinessProjectService {
       });
     }
 
-    const updatedProject = await this.uow.withTransaction(async (txUow) => {
-      // Deduct balance and record transaction for pre-paid businesses
-      if (eligibility.paymentType === 'pre-paid') {
-        const { projectAmount, commissionRate, commissionAmount, totalAmount } = eligibility;
+    // Lock + re-check + deduct atomically. Without the row lock two concurrent
+    // publish calls could both pass the balance check and over-draw the
+    // account; SELECT ... FOR UPDATE serialises the second caller behind the
+    // first.
+    const { updatedProject, eligibility } = await this.uow.withTransaction(async (txUow) => {
+      const lockedProfile = await txUow.businessProfiles.findByIdForUpdate(businessProfile.id);
+      if (!lockedProfile) {
+        this.logger.warn(
+          `confirmPublish — profile vanished mid-transaction | businessId: ${businessProfile.id}`,
+        );
+        throw new TranslatableException({
+          messageKey: 'error.business_profile.not_found',
+          errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
+          status: HttpStatus.FORBIDDEN,
+        });
+      }
 
-        const newBalance = parseFloat(businessProfile.accountBalance) - totalAmount;
-        businessProfile.accountBalance = newBalance.toFixed(2);
-        await txUow.businessProfiles.save(businessProfile);
+      const lockedEligibility = await this.evaluatePublishEligibility(project, lockedProfile);
+      if (!lockedEligibility.canPublish) {
+        if (lockedEligibility.reasonCode === 'INSUFFICIENT_BALANCE') {
+          this.logger.warn(
+            `confirmPublish — insufficient balance after lock | projectId: ${projectId}, balance: ${lockedEligibility.accountBalance.toFixedString()}`,
+          );
+          throw new TranslatableException({
+            messageKey: 'error.project.insufficient_balance',
+            errorCode: ERROR_CODES.PROJECT_INSUFFICIENT_BALANCE,
+            status: HttpStatus.UNPROCESSABLE_ENTITY,
+          });
+        }
+        throw new TranslatableException({
+          messageKey: 'error.project.cannot_publish',
+          errorCode: ERROR_CODES.PROJECT_CANNOT_PUBLISH,
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+        });
+      }
+
+      if (lockedEligibility.paymentType === 'pre-paid') {
+        const newBalance = lockedEligibility.accountBalance.sub(lockedEligibility.totalAmount);
+        if (newBalance.isNegative()) {
+          // Defensive — the lock should have prevented this. Map to the same
+          // user-facing error rather than letting the column constraint raise
+          // a generic DB error.
+          throw new TranslatableException({
+            messageKey: 'error.project.insufficient_balance',
+            errorCode: ERROR_CODES.PROJECT_INSUFFICIENT_BALANCE,
+            status: HttpStatus.UNPROCESSABLE_ENTITY,
+          });
+        }
+        lockedProfile.accountBalance = newBalance.toFixedString();
+        await txUow.businessProfiles.save(lockedProfile);
 
         const txn = txUow.businessTransactions.create({
-          businessId: businessProfile.id,
+          businessId: lockedProfile.id,
           type: BusinessTransactionType.PROJECT_PUBLISHED,
-          amount: projectAmount.toFixed(2),
-          commissionRate: commissionRate.toFixed(4),
-          commissionAmount: commissionAmount.toFixed(2),
-          totalAmount: totalAmount.toFixed(2),
+          amount: lockedEligibility.projectAmount.toFixedString(),
+          commissionRate: Number(lockedEligibility.commissionRate).toFixed(4),
+          commissionAmount: lockedEligibility.commissionAmount.toFixedString(),
+          totalAmount: lockedEligibility.totalAmount.toFixedString(),
           status: TransactionStatus.COMPLETED,
           projectId,
-          note: `Pre-paid project publication: ${project.title} (tasks: ${projectAmount.toFixed(2)} + commission ${(commissionRate * 100).toFixed(0)}%: ${commissionAmount.toFixed(2)})`,
+          note: `Pre-paid project publication: ${project.title} (tasks: ${lockedEligibility.projectAmount.toFixedString()} + commission ${(Number(lockedEligibility.commissionRate) * 100).toFixed(0)}%: ${lockedEligibility.commissionAmount.toFixedString()})`,
         });
         await txUow.businessTransactions.save(txn);
       }
 
       project.status = ProjectStatus.PUBLIC;
-      return txUow.projects.save(project);
+      const saved = await txUow.projects.save(project);
+      return { updatedProject: saved, eligibility: lockedEligibility };
     });
 
     this.logger.log(
@@ -438,9 +505,8 @@ export class BusinessProjectService implements IBusinessProjectService {
     if (user?.email) {
       try {
         if (eligibility.paymentType === 'pre-paid') {
-          // Send payment receipt email for pre-paid businesses
-          const { projectAmount, commissionRate, commissionAmount, totalAmount } = eligibility;
-          const receiptNumber = `PLY-${Date.now().toString().slice(-8).toUpperCase()}`;
+          // Receipt number: short, unique, collision-resistant under concurrency.
+          const receiptNumber = `PLY-${randomUUID().split('-')[0].toUpperCase()}`;
           const paidDate = new Date().toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
@@ -454,10 +520,10 @@ export class BusinessProjectService implements IBusinessProjectService {
             paidDate,
             projectTitle: project.title,
             paymentMethod: PaymentMethod.ACCOUNT_BALANCE,
-            amount: projectAmount.toFixed(2),
-            commissionRate: (commissionRate * 100).toFixed(2),
-            commissionAmount: commissionAmount.toFixed(2),
-            totalAmount: totalAmount.toFixed(2),
+            amount: eligibility.projectAmount.toFixedString(),
+            commissionRate: (Number(eligibility.commissionRate) * 100).toFixed(2),
+            commissionAmount: eligibility.commissionAmount.toFixedString(),
+            totalAmount: eligibility.totalAmount.toFixedString(),
             projectDashboardUrl,
           });
 
@@ -465,7 +531,6 @@ export class BusinessProjectService implements IBusinessProjectService {
             `confirmPublish — receipt email sent | projectId: ${projectId}, email: ${user.email}`,
           );
         } else {
-          // Send project published success email for credit-based businesses
           const projectHubUrl = `${this.env.ployosUrl}/c/${businessProfile.id}/projects/${projectId}`;
 
           await this.emailService.sendProjectPublishedSuccessEmail(user.email, {
@@ -586,8 +651,9 @@ export class BusinessProjectService implements IBusinessProjectService {
    * a refund of the original PROJECT_PUBLISHED charge amount. Credit-based
    * businesses simply transition without any financial side-effects.
    *
-   * Why transactional: balance credit + refund transaction + status change must
-   * be atomic to avoid a partial refund leaving the project still public.
+   * Why transactional + locked: balance credit + refund transaction + status
+   * change must be atomic, and the lock prevents a concurrent publish from
+   * racing with the refund and corrupting the running balance.
    */
   private async handleRecall(project: Project): Promise<BusinessProjectResponseDto> {
     const businessProfile = await this.resolveBusinessProfile();
@@ -598,6 +664,15 @@ export class BusinessProjectService implements IBusinessProjectService {
     const updatedProject = await this.uow.withTransaction(async (txUow) => {
       // Pre-paid businesses need a refund of the original publish charge
       if (!businessProfile.allowPaymentCredit) {
+        const lockedProfile = await txUow.businessProfiles.findByIdForUpdate(businessProfile.id);
+        if (!lockedProfile) {
+          throw new TranslatableException({
+            messageKey: 'error.business_profile.not_found',
+            errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
+            status: HttpStatus.FORBIDDEN,
+          });
+        }
+
         const originalTxn = await txUow.businessTransactions.findOne({
           where: {
             projectId: project.id,
@@ -617,14 +692,14 @@ export class BusinessProjectService implements IBusinessProjectService {
           });
         }
 
-        const refundAmount = parseFloat(originalTxn.amount);
-        businessProfile.accountBalance = (
-          parseFloat(businessProfile.accountBalance) + refundAmount
-        ).toFixed(2);
-        await txUow.businessProfiles.save(businessProfile);
+        const newBalance = Money.from(lockedProfile.accountBalance).add(
+          Money.from(originalTxn.amount),
+        );
+        lockedProfile.accountBalance = newBalance.toFixedString();
+        await txUow.businessProfiles.save(lockedProfile);
 
         const refundTxn = txUow.businessTransactions.create({
-          businessId: businessProfile.id,
+          businessId: lockedProfile.id,
           type: BusinessTransactionType.REFUND,
           amount: originalTxn.amount,
           status: TransactionStatus.COMPLETED,
@@ -634,7 +709,7 @@ export class BusinessProjectService implements IBusinessProjectService {
         await txUow.businessTransactions.save(refundTxn);
 
         this.logger.log(
-          `handleRecall — refund issued | projectId: ${project.id}, amount: ${originalTxn.amount}, newBalance: ${businessProfile.accountBalance}`,
+          `handleRecall — refund issued | projectId: ${project.id}, amount: ${originalTxn.amount}, newBalance: ${lockedProfile.accountBalance}`,
         );
       }
 
@@ -688,80 +763,27 @@ export class BusinessProjectService implements IBusinessProjectService {
 
   /**
    * Shared validation logic for publish eligibility.
-   * Checks project status + payment affordability.
+   * Checks project status + payment affordability using fixed-point money math.
    */
   private async evaluatePublishEligibility(
     project: Project,
     businessProfile: BusinessProfile,
-  ): Promise<{
-    canPublish: boolean;
-    reasonCode: string | null;
-    accountBalance: number;
-    projectAmount: number;
-    commissionRate: number;
-    commissionAmount: number;
-    totalAmount: number;
-    paymentType: 'credit' | 'pre-paid';
-  }> {
-    const accountBalance = parseFloat(businessProfile.accountBalance);
-    const paymentType: 'credit' | 'pre-paid' = businessProfile.allowPaymentCredit
-      ? 'credit'
-      : 'pre-paid';
+  ): Promise<PublishEligibility> {
+    const accountBalance = Money.from(businessProfile.accountBalance);
+    const paymentType: PaymentType = businessProfile.allowPaymentCredit ? 'credit' : 'pre-paid';
 
     const tasks = await this.uow.tasks.find({ where: { projectId: project.id } });
-    const projectAmount = tasks.reduce((sum, t) => sum + Number(t.price), 0);
+    const projectAmount = Money.sum(tasks.map((t) => t.price));
 
-    // Commission only applies to pre-paid businesses
+    // Commission only applies to pre-paid businesses.
     const commissionRate =
-      paymentType === 'pre-paid' ? Number(businessProfile.commissionRate ?? 0.25) : 0;
-    const commissionAmount = projectAmount * commissionRate;
-    const totalAmount = projectAmount + commissionAmount;
+      paymentType === 'pre-paid'
+        ? (businessProfile.commissionRate ?? DEFAULT_COMMISSION_RATE)
+        : '0';
+    const commissionAmount = projectAmount.mulRate(commissionRate);
+    const totalAmount = projectAmount.add(commissionAmount);
 
-    // Project must be in CONFIGURED status to be published
-    if (project.status !== ProjectStatus.CONFIGURED) {
-      return {
-        canPublish: false,
-        reasonCode: 'NOT_CONFIGURED',
-        accountBalance,
-        projectAmount,
-        commissionRate,
-        commissionAmount,
-        totalAmount,
-        paymentType,
-      };
-    }
-
-    // Credit-based businesses can always publish (invoiced monthly)
-    if (paymentType === 'credit') {
-      return {
-        canPublish: true,
-        reasonCode: null,
-        accountBalance,
-        projectAmount,
-        commissionRate: 0,
-        commissionAmount: 0,
-        totalAmount: projectAmount,
-        paymentType,
-      };
-    }
-
-    // Pre-paid: check balance covers totalAmount (task subtotal + commission)
-    if (accountBalance >= totalAmount) {
-      return {
-        canPublish: true,
-        reasonCode: null,
-        accountBalance,
-        projectAmount,
-        commissionRate,
-        commissionAmount,
-        totalAmount,
-        paymentType,
-      };
-    }
-
-    return {
-      canPublish: false,
-      reasonCode: 'INSUFFICIENT_BALANCE',
+    const baseResult = {
       accountBalance,
       projectAmount,
       commissionRate,
@@ -769,6 +791,29 @@ export class BusinessProjectService implements IBusinessProjectService {
       totalAmount,
       paymentType,
     };
+
+    if (project.status !== ProjectStatus.CONFIGURED) {
+      return { ...baseResult, canPublish: false, reasonCode: 'NOT_CONFIGURED' };
+    }
+
+    if (paymentType === 'credit') {
+      // Credit-based businesses are billed monthly; the publish call itself
+      // does not move money. Zero out commission for the response payload.
+      return {
+        ...baseResult,
+        commissionRate: '0',
+        commissionAmount: Money.zero(),
+        totalAmount: projectAmount,
+        canPublish: true,
+        reasonCode: null,
+      };
+    }
+
+    if (accountBalance.gte(totalAmount)) {
+      return { ...baseResult, canPublish: true, reasonCode: null };
+    }
+
+    return { ...baseResult, canPublish: false, reasonCode: 'INSUFFICIENT_BALANCE' };
   }
 
   /**
@@ -857,31 +902,47 @@ export class BusinessProjectService implements IBusinessProjectService {
     return byProject;
   }
 
+  // Translates each unique skill key once per request locale, so a list of
+  // N projects sharing M skills runs at most M i18n calls instead of N×M.
+  private translateSkillKeys(skills: ProjectRequiredSkill[]): Map<string, string> {
+    const lang = this.requestContext.lang;
+    const out = new Map<string, string>();
+    for (const s of skills) {
+      const key = s.skill.name;
+      if (out.has(key)) continue;
+      out.set(key, this.translateSkillKey(key, lang));
+    }
+    return out;
+  }
+
   private toResponseDto(
     project: Project,
     skills: ProjectRequiredSkill[],
     questions: ProjectInterviewQuestion[],
     tasks: Task[],
+    skillTranslations?: Map<string, string>,
   ): BusinessProjectResponseDto {
     const lang = this.requestContext.lang;
+    const translate = (name: string): string =>
+      skillTranslations?.get(name) ?? this.translateSkillKey(name, lang);
 
     return plainToInstance(
       BusinessProjectResponseDto,
       {
         id: project.id,
-        businessId: project.businessId,
+        business_id: project.businessId,
         title: project.title,
         introduction: project.introduction,
         status: project.status,
-        requiredConsultants: project.requiredConsultants,
-        publishedAt: project.publishedAt,
-        startedAt: project.startedAt,
-        completedAt: project.completedAt,
-        cancelledAt: project.cancelledAt,
-        createdAt: project.createdAt,
+        required_consultants: project.requiredConsultants,
+        published_at: project.publishedAt,
+        started_at: project.startedAt,
+        completed_at: project.completedAt,
+        cancelled_at: project.cancelledAt,
+        created_at: project.createdAt,
         skills: skills.map((s) => ({
           skill_id: s.skillId,
-          skill_name: this.translateSkillKey(s.skill.name, lang),
+          skill_name: translate(s.skill.name),
         })),
         interview_questions: questions.map((q) => ({
           id: q.id,

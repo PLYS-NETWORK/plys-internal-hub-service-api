@@ -1,26 +1,43 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayUnique,
   IsArray,
   IsInt,
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
   Min,
+  MinLength,
   ValidateNested,
 } from 'class-validator';
 
 import { IUpdateProjectRequest } from './interfaces/update-project.request.interface';
 import { InterviewQuestionItemDto } from './interview-question-item.dto';
+import {
+  PROJECT_INTERVIEW_QUESTIONS_MAX,
+  PROJECT_REQUIRED_CONSULTANTS_MAX,
+  PROJECT_SKILLS_MAX,
+  PROJECT_TASKS_MAX,
+  PROJECT_TITLE_MAX,
+  PROJECT_TITLE_MIN,
+} from './project.constants';
 import { TaskItemDto } from './task-item.dto';
 
 export class UpdateProjectDto implements IUpdateProjectRequest {
   @Expose()
-  @ApiPropertyOptional({ name: 'title', example: 'Build an e-commerce platform', maxLength: 300 })
+  @ApiPropertyOptional({
+    name: 'title',
+    example: 'Build an e-commerce platform',
+    minLength: PROJECT_TITLE_MIN,
+    maxLength: PROJECT_TITLE_MAX,
+  })
   @IsString()
-  @MaxLength(300)
+  @MinLength(PROJECT_TITLE_MIN)
+  @MaxLength(PROJECT_TITLE_MAX)
   @IsOptional()
   public readonly title?: string;
 
@@ -31,9 +48,15 @@ export class UpdateProjectDto implements IUpdateProjectRequest {
   public readonly introduction?: string;
 
   @Expose()
-  @ApiPropertyOptional({ name: 'required_consultants', example: 2, minimum: 1 })
+  @ApiPropertyOptional({
+    name: 'required_consultants',
+    example: 2,
+    minimum: 1,
+    maximum: PROJECT_REQUIRED_CONSULTANTS_MAX,
+  })
   @IsInt()
   @Min(1)
+  @Max(PROJECT_REQUIRED_CONSULTANTS_MAX)
   @IsOptional()
   public readonly required_consultants?: number;
 
@@ -42,10 +65,10 @@ export class UpdateProjectDto implements IUpdateProjectRequest {
     name: 'skills',
     type: [String],
     example: ['550e8400-e29b-41d4-a716-446655440000'],
-    description:
-      'When provided, replaces the entire set of required skills. Array of unique skill UUIDs.',
+    description: `When provided, replaces the entire set of required skills. Array of unique skill UUIDs. Max ${PROJECT_SKILLS_MAX}.`,
   })
   @IsArray()
+  @ArrayMaxSize(PROJECT_SKILLS_MAX)
   @IsUUID('4', { each: true })
   @ArrayUnique()
   @IsOptional()
@@ -55,9 +78,10 @@ export class UpdateProjectDto implements IUpdateProjectRequest {
   @ApiPropertyOptional({
     name: 'interview_questions',
     type: [InterviewQuestionItemDto],
-    description: 'When provided, replaces the entire set of interview questions.',
+    description: `When provided, replaces the entire set of interview questions. Max ${PROJECT_INTERVIEW_QUESTIONS_MAX}.`,
   })
   @IsArray()
+  @ArrayMaxSize(PROJECT_INTERVIEW_QUESTIONS_MAX)
   @ValidateNested({ each: true })
   @Type(() => InterviewQuestionItemDto)
   @IsOptional()
@@ -67,9 +91,10 @@ export class UpdateProjectDto implements IUpdateProjectRequest {
   @ApiPropertyOptional({
     name: 'tasks',
     type: [TaskItemDto],
-    description: 'When provided, replaces the entire set of tasks.',
+    description: `When provided, replaces the entire set of tasks. Max ${PROJECT_TASKS_MAX}.`,
   })
   @IsArray()
+  @ArrayMaxSize(PROJECT_TASKS_MAX)
   @ValidateNested({ each: true })
   @Type(() => TaskItemDto)
   @IsOptional()

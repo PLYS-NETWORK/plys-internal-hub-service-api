@@ -36,7 +36,8 @@
     "cannot_publish": "This project cannot be published in its current state.",
     "insufficient_balance": "Insufficient account balance to publish this project.",
     "recall_transaction_not_found": "Original publication transaction not found for recall refund.",
-    "cannot_be_deleted": "Only draft, setting-up, or configured projects can be deleted."
+    "cannot_be_deleted": "Only draft, setting-up, or configured projects can be deleted.",
+    "invalid_status_transition": "Invalid project status transition."
   },
   "task": {
     "not_found": "Task not found.",

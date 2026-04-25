@@ -1,27 +1,55 @@
 import { TaskDifficulty } from '@database/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { IsEnum, IsInt, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 import { ITaskItemRequest } from './interfaces/task-item.request.interface';
+import {
+  TASK_DESCRIPTION_MAX,
+  TASK_PRICE_MAX,
+  TASK_TITLE_MAX,
+  TASK_TITLE_MIN,
+} from './project.constants';
 
 export class TaskItemDto implements ITaskItemRequest {
   @Expose()
-  @ApiProperty({ name: 'title', example: 'Implement authentication module', maxLength: 300 })
+  @ApiProperty({
+    name: 'title',
+    example: 'Implement authentication module',
+    minLength: TASK_TITLE_MIN,
+    maxLength: TASK_TITLE_MAX,
+  })
   @IsString()
-  @MaxLength(300)
+  @MinLength(TASK_TITLE_MIN)
+  @MaxLength(TASK_TITLE_MAX)
   public readonly title!: string;
 
   @Expose()
-  @ApiPropertyOptional({ name: 'description', example: 'Build JWT-based auth with refresh tokens' })
+  @ApiPropertyOptional({
+    name: 'description',
+    example: 'Build JWT-based auth with refresh tokens',
+    maxLength: TASK_DESCRIPTION_MAX,
+  })
   @IsString()
+  @MaxLength(TASK_DESCRIPTION_MAX)
   @IsOptional()
   public readonly description?: string;
 
   @Expose()
-  @ApiProperty({ name: 'price', example: 250.0, minimum: 0 })
+  @ApiProperty({ name: 'price', example: 250.0, minimum: 0, maximum: TASK_PRICE_MAX })
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(TASK_PRICE_MAX)
   public readonly price!: number;
 
   @Expose({ name: 'difficulty_level' })

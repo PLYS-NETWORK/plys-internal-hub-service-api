@@ -69,12 +69,18 @@ export class ConsultantProjectService implements IConsultantProjectService {
       this.loadBusinessProfiles(businessIds),
     ]);
 
+    // One translation lookup per unique skill key, instead of per row.
+    const allSkills: ProjectRequiredSkill[] = [];
+    for (const list of skills.values()) allSkills.push(...list);
+    const skillTranslations = this.translateSkillKeys(allSkills);
+
     const data = projects.map((p) =>
       this.toResponseDto(
         p,
         skills.get(p.id) ?? [],
         questions.get(p.id) ?? [],
         businessProfiles.get(p.businessId),
+        skillTranslations,
       ),
     );
     const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
@@ -189,26 +195,42 @@ export class ConsultantProjectService implements IConsultantProjectService {
     return byId;
   }
 
+  // Translates each unique skill key once per request locale, so a list of
+  // N projects sharing M skills runs at most M i18n calls instead of N×M.
+  private translateSkillKeys(skills: ProjectRequiredSkill[]): Map<string, string> {
+    const lang = this.requestContext.lang;
+    const out = new Map<string, string>();
+    for (const s of skills) {
+      const key = s.skill.name;
+      if (out.has(key)) continue;
+      out.set(key, this.translateSkillKey(key, lang));
+    }
+    return out;
+  }
+
   private toResponseDto(
     project: Project,
     skills: ProjectRequiredSkill[],
     questions: ProjectInterviewQuestion[],
     businessProfile?: BusinessProfile,
+    skillTranslations?: Map<string, string>,
   ): ConsultantProjectResponseDto {
     const lang = this.requestContext.lang;
+    const translate = (name: string): string =>
+      skillTranslations?.get(name) ?? this.translateSkillKey(name, lang);
 
     return plainToInstance(
       ConsultantProjectResponseDto,
       {
         id: project.id,
-        businessId: project.businessId,
+        business_id: project.businessId,
         title: project.title,
         introduction: project.introduction,
         status: project.status,
-        requiredConsultants: project.requiredConsultants,
-        publishedAt: project.publishedAt,
-        startedAt: project.startedAt,
-        cancelledAt: project.cancelledAt,
+        required_consultants: project.requiredConsultants,
+        published_at: project.publishedAt,
+        started_at: project.startedAt,
+        cancelled_at: project.cancelledAt,
         payment_type: businessProfile?.allowPaymentCredit ? 'monthly' : 'per_task',
         company_name: businessProfile?.companyName ?? '',
         company_address: {
@@ -221,7 +243,7 @@ export class ConsultantProjectService implements IConsultantProjectService {
         is_partner_platform: businessProfile?.isPartnerPlatform ?? false,
         skills: skills.map((s) => ({
           skill_id: s.skillId,
-          skill_name: this.translateSkillKey(s.skill.name, lang),
+          skill_name: translate(s.skill.name),
         })),
         interview_questions: questions.map((q) => ({
           id: q.id,

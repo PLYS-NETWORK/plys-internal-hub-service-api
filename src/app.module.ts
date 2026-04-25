@@ -18,6 +18,7 @@ import { PaymentModule } from './common/modules/payment';
 import { RedisModule } from './common/modules/redis';
 import { RequestContextMiddleware, RequestContextModule } from './common/modules/request-context';
 import configuration from './config/configuration';
+import { resolveEnvFilePath } from './config/env-file.config';
 import { AuditSubscriber } from './database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from './database/typeorm.config';
 import { ApplicationsModule } from './modules/applications/applications.module';
@@ -37,7 +38,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development',
+      envFilePath: resolveEnvFilePath(),
       load: [configuration],
     }),
     EnvironmentsModule,
@@ -78,7 +79,9 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
 })
 export class AppModule implements NestModule {
   public configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(RequestContextMiddleware).forRoutes({ path: '*path', method: RequestMethod.ALL });
+    consumer
+      .apply(RequestContextMiddleware)
+      .forRoutes({ path: '*path', method: RequestMethod.ALL });
 
     // JwtContextMiddleware runs after RequestContextMiddleware so the AsyncLocalStorage
     // context is already established when the JWT payload is written into it.
