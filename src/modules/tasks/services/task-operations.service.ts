@@ -237,6 +237,48 @@ export class TaskOperationsService implements ITaskOperationsService {
   }
 
   /** @inheritdoc */
+  public async listKanbanTasksForBusiness(projectId: string): Promise<TaskResponseDto[]> {
+    const businessId = await this.resolveBusinessId();
+    this.logger.log(`listKanbanTasksForBusiness — start | projectId: ${projectId}`);
+
+    const project = await this.uow.projects.findByIdAndBusinessId(projectId, businessId);
+    if (!project) {
+      throw this.projectNotFound(projectId, businessId);
+    }
+
+    const tasks = await this.uow.tasks.find({
+      where: { projectId, kanbanStatus: Not(TaskKanbanStatus.DRAFT) },
+      order: { displayOrder: 'ASC' },
+    });
+
+    this.logger.log(
+      `listKanbanTasksForBusiness — complete | projectId: ${projectId}, returned: ${tasks.length}`,
+    );
+    return tasks.map((t) => this.toResponseDto(t));
+  }
+
+  /** @inheritdoc */
+  public async listDraftTasksForBusiness(projectId: string): Promise<TaskResponseDto[]> {
+    const businessId = await this.resolveBusinessId();
+    this.logger.log(`listDraftTasksForBusiness — start | projectId: ${projectId}`);
+
+    const project = await this.uow.projects.findByIdAndBusinessId(projectId, businessId);
+    if (!project) {
+      throw this.projectNotFound(projectId, businessId);
+    }
+
+    const tasks = await this.uow.tasks.find({
+      where: { projectId, kanbanStatus: TaskKanbanStatus.DRAFT },
+      order: { displayOrder: 'ASC' },
+    });
+
+    this.logger.log(
+      `listDraftTasksForBusiness — complete | projectId: ${projectId}, returned: ${tasks.length}`,
+    );
+    return tasks.map((t) => this.toResponseDto(t));
+  }
+
+  /** @inheritdoc */
   public async getTaskHistory(
     taskId: string,
     pageOptions: PageOptionsDto,
@@ -337,8 +379,7 @@ export class TaskOperationsService implements ITaskOperationsService {
   /** @inheritdoc */
   public async listProjectTasksForConsultant(
     projectId: string,
-    pageOptions: PageOptionsDto,
-  ): Promise<PageDto<ConsultantTaskResponseDto>> {
+  ): Promise<ConsultantTaskResponseDto[]> {
     const consultantProfile = await this.resolveConsultantProfile();
     this.logger.log(
       `listProjectTasksForConsultant — start | projectId: ${projectId}, consultantId: ${consultantProfile.id}`,
@@ -346,11 +387,9 @@ export class TaskOperationsService implements ITaskOperationsService {
 
     await this.verifyProjectMembership(projectId, consultantProfile.id);
 
-    const [tasks, itemCount] = await this.uow.tasks.findAndCount({
-      where: { projectId },
+    const tasks = await this.uow.tasks.find({
+      where: { projectId, kanbanStatus: Not(TaskKanbanStatus.DRAFT) },
       order: { displayOrder: 'ASC' },
-      skip: pageOptions.skip,
-      take: pageOptions.limit,
     });
 
     const data = tasks.map((t) =>
@@ -372,11 +411,10 @@ export class TaskOperationsService implements ITaskOperationsService {
       ),
     );
 
-    const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
     this.logger.log(
-      `listProjectTasksForConsultant — complete | projectId: ${projectId}, returned: ${data.length}, total: ${itemCount}`,
+      `listProjectTasksForConsultant — complete | projectId: ${projectId}, returned: ${data.length}`,
     );
-    return new PageDto(data, meta);
+    return data;
   }
 
   // ─── Private helpers ───────────────────────────────────────────────────────

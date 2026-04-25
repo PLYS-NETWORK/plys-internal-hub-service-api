@@ -5,10 +5,11 @@ import { TaskCommentsService } from './services/task-comments.service';
 import { TaskOperationsService } from './services/task-operations.service';
 import { TasksBusinessController } from './tasks-business.controller';
 import { TasksConsultantController } from './tasks-consultant.controller';
+import { TasksController } from './tasks.controller';
 
 @Module({
   imports: [UnitOfWorkModule],
-  controllers: [TasksBusinessController, TasksConsultantController],
+  controllers: [TasksController, TasksBusinessController, TasksConsultantController],
   providers: [TaskOperationsService, TaskCommentsService],
 })
 export class TasksModule {}

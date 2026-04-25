@@ -93,6 +93,26 @@ export interface ITaskOperationsService {
   assignTask(taskId: string, dto: AssignTaskDto): Promise<TaskResponseDto>;
 
   /**
+   * Returns all non-draft tasks for a project, ordered by `display_order` ascending,
+   * for use as the business kanban board. Only the business that owns the project may call this.
+   *
+   * @param projectId - UUID of the project whose kanban tasks to list.
+   * @returns Full list of task DTOs with `kanban_status` other than `draft`.
+   * @throws TranslatableException (404) — project not found or not owned by calling business.
+   */
+  listKanbanTasksForBusiness(projectId: string): Promise<TaskResponseDto[]>;
+
+  /**
+   * Returns all draft tasks for a project, ordered by `display_order` ascending.
+   * Only the business that owns the project may call this.
+   *
+   * @param projectId - UUID of the project whose draft tasks to list.
+   * @returns Full list of task DTOs with `kanban_status: draft`.
+   * @throws TranslatableException (404) — project not found or not owned by calling business.
+   */
+  listDraftTasksForBusiness(projectId: string): Promise<TaskResponseDto[]>;
+
+  /**
    * Returns a paginated list of status and assignment history entries for a task,
    * ordered by `changed_at` descending. Accessible by both business and consultant
    * platform users.
@@ -135,19 +155,15 @@ export interface ITaskOperationsService {
   reorderTasks(dto: ReorderTasksDto): Promise<void>;
 
   /**
-   * Returns a paginated list of tasks for a project, scoped to the consultant
-   * platform. The caller must be an `ACTIVE` member of the project.
+   * Returns all non-draft tasks for a project, scoped to the consultant platform,
+   * ordered by `display_order` ascending. The caller must be an `ACTIVE` member of the project.
    *
    * Returns `ConsultantTaskResponseDto` which omits sensitive pricing fields
    * (`price`, `platform_fee_amount`, `consultant_payout`) visible only to business.
    *
-   * @param projectId   - UUID of the project whose tasks to list.
-   * @param pageOptions - Pagination parameters (page, take).
-   * @returns Paginated wrapper containing consultant-scoped task DTOs and page metadata.
+   * @param projectId - UUID of the project whose tasks to list.
+   * @returns Full list of consultant-scoped task DTOs with `kanban_status` other than `draft`.
    * @throws TranslatableException (422) — caller is not an active project member.
    */
-  listProjectTasksForConsultant(
-    projectId: string,
-    pageOptions: PageOptionsDto,
-  ): Promise<PageDto<ConsultantTaskResponseDto>>;
+  listProjectTasksForConsultant(projectId: string): Promise<ConsultantTaskResponseDto[]>;
 }
