@@ -32,8 +32,8 @@ export class Project extends AuditableEntity {
   @Column({ type: 'varchar', length: 300 })
   public title!: string;
 
-  @Column({ type: 'text', nullable: true })
-  public introduction!: string | null;
+  @Column({ type: 'jsonb', nullable: true })
+  public introduction!: Record<string, unknown> | null;
 
   @Column({ type: 'varchar', length: 20, default: ProjectStatus.DRAFT })
   public status!: ProjectStatus;

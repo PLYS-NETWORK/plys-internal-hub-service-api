@@ -5,6 +5,7 @@ import {
   ArrayUnique,
   IsArray,
   IsInt,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
@@ -42,10 +43,23 @@ export class UpdateProjectDto implements IUpdateProjectRequest {
   public readonly title?: string;
 
   @Expose()
-  @ApiPropertyOptional({ name: 'introduction', example: 'We need a full-stack team...' })
-  @IsString()
+  @ApiPropertyOptional({
+    name: 'introduction',
+    type: 'object',
+    additionalProperties: true,
+    example: {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'We need a full-stack team...' }],
+        },
+      ],
+    },
+  })
+  @IsObject()
   @IsOptional()
-  public readonly introduction?: string;
+  public readonly introduction?: Record<string, unknown>;
 
   @Expose()
   @ApiPropertyOptional({

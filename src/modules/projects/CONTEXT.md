@@ -13,7 +13,7 @@ Owns the top-level container under which tasks live and consultants are recruite
 | Column | Type | Notes |
 |---|---|---|
 | `title` | varchar(300) | Required |
-| `introduction` | text | Optional description |
+| `introduction` | jsonb | Optional rich-text editor document (TipTap/ProseMirror JSON tree); `null` when not provided |
 | `status` | varchar(20) | Enforced by DB trigger |
 | `required_consultants` | smallint | Default 1 |
 | `published_at` | timestamptz | Auto-stamped by trigger on → `public` |

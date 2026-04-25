@@ -19,8 +19,21 @@ export class TaskResponseDto implements ITaskResponse {
   public readonly title!: string;
 
   @Expose()
-  @ApiProperty({ nullable: true })
-  public readonly description!: string | null;
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: true,
+    nullable: true,
+    example: {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Build JWT-based auth with refresh tokens.' }],
+        },
+      ],
+    },
+  })
+  public readonly description!: Record<string, unknown> | null;
 
   @Expose()
   @ApiProperty({ example: 250.0 })

@@ -5,8 +5,8 @@ export interface IProjectTaskResponse {
   id: string;
   /** Short descriptive title of the deliverable. */
   title: string;
-  /** Optional extended description of the task scope; `null` when not provided. */
-  description: string | null;
+  /** Optional extended description of the task scope (TipTap/ProseMirror JSON document); `null` when not provided. */
+  description: Record<string, unknown> | null;
   /** Total task price charged to the business, in the platform's base currency (minor units). */
   price: number;
   /** Platform fee deducted from the task price before paying the consultant. */

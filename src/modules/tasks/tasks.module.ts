@@ -9,6 +9,7 @@ import { ConsultantTasksService } from './consultant/consultant-tasks.service';
 import { TasksConsultantController } from './consultant/tasks-consultant.controller';
 import { TaskAccessService } from './shared/services/task-access.service';
 import { TaskCommentsService } from './shared/services/task-comments.service';
+import { TaskEvidencesService } from './shared/services/task-evidences.service';
 import { TaskMapperService } from './shared/services/task-mapper.service';
 import { TaskPaymentService } from './shared/services/task-payment.service';
 import { TasksController } from './shared/tasks.controller';
@@ -22,6 +23,7 @@ import { TasksController } from './shared/tasks.controller';
     TaskMapperService,
     TaskPaymentService,
     TaskCommentsService,
+    TaskEvidencesService,
     // business
     BusinessTasksService,
     BusinessTaskStatusStrategy,

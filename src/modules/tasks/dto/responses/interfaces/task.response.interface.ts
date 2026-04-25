@@ -7,8 +7,8 @@ export interface ITaskResponse {
   readonly project_id: string;
   /** Short descriptive title of the deliverable. */
   readonly title: string;
-  /** Optional extended description of the task scope; `null` when not provided. */
-  readonly description: string | null;
+  /** Optional extended description of the task scope (TipTap/ProseMirror JSON document); `null` when not provided. */
+  readonly description: Record<string, unknown> | null;
   /** Total task price charged to the business, in the platform's base currency (minor units). */
   readonly price: number;
   /** Platform fee deducted from the task price before paying the consultant. */

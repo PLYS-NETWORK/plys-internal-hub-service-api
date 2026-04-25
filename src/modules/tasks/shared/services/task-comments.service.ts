@@ -47,12 +47,12 @@ export class TaskCommentsService implements ITaskCommentsService {
 
     await this.verifyCommentAccess(task.project.businessId, task.projectId);
 
-    const comment = this.uow.taskComments.create({
+    const newComment = this.uow.taskComments.create({
       taskId,
       authorId: userId,
-      body: dto.body,
+      comment: dto.comment,
     });
-    const saved = await this.uow.taskComments.save(comment);
+    const saved = await this.uow.taskComments.save(newComment);
 
     this.logger.log(`createComment — complete | commentId: ${saved.id}, taskId: ${taskId}`);
     return this.taskMapper.toTaskCommentResponseDto(saved);
@@ -83,12 +83,12 @@ export class TaskCommentsService implements ITaskCommentsService {
     const userId = this.requestContext.userId!;
     this.logger.log(`updateComment — start | commentId: ${commentId}`);
 
-    const comment = await this.uow.taskComments.findOne({ where: { id: commentId } });
-    if (!comment || comment.isDeleted) {
+    const existing = await this.uow.taskComments.findOne({ where: { id: commentId } });
+    if (!existing || existing.isDeleted) {
       throw this.commentNotFound(commentId);
     }
 
-    if (comment.authorId !== userId) {
+    if (existing.authorId !== userId) {
       throw new TranslatableException({
         messageKey: TASK_ERRORS.COMMENT_FORBIDDEN,
         errorCode: ERROR_CODES.TASK_COMMENT_FORBIDDEN,
@@ -96,10 +96,10 @@ export class TaskCommentsService implements ITaskCommentsService {
       });
     }
 
-    comment.body = dto.body;
-    comment.isEdited = true;
-    comment.editedAt = new Date();
-    const saved = await this.uow.taskComments.save(comment);
+    existing.comment = dto.comment;
+    existing.isEdited = true;
+    existing.editedAt = new Date();
+    const saved = await this.uow.taskComments.save(existing);
 
     this.logger.log(`updateComment — complete | commentId: ${commentId}`);
     return this.taskMapper.toTaskCommentResponseDto(saved);
@@ -110,12 +110,12 @@ export class TaskCommentsService implements ITaskCommentsService {
     const userId = this.requestContext.userId!;
     this.logger.log(`deleteComment — start | commentId: ${commentId}`);
 
-    const comment = await this.uow.taskComments.findOne({ where: { id: commentId } });
-    if (!comment || comment.isDeleted) {
+    const existing = await this.uow.taskComments.findOne({ where: { id: commentId } });
+    if (!existing || existing.isDeleted) {
       throw this.commentNotFound(commentId);
     }
 
-    if (comment.authorId !== userId) {
+    if (existing.authorId !== userId) {
       throw new TranslatableException({
         messageKey: TASK_ERRORS.COMMENT_FORBIDDEN,
         errorCode: ERROR_CODES.TASK_COMMENT_FORBIDDEN,
@@ -123,8 +123,8 @@ export class TaskCommentsService implements ITaskCommentsService {
       });
     }
 
-    comment.isDeleted = true;
-    await this.uow.taskComments.save(comment);
+    existing.isDeleted = true;
+    await this.uow.taskComments.save(existing);
 
     this.logger.log(`deleteComment — complete | commentId: ${commentId}`);
   }

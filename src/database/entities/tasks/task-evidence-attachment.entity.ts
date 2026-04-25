@@ -3,33 +3,35 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-import { TaskComment } from './task-comment.entity';
+import { TaskEvidence } from './task-evidence.entity';
 
-// Metadata only — actual files live in object storage (S3/R2).
-// `file_id` (nullable, ON DELETE SET NULL) keeps the audit chain to the
-// canonical `files` row when available; the snapshotted `file_url`/`file_name`
-// keep this row meaningful even if the source file row is later removed.
-@Entity('task_comment_attachments')
-export class TaskCommentAttachment {
+// Metadata only — actual files live in object storage (S3/local). The file
+// metadata (name/url/mime/size) is snapshotted at creation time so the
+// evidence stays durable even if the source `files` row is later removed.
+// `file_id` keeps the audit chain to the canonical file row when available.
+@Entity('task_evidence_attachments')
+@Index('idx_task_evidence_attachments_evidence_id', ['evidenceId'])
+export class TaskEvidenceAttachment {
   @PrimaryGeneratedColumn('uuid', {
-    primaryKeyConstraintName: 'pk_task_comment_attachments',
+    primaryKeyConstraintName: 'pk_task_evidence_attachments',
   })
   public readonly id!: string;
 
-  @Column({ name: 'comment_id', type: 'uuid' })
-  public commentId!: string;
+  @Column({ name: 'evidence_id', type: 'uuid' })
+  public evidenceId!: string;
 
-  @ManyToOne(() => TaskComment, { onDelete: 'CASCADE' })
+  @ManyToOne(() => TaskEvidence, { onDelete: 'CASCADE' })
   @JoinColumn({
-    name: 'comment_id',
-    foreignKeyConstraintName: 'fk_task_comment_attachments_to_task_comments',
+    name: 'evidence_id',
+    foreignKeyConstraintName: 'fk_task_evidence_attachments_to_task_evidences',
   })
-  public comment!: TaskComment;
+  public evidence!: TaskEvidence;
 
   @Column({ name: 'file_id', type: 'uuid', nullable: true })
   public fileId!: string | null;
@@ -37,7 +39,7 @@ export class TaskCommentAttachment {
   @ManyToOne(() => FileEntity, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({
     name: 'file_id',
-    foreignKeyConstraintName: 'fk_task_comment_attachments_to_files',
+    foreignKeyConstraintName: 'fk_task_evidence_attachments_to_files',
   })
   public file!: FileEntity | null;
 

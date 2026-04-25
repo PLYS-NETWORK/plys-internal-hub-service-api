@@ -53,6 +53,11 @@
     "project_not_in_progress": "Tasks can only be managed for in-progress projects.",
     "comment_not_found": "Task comment not found.",
     "comment_forbidden": "You do not have permission to perform this action on this comment.",
+    "evidence_not_found": "Task evidence not found.",
+    "evidence_forbidden": "You do not have permission to perform this action on this evidence.",
+    "evidence_not_assignee": "Only the consultant assigned to this task can manage its evidences.",
+    "evidence_file_not_owned": "One or more attached files do not belong to you or do not exist.",
+    "evidence_empty_update": "Provide remarks or file_ids to update.",
     "consultant_already_in_progress": "You already have a task in progress. Complete or pause it before starting another."
   },
   "payment": {

@@ -25,6 +25,8 @@ import {
   TaskCommentAttachmentRepository,
   TaskCommentRepository,
   TaskDisputeRepository,
+  TaskEvidenceAttachmentRepository,
+  TaskEvidenceRepository,
   TaskHistoryRepository,
   TaskRepository,
   UserRepository,
@@ -55,6 +57,8 @@ const repositories = [
   TaskHistoryRepository,
   TaskCommentRepository,
   TaskCommentAttachmentRepository,
+  TaskEvidenceRepository,
+  TaskEvidenceAttachmentRepository,
   // Domain 5 — AI
   AiTaskSessionRepository,
   AiSessionMessageRepository,

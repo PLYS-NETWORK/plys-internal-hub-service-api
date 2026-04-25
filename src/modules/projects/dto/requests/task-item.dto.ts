@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsInt,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   Max,
@@ -14,12 +15,7 @@ import {
 } from 'class-validator';
 
 import { ITaskItemRequest } from './interfaces/task-item.request.interface';
-import {
-  TASK_DESCRIPTION_MAX,
-  TASK_PRICE_MAX,
-  TASK_TITLE_MAX,
-  TASK_TITLE_MIN,
-} from './project.constants';
+import { TASK_PRICE_MAX, TASK_TITLE_MAX, TASK_TITLE_MIN } from './project.constants';
 
 export class TaskItemDto implements ITaskItemRequest {
   @Expose()
@@ -37,13 +33,21 @@ export class TaskItemDto implements ITaskItemRequest {
   @Expose()
   @ApiPropertyOptional({
     name: 'description',
-    example: 'Build JWT-based auth with refresh tokens',
-    maxLength: TASK_DESCRIPTION_MAX,
+    type: 'object',
+    additionalProperties: true,
+    example: {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Build JWT-based auth with refresh tokens.' }],
+        },
+      ],
+    },
   })
-  @IsString()
-  @MaxLength(TASK_DESCRIPTION_MAX)
+  @IsObject()
   @IsOptional()
-  public readonly description?: string;
+  public readonly description?: Record<string, unknown>;
 
   @Expose()
   @ApiProperty({ name: 'price', example: 250.0, minimum: 0, maximum: TASK_PRICE_MAX })

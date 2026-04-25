@@ -4,9 +4,13 @@ import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } 
 
 import { Task } from './task.entity';
 
-// Flat comment model. Soft-delete via `is_deleted` flag — body preserved for
-// audit. The AuditableEntity `deletedAt`/`deletedBy` columns also apply when
-// using TypeORM's softRemove path.
+// Flat comment model. Soft-delete via `is_deleted` flag — comment preserved
+// for audit. The AuditableEntity `deletedAt`/`deletedBy` columns also apply
+// when using TypeORM's softRemove path.
+//
+// `comment` is a rich-text editor JSON document (TipTap/ProseMirror tree)
+// persisted verbatim as `jsonb` — the server never parses or interprets the
+// inner shape.
 @Auditable()
 @Entity('task_comments')
 @Index('idx_task_comments_task_id', ['taskId'])
@@ -34,8 +38,8 @@ export class TaskComment extends AuditableEntity {
   })
   public author!: User;
 
-  @Column({ type: 'text' })
-  public body!: string;
+  @Column({ name: 'comment', type: 'jsonb' })
+  public comment!: Record<string, unknown>;
 
   @Column({ name: 'is_edited', type: 'boolean', default: false })
   public isEdited!: boolean;

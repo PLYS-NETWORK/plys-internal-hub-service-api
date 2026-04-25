@@ -1,13 +1,24 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsObject } from 'class-validator';
 
 import { IUpdateTaskCommentRequest } from './interfaces/update-task-comment.request.interface';
 
 export class UpdateTaskCommentDto implements IUpdateTaskCommentRequest {
   @Expose()
-  @ApiProperty({ example: 'Updated comment text.' })
-  @IsString()
-  @IsNotEmpty()
-  public readonly body!: string;
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: true,
+    example: {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Updated comment text.' }],
+        },
+      ],
+    },
+  })
+  @IsObject()
+  public readonly comment!: Record<string, unknown>;
 }

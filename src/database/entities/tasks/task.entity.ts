@@ -54,8 +54,8 @@ export class Task extends AuditableEntity {
   @Column({ type: 'varchar', length: 300 })
   public title!: string;
 
-  @Column({ type: 'text', nullable: true })
-  public description!: string | null;
+  @Column({ type: 'jsonb', nullable: true })
+  public description!: Record<string, unknown> | null;
 
   // Pricing (CHECK enforced at migration; see also §H9 — draft tasks may have
   // price = 0 prior to publication, enforced via CHECK constraint).

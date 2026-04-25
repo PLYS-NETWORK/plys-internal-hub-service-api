@@ -28,7 +28,10 @@
     "status_updated": "Görev durumu başarıyla güncellendi.",
     "comment_created": "Yorum başarıyla oluşturuldu.",
     "comment_updated": "Yorum başarıyla güncellendi.",
-    "comment_deleted": "Yorum başarıyla silindi."
+    "comment_deleted": "Yorum başarıyla silindi.",
+    "evidence_created": "Kanıt başarıyla oluşturuldu.",
+    "evidence_updated": "Kanıt başarıyla güncellendi.",
+    "evidence_deleted": "Kanıt başarıyla silindi."
   },
   "application": {
     "created": "Başvuru başarıyla gönderildi.",

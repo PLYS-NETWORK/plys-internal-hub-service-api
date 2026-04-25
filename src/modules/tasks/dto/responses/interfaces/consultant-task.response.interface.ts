@@ -7,8 +7,8 @@ export interface IConsultantTaskResponse {
   project_id: string;
   /** Short descriptive title of the deliverable. */
   title: string;
-  /** Optional extended description of the task scope; `null` when not provided. */
-  description: string | null;
+  /** Optional extended description of the task scope (TipTap/ProseMirror JSON document); `null` when not provided. */
+  description: Record<string, unknown> | null;
   /** Estimated complexity of the task (e.g. `easy`, `medium`, `hard`). */
   difficulty_level: TaskDifficulty;
   /** Current Kanban column the task occupies (e.g. `todo`, `in_progress`, `done`). */

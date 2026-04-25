@@ -23,8 +23,8 @@ export interface IConsultantProjectResponse {
   business_id: string;
   /** Human-readable project title. */
   title: string;
-  /** Optional rich-text introduction visible to consultants; `null` when not provided. */
-  introduction: string | null;
+  /** Optional rich-text introduction visible to consultants (TipTap/ProseMirror JSON document); `null` when not provided. */
+  introduction: Record<string, unknown> | null;
   /** Current lifecycle status of the project (always `public` in consultant-facing lists). */
   status: ProjectStatus;
   /** Total number of consultant seats the business wants to fill. */

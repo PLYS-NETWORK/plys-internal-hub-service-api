@@ -15,6 +15,11 @@ export const TASK_ERRORS = {
   CONSULTANT_ALREADY_IN_PROGRESS: 'error.task.consultant_already_in_progress',
   COMMENT_NOT_FOUND: 'error.task.comment_not_found',
   COMMENT_FORBIDDEN: 'error.task.comment_forbidden',
+  EVIDENCE_NOT_FOUND: 'error.task.evidence_not_found',
+  EVIDENCE_FORBIDDEN: 'error.task.evidence_forbidden',
+  EVIDENCE_NOT_ASSIGNEE: 'error.task.evidence_not_assignee',
+  EVIDENCE_FILE_NOT_OWNED: 'error.task.evidence_file_not_owned',
+  EVIDENCE_EMPTY_UPDATE: 'error.task.evidence_empty_update',
 } as const;
 
 export type TaskErrorKey = (typeof TASK_ERRORS)[keyof typeof TASK_ERRORS];

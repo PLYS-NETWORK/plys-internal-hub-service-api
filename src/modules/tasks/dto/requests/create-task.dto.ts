@@ -1,7 +1,16 @@
 import { TaskDifficulty } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+} from 'class-validator';
 
 import { ICreateTaskRequest } from './interfaces/create-task.request.interface';
 
@@ -19,10 +28,24 @@ export class CreateTaskDto implements ICreateTaskRequest {
   public readonly title!: string;
 
   @Expose()
-  @ApiProperty({ nullable: true, required: false })
-  @IsString()
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: true,
+    nullable: true,
+    required: false,
+    example: {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Build JWT-based auth with refresh tokens.' }],
+        },
+      ],
+    },
+  })
+  @IsObject()
   @IsOptional()
-  public readonly description?: string | null;
+  public readonly description?: Record<string, unknown> | null;
 
   @Expose()
   @ApiProperty({ example: 250.0 })

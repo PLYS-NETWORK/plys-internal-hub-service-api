@@ -21,9 +21,14 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PlatformGuard } from '../../../common/guards/platform.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { CreateTaskCommentDto, UpdateTaskCommentDto } from '../dto/requests';
-import { TaskCommentResponseDto, TaskHistoryResponseDto } from '../dto/responses';
+import {
+  TaskCommentResponseDto,
+  TaskEvidenceResponseDto,
+  TaskHistoryResponseDto,
+} from '../dto/responses';
 import { TaskAccessService } from './services/task-access.service';
 import { TaskCommentsService } from './services/task-comments.service';
+import { TaskEvidencesService } from './services/task-evidences.service';
 
 @ApiTags('Tasks')
 @ApiBearerAuth()
@@ -34,6 +39,7 @@ export class TasksController {
   constructor(
     private readonly taskAccess: TaskAccessService,
     private readonly taskComments: TaskCommentsService,
+    private readonly taskEvidences: TaskEvidencesService,
   ) {}
 
   @Get(':id/history')
@@ -88,5 +94,15 @@ export class TasksController {
   ): Promise<ITranslatedPayload<null>> {
     await this.taskComments.deleteComment(commentId);
     return { messageKey: 'success.task.comment_deleted', data: null };
+  }
+
+  @Get(':id/evidences')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List evidences on a task (project owner or ACTIVE member)' })
+  public async listEvidences(
+    @Param('id') id: string,
+  ): Promise<ITranslatedPayload<TaskEvidenceResponseDto[]>> {
+    const data = await this.taskEvidences.listEvidences(id);
+    return { messageKey: 'success.ok', data };
   }
 }

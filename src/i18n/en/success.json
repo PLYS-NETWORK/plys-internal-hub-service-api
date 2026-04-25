@@ -28,7 +28,10 @@
     "status_updated": "Task status updated successfully.",
     "comment_created": "Comment created successfully.",
     "comment_updated": "Comment updated successfully.",
-    "comment_deleted": "Comment deleted successfully."
+    "comment_deleted": "Comment deleted successfully.",
+    "evidence_created": "Evidence created successfully.",
+    "evidence_updated": "Evidence updated successfully.",
+    "evidence_deleted": "Evidence deleted successfully."
   },
   "application": {
     "created": "Application submitted successfully.",

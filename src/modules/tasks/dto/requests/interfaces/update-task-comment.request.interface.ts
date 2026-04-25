@@ -1,3 +1,4 @@
 export interface IUpdateTaskCommentRequest {
-  readonly body: string;
+  /** Replacement rich-text editor JSON document. */
+  readonly comment: Record<string, unknown>;
 }

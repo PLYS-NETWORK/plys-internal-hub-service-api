@@ -1,10 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Exclude, Expose } from 'class-transformer';
+import { Exclude, Expose, Type } from 'class-transformer';
 
-import { ITaskCommentResponse } from './interfaces/task-comment.response.interface';
+import { ITaskEvidenceResponse } from './interfaces/task-evidence.response.interface';
+import { TaskEvidenceAttachmentResponseDto } from './task-evidence-attachment-response.dto';
 
 @Exclude()
-export class TaskCommentResponseDto implements ITaskCommentResponse {
+export class TaskEvidenceResponseDto implements ITaskEvidenceResponse {
   @Expose()
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   public readonly id!: string;
@@ -17,6 +18,7 @@ export class TaskCommentResponseDto implements ITaskCommentResponse {
   @ApiProperty({ name: 'author_id', example: '550e8400-e29b-41d4-a716-446655440000' })
   public readonly author_id!: string;
 
+  // Round-tripped rich-text JSON document — the server does not parse it.
   @Expose()
   @ApiProperty({
     type: 'object',
@@ -26,12 +28,12 @@ export class TaskCommentResponseDto implements ITaskCommentResponse {
       content: [
         {
           type: 'paragraph',
-          content: [{ type: 'text', text: 'I have completed the first subtask.' }],
+          content: [{ type: 'text', text: 'Completed.' }],
         },
       ],
     },
   })
-  public readonly comment!: Record<string, unknown>;
+  public readonly remarks!: Record<string, unknown>;
 
   @Expose()
   @ApiProperty({ name: 'is_edited', example: false })
@@ -44,4 +46,9 @@ export class TaskCommentResponseDto implements ITaskCommentResponse {
   @Expose()
   @ApiProperty({ name: 'created_at' })
   public readonly created_at!: Date;
+
+  @Expose()
+  @Type(() => TaskEvidenceAttachmentResponseDto)
+  @ApiProperty({ type: () => [TaskEvidenceAttachmentResponseDto] })
+  public readonly attachments!: TaskEvidenceAttachmentResponseDto[];
 }

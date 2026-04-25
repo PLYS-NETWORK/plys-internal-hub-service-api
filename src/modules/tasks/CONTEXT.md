@@ -4,11 +4,13 @@
 Owns the atomic unit of work inside a project. A task carries its own price, kanban state, single assignee, comments, dispute, and immutable change history. This module provides runtime task lifecycle management (creation, assignment, status transitions, payment triggers) for `in_progress` projects. Bulk task setup during project configuration is handled by `ProjectTasksService` in the Projects module.
 
 ## Tables owned
-- `tasks` — title, description, price, generated platform fee + payout columns, kanban status, assignment, version (optimistic lock).
+- `tasks` — title, `description` (jsonb — TipTap/ProseMirror rich-text document, nullable), price, generated platform fee + payout columns, kanban status, assignment, version (optimistic lock).
 - `task_disputes` — opened when business rejects work at `pending_approval`.
 - `task_history` — append-only audit of every status / assignment / approval change.
-- `task_comments` — flat comment thread per task. Soft-delete only.
-- `task_comment_attachments` — file metadata; bytes live in object storage.
+- `task_comments` — flat comment thread per task. `comment` (jsonb, was `body text`) is a rich-text editor JSON document. Soft-delete only.
+- `task_comment_attachments` — file metadata; bytes live in object storage. `file_id` FK (nullable, ON DELETE SET NULL) keeps the audit chain to the canonical `files` row.
+- `task_evidences` — proof-of-work records authored by the assigned consultant. `remarks` is a `jsonb` document (rich-text editor JSON tree). Soft-delete via `is_deleted`. Optimistic lock via `@VersionColumn`.
+- `task_evidence_attachments` — denormalised file metadata per evidence; same shape as `task_comment_attachments`.
 
 ## Endpoints
 
@@ -32,6 +34,14 @@ Owns the atomic unit of work inside a project. A task carries its own price, kan
 | GET | `/tasks-consultant/:id/comments` | `@Roles(USER)` `@Platform(CONSULTANT)` | List comments (paginated, ASC by createdAt) |
 | PATCH | `/tasks-consultant/comments/:commentId` | `@Roles(USER)` `@Platform(CONSULTANT)` | Edit own comment |
 | DELETE | `/tasks-consultant/comments/:commentId` | `@Roles(USER)` `@Platform(CONSULTANT)` | Soft-delete own comment |
+| POST | `/tasks-consultant/:id/evidences` | `@Roles(USER)` `@Platform(CONSULTANT)` | Create an evidence (assigned consultant only) |
+| PATCH | `/tasks-consultant/evidences/:evidenceId` | `@Roles(USER)` `@Platform(CONSULTANT)` | Edit own evidence (remarks and/or replace attachments) |
+| DELETE | `/tasks-consultant/evidences/:evidenceId` | `@Roles(USER)` `@Platform(CONSULTANT)` | Soft-delete own evidence |
+
+### Shared — `TasksController` (`/tasks`)
+| Method | Path | Guard | Description |
+|---|---|---|---|
+| GET | `/tasks/:id/evidences` | `@Roles(USER)` | List all non-deleted evidences for a task — project owner business OR ACTIVE project member consultant |
 
 ## Key invariants
 - **Generated columns.** `platform_fee_amount` and `consultant_payout` are STORED generated columns — never write them. Computed from `price` and `platform_fee_rate`.
@@ -123,7 +133,23 @@ REVISION_REQUESTED → IN_PROGRESS
 - **List:** any project owner or ACTIVE member. Paginated, ordered by `createdAt ASC`, excludes soft-deleted.
 
 ### Edit tracking
-When a comment is updated: `body` is replaced, `isEdited = true`, `editedAt = NOW()`.
+When a comment is updated: `comment` (the JSON document) is replaced, `isEdited = true`, `editedAt = NOW()`.
+
+## Evidences
+
+### Access control
+- **Create:** caller must be the consultant currently in `tasks.assigned_to`. Any other consultant — including ACTIVE project members not assigned to that task — gets `EVIDENCE_NOT_ASSIGNEE` (403).
+- **List:** project owner (business) OR ACTIVE consultant member (same predicate as comments).
+- **Edit / Delete:** only the original author (`evidence.authorId === requestContext.userId`).
+
+### `remarks` is opaque JSON
+The column is `jsonb`. Clients send the rich-text editor's document tree (e.g. TipTap/ProseMirror) and the server persists it verbatim — no parsing, no plain-text extraction, no length validation. The DTO uses `@IsObject()` + `@IsNotEmptyObject()`; nested structure is unconstrained.
+
+### Attachments are durable snapshots
+On create / replace, the service reads each `file_id` from the `files` table, verifies `ownerUserId === caller`, and snapshots `file_name`, `file_url`, `mime_type`, and `file_size_bytes` into the `task_evidence_attachments` row. The `file_id` FK is `ON DELETE SET NULL` so removing the source `files` row doesn't break the evidence — the snapshot is the source of truth.
+
+### Update semantics
+PATCH accepts `remarks?` and `file_ids?` — at least one must be present (`EVIDENCE_EMPTY_UPDATE`, 400). When `remarks` is supplied the row is updated and `is_edited` / `edited_at` are bumped. When `file_ids` is supplied (even as `[]`) the existing attachments are deleted and replaced with rows derived from the new IDs. Concurrent edits are protected by `@VersionColumn`.
 
 ## External dependencies
 - **Project** (FK `ON DELETE CASCADE`) — deleting a project removes its tasks.

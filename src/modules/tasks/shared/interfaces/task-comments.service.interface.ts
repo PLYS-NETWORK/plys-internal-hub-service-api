@@ -17,7 +17,7 @@ export interface ITaskCommentsService {
    * business or an `ACTIVE` project member (consultant).
    *
    * @param taskId - UUID of the task to comment on.
-   * @param dto    - Validated comment payload containing `body`.
+   * @param dto    - Validated comment payload containing `comment` (rich-text JSON document).
    * @returns The newly created comment DTO.
    * @throws TranslatableException (404) — task not found.
    * @throws TranslatableException (403) — caller is not a project participant.
@@ -38,11 +38,11 @@ export interface ITaskCommentsService {
   ): Promise<PageDto<TaskCommentResponseDto>>;
 
   /**
-   * Updates the body of an existing comment. Only the original author may edit
-   * their own comment. Sets `is_edited: true` and records `edited_at` timestamp.
+   * Updates the comment of an existing comment row. Only the original author
+   * may edit. Sets `is_edited: true` and records `edited_at` timestamp.
    *
    * @param commentId - UUID of the comment to update.
-   * @param dto       - Validated payload containing the new `body`.
+   * @param dto       - Validated payload containing the new `comment` JSON document.
    * @returns The updated comment DTO with `is_edited: true`.
    * @throws TranslatableException (404) — comment not found or already deleted.
    * @throws TranslatableException (403) — caller is not the comment author.

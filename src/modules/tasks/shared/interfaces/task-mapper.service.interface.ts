@@ -1,8 +1,16 @@
-import { Task, TaskComment, TaskHistory } from '@database/entities';
+import {
+  Task,
+  TaskComment,
+  TaskEvidence,
+  TaskEvidenceAttachment,
+  TaskHistory,
+} from '@database/entities';
 
 import {
   ConsultantTaskResponseDto,
   TaskCommentResponseDto,
+  TaskEvidenceAttachmentResponseDto,
+  TaskEvidenceResponseDto,
   TaskHistoryResponseDto,
   TaskResponseDto,
 } from '../../dto/responses';
@@ -37,4 +45,22 @@ export interface ITaskMapperService {
    * Map a `TaskComment` entity to its response DTO.
    */
   toTaskCommentResponseDto(comment: TaskComment): TaskCommentResponseDto;
+
+  /**
+   * Map a `TaskEvidence` entity (plus its attachments) to the response DTO.
+   * The attachments list is supplied separately because the service composes it
+   * either from a relation load or a fresh repository query depending on the
+   * call site.
+   */
+  toTaskEvidenceResponseDto(
+    evidence: TaskEvidence,
+    attachments: TaskEvidenceAttachment[],
+  ): TaskEvidenceResponseDto;
+
+  /**
+   * Map a single `TaskEvidenceAttachment` to its response DTO.
+   */
+  toTaskEvidenceAttachmentResponseDto(
+    attachment: TaskEvidenceAttachment,
+  ): TaskEvidenceAttachmentResponseDto;
 }

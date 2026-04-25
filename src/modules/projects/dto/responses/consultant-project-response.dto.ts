@@ -47,8 +47,21 @@ export class ConsultantProjectResponseDto implements IConsultantProjectResponse 
   public readonly title!: string;
 
   @Expose()
-  @ApiProperty({ nullable: true })
-  public readonly introduction!: string | null;
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: true,
+    nullable: true,
+    example: {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'We need a full-stack team...' }],
+        },
+      ],
+    },
+  })
+  public readonly introduction!: Record<string, unknown> | null;
 
   @Expose()
   @ApiProperty({ enum: ProjectStatus, example: ProjectStatus.PUBLIC })
