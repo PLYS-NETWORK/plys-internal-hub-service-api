@@ -4,7 +4,6 @@ export * from './auth';
 export * from './base';
 export * from './files';
 export * from './finance';
-export * from './notifications';
 export * from './profiles';
 export * from './projects';
 export * from './tasks';

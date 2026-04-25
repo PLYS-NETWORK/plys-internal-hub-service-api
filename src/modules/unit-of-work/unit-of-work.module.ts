@@ -14,7 +14,6 @@ import {
   InterviewAnswerRepository,
   InvoiceLineItemRepository,
   InvoiceRepository,
-  NotificationRepository,
   ProjectApplicationRepository,
   ProjectInterviewQuestionRepository,
   ProjectMemberRepository,
@@ -66,8 +65,6 @@ const repositories = [
   ProjectApplicationRepository,
   InterviewAnswerRepository,
   ProjectMemberRepository,
-  // Domain 7 — Notifications
-  NotificationRepository,
   // Domain 8 — Finance
   BillingPeriodRepository,
   InvoiceRepository,

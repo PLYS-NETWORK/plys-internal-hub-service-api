@@ -12,7 +12,6 @@ import {
   IInterviewAnswerRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
-  INotificationRepository,
   IProjectApplicationRepository,
   IProjectInterviewQuestionRepository,
   IProjectMemberRepository,
@@ -73,9 +72,6 @@ export interface IUnitOfWork {
   readonly projectApplications: IProjectApplicationRepository;
   readonly interviewAnswers: IInterviewAnswerRepository;
   readonly projectMembers: IProjectMemberRepository;
-
-  // Domain 7 — Notifications
-  readonly notifications: INotificationRepository;
 
   // Domain 8 — Finance
   readonly billingPeriods: IBillingPeriodRepository;
