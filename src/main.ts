@@ -6,6 +6,12 @@ import { SwaggerModule } from '@nestjs/swagger';
 import { I18nValidationExceptionFilter, I18nValidationPipe } from 'nestjs-i18n';
 
 import { AppModule } from './app.module';
+import {
+  ADMIN_DOC_TAGS,
+  BUSINESS_DOC_TAGS,
+  CONSULTANT_DOC_TAGS,
+  filterDocumentByTags,
+} from './config/swagger-filter.util';
 import { swaggerConfig } from './config/swagger.config';
 
 async function bootstrap(): Promise<void> {
@@ -53,10 +59,25 @@ async function bootstrap(): Promise<void> {
   );
 
   if (!envService.isProduction) {
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    const fullDocument = SwaggerModule.createDocument(app, swaggerConfig);
 
-    SwaggerModule.setup('api/v1/docs', app, document);
-    console.log(`Swagger docs available at http://localhost:${envService.port}/api/v1/docs`);
+    SwaggerModule.setup('api/v1/docs', app, fullDocument);
+
+    SwaggerModule.setup('api/v1/business/docs', app, () =>
+      filterDocumentByTags(fullDocument, BUSINESS_DOC_TAGS, 'Marketplace API — Business'),
+    );
+
+    SwaggerModule.setup('api/v1/consultant/docs', app, () =>
+      filterDocumentByTags(fullDocument, CONSULTANT_DOC_TAGS, 'Marketplace API — Consultant'),
+    );
+
+    SwaggerModule.setup('api/v1/admin/docs', app, () =>
+      filterDocumentByTags(fullDocument, ADMIN_DOC_TAGS, 'Marketplace API — Admin'),
+    );
+
+    console.log(
+      `Swagger → full: /api/v1/docs | business: /api/v1/business/docs | consultant: /api/v1/consultant/docs | admin: /api/v1/admin/docs`,
+    );
   }
 
   await app.listen(envService.port, '0.0.0.0');
