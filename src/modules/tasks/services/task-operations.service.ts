@@ -355,10 +355,12 @@ export class TaskOperationsService implements ITaskOperationsService {
         businessProfile.accountBalance = (balance - price).toFixed(2);
         await txUow.businessProfiles.save(businessProfile);
 
+        const priceStr = price.toFixed(2);
         const txn = txUow.businessTransactions.create({
           businessId: businessProfile.id,
           type: BusinessTransactionType.TASK_ADDED,
-          amount: price.toFixed(2),
+          amount: priceStr,
+          totalAmount: priceStr,
           status: TransactionStatus.COMPLETED,
           taskId: task.id,
           projectId: task.projectId,

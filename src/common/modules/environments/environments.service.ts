@@ -59,6 +59,43 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.configService.getOrThrow<string>('app.jwt.refreshExpiration');
   }
 
+  public get jwtIssuer(): string {
+    return this.configService.getOrThrow<string>('app.jwt.issuer');
+  }
+
+  public get jwtAudience(): string {
+    return this.configService.getOrThrow<string>('app.jwt.audience');
+  }
+
+  public get jwtStrictClaims(): boolean {
+    return this.configService.getOrThrow<boolean>('app.jwt.strictClaims');
+  }
+
+  /**
+   * Base64-encoded 32-byte AES-256 key used to encrypt SSO provider tokens
+   * at rest. Must be present in production; the crypto vault throws on
+   * first use if it isn't configured correctly.
+   */
+  public get ssoTokenEncryptionKey(): string {
+    return this.configService.getOrThrow<string>('app.security.ssoTokenEncryptionKey');
+  }
+
+  public get ssoExchangeCodeTtlSeconds(): number {
+    return this.configService.getOrThrow<number>('app.security.ssoExchangeCodeTtlSeconds');
+  }
+
+  public get loginLockoutThreshold(): number {
+    return this.configService.getOrThrow<number>('app.security.loginLockoutThreshold');
+  }
+
+  public get loginLockoutWindowMin(): number {
+    return this.configService.getOrThrow<number>('app.security.loginLockoutWindowMin');
+  }
+
+  public get throttleRedisPrefix(): string {
+    return this.configService.getOrThrow<string>('app.security.throttleRedisPrefix');
+  }
+
   public get resendApiKey(): string {
     return this.configService.getOrThrow<string>('app.resend.apiKey');
   }

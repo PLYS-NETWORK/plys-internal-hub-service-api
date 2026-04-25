@@ -6,6 +6,7 @@ import { IJwtConfig } from './jwt-config.interface';
 import { IPaymentConfig } from './payment-config.interface';
 import { IRedisConfig } from './redis-config.interface';
 import { IResendConfig } from './resend-config.interface';
+import { ISecurityConfig } from './security-config.interface';
 
 export interface IEnvironmentsService
   extends
@@ -16,4 +17,5 @@ export interface IEnvironmentsService
     IResendConfig,
     IPaymentConfig,
     IGoogleConfig,
-    IRedisConfig {}
+    IRedisConfig,
+    ISecurityConfig {}

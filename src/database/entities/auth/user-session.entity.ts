@@ -20,6 +20,8 @@ import { User } from './user.entity';
 @Index('idx_user_sessions_user_id', ['userId'])
 @Index('idx_user_sessions_expires_at', ['expiresAt'])
 @Index('idx_user_sessions_device_id', ['deviceId'])
+// Drives the active-only lookup in refresh: WHERE session_token = ? AND used_at IS NULL.
+@Index('idx_user_sessions_token_used_at', ['sessionToken', 'usedAt'])
 export class UserSession extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_user_sessions' })
   public readonly id!: string;
@@ -51,4 +53,10 @@ export class UserSession extends AuditableEntity {
 
   @Column({ name: 'expires_at', type: 'timestamptz' })
   public expiresAt!: Date;
+
+  // Single-use marker for refresh-token rotation. Stamped when the session is
+  // consumed (logout / refresh), so a replayed refresh token cannot succeed.
+  // A row found with `usedAt IS NOT NULL` is a strong signal of token reuse.
+  @Column({ name: 'used_at', type: 'timestamptz', nullable: true })
+  public usedAt!: Date | null;
 }

@@ -702,6 +702,7 @@ export class BusinessProjectService implements IBusinessProjectService {
           businessId: lockedProfile.id,
           type: BusinessTransactionType.REFUND,
           amount: originalTxn.amount,
+          totalAmount: originalTxn.amount,
           status: TransactionStatus.COMPLETED,
           projectId: project.id,
           note: `Project recall refund: ${project.title}`,

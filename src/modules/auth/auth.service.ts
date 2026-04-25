@@ -4,9 +4,11 @@ import { Injectable } from '@nestjs/common';
 import {
   AuthResponseDto,
   ChangePasswordDto,
+  ForgotPasswordDto,
   LoginDto,
   RegisterDto,
   ResendVerificationDto,
+  ResetPasswordDto,
   UserResponseDto,
 } from './dto';
 import { IAuthService, ISessionContext, ISsoUserData } from './interfaces/auth-service.interface';
@@ -54,6 +56,16 @@ export class AuthService implements IAuthService {
   /** @inheritdoc */
   public changePassword(dto: ChangePasswordDto): Promise<void> {
     return this.basicAuth.changePassword(dto);
+  }
+
+  /** @inheritdoc */
+  public requestPasswordReset(dto: ForgotPasswordDto): Promise<void> {
+    return this.basicAuth.requestPasswordReset(dto);
+  }
+
+  /** @inheritdoc */
+  public resetPassword(dto: ResetPasswordDto): Promise<void> {
+    return this.basicAuth.resetPassword(dto);
   }
 
   /** @inheritdoc */

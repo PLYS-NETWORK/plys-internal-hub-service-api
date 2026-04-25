@@ -15,17 +15,22 @@ import { Not } from 'typeorm';
 import {
   AuthResponseDto,
   ChangePasswordDto,
+  ForgotPasswordDto,
   LoginDto,
   RegisterDto,
   ResendVerificationDto,
+  ResetPasswordDto,
 } from '../dto';
 import { IBasicAuthService, ISessionContext } from '../interfaces/auth-service.interface';
 import { sha256 } from '../utils/auth.utils';
+import { LoginAttemptTracker } from './login-attempt-tracker.service';
 import { SessionService } from './session.service';
 import { UserOnboardingService } from './user-onboarding.service';
 
 const BCRYPT_ROUNDS = 12;
 const EMAIL_VERIFICATION_EXPIRY_HOURS = 24;
+const PASSWORD_RESET_EXPIRY_MINUTES = 15;
+const PASSWORD_RESET_OTP_LENGTH = 6;
 
 @Injectable()
 export class BasicAuthService implements IBasicAuthService {
@@ -38,6 +43,7 @@ export class BasicAuthService implements IBasicAuthService {
     private readonly onboardingService: UserOnboardingService,
     private readonly envService: EnvironmentsService,
     private readonly requestContext: RequestContextService,
+    private readonly loginAttemptTracker: LoginAttemptTracker,
   ) {
     this.logger = new AppLogger(BasicAuthService.name, requestContext);
   }
@@ -258,15 +264,25 @@ export class BasicAuthService implements IBasicAuthService {
       });
     }
 
+    // Account-level lockout: if too many failures have already accumulated
+    // for this user, refuse before running the (intentionally slow) bcrypt
+    // compare so the 429 response is fast.
+    await this.loginAttemptTracker.assertNotLocked(user.id);
+
     const passwordValid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordValid) {
-      this.logger.warn(`login — invalid password | userId: ${user.id}`);
+      const count = await this.loginAttemptTracker.recordFailure(user.id);
+      this.logger.warn(`login — invalid password | userId: ${user.id}, failureCount: ${count}`);
       throw new TranslatableException({
         messageKey: 'error.auth.invalid_credentials',
         errorCode: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
         status: HttpStatus.UNAUTHORIZED,
       });
     }
+
+    // Successful credential check resets the lockout counter immediately so a
+    // user who recovers their password isn't penalised by older failures.
+    await this.loginAttemptTracker.reset(user.id);
 
     if (!user.isEmailVerified) {
       this.logger.warn(`login — email not verified | userId: ${user.id}`);
@@ -381,6 +397,128 @@ export class BasicAuthService implements IBasicAuthService {
     });
 
     this.logger.log(`resendVerification — complete | email: ${dto.email}`);
+  }
+
+  // ─── Password Reset ──────────────────────────────────────────────────────
+
+  /**
+   * Issues a one-time numeric OTP to the user's email if a matching
+   * unverified-or-active account exists. Always returns void to avoid
+   * disclosing account existence (combine with throttling on the route).
+   */
+  public async requestPasswordReset(dto: ForgotPasswordDto): Promise<void> {
+    this.logger.log(
+      `requestPasswordReset — start | email: ${dto.email}, platform: ${dto.activePlatform}`,
+    );
+
+    const user = await this.uow.users.findUserByEmailAndPlatform(dto.email, dto.activePlatform);
+
+    if (!user || !user.isActive || !user.passwordHash) {
+      // Either no user, deactivated, or SSO-only (no password to reset).
+      // Silent no-op — the controller still returns 200.
+      this.logger.warn(
+        `requestPasswordReset — noop (no active password account) | email: ${dto.email}`,
+      );
+      return;
+    }
+
+    // 6-digit numeric OTP. With per-IP+email throttling and a 15-minute
+    // window, brute-force probability is ~150/1_000_000 = 0.015%.
+    const otp = String(randomBytes(4).readUInt32BE(0) % 1_000_000).padStart(
+      PASSWORD_RESET_OTP_LENGTH,
+      '0',
+    );
+    const otpHash = sha256(otp);
+
+    await this.uow.withTransaction(async (tx) => {
+      const authToken = tx.authTokens.create({
+        userId: user.id,
+        type: AuthTokenType.PASSWORD_RESET,
+        tokenHash: otpHash,
+        expiresAt: new Date(Date.now() + PASSWORD_RESET_EXPIRY_MINUTES * 60 * 1000),
+      });
+      await tx.authTokens.save(authToken);
+
+      // Awaited inside the transaction: if delivery fails the token row is
+      // rolled back and the API returns an error so the caller can retry.
+      await this.emailService.sendForgotPasswordOtpEmail(
+        user.email,
+        {
+          userName: user.email,
+          otp,
+          expiryMinutes: PASSWORD_RESET_EXPIRY_MINUTES,
+        },
+        user.platform,
+      );
+    });
+
+    this.logger.log(`requestPasswordReset — complete | userId: ${user.id}`);
+  }
+
+  /**
+   * Validates the OTP, sets a new password hash, and revokes every session
+   * for the user so all devices are signed out.
+   */
+  public async resetPassword(dto: ResetPasswordDto): Promise<void> {
+    this.logger.log(`resetPassword — start | email: ${dto.email}, platform: ${dto.activePlatform}`);
+
+    const user = await this.uow.users.findUserByEmailAndPlatform(dto.email, dto.activePlatform);
+    if (!user || !user.isActive) {
+      // Generic invalid-token to prevent email enumeration via reset path.
+      this.logger.warn(`resetPassword — user not found or inactive | email: ${dto.email}`);
+      throw new TranslatableException({
+        messageKey: 'error.auth.reset_token_invalid',
+        errorCode: ERROR_CODES.AUTH_RESET_TOKEN_INVALID,
+        status: HttpStatus.BAD_REQUEST,
+      });
+    }
+
+    const otpHash = sha256(dto.otp);
+    const authToken = await this.uow.authTokens.findOne({
+      where: {
+        userId: user.id,
+        tokenHash: otpHash,
+        type: AuthTokenType.PASSWORD_RESET,
+      },
+    });
+
+    if (!authToken) {
+      this.logger.warn(`resetPassword — token not found | userId: ${user.id}`);
+      throw new TranslatableException({
+        messageKey: 'error.auth.reset_token_invalid',
+        errorCode: ERROR_CODES.AUTH_RESET_TOKEN_INVALID,
+        status: HttpStatus.BAD_REQUEST,
+      });
+    }
+    if (authToken.usedAt) {
+      this.logger.warn(`resetPassword — token already used | userId: ${user.id}`);
+      throw new TranslatableException({
+        messageKey: 'error.auth.token_already_used',
+        errorCode: ERROR_CODES.AUTH_TOKEN_ALREADY_USED,
+        status: HttpStatus.BAD_REQUEST,
+      });
+    }
+    if (authToken.expiresAt < new Date()) {
+      this.logger.warn(`resetPassword — token expired | userId: ${user.id}`);
+      throw new TranslatableException({
+        messageKey: 'error.auth.reset_token_expired',
+        errorCode: ERROR_CODES.AUTH_RESET_TOKEN_EXPIRED,
+        status: HttpStatus.BAD_REQUEST,
+      });
+    }
+
+    await this.uow.withTransaction(async (tx) => {
+      authToken.usedAt = new Date();
+      await tx.authTokens.save(authToken);
+
+      user.passwordHash = await bcrypt.hash(dto.newPassword, BCRYPT_ROUNDS);
+      await tx.users.save(user);
+
+      // Revoke every session — user must sign in again on every device.
+      await tx.userSessions.delete({ userId: user.id });
+    });
+
+    this.logger.log(`resetPassword — complete | userId: ${user.id}`);
   }
 
   // ─── Private helpers ─────────────────────────────────────────────────────

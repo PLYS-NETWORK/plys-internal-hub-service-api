@@ -16,4 +16,17 @@ export interface IJwtConfig {
    * On use, the old session is deleted and a new one is issued (single-use rotation).
    */
   readonly jwtRefreshExpiration: string;
+
+  /** Issuer (`iss`) claim emitted on every JWT and asserted on verify. */
+  readonly jwtIssuer: string;
+
+  /** Audience (`aud`) claim emitted on every JWT and asserted on verify. */
+  readonly jwtAudience: string;
+
+  /**
+   * When `true`, JWTs missing `iss`/`aud` are rejected. When `false`, they are
+   * accepted to allow a roll-forward window after the deploy that introduces
+   * the claims; flip to `true` once one access-token TTL has elapsed.
+   */
+  readonly jwtStrictClaims: boolean;
 }

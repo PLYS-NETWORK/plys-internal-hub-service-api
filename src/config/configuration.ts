@@ -16,6 +16,25 @@ export default registerAs('app', () => ({
     accessExpiration: process.env.JWT_ACCESS_EXPIRATION ?? '15m',
     refreshSecret: process.env.JWT_REFRESH_SECRET ?? '',
     refreshExpiration: process.env.JWT_REFRESH_EXPIRATION ?? '7d',
+    issuer: process.env.JWT_ISSUER ?? 'marketplace-api',
+    audience: process.env.JWT_AUDIENCE ?? 'marketplace-clients',
+    // Roll-forward toggle: when false, tokens missing iss/aud are still
+    // accepted so a deploy can land before all live tokens carry the new
+    // claims. Flip to `true` after one access-token TTL has elapsed.
+    strictClaims: process.env.JWT_STRICT_CLAIMS === 'true',
+  },
+  security: {
+    // Base64-encoded 32-byte AES-256 key. Required in production; absence
+    // throws at boot. In dev a deterministic test key is allowed.
+    ssoTokenEncryptionKey: process.env.SSO_TOKEN_ENCRYPTION_KEY ?? '',
+    // Single-use code lifetime for /auth/sso/exchange (seconds).
+    ssoExchangeCodeTtlSeconds: parseInt(process.env.SSO_EXCHANGE_CODE_TTL ?? '60', 10),
+    // Account lockout knobs (per user). After N failed attempts within the
+    // window the user is locked until the window expires.
+    loginLockoutThreshold: parseInt(process.env.LOGIN_LOCKOUT_THRESHOLD ?? '10', 10),
+    loginLockoutWindowMin: parseInt(process.env.LOGIN_LOCKOUT_WINDOW_MIN ?? '15', 10),
+    // Used to namespace throttler keys across environments / shared Redis.
+    throttleRedisPrefix: process.env.THROTTLE_REDIS_PREFIX ?? 'throttle:',
   },
   resend: {
     apiKey: process.env.RESEND_API_KEY ?? '',

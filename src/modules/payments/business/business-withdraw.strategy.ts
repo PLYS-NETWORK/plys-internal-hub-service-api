@@ -89,11 +89,13 @@ export class BusinessWithdrawStrategy implements IWithdrawStrategy {
     }
 
     // Execute withdraw in transaction
+    const amountStr = amount.toFixed(2);
     const savedTransaction = await this.uow.withTransaction(async (txUow) => {
       const transaction = txUow.businessTransactions.create({
         businessId: businessProfile.id,
         type: BusinessTransactionType.WITHDRAW,
-        amount: amount.toFixed(2),
+        amount: amountStr,
+        totalAmount: amountStr,
         status: TransactionStatus.PENDING,
         note: 'Withdrawal to connected Stripe account',
       });

@@ -47,43 +47,62 @@ export class SessionService implements ISessionService {
     return plainToInstance(UserResponseDto, user, { excludeExtraneousValues: true });
   }
 
+  /**
+   * Single-use refresh-token rotation.
+   *
+   * The lookup-and-mark sequence is wrapped in a pessimistic_write lock so
+   * two concurrent calls with the same token cannot both succeed: the first
+   * caller wins and stamps `used_at`; the second sees no active row and is
+   * rejected. If the supplied token matches a session that is *already*
+   * used, that's strong evidence of replay — every session for that user is
+   * revoked.
+   */
   public async refresh(refreshToken: string, context: ISessionContext): Promise<AuthResponseDto> {
     this.logger.log(`refresh — start`);
     const tokenHash = sha256(refreshToken);
 
-    const session = await this.uow.userSessions.findOne({
-      where: { sessionToken: tokenHash },
-      relations: ['user'],
+    const result = await this.uow.withTransaction(async (tx) => {
+      const session = await tx.userSessions.findActiveByTokenForUpdate(tokenHash);
+
+      if (!session) {
+        // Either the token never existed or it has already been used. Detect
+        // reuse so we can revoke all sessions for the impacted user.
+        const existing = await tx.userSessions.findByToken(tokenHash);
+        if (existing && existing.usedAt) {
+          this.logger.error(
+            `refresh — token reuse detected | userId: ${existing.userId}, sessionId: ${existing.id}`,
+          );
+          await tx.userSessions.delete({ userId: existing.userId });
+        } else {
+          this.logger.warn(`refresh — session not found`);
+        }
+        throw new TranslatableException({
+          messageKey: 'error.auth.token_invalid',
+          errorCode: ERROR_CODES.AUTH_TOKEN_INVALID,
+          status: HttpStatus.UNAUTHORIZED,
+        });
+      }
+
+      if (session.expiresAt < new Date()) {
+        this.logger.warn(`refresh — session expired | sessionId: ${session.id}`);
+        await tx.userSessions.delete({ id: session.id });
+        throw new TranslatableException({
+          messageKey: 'error.auth.token_expired',
+          errorCode: ERROR_CODES.AUTH_TOKEN_EXPIRED,
+          status: HttpStatus.UNAUTHORIZED,
+        });
+      }
+
+      // Mark as consumed inside the lock — second concurrent caller will find
+      // no active row and be rejected.
+      session.usedAt = new Date();
+      await tx.userSessions.save(session);
+
+      return { userId: session.userId, user: session.user };
     });
 
-    if (!session) {
-      this.logger.warn(`refresh — session not found`);
-      throw new TranslatableException({
-        messageKey: 'error.auth.token_invalid',
-        errorCode: ERROR_CODES.AUTH_TOKEN_INVALID,
-        status: HttpStatus.UNAUTHORIZED,
-      });
-    }
-
-    if (session.expiresAt < new Date()) {
-      this.logger.warn(`refresh — session expired | sessionId: ${session.id}`);
-      // Clean up expired session
-      await this.uow.userSessions.remove(session);
-      throw new TranslatableException({
-        messageKey: 'error.auth.token_expired',
-        errorCode: ERROR_CODES.AUTH_TOKEN_EXPIRED,
-        status: HttpStatus.UNAUTHORIZED,
-      });
-    }
-
-    const { userId, user } = session;
-
-    // Refresh Token Rotation: delete old session, create fresh one.
-    // The platform is re-read from the user (the session no longer carries it).
-    await this.uow.userSessions.remove(session);
-
-    this.logger.log(`refresh — complete | userId: ${userId}`);
-    return this.createSession(userId, user.email, user.platform, context);
+    this.logger.log(`refresh — complete | userId: ${result.userId}`);
+    return this.createSession(result.userId, result.user.email, result.user.platform, context);
   }
 
   public async logout(): Promise<void> {
@@ -129,6 +148,7 @@ export class SessionService implements ISessionService {
       ipAddress: context.ipAddress || null,
       userAgent: context.userAgent,
       expiresAt,
+      usedAt: null,
     });
     await this.uow.userSessions.save(session);
 
@@ -142,9 +162,14 @@ export class SessionService implements ISessionService {
     };
 
     const accessExpiresIn = this.envService.jwtAccessExpiration;
+    // iss/aud/algorithm are pinned on every newly signed token so verifiers
+    // can scope tokens to this service and reject alg-confusion attacks.
     const accessToken = this.jwtService.sign(jwtPayload, {
       secret: this.envService.jwtAccessSecret,
       expiresIn: accessExpiresIn,
+      algorithm: 'HS256',
+      issuer: this.envService.jwtIssuer,
+      audience: this.envService.jwtAudience,
     });
 
     return plainToInstance(
@@ -157,5 +182,15 @@ export class SessionService implements ISessionService {
       },
       { excludeExtraneousValues: true },
     );
+  }
+
+  /**
+   * Revokes all sessions for the given user. Called after password reset and
+   * to short-circuit a refresh-token replay event (where reuse was detected).
+   */
+  public async revokeAllSessionsForUser(userId: string): Promise<void> {
+    this.logger.log(`revokeAllSessionsForUser — start | userId: ${userId}`);
+    await this.uow.userSessions.delete({ userId });
+    this.logger.log(`revokeAllSessionsForUser — complete | userId: ${userId}`);
   }
 }

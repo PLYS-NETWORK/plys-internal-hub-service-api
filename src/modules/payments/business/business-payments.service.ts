@@ -56,10 +56,12 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
     }
 
     // Create pending transaction
+    const amountStr = dto.amount.toFixed(2);
     const transaction = this.uow.businessTransactions.create({
       businessId: businessProfile.id,
       type: BusinessTransactionType.TOP_UP,
-      amount: dto.amount.toFixed(2),
+      amount: amountStr,
+      totalAmount: amountStr,
       status: TransactionStatus.PENDING,
       note: 'Top-up via payment checkout',
     });

@@ -364,7 +364,10 @@ export class BillingSettlementService {
       const businessTxn = txUow.businessTransactions.create({
         businessId,
         type: BusinessTransactionType.MONTHLY_BILLING,
-        amount: invoiceTotal.toFixed(2),
+        amount: taskTotal.toFixed(2),
+        commissionRate: commissionRate.toFixed(4),
+        commissionAmount: commissionAmount.toFixed(2),
+        totalAmount: invoiceTotal.toFixed(2),
         status: TransactionStatus.PENDING,
         invoiceId: savedInvoice.id,
         note: `Monthly billing: ${year}-${String(sqlMonth).padStart(2, '0')} (tasks: ${taskTotal.toFixed(2)} + commission ${(commissionRate * 100).toFixed(0)}%: ${commissionAmount.toFixed(2)})`,

@@ -23,9 +23,36 @@ export class JwtContextMiddleware implements NestMiddleware {
     if (authorization?.startsWith('Bearer ')) {
       const token = authorization.slice(7);
       try {
+        // Algorithm pinning prevents alg-confusion attacks. iss/aud are
+        // asserted to scope tokens to this service; in non-strict mode we
+        // allow tokens missing the claims so a deploy can land before all
+        // live tokens carry them.
+        const strict = this.envService.jwtStrictClaims;
         const payload = this.jwtService.verify<JwtPayload>(token, {
           secret: this.envService.jwtAccessSecret,
+          algorithms: ['HS256'],
+          issuer: strict ? this.envService.jwtIssuer : undefined,
+          audience: strict ? this.envService.jwtAudience : undefined,
         });
+
+        // In non-strict mode we still validate iss/aud when present so a
+        // tampered claim is rejected even before strict mode is on.
+        if (!strict) {
+          if (payload.iss !== undefined && payload.iss !== this.envService.jwtIssuer) {
+            throw new TranslatableException({
+              messageKey: 'error.auth.token_invalid',
+              errorCode: ERROR_CODES.AUTH_TOKEN_INVALID,
+              status: HttpStatus.UNAUTHORIZED,
+            });
+          }
+          if (payload.aud !== undefined && payload.aud !== this.envService.jwtAudience) {
+            throw new TranslatableException({
+              messageKey: 'error.auth.token_invalid',
+              errorCode: ERROR_CODES.AUTH_TOKEN_INVALID,
+              status: HttpStatus.UNAUTHORIZED,
+            });
+          }
+        }
 
         // Device-binding: reject only when the client sends x-device-id but it doesn't match
         // the JWT. If the header is absent (e.g. browser clients) the check is skipped —

@@ -7,6 +7,12 @@ export interface JwtPayload {
   readonly activePlatform: ActivePlatform;
   readonly sessionId: string;
   readonly deviceId: string | null;
+  /** Issuer claim — set on every newly signed token. Optional for roll-forward;
+   *  enforced when JWT_STRICT_CLAIMS=true. */
+  readonly iss?: string;
+  /** Audience claim — set on every newly signed token. Optional for roll-forward;
+   *  enforced when JWT_STRICT_CLAIMS=true. */
+  readonly aud?: string;
   readonly iat?: number;
   readonly exp?: number;
 }

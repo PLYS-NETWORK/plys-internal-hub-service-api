@@ -2,9 +2,11 @@ import { ActivePlatform, SsoProvider } from '@database/enums';
 import {
   AuthResponseDto,
   ChangePasswordDto,
+  ForgotPasswordDto,
   LoginDto,
   RegisterDto,
   ResendVerificationDto,
+  ResetPasswordDto,
   UserResponseDto,
 } from '@modules/auth/dto';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
@@ -87,6 +89,24 @@ export interface IBasicAuthService {
    * @throws TranslatableException (401) — current password is incorrect.
    */
   changePassword(dto: ChangePasswordDto): Promise<void>;
+
+  /**
+   * Issues a single-use 6-digit OTP and emails it to the user. Always
+   * resolves silently — even when no account matches — so callers cannot
+   * enumerate registered emails.
+   *
+   * @param dto - Contains `email` and `active_platform`.
+   */
+  requestPasswordReset(dto: ForgotPasswordDto): Promise<void>;
+
+  /**
+   * Validates the OTP, replaces the password hash, and revokes every active
+   * session for the user.
+   *
+   * @param dto - Contains `email`, `active_platform`, `otp`, `new_password`.
+   * @throws TranslatableException (400) — OTP unknown, used, or expired.
+   */
+  resetPassword(dto: ResetPasswordDto): Promise<void>;
 }
 
 export interface ISessionService {
@@ -104,13 +124,16 @@ export interface ISessionService {
   /**
    * Issues a new access/refresh token pair using a valid refresh token.
    *
-   * The old refresh token is rotated (deleted and replaced) on success to
-   * prevent replay attacks.
+   * Single-use rotation: the lookup, `used_at` stamp, and new-session creation
+   * happen inside a `pessimistic_write` lock so two concurrent callers cannot
+   * both succeed with the same refresh token. If the supplied token matches a
+   * session that is already used, this is treated as token reuse and **all**
+   * sessions for the impacted user are revoked before throwing.
    *
    * @param refreshToken - The opaque refresh token from a previous session.
    * @param context      - Network metadata used to bind the renewed session.
    * @returns A new `AuthResponseDto` with rotated tokens.
-   * @throws TranslatableException (401) — refresh token not found or expired.
+   * @throws TranslatableException (401) — refresh token not found, already used, or expired.
    */
   refresh(refreshToken: string, context: ISessionContext): Promise<AuthResponseDto>;
 
@@ -140,6 +163,15 @@ export interface ISessionService {
     activePlatform: ActivePlatform,
     context: ISessionContext,
   ): Promise<AuthResponseDto>;
+
+  /**
+   * Revokes every session belonging to the given user. Called by password
+   * reset (force re-login on every device) and by refresh-token reuse
+   * detection.
+   *
+   * @param userId - UUID of the user whose sessions to revoke.
+   */
+  revokeAllSessionsForUser(userId: string): Promise<void>;
 }
 
 export interface ISsoAuthService {
@@ -273,6 +305,22 @@ export interface IAuthService {
    * @throws TranslatableException (401) — current password is incorrect.
    */
   changePassword(dto: ChangePasswordDto): Promise<void>;
+
+  /**
+   * Sends a one-time OTP to the user's email so they can recover access.
+   * Always resolves silently to avoid disclosing account existence.
+   *
+   * @param dto - Contains `email` and `active_platform`.
+   */
+  requestPasswordReset(dto: ForgotPasswordDto): Promise<void>;
+
+  /**
+   * Validates the OTP, sets a new password, and revokes every session.
+   *
+   * @param dto - Contains `email`, `active_platform`, `otp`, `new_password`.
+   * @throws TranslatableException (400) — OTP unknown, used, or expired.
+   */
+  resetPassword(dto: ResetPasswordDto): Promise<void>;
 
   /**
    * Authenticates or registers a user via a third-party SSO provider.

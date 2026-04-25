@@ -1,5 +1,6 @@
 import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { ActivePlatform, SsoProvider } from '@database/enums';
+import { encryptedStringTransformer } from '@database/transformers/encrypted-string.transformer';
 import {
   Column,
   Entity,
@@ -17,9 +18,8 @@ import { User } from './user.entity';
 // user (two separate accounts, one per platform). The `platform` column is
 // denormalized from the owning user and kept in sync at insert time.
 //
-// SECURITY: access_token and refresh_token must be encrypted at rest.
-// Current implementation stores plaintext with a TODO — see schema fix §H8.
-// Replace with pgcrypto (`pgp_sym_encrypt` wrapper) or external secret store.
+// access_token / refresh_token are encrypted at rest via the
+// EncryptedStringTransformer (AES-256-GCM, see CryptoVault).
 @Auditable()
 @Entity('user_sso_providers')
 @Unique('uq_user_sso_providers_platform_provider_identity', [
@@ -54,11 +54,22 @@ export class UserSsoProvider extends AuditableEntity {
   @Column({ name: 'provider_email', type: 'varchar', length: 255, nullable: true })
   public providerEmail!: string | null;
 
-  // TODO §H8: encrypt before persist / decrypt on read.
-  @Column({ name: 'access_token', type: 'text', nullable: true })
+  // Encrypted at rest. The transformer handles encrypt-on-write and
+  // decrypt-on-read so service code sees plaintext as before.
+  @Column({
+    name: 'access_token',
+    type: 'text',
+    nullable: true,
+    transformer: encryptedStringTransformer,
+  })
   public accessToken!: string | null;
 
-  @Column({ name: 'refresh_token', type: 'text', nullable: true })
+  @Column({
+    name: 'refresh_token',
+    type: 'text',
+    nullable: true,
+    transformer: encryptedStringTransformer,
+  })
   public refreshToken!: string | null;
 
   @Column({ name: 'token_expires_at', type: 'timestamptz', nullable: true })

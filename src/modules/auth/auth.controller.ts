@@ -1,5 +1,6 @@
 import { Public } from '@common/decorators/public.decorator';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
+import { EnvironmentsService } from '@common/modules/environments';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ActivePlatform, SsoProvider } from '@database/enums';
 import {
@@ -10,21 +11,26 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { FastifyReply, FastifyRequest } from 'fastify';
 
 import { AuthService } from './auth.service';
 import {
   AuthResponseDto,
   ChangePasswordDto,
+  ForgotPasswordDto,
   LoginDto,
   RefreshTokenDto,
   RegisterDto,
   ResendVerificationDto,
+  ResetPasswordDto,
+  SsoExchangeDto,
   SsoTokenDto,
   UserResponseDto,
   VerifyEmailDto,
@@ -33,6 +39,8 @@ import { GoogleCallbackGuard } from './guards/google-callback.guard';
 import { GoogleOAuthGuard } from './guards/google-oauth.guard';
 import { RefreshTokenGuard } from './guards/refresh-token.guard';
 import { ISessionContext } from './interfaces/auth-service.interface';
+import { OAuthStateStore } from './services/oauth-state-store.service';
+import { SsoCodeStore } from './services/sso-code-store.service';
 import { GoogleProfile } from './strategies/google.strategy';
 
 @ApiTags('Auth')
@@ -41,11 +49,15 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly requestContext: RequestContextService,
+    private readonly ssoCodeStore: SsoCodeStore,
+    private readonly oauthStateStore: OAuthStateStore,
+    private readonly env: EnvironmentsService,
   ) {}
 
   // ─── Email / Password ────────────────────────────────────────────────────
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new user with email/password' })
@@ -60,6 +72,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify email with token from verification link' })
@@ -74,6 +87,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
   @Post('resend-verification')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -89,6 +103,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email/password' })
@@ -103,6 +118,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @UseGuards(RefreshTokenGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
@@ -143,20 +159,67 @@ export class AuthController {
     return { messageKey: 'success.ok', data: null };
   }
 
+  // ─── Forgot / Reset Password ─────────────────────────────────────────────
+
+  @Public()
+  // Strict: 3 forgot-password requests per hour per IP+email. The
+  // AuthThrottlerGuard composes the email into the key so a single IP can't
+  // burn another user's quota.
+  @Throttle({ default: { limit: 3, ttl: 3_600_000 } })
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Send a password-reset OTP to the given email',
+    description:
+      'Always returns 200 regardless of whether the account exists to prevent user enumeration.',
+  })
+  public async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<ITranslatedPayload<null>> {
+    await this.authService.requestPasswordReset(dto);
+    return { messageKey: 'success.ok', data: null };
+  }
+
+  @Public()
+  // Tight: 10 attempts/min per IP+email. With 6-digit OTPs (1M space) this
+  // caps brute-force probability at 150/1_000_000 over the 15-minute window.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Reset password using OTP from email',
+    description: 'Revokes all existing sessions for the user on success.',
+  })
+  public async resetPassword(@Body() dto: ResetPasswordDto): Promise<ITranslatedPayload<null>> {
+    await this.authService.resetPassword(dto);
+    return { messageKey: 'success.ok', data: null };
+  }
+
   // ─── Google SSO — Web Redirect Flow ──────────────────────────────────────
 
   @Public()
   @UseGuards(GoogleOAuthGuard)
   @Get('sso/google')
-  @ApiOperation({ summary: 'Initiate Google OAuth redirect' })
-  public ssoGoogleRedirect(): void {
-    // Guard handles the redirect — this method body is never reached
+  @ApiOperation({
+    summary: 'Initiate Google OAuth redirect',
+    description:
+      'Generates a CSRF-bound state nonce stored in Redis and forwards the user to Google.',
+  })
+  public async ssoGoogleRedirect(@Query('active_platform') activePlatform?: string): Promise<void> {
+    // The guard handles the actual redirect. We don't reach the body — but
+    // the guard reads `request.query['state']` to forward to Google, so the
+    // nonce needs to be in the URL before Passport runs. That's done in the
+    // guard itself via getAuthenticateOptions; this method is unreachable.
+    // (Kept for OpenAPI documentation.)
+    void activePlatform;
   }
 
   @Public()
   @UseGuards(GoogleCallbackGuard)
   @Get('sso/google/callback')
-  @ApiOperation({ summary: 'Google OAuth callback — exchanges code for tokens' })
+  @ApiOperation({
+    summary: 'Google OAuth callback — exchanges code for tokens',
+    description:
+      'Validates the CSRF state nonce, then redirects to the frontend with a single-use exchange code (NO tokens in URL).',
+  })
   public async ssoGoogleCallback(
     @Req() request: FastifyRequest & { user: GoogleProfile },
     @Res() reply: FastifyReply,
@@ -165,28 +228,51 @@ export class AuthController {
   ): Promise<void> {
     const context = this.buildSessionContext(deviceId, fingerprint);
     const queryState = (request.query as Record<string, string>)?.['state'];
-    const activePlatform = this.parseActivePlatformFromState(queryState);
+
+    // Validate the state nonce to prevent CSRF / forced linking. The stored
+    // record is the source of truth for activePlatform — never the URL.
+    const stateRecord = await this.oauthStateStore.consume(queryState ?? '');
 
     const data = await this.authService.ssoLogin(
       SsoProvider.GOOGLE,
       request.user,
-      activePlatform,
+      stateRecord.activePlatform,
       context,
     );
 
-    // Redirect back to the frontend with tokens in query params
-    // Why: Cookies cannot be set cross-origin from the OAuth callback; the frontend
-    // reads these params once, stores them securely, and clears the URL.
-    const redirectUrl = new URL('/auth/sso/callback', this.requestContext.path);
-    redirectUrl.searchParams.set('access_token', data.access_token);
-    redirectUrl.searchParams.set('refresh_token', data.refresh_token);
+    // Redirect with a single-use exchange code rather than token values. The
+    // frontend POSTs the code to /auth/sso/exchange to receive tokens once.
+    const code = await this.ssoCodeStore.issue(data);
+    const baseUrl =
+      stateRecord.activePlatform === ActivePlatform.CONSULTANT
+        ? this.env.lonaUrl
+        : this.env.ployosUrl;
+    const redirectUrl = new URL('/auth/sso/callback', baseUrl);
+    redirectUrl.searchParams.set('code', code);
 
     await reply.redirect(redirectUrl.toString());
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('sso/exchange')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Exchange a single-use SSO code for access/refresh tokens',
+    description:
+      'Consumes the code emitted by /auth/sso/google/callback. Each code is valid once for a short TTL.',
+  })
+  public async ssoExchange(
+    @Body() dto: SsoExchangeDto,
+  ): Promise<ITranslatedPayload<AuthResponseDto>> {
+    const data = await this.ssoCodeStore.consume(dto.code);
+    return { messageKey: 'success.ok', data };
   }
 
   // ─── Google SSO — Token Exchange Flow (SPA/Mobile) ──────────────────────
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('sso/google/token')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Exchange Google ID token for platform tokens (SPA/mobile)' })
@@ -217,12 +303,5 @@ export class AuthController {
       deviceId: deviceId ?? null,
       fingerprint: fingerprint ?? null,
     };
-  }
-
-  private parseActivePlatformFromState(state: string | undefined): ActivePlatform {
-    if (state === ActivePlatform.CONSULTANT) {
-      return ActivePlatform.CONSULTANT;
-    }
-    return ActivePlatform.BUSINESS;
   }
 }

@@ -19,6 +19,12 @@
     "email_pending_verification": "A verification email has already been sent. Please check your inbox or spam folder.",
     "user_not_found": "User not found",
     "account_inactive": "Account is inactive",
+    "account_locked": "Account temporarily locked due to too many failed login attempts. Try again later or reset your password.",
+    "reset_token_invalid": "Password reset code is invalid",
+    "reset_token_expired": "Password reset code has expired",
+    "oauth_state_invalid": "Invalid OAuth callback. Please retry the sign-in flow from the start.",
+    "rate_limited": "Too many requests. Please slow down and try again in a moment.",
+    "sso_exchange_invalid": "SSO exchange code is invalid or has expired",
     "sso_email_missing": "SSO provider did not return an email address"
   },
   "business_profile": {
