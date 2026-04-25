@@ -7,10 +7,10 @@ import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
+import { ConsultantSkillsService } from './consultant-skills.service';
 import { OnboardConsultantProfileDto, UpdateConsultantProfileDto } from './dto/requests';
 import { ConsultantProfileResponseDto } from './dto/responses';
 import { IConsultantProfilesService } from './interfaces/consultant-profiles-service.interface';
-import { ConsultantSkillsService } from './services/consultant-skills.service';
 
 @Injectable()
 export class ConsultantProfilesService implements IConsultantProfilesService {

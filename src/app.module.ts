@@ -24,9 +24,8 @@ import { getTypeOrmConfig } from './database/typeorm.config';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
-import { BusinessProfilesModule } from './modules/business-profiles/business-profiles.module';
-import { ConsultantProfilesModule } from './modules/consultant-profiles/consultant-profiles.module';
 import { PaymentsModule } from './modules/payments';
+import { ProfilesModule } from './modules/profiles/profiles.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { SkillsModule } from './modules/skills/skills.module';
 import { TasksModule } from './modules/tasks/tasks.module';
@@ -59,8 +58,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     AuthModule,
     BillingModule,
     PaymentsModule,
-    BusinessProfilesModule,
-    ConsultantProfilesModule,
+    ProfilesModule,
     ProjectsModule,
     SkillsModule,
     TasksModule,

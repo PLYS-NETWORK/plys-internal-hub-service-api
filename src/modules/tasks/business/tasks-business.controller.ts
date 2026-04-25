@@ -15,16 +15,16 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { PlatformGuard } from '../../common/guards/platform.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { PlatformGuard } from '../../../common/guards/platform.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
 import {
   AssignTaskDto,
   CreateTaskDto,
   ReorderTasksDto,
   UpdateTaskBusinessStatusDto,
-} from './dto/requests';
-import { TaskResponseDto } from './dto/responses';
-import { TaskOperationsService } from './services/task-operations.service';
+} from '../dto/requests';
+import { TaskResponseDto } from '../dto/responses';
+import { BusinessTasksService } from './business-tasks.service';
 
 @ApiTags('Tasks - Business')
 @ApiBearerAuth()
@@ -33,7 +33,7 @@ import { TaskOperationsService } from './services/task-operations.service';
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
 export class TasksBusinessController {
-  constructor(private readonly taskOps: TaskOperationsService) {}
+  constructor(private readonly businessTasks: BusinessTasksService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -41,7 +41,7 @@ export class TasksBusinessController {
   public async createTask(
     @Body() dto: CreateTaskDto,
   ): Promise<ITranslatedPayload<TaskResponseDto>> {
-    const data = await this.taskOps.createDraftTask(dto);
+    const data = await this.businessTasks.createDraftTask(dto);
     return { messageKey: 'success.task.created', data };
   }
 
@@ -52,7 +52,7 @@ export class TasksBusinessController {
     @Param('id') id: string,
     @Body() dto: AssignTaskDto,
   ): Promise<ITranslatedPayload<TaskResponseDto>> {
-    const data = await this.taskOps.assignTask(id, dto);
+    const data = await this.businessTasks.assignTask(id, dto);
     return { messageKey: 'success.task.assigned', data };
   }
 
@@ -60,7 +60,7 @@ export class TasksBusinessController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Bulk-update display order for a set of tasks' })
   public async reorderTasks(@Body() dto: ReorderTasksDto): Promise<void> {
-    await this.taskOps.reorderTasks(dto);
+    await this.businessTasks.reorderTasks(dto);
   }
 
   @Patch(':id/business-status')
@@ -70,7 +70,7 @@ export class TasksBusinessController {
     @Param('id') id: string,
     @Body() dto: UpdateTaskBusinessStatusDto,
   ): Promise<ITranslatedPayload<TaskResponseDto>> {
-    const data = await this.taskOps.updateBusinessStatus(id, dto);
+    const data = await this.businessTasks.updateStatus(id, dto);
     return { messageKey: 'success.task.status_updated', data };
   }
 
@@ -80,7 +80,7 @@ export class TasksBusinessController {
   public async listKanbanTasks(
     @Param('projectId') projectId: string,
   ): Promise<ITranslatedPayload<TaskResponseDto[]>> {
-    const data = await this.taskOps.listKanbanTasksForBusiness(projectId);
+    const data = await this.businessTasks.listKanbanTasks(projectId);
     return { messageKey: 'success.ok', data };
   }
 
@@ -90,7 +90,7 @@ export class TasksBusinessController {
   public async listDraftTasks(
     @Param('projectId') projectId: string,
   ): Promise<ITranslatedPayload<TaskResponseDto[]>> {
-    const data = await this.taskOps.listDraftTasksForBusiness(projectId);
+    const data = await this.businessTasks.listDraftTasks(projectId);
     return { messageKey: 'success.ok', data };
   }
 }

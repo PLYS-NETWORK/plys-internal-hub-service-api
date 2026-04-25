@@ -8,11 +8,13 @@ import { RequestContextService } from '@common/modules/request-context/request-c
 import { ProjectMemberStatus } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { plainToInstance } from 'class-transformer';
 
-import { CreateTaskCommentDto, UpdateTaskCommentDto } from '../dto/requests';
-import { TaskCommentResponseDto } from '../dto/responses';
+import { CreateTaskCommentDto, UpdateTaskCommentDto } from '../../dto/requests';
+import { TaskCommentResponseDto } from '../../dto/responses';
+import { TASK_ERRORS } from '../constants/task-error-messages.constant';
 import { ITaskCommentsService } from '../interfaces/task-comments.service.interface';
+import { TaskAccessService } from './task-access.service';
+import { TaskMapperService } from './task-mapper.service';
 
 @Injectable()
 export class TaskCommentsService implements ITaskCommentsService {
@@ -21,6 +23,8 @@ export class TaskCommentsService implements ITaskCommentsService {
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
+    private readonly taskAccess: TaskAccessService,
+    private readonly taskMapper: TaskMapperService,
   ) {
     this.logger = new AppLogger(TaskCommentsService.name, requestContext);
   }
@@ -38,7 +42,7 @@ export class TaskCommentsService implements ITaskCommentsService {
       relations: { project: true },
     });
     if (!task) {
-      throw this.taskNotFound(taskId);
+      throw this.taskAccess.taskNotFound(taskId);
     }
 
     await this.verifyCommentAccess(task.project.businessId, task.projectId);
@@ -51,7 +55,7 @@ export class TaskCommentsService implements ITaskCommentsService {
     const saved = await this.uow.taskComments.save(comment);
 
     this.logger.log(`createComment — complete | commentId: ${saved.id}, taskId: ${taskId}`);
-    return this.toResponseDto(saved);
+    return this.taskMapper.toTaskCommentResponseDto(saved);
   }
 
   /** @inheritdoc */
@@ -66,7 +70,7 @@ export class TaskCommentsService implements ITaskCommentsService {
       order: { createdAt: 'ASC' },
     });
 
-    const data = comments.map((c) => this.toResponseDto(c));
+    const data = comments.map((c) => this.taskMapper.toTaskCommentResponseDto(c));
     const meta = new PageMetaDto({ pageOptionsDto: pageOptions, itemCount });
     return new PageDto(data, meta);
   }
@@ -86,7 +90,7 @@ export class TaskCommentsService implements ITaskCommentsService {
 
     if (comment.authorId !== userId) {
       throw new TranslatableException({
-        messageKey: 'error.task.comment_forbidden',
+        messageKey: TASK_ERRORS.COMMENT_FORBIDDEN,
         errorCode: ERROR_CODES.TASK_COMMENT_FORBIDDEN,
         status: HttpStatus.FORBIDDEN,
       });
@@ -98,7 +102,7 @@ export class TaskCommentsService implements ITaskCommentsService {
     const saved = await this.uow.taskComments.save(comment);
 
     this.logger.log(`updateComment — complete | commentId: ${commentId}`);
-    return this.toResponseDto(saved);
+    return this.taskMapper.toTaskCommentResponseDto(saved);
   }
 
   /** @inheritdoc */
@@ -113,7 +117,7 @@ export class TaskCommentsService implements ITaskCommentsService {
 
     if (comment.authorId !== userId) {
       throw new TranslatableException({
-        messageKey: 'error.task.comment_forbidden',
+        messageKey: TASK_ERRORS.COMMENT_FORBIDDEN,
         errorCode: ERROR_CODES.TASK_COMMENT_FORBIDDEN,
         status: HttpStatus.FORBIDDEN,
       });
@@ -134,13 +138,11 @@ export class TaskCommentsService implements ITaskCommentsService {
   private async verifyCommentAccess(businessId: string, projectId: string): Promise<void> {
     const userId = this.requestContext.userId!;
 
-    // Check if caller is the business owner
     const businessProfile = await this.uow.businessProfiles.findByUserId(userId);
     if (businessProfile && businessProfile.id === businessId) {
       return;
     }
 
-    // Check if caller is an ACTIVE project member (consultant)
     const consultantProfile = await this.uow.consultantProfiles.findByUserId(userId);
     if (consultantProfile) {
       const member = await this.uow.projectMembers.findOne({
@@ -154,51 +156,18 @@ export class TaskCommentsService implements ITaskCommentsService {
     }
 
     throw new TranslatableException({
-      messageKey: 'error.task.comment_forbidden',
+      messageKey: TASK_ERRORS.COMMENT_FORBIDDEN,
       errorCode: ERROR_CODES.TASK_COMMENT_FORBIDDEN,
       status: HttpStatus.FORBIDDEN,
-    });
-  }
-
-  private taskNotFound(taskId: string): TranslatableException {
-    this.logger.warn(`comment operation — task not found | taskId: ${taskId}`);
-    return new TranslatableException({
-      messageKey: 'error.task.not_found',
-      errorCode: ERROR_CODES.TASK_NOT_FOUND,
-      status: HttpStatus.NOT_FOUND,
     });
   }
 
   private commentNotFound(commentId: string): TranslatableException {
     this.logger.warn(`comment operation — comment not found | commentId: ${commentId}`);
     return new TranslatableException({
-      messageKey: 'error.task.comment_not_found',
+      messageKey: TASK_ERRORS.COMMENT_NOT_FOUND,
       errorCode: ERROR_CODES.TASK_COMMENT_NOT_FOUND,
       status: HttpStatus.NOT_FOUND,
     });
-  }
-
-  private toResponseDto(comment: {
-    id: string;
-    taskId: string;
-    authorId: string;
-    body: string;
-    isEdited: boolean;
-    editedAt: Date | null;
-    createdAt: Date;
-  }): TaskCommentResponseDto {
-    return plainToInstance(
-      TaskCommentResponseDto,
-      {
-        id: comment.id,
-        task_id: comment.taskId,
-        author_id: comment.authorId,
-        body: comment.body,
-        is_edited: comment.isEdited,
-        edited_at: comment.editedAt,
-        created_at: comment.createdAt,
-      },
-      { excludeExtraneousValues: true },
-    );
   }
 }

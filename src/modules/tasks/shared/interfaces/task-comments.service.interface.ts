@@ -1,8 +1,8 @@
 import { PageDto } from '@common/dto/page.dto';
 import { PageOptionsDto } from '@common/dto/page-options.dto';
 
-import { CreateTaskCommentDto, UpdateTaskCommentDto } from '../dto/requests';
-import { TaskCommentResponseDto } from '../dto/responses';
+import { CreateTaskCommentDto, UpdateTaskCommentDto } from '../../dto/requests';
+import { TaskCommentResponseDto } from '../../dto/responses';
 
 /**
  * Contract for task comment operations.

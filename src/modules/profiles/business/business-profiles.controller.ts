@@ -15,8 +15,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { PlatformGuard } from '../../common/guards/platform.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
+import { PlatformGuard } from '../../../common/guards/platform.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
 import { BusinessProfilesService } from './business-profiles.service';
 import { OnboardBusinessProfileDto } from './dto/requests/onboard-business-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/requests/update-business-profile.dto';

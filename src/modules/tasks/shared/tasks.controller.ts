@@ -18,12 +18,12 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { PlatformGuard } from '../../common/guards/platform.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { CreateTaskCommentDto, UpdateTaskCommentDto } from './dto/requests';
-import { TaskCommentResponseDto, TaskHistoryResponseDto } from './dto/responses';
+import { PlatformGuard } from '../../../common/guards/platform.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
+import { CreateTaskCommentDto, UpdateTaskCommentDto } from '../dto/requests';
+import { TaskCommentResponseDto, TaskHistoryResponseDto } from '../dto/responses';
+import { TaskAccessService } from './services/task-access.service';
 import { TaskCommentsService } from './services/task-comments.service';
-import { TaskOperationsService } from './services/task-operations.service';
 
 @ApiTags('Tasks')
 @ApiBearerAuth()
@@ -32,7 +32,7 @@ import { TaskOperationsService } from './services/task-operations.service';
 @Roles(UserRole.USER)
 export class TasksController {
   constructor(
-    private readonly taskOps: TaskOperationsService,
+    private readonly taskAccess: TaskAccessService,
     private readonly taskComments: TaskCommentsService,
   ) {}
 
@@ -43,7 +43,7 @@ export class TasksController {
     @Param('id') id: string,
     @Query() pageOptions: PageOptionsDto,
   ): Promise<ITranslatedPayload<PageDto<TaskHistoryResponseDto>>> {
-    const data = await this.taskOps.getTaskHistory(id, pageOptions);
+    const data = await this.taskAccess.getTaskHistory(id, pageOptions);
     return { messageKey: 'success.ok', data };
   }
 

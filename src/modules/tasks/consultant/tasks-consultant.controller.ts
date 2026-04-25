@@ -14,11 +14,11 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { PlatformGuard } from '../../common/guards/platform.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { UpdateTaskConsultantStatusDto } from './dto/requests';
-import { ConsultantTaskResponseDto, TaskResponseDto } from './dto/responses';
-import { TaskOperationsService } from './services/task-operations.service';
+import { PlatformGuard } from '../../../common/guards/platform.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
+import { UpdateTaskConsultantStatusDto } from '../dto/requests';
+import { ConsultantTaskResponseDto, TaskResponseDto } from '../dto/responses';
+import { ConsultantTasksService } from './consultant-tasks.service';
 
 @ApiTags('Tasks - Consultant')
 @ApiBearerAuth()
@@ -27,7 +27,7 @@ import { TaskOperationsService } from './services/task-operations.service';
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.CONSULTANT)
 export class TasksConsultantController {
-  constructor(private readonly taskOps: TaskOperationsService) {}
+  constructor(private readonly consultantTasks: ConsultantTasksService) {}
 
   @Get('by-project/:projectId')
   @HttpCode(HttpStatus.OK)
@@ -35,7 +35,7 @@ export class TasksConsultantController {
   public async listProjectTasks(
     @Param('projectId') projectId: string,
   ): Promise<ITranslatedPayload<ConsultantTaskResponseDto[]>> {
-    const data = await this.taskOps.listProjectTasksForConsultant(projectId);
+    const data = await this.consultantTasks.listProjectTasks(projectId);
     return { messageKey: 'success.ok', data };
   }
 
@@ -46,7 +46,7 @@ export class TasksConsultantController {
     @Param('id') id: string,
     @Body() dto: UpdateTaskConsultantStatusDto,
   ): Promise<ITranslatedPayload<TaskResponseDto>> {
-    const data = await this.taskOps.updateConsultantStatus(id, dto);
+    const data = await this.consultantTasks.updateStatus(id, dto);
     return { messageKey: 'success.task.status_updated', data };
   }
 }

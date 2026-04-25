@@ -6,8 +6,8 @@ import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.inter
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable } from '@nestjs/common';
 
-import { ConsultantSkillInputDto } from '../dto/requests';
-import { IConsultantSkillsService } from '../interfaces/consultant-skills-service.interface';
+import { ConsultantSkillInputDto } from './dto/requests';
+import { IConsultantSkillsService } from './interfaces/consultant-skills-service.interface';
 
 @Injectable()
 export class ConsultantSkillsService implements IConsultantSkillsService {
