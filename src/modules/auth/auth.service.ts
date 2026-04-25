@@ -31,38 +31,47 @@ export class AuthService implements IAuthService {
     private readonly session: SessionService,
   ) {}
 
+  /** @inheritdoc */
   public register(dto: RegisterDto, context: ISessionContext): Promise<void> {
     return this.basicAuth.register(dto, context);
   }
 
+  /** @inheritdoc */
   public verifyEmail(token: string, context: ISessionContext): Promise<AuthResponseDto> {
     return this.basicAuth.verifyEmail(token, context);
   }
 
+  /** @inheritdoc */
   public resendVerification(dto: ResendVerificationDto): Promise<void> {
     return this.basicAuth.resendVerification(dto);
   }
 
+  /** @inheritdoc */
   public login(dto: LoginDto, context: ISessionContext): Promise<AuthResponseDto> {
     return this.basicAuth.login(dto, context);
   }
 
+  /** @inheritdoc */
   public changePassword(dto: ChangePasswordDto): Promise<void> {
     return this.basicAuth.changePassword(dto);
   }
 
+  /** @inheritdoc */
   public refresh(refreshToken: string, context: ISessionContext): Promise<AuthResponseDto> {
     return this.session.refresh(refreshToken, context);
   }
 
+  /** @inheritdoc */
   public logout(): Promise<void> {
     return this.session.logout();
   }
 
+  /** @inheritdoc */
   public me(): Promise<UserResponseDto> {
     return this.session.me();
   }
 
+  /** @inheritdoc */
   public ssoLogin(
     provider: string,
     userData: ISsoUserData,
@@ -72,6 +81,7 @@ export class AuthService implements IAuthService {
     return this.ssoAuth.ssoLogin(provider, userData, activePlatform, context);
   }
 
+  /** @inheritdoc */
   public verifyGoogleIdToken(idToken: string): Promise<ISsoUserData> {
     return this.ssoAuth.verifyProviderToken(SsoProvider.GOOGLE, idToken);
   }

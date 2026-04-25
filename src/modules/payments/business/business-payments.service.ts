@@ -41,6 +41,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
     this.logger = new AppLogger(BusinessPaymentsService.name, requestContext);
   }
 
+  /** @inheritdoc */
   public async createTopUp(dto: CreateTopUpDto): Promise<TopUpResponseDto> {
     const userId = this.requestContext.userId!;
     this.logger.log(`createTopUp — start | userId: ${userId}, amount: ${dto.amount}`);
@@ -111,6 +112,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
     }
   }
 
+  /** @inheritdoc */
   public async settleInvoice(dto: SettleInvoiceDto): Promise<SettleInvoiceResponseDto> {
     const userId = this.requestContext.userId!;
     this.logger.log(`settleInvoice — start | userId: ${userId}, invoiceId: ${dto.invoiceId}`);
@@ -220,6 +222,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
     }
   }
 
+  /** @inheritdoc */
   public async listTransactions(
     dto: ListBusinessTransactionsDto,
   ): Promise<PageDto<TransactionResponseDto>> {

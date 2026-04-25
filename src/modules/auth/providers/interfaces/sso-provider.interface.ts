@@ -17,7 +17,16 @@ export interface ISsoTokenProvider {
 
   /**
    * Verifies the provider-specific token (ID token, access token, etc.) and
-   * returns a normalised ISsoUserData. Throws TranslatableException on failure.
+   * returns a normalised `ISsoUserData`.
+   *
+   * Implementations must validate the token's signature, expiry, and audience
+   * against the configured client ID before extracting user data.
+   *
+   * @param idToken - The raw ID token (or access token) issued by the provider.
+   * @returns Normalised `ISsoUserData` containing the provider user ID, email,
+   *          display name, and raw access/refresh tokens.
+   * @throws TranslatableException (401) — token is invalid, expired, or the
+   *         payload could not be extracted.
    */
   verifyToken(idToken: string): Promise<ISsoUserData>;
 }

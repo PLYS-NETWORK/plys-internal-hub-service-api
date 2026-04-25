@@ -27,6 +27,7 @@ export class GoogleSsoProvider implements ISsoTokenProvider {
     this.client = new OAuth2Client(envService.googleClientId);
   }
 
+  /** @inheritdoc */
   public async verifyToken(idToken: string): Promise<ISsoUserData> {
     this.logger.log(`verifyToken — start | provider: google`);
 

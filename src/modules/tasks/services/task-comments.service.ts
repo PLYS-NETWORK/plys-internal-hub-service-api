@@ -25,7 +25,7 @@ export class TaskCommentsService implements ITaskCommentsService {
     this.logger = new AppLogger(TaskCommentsService.name, requestContext);
   }
 
-  /** Create a comment on a task. Caller must be project owner or ACTIVE member. */
+  /** @inheritdoc */
   public async createComment(
     taskId: string,
     dto: CreateTaskCommentDto,
@@ -54,7 +54,7 @@ export class TaskCommentsService implements ITaskCommentsService {
     return this.toResponseDto(saved);
   }
 
-  /** Paginated list of non-deleted comments for a task. */
+  /** @inheritdoc */
   public async listComments(
     taskId: string,
     pageOptions: PageOptionsDto,
@@ -71,7 +71,7 @@ export class TaskCommentsService implements ITaskCommentsService {
     return new PageDto(data, meta);
   }
 
-  /** Edit own comment. Sets isEdited flag and editedAt timestamp. */
+  /** @inheritdoc */
   public async updateComment(
     commentId: string,
     dto: UpdateTaskCommentDto,
@@ -101,7 +101,7 @@ export class TaskCommentsService implements ITaskCommentsService {
     return this.toResponseDto(saved);
   }
 
-  /** Soft-delete own comment. */
+  /** @inheritdoc */
   public async deleteComment(commentId: string): Promise<void> {
     const userId = this.requestContext.userId!;
     this.logger.log(`deleteComment — start | commentId: ${commentId}`);

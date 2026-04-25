@@ -23,6 +23,7 @@ export class ConsultantPaymentsService implements IConsultantPaymentsService {
     this.logger = new AppLogger(ConsultantPaymentsService.name, requestContext);
   }
 
+  /** @inheritdoc */
   public async listTransactions(
     dto: ListConsultantTransactionsDto,
   ): Promise<PageDto<ConsultantTransactionResponseDto>> {

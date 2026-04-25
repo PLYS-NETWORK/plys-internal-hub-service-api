@@ -45,6 +45,7 @@ export class PolarPaymentProvider implements IPaymentProvider {
     this.client = new Polar({ accessToken: this.env.polarAccessToken });
   }
 
+  /** @inheritdoc */
   public async createCheckoutSession(
     params: ICreateCheckoutSessionParams,
   ): Promise<ICheckoutSession> {
@@ -77,6 +78,7 @@ export class PolarPaymentProvider implements IPaymentProvider {
     }
   }
 
+  /** @inheritdoc */
   public async createRefund(params: ICreateRefundParams): Promise<void> {
     try {
       // Polar refunds are created against the order ID (processorPaymentIntentId stores
@@ -97,6 +99,7 @@ export class PolarPaymentProvider implements IPaymentProvider {
     }
   }
 
+  /** @inheritdoc */
   public constructWebhookEvent(payload: Buffer, headers: Record<string, string>): IWebhookEvent {
     // Polar uses the Standard Webhooks spec (standardwebhooks library).
     // The signature covers webhook-id + "." + webhook-timestamp + "." + body,
@@ -123,6 +126,7 @@ export class PolarPaymentProvider implements IPaymentProvider {
     };
   }
 
+  /** @inheritdoc */
   public async createTransfer(_params: ICreateTransferParams): Promise<ITransferResult> {
     // Polar.sh does not support payouts/transfers. Withdrawals must use Stripe Connect.
     throw new NotImplementedException('Polar does not support transfers. Use Stripe for payouts.');

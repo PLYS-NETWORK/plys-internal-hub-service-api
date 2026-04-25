@@ -35,6 +35,7 @@ export class BillingAdminService implements IBillingAdminService {
     this.logger = new AppLogger(BillingAdminService.name, requestContext);
   }
 
+  /** @inheritdoc */
   public async listBills(dto: ListBillsDto): Promise<PageDto<BillListResponseDto>> {
     this.logger.log(`[${this.rid}] listBills — start | page: ${dto.page}, limit: ${dto.limit}`);
 
@@ -84,6 +85,7 @@ export class BillingAdminService implements IBillingAdminService {
     return new PageDto(data, meta);
   }
 
+  /** @inheritdoc */
   public async triggerSettlement(dto: TriggerSettlementDto): Promise<void> {
     this.logger.log(
       `[${this.rid}] triggerSettlement — start | year: ${dto.year}, month: ${dto.month}${dto.businessId ? `, businessId: ${dto.businessId}` : ''}`,
@@ -95,6 +97,7 @@ export class BillingAdminService implements IBillingAdminService {
     this.logger.log(`[${this.rid}] triggerSettlement — complete`);
   }
 
+  /** @inheritdoc */
   public async getBillDetail(invoiceId: string): Promise<BillDetailResponseDto> {
     this.logger.log(`[${this.rid}] getBillDetail — start | invoiceId: ${invoiceId}`);
 
@@ -167,6 +170,7 @@ export class BillingAdminService implements IBillingAdminService {
     );
   }
 
+  /** @inheritdoc */
   public async sendBillEmail(invoiceId: string): Promise<SendBillResponseDto> {
     this.logger.log(`[${this.rid}] sendBillEmail — start | invoiceId: ${invoiceId}`);
 

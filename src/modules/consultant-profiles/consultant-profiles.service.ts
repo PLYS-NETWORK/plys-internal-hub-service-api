@@ -24,6 +24,7 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
     this.logger = new AppLogger(ConsultantProfilesService.name, requestContext);
   }
 
+  /** @inheritdoc */
   public async getProfile(): Promise<ConsultantProfileResponseDto> {
     const userId = this.requestContext.userId!;
     this.logger.log(`getProfile — start | userId: ${userId}`);
@@ -43,6 +44,7 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
     return this.toResponseDto(profile, skills);
   }
 
+  /** @inheritdoc */
   public async onboard(dto: OnboardConsultantProfileDto): Promise<ConsultantProfileResponseDto> {
     const userId = this.requestContext.userId!;
     this.logger.log(`onboard — start | userId: ${userId}, fullName: ${dto.full_name}`);
@@ -87,6 +89,7 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
     return this.toResponseDto(profile, skills);
   }
 
+  /** @inheritdoc */
   public async updateProfile(
     dto: UpdateConsultantProfileDto,
   ): Promise<ConsultantProfileResponseDto> {
@@ -137,6 +140,7 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
     return this.toResponseDto(updatedProfile, skills);
   }
 
+  /** @inheritdoc */
   public async verify(profileId: string): Promise<void> {
     this.logger.log(`verify — start | profileId: ${profileId}`);
     const profile = await this.uow.consultantProfiles.findOne({ where: { id: profileId } });

@@ -29,6 +29,7 @@ export class StripePaymentProvider implements IPaymentProvider {
     this.client = new Stripe(this.env.stripeSecretKey);
   }
 
+  /** @inheritdoc */
   public async createCheckoutSession(
     params: ICreateCheckoutSessionParams,
   ): Promise<ICheckoutSession> {
@@ -69,6 +70,7 @@ export class StripePaymentProvider implements IPaymentProvider {
     }
   }
 
+  /** @inheritdoc */
   public async createRefund(params: ICreateRefundParams): Promise<void> {
     try {
       await this.client.refunds.create({
@@ -85,6 +87,7 @@ export class StripePaymentProvider implements IPaymentProvider {
     }
   }
 
+  /** @inheritdoc */
   public constructWebhookEvent(payload: Buffer, headers: Record<string, string>): IWebhookEvent {
     // stripe.webhooks.constructEvent validates the HMAC signature.
     // Must use the raw request body (Buffer) — do not parse to JSON first.
@@ -103,6 +106,7 @@ export class StripePaymentProvider implements IPaymentProvider {
     };
   }
 
+  /** @inheritdoc */
   public async createTransfer(params: ICreateTransferParams): Promise<ITransferResult> {
     try {
       const transfer = await this.client.transfers.create({

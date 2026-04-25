@@ -25,6 +25,7 @@ export class ConsultantWithdrawStrategy implements IWithdrawStrategy {
     this.logger = new AppLogger(ConsultantWithdrawStrategy.name, requestContext);
   }
 
+  /** @inheritdoc */
   public async execute(
     amount: number,
     successUrl: string,

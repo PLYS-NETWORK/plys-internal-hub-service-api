@@ -23,6 +23,7 @@ export class CopyleaksApiProvider implements ICopyleaksProvider {
     this.apiKey = this.env.copyleaksApiKey;
   }
 
+  /** @inheritdoc */
   public async checkAiContent(text: string): Promise<ICopyleaksAiResult> {
     const response = await fetch(this.baseUrl, {
       method: 'POST',

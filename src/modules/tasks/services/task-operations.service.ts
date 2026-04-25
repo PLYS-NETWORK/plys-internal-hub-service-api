@@ -46,7 +46,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     this.logger = new AppLogger(TaskOperationsService.name, requestContext);
   }
 
-  /** Create a draft task for an in-progress project. */
+  /** @inheritdoc */
   public async createDraftTask(dto: CreateTaskDto): Promise<TaskResponseDto> {
     const businessId = await this.resolveBusinessId();
     this.logger.log(`createDraftTask — start | projectId: ${dto.projectId}`);
@@ -81,10 +81,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     return this.toResponseDto(saved);
   }
 
-  /**
-   * Business changes task status. Handles payment gate at draft→to_do and
-   * consultant payout at any→done.
-   */
+  /** @inheritdoc */
   public async updateBusinessStatus(
     taskId: string,
     dto: UpdateTaskBusinessStatusDto,
@@ -127,7 +124,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     return this.toResponseDto(saved);
   }
 
-  /** Consultant changes task status (restricted transition map). */
+  /** @inheritdoc */
   public async updateConsultantStatus(
     taskId: string,
     dto: UpdateTaskConsultantStatusDto,
@@ -173,10 +170,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     return this.toResponseDto(saved);
   }
 
-  /**
-   * Consultant self-assigns to an unassigned to_do task.
-   * Uses SELECT FOR UPDATE SKIP LOCKED to prevent race conditions.
-   */
+  /** @inheritdoc */
   public async claimTask(taskId: string): Promise<TaskResponseDto> {
     const consultantProfile = await this.resolveConsultantProfile();
     this.logger.log(`claimTask — start | taskId: ${taskId}, consultantId: ${consultantProfile.id}`);
@@ -214,7 +208,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     return this.toResponseDto(saved);
   }
 
-  /** Business assigns a consultant to a to_do task. */
+  /** @inheritdoc */
   public async assignTask(taskId: string, dto: AssignTaskDto): Promise<TaskResponseDto> {
     const businessProfile = await this.resolveBusinessProfile();
     this.logger.log(`assignTask — start | taskId: ${taskId}, consultantId: ${dto.consultantId}`);
@@ -243,7 +237,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     return this.toResponseDto(saved);
   }
 
-  /** Paginated task list for a project. */
+  /** @inheritdoc */
   public async listProjectTasks(
     projectId: string,
     pageOptions: PageOptionsDto,
@@ -260,7 +254,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     return new PageDto(data, meta);
   }
 
-  /** Bulk-updates displayOrder for a set of tasks owned by the calling business. */
+  /** @inheritdoc */
   public async reorderTasks(dto: ReorderTasksDto): Promise<void> {
     const businessId = await this.resolveBusinessId();
     this.logger.log(`reorderTasks — start | count: ${dto.tasks.length}`);
@@ -290,7 +284,7 @@ export class TaskOperationsService implements ITaskOperationsService {
     this.logger.log(`reorderTasks — complete | count: ${dto.tasks.length}`);
   }
 
-  /** Paginated task list for a project, scoped to the consultant platform. */
+  /** @inheritdoc */
   public async listProjectTasksForConsultant(
     projectId: string,
     pageOptions: PageOptionsDto,

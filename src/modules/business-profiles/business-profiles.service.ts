@@ -23,6 +23,7 @@ export class BusinessProfilesService implements IBusinessProfilesService {
     this.logger = new AppLogger(BusinessProfilesService.name, requestContext);
   }
 
+  /** @inheritdoc */
   public async getProfile(): Promise<BusinessProfileResponseDto> {
     const userId = this.requestContext.userId!;
     this.logger.log(`getProfile — start | userId: ${userId}`);
@@ -40,6 +41,7 @@ export class BusinessProfilesService implements IBusinessProfilesService {
     return this.toResponseDto(profile);
   }
 
+  /** @inheritdoc */
   public async onboard(dto: OnboardBusinessProfileDto): Promise<BusinessProfileResponseDto> {
     const userId = this.requestContext.userId!;
     this.logger.log(`onboard — start | userId: ${userId}, company: ${dto.company_name}`);
@@ -73,6 +75,7 @@ export class BusinessProfilesService implements IBusinessProfilesService {
     return this.toResponseDto(profile);
   }
 
+  /** @inheritdoc */
   public async updateProfile(dto: UpdateBusinessProfileDto): Promise<BusinessProfileResponseDto> {
     const userId = this.requestContext.userId!;
     this.logger.log(`updateProfile — start | userId: ${userId}`);
@@ -104,6 +107,7 @@ export class BusinessProfilesService implements IBusinessProfilesService {
     return this.toResponseDto(profile);
   }
 
+  /** @inheritdoc */
   public async markAsPartner(profileId: string): Promise<void> {
     this.logger.log(`markAsPartner — start | profileId: ${profileId}`);
     const profile = await this.uow.businessProfiles.findOne({ where: { id: profileId } });
@@ -122,6 +126,7 @@ export class BusinessProfilesService implements IBusinessProfilesService {
     this.logger.log(`markAsPartner — complete | profileId: ${profileId}`);
   }
 
+  /** @inheritdoc */
   public async allowPaymentCredit(profileId: string): Promise<void> {
     this.logger.log(`allowPaymentCredit — start | profileId: ${profileId}`);
     const profile = await this.uow.businessProfiles.findOne({ where: { id: profileId } });

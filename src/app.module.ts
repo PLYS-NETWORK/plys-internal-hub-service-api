@@ -37,7 +37,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development',
       load: [configuration],
     }),
     EnvironmentsModule,
@@ -78,10 +78,10 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
 })
 export class AppModule implements NestModule {
   public configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(RequestContextMiddleware).forRoutes({ path: '*', method: RequestMethod.ALL });
+    consumer.apply(RequestContextMiddleware).forRoutes({ path: '*path', method: RequestMethod.ALL });
 
     // JwtContextMiddleware runs after RequestContextMiddleware so the AsyncLocalStorage
     // context is already established when the JWT payload is written into it.
-    consumer.apply(JwtContextMiddleware).forRoutes({ path: '*', method: RequestMethod.ALL });
+    consumer.apply(JwtContextMiddleware).forRoutes({ path: '*path', method: RequestMethod.ALL });
   }
 }

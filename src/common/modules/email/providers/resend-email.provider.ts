@@ -26,6 +26,7 @@ export class ResendEmailProvider implements IEmailProvider {
     this.client = new Resend(this.env.resendApiKey);
   }
 
+  /** @inheritdoc */
   public async send(message: IEmailMessage): Promise<void> {
     const { error } = await this.client.emails.send({
       from: message.from,

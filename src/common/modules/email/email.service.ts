@@ -61,6 +61,7 @@ export class EmailService implements IEmailService {
       : this.env.resendPloyosEmail;
   }
 
+  /** @inheritdoc */
   public async sendVerificationEmail(
     to: string,
     options: IVerifyRegistrationEmailOptions,
@@ -87,6 +88,7 @@ export class EmailService implements IEmailService {
     }
   }
 
+  /** @inheritdoc */
   public async sendForgotPasswordOtpEmail(
     to: string,
     options: IForgotPasswordOtpEmailOptions,
@@ -113,6 +115,7 @@ export class EmailService implements IEmailService {
     }
   }
 
+  /** @inheritdoc */
   public async sendWelcomeEmail(
     to: string,
     options: IWelcomeEmailOptions,
@@ -139,6 +142,7 @@ export class EmailService implements IEmailService {
     }
   }
 
+  /** @inheritdoc */
   public async sendApplicationNotificationToBusinessEmail(
     to: string,
     options: IBusinessApplicationNotificationEmailOptions,
@@ -161,6 +165,7 @@ export class EmailService implements IEmailService {
     }
   }
 
+  /** @inheritdoc */
   public async sendApplicationNotificationToConsultantEmail(
     to: string,
     options: IConsultantApplicationNotificationEmailOptions,
@@ -183,6 +188,7 @@ export class EmailService implements IEmailService {
     }
   }
 
+  /** @inheritdoc */
   public async sendAiDetectedEmail(to: string, options: IAiDetectedEmailOptions): Promise<void> {
     this.logger.log(`sendAiDetectedEmail — start | to: ${to}`);
     try {
@@ -200,6 +206,7 @@ export class EmailService implements IEmailService {
     }
   }
 
+  /** @inheritdoc */
   public async sendApplicationStatusEmail(
     to: string,
     options: IApplicationStatusEmailOptions,
@@ -268,6 +275,7 @@ export class EmailService implements IEmailService {
     }
   }
 
+  /** @inheritdoc */
   public async sendMonthlyInvoiceEmail(
     to: string,
     options: IMonthlyInvoiceEmailOptions,

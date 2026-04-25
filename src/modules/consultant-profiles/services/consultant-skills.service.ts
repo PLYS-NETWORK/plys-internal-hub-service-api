@@ -20,6 +20,7 @@ export class ConsultantSkillsService implements IConsultantSkillsService {
     this.logger = new AppLogger(ConsultantSkillsService.name, requestContext);
   }
 
+  /** @inheritdoc */
   public async findByConsultantId(
     consultantId: string,
     uow?: IUnitOfWork,
@@ -27,6 +28,7 @@ export class ConsultantSkillsService implements IConsultantSkillsService {
     return (uow ?? this.uow).consultantSkills.findByConsultantId(consultantId);
   }
 
+  /** @inheritdoc */
   public async createForConsultant(
     consultantId: string,
     skills: ConsultantSkillInputDto[],
@@ -55,6 +57,7 @@ export class ConsultantSkillsService implements IConsultantSkillsService {
     return saved;
   }
 
+  /** @inheritdoc */
   public async replaceForConsultant(
     consultantId: string,
     skills: ConsultantSkillInputDto[],
