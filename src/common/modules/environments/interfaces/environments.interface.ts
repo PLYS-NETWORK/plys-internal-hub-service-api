@@ -1,4 +1,5 @@
 import { IAppConfig } from './app-config.interface';
+import { IAwsS3Config } from './aws-s3-config.interface';
 import { ICopyleaksConfig } from './copyleaks-config.interface';
 import { IDataConnection } from './data-connection.interface';
 import { IFilesConfig } from './files-config.interface';
@@ -12,6 +13,7 @@ import { ISecurityConfig } from './security-config.interface';
 export interface IEnvironmentsService
   extends
     IAppConfig,
+    IAwsS3Config,
     ICopyleaksConfig,
     IDataConnection,
     IFilesConfig,

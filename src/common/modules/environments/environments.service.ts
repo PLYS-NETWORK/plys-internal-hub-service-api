@@ -229,4 +229,24 @@ export class EnvironmentsService implements IEnvironmentsService {
   public get filesLocalPublicBaseUrl(): string {
     return this.configService.getOrThrow<string>('app.files.local.publicBaseUrl');
   }
+
+  public get awsS3Region(): string {
+    return this.configService.getOrThrow<string>('app.awsS3.region');
+  }
+
+  public get awsS3AccessKeyId(): string {
+    return this.configService.getOrThrow<string>('app.awsS3.accessKeyId');
+  }
+
+  public get awsS3SecretAccessKey(): string {
+    return this.configService.getOrThrow<string>('app.awsS3.secretAccessKey');
+  }
+
+  public get awsS3DefaultBucket(): string {
+    return this.configService.getOrThrow<string>('app.awsS3.defaultBucket');
+  }
+
+  public get awsS3PresignTtlSeconds(): number {
+    return this.configService.getOrThrow<number>('app.awsS3.presignTtlSeconds');
+  }
 }

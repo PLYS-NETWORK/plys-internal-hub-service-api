@@ -75,9 +75,18 @@ export default registerAs('app', () => ({
   copyleaks: {
     apiKey: process.env.COPYLEAKS_API_KEY ?? '',
   },
+  awsS3: {
+    region: process.env.AWS_S3_REGION ?? '',
+    // Empty access key means "fall back to the SDK's default credential chain"
+    // (IAM role, instance profile, env vars). Treated as an opt-out signal,
+    // not a misconfiguration.
+    accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID ?? '',
+    secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY ?? '',
+    defaultBucket: process.env.AWS_S3_DEFAULT_BUCKET ?? '',
+    presignTtlSeconds: parseInt(process.env.AWS_S3_PRESIGN_TTL_SECONDS ?? '900', 10),
+  },
   files: {
-    // Pluggable storage backend. Currently only `local` is implemented;
-    // `s3` and `gcs` are reserved for future cloud-storage providers.
+    // Pluggable storage backend. `local` and `s3` are wired; `gcs` is reserved.
     storageProvider: (process.env.FILES_STORAGE_PROVIDER ?? 'local') as 'local' | 's3' | 'gcs',
     maxSizeBytes: parseInt(process.env.FILES_MAX_SIZE_BYTES ?? '10485760', 10),
     allowedMimeList: process.env.FILES_ALLOWED_MIME?.split(',')

@@ -10,6 +10,7 @@ import { PlatformGuard } from './common/guards/platform.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
 import { JwtContextMiddleware } from './common/middleware/jwt-context.middleware';
+import { AwsS3Module } from './common/modules/aws-s3';
 import { CopyleaksModule } from './common/modules/copyleaks';
 import { EmailModule } from './common/modules/email';
 import { EnvironmentsModule, EnvironmentsService } from './common/modules/environments';
@@ -55,6 +56,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     RedisModule,
     PaymentModule,
     UnitOfWorkModule,
+    AwsS3Module,
     FilesModule,
     ApplicationsModule,
     AuthModule,
