@@ -29,7 +29,7 @@ import {
   UpdateTaskBusinessStatusDto,
   UpdateTaskCommentDto,
 } from './dto/requests';
-import { TaskCommentResponseDto, TaskResponseDto } from './dto/responses';
+import { TaskCommentResponseDto, TaskHistoryResponseDto, TaskResponseDto } from './dto/responses';
 import { TaskCommentsService } from './services/task-comments.service';
 import { TaskOperationsService } from './services/task-operations.service';
 
@@ -82,6 +82,17 @@ export class TasksBusinessController {
   ): Promise<ITranslatedPayload<TaskResponseDto>> {
     const data = await this.taskOps.updateBusinessStatus(id, dto);
     return { messageKey: 'success.task.status_updated', data };
+  }
+
+  @Get(':id/history')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get status and assignment history for a task (paginated)' })
+  public async getTaskHistory(
+    @Param('id') id: string,
+    @Query() pageOptions: PageOptionsDto,
+  ): Promise<ITranslatedPayload<PageDto<TaskHistoryResponseDto>>> {
+    const data = await this.taskOps.getTaskHistory(id, pageOptions);
+    return { messageKey: 'success.ok', data };
   }
 
   @Post(':id/comments')

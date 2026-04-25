@@ -29,6 +29,7 @@ import {
 import {
   ConsultantTaskResponseDto,
   TaskCommentResponseDto,
+  TaskHistoryResponseDto,
   TaskResponseDto,
 } from './dto/responses';
 import { TaskCommentsService } from './services/task-comments.service';
@@ -57,14 +58,6 @@ export class TasksConsultantController {
     return { messageKey: 'success.ok', data };
   }
 
-  @Post(':id/claim')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Self-assign to an unassigned to_do task' })
-  public async claimTask(@Param('id') id: string): Promise<ITranslatedPayload<TaskResponseDto>> {
-    const data = await this.taskOps.claimTask(id);
-    return { messageKey: 'success.task.claimed', data };
-  }
-
   @Patch(':id/consultant-status')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Change task status (consultant)' })
@@ -74,6 +67,17 @@ export class TasksConsultantController {
   ): Promise<ITranslatedPayload<TaskResponseDto>> {
     const data = await this.taskOps.updateConsultantStatus(id, dto);
     return { messageKey: 'success.task.status_updated', data };
+  }
+
+  @Get(':id/history')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get status and assignment history for a task (paginated)' })
+  public async getTaskHistory(
+    @Param('id') id: string,
+    @Query() pageOptions: PageOptionsDto,
+  ): Promise<ITranslatedPayload<PageDto<TaskHistoryResponseDto>>> {
+    const data = await this.taskOps.getTaskHistory(id, pageOptions);
+    return { messageKey: 'success.ok', data };
   }
 
   @Post(':id/comments')

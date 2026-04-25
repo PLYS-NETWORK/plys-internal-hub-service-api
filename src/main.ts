@@ -6,13 +6,13 @@ import { SwaggerModule } from '@nestjs/swagger';
 import { I18nValidationExceptionFilter, I18nValidationPipe } from 'nestjs-i18n';
 
 import { AppModule } from './app.module';
+import { swaggerConfig } from './config/swagger.config';
 import {
   ADMIN_DOC_TAGS,
   BUSINESS_DOC_TAGS,
   CONSULTANT_DOC_TAGS,
   filterDocumentByTags,
 } from './config/swagger-filter.util';
-import { swaggerConfig } from './config/swagger.config';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(

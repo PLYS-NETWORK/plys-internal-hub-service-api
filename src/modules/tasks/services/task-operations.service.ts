@@ -11,12 +11,14 @@ import {
   ConsultantTransactionType,
   ProjectMemberStatus,
   ProjectStatus,
+  TaskHistoryChangeType,
   TaskKanbanStatus,
   TransactionStatus,
 } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
+import { In, Not } from 'typeorm';
 
 import {
   AssignTaskDto,
@@ -25,13 +27,19 @@ import {
   UpdateTaskBusinessStatusDto,
   UpdateTaskConsultantStatusDto,
 } from '../dto/requests';
-import { ConsultantTaskResponseDto, TaskResponseDto } from '../dto/responses';
+import {
+  ConsultantTaskResponseDto,
+  TaskHistoryResponseDto,
+  TaskResponseDto,
+} from '../dto/responses';
 import { ITaskOperationsService } from '../interfaces/task-operations.service.interface';
 
 /** Allowed consultant-driven status transitions. */
 const CONSULTANT_TRANSITIONS = new Map<TaskKanbanStatus, TaskKanbanStatus[]>([
+  [TaskKanbanStatus.TO_DO, [TaskKanbanStatus.IN_PROGRESS]],
   [TaskKanbanStatus.ASSIGNED, [TaskKanbanStatus.IN_PROGRESS]],
-  [TaskKanbanStatus.IN_PROGRESS, [TaskKanbanStatus.IN_REVIEW]],
+  [TaskKanbanStatus.IN_PROGRESS, [TaskKanbanStatus.IN_REVIEW, TaskKanbanStatus.TO_DO]],
+  [TaskKanbanStatus.IN_REVIEW, [TaskKanbanStatus.IN_PROGRESS]],
   [TaskKanbanStatus.REVISION_REQUESTED, [TaskKanbanStatus.IN_PROGRESS]],
 ]);
 
@@ -137,18 +145,6 @@ export class TaskOperationsService implements ITaskOperationsService {
       throw this.taskNotFound(taskId);
     }
 
-    // Consultant must be the one assigned to the task
-    if (task.assignedTo !== consultantProfile.id) {
-      this.logger.warn(
-        `updateConsultantStatus — not assigned | taskId: ${taskId}, assignedTo: ${task.assignedTo}, consultantId: ${consultantProfile.id}`,
-      );
-      throw new TranslatableException({
-        messageKey: 'error.task.invalid_status_transition',
-        errorCode: ERROR_CODES.TASK_INVALID_STATUS_TRANSITION,
-        status: HttpStatus.FORBIDDEN,
-      });
-    }
-
     const allowed = CONSULTANT_TRANSITIONS.get(task.kanbanStatus);
     if (!allowed || !allowed.includes(dto.status)) {
       this.logger.warn(
@@ -161,49 +157,52 @@ export class TaskOperationsService implements ITaskOperationsService {
       });
     }
 
+    // ── to_do → in_progress: auto-assign consultant (race-safe) ──
+    if (
+      task.kanbanStatus === TaskKanbanStatus.TO_DO &&
+      dto.status === TaskKanbanStatus.IN_PROGRESS
+    ) {
+      const saved = await this.handleConsultantSelfAssignAndStart(task, consultantProfile.id);
+      this.logger.log(
+        `updateConsultantStatus — to_do→in_progress complete | taskId: ${taskId}, consultantId: ${consultantProfile.id}`,
+      );
+      return this.toResponseDto(saved);
+    }
+
+    // All remaining transitions require the caller to be the assigned consultant
+    if (task.assignedTo !== consultantProfile.id) {
+      this.logger.warn(
+        `updateConsultantStatus — not assigned | taskId: ${taskId}, assignedTo: ${task.assignedTo}, consultantId: ${consultantProfile.id}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.task.invalid_status_transition',
+        errorCode: ERROR_CODES.TASK_INVALID_STATUS_TRANSITION,
+        status: HttpStatus.FORBIDDEN,
+      });
+    }
+
+    // ── in_progress → to_do: auto-unassign ──
+    if (
+      task.kanbanStatus === TaskKanbanStatus.IN_PROGRESS &&
+      dto.status === TaskKanbanStatus.TO_DO
+    ) {
+      const saved = await this.handleConsultantUnassign(task);
+      this.logger.log(
+        `updateConsultantStatus — in_progress→to_do complete | taskId: ${taskId}, consultantId: ${consultantProfile.id}`,
+      );
+      return this.toResponseDto(saved);
+    }
+
+    // ── Transitions to in_progress: enforce one-task-in-progress constraint ──
+    if (dto.status === TaskKanbanStatus.IN_PROGRESS) {
+      await this.checkConsultantHasNoOtherInProgressTask(consultantProfile.id, taskId);
+    }
+
     task.kanbanStatus = dto.status;
     const saved = await this.uow.tasks.save(task);
 
     this.logger.log(
       `updateConsultantStatus — complete | taskId: ${taskId}, status: ${saved.kanbanStatus}`,
-    );
-    return this.toResponseDto(saved);
-  }
-
-  /** @inheritdoc */
-  public async claimTask(taskId: string): Promise<TaskResponseDto> {
-    const consultantProfile = await this.resolveConsultantProfile();
-    this.logger.log(`claimTask — start | taskId: ${taskId}, consultantId: ${consultantProfile.id}`);
-
-    const saved = await this.uow.withTransaction(async (txUow) => {
-      // Race-free claim via FOR UPDATE SKIP LOCKED
-      const task = await txUow.tasks
-        .createQueryBuilder('task')
-        .setLock('pessimistic_write_or_fail')
-        .where('task.id = :taskId', { taskId })
-        .andWhere('task.kanban_status = :status', { status: TaskKanbanStatus.TO_DO })
-        .andWhere('task.assigned_to IS NULL')
-        .getOne();
-
-      if (!task) {
-        throw new TranslatableException({
-          messageKey: 'error.task.not_found',
-          errorCode: ERROR_CODES.TASK_ALREADY_ASSIGNED,
-          status: HttpStatus.CONFLICT,
-        });
-      }
-
-      // Verify consultant is an ACTIVE project member
-      await this.verifyProjectMembership(task.projectId, consultantProfile.id);
-
-      task.assignedTo = consultantProfile.id;
-      task.assignedAt = new Date();
-      task.kanbanStatus = TaskKanbanStatus.ASSIGNED;
-      return txUow.tasks.save(task);
-    });
-
-    this.logger.log(
-      `claimTask — complete | taskId: ${taskId}, consultantId: ${consultantProfile.id}`,
     );
     return this.toResponseDto(saved);
   }
@@ -235,6 +234,57 @@ export class TaskOperationsService implements ITaskOperationsService {
 
     this.logger.log(`assignTask — complete | taskId: ${taskId}, consultantId: ${dto.consultantId}`);
     return this.toResponseDto(saved);
+  }
+
+  /** @inheritdoc */
+  public async getTaskHistory(
+    taskId: string,
+    pageOptions: PageOptionsDto,
+  ): Promise<PageDto<TaskHistoryResponseDto>> {
+    this.logger.log(`getTaskHistory — start | taskId: ${taskId}`);
+
+    const task = await this.uow.tasks.findOne({ where: { id: taskId } });
+    if (!task) {
+      throw this.taskNotFound(taskId);
+    }
+
+    const [rows, itemCount] = await this.uow.taskHistory.findAndCount({
+      where: {
+        taskId,
+        changeType: In([
+          TaskHistoryChangeType.STATUS_CHANGE,
+          TaskHistoryChangeType.ASSIGNMENT,
+          TaskHistoryChangeType.UNASSIGNMENT,
+        ]),
+      },
+      order: { changedAt: 'DESC' },
+      skip: pageOptions.skip,
+      take: pageOptions.limit,
+    });
+
+    const data = rows.map((r) =>
+      plainToInstance(
+        TaskHistoryResponseDto,
+        {
+          id: r.id,
+          task_id: r.taskId,
+          change_type: r.changeType,
+          previous_kanban_status: r.previousKanbanStatus,
+          new_kanban_status: r.newKanbanStatus,
+          previous_assigned_to: r.previousAssignedTo,
+          new_assigned_to: r.newAssignedTo,
+          changed_by: r.changedBy,
+          note: r.note,
+          changed_at: r.changedAt,
+        },
+        { excludeExtraneousValues: true },
+      ),
+    );
+
+    this.logger.log(
+      `getTaskHistory — complete | taskId: ${taskId}, returned: ${data.length}, total: ${itemCount}`,
+    );
+    return new PageDto(data, new PageMetaDto({ pageOptionsDto: pageOptions, itemCount }));
   }
 
   /** @inheritdoc */
@@ -330,6 +380,79 @@ export class TaskOperationsService implements ITaskOperationsService {
   }
 
   // ─── Private helpers ───────────────────────────────────────────────────────
+
+  /**
+   * Handles to_do → in_progress: verifies project membership, checks the
+   * one-task-in-progress constraint, and atomically assigns + starts the task
+   * using a pessimistic write lock to prevent concurrent self-assignments.
+   */
+  private async handleConsultantSelfAssignAndStart(
+    task: Task,
+    consultantId: string,
+  ): Promise<Task> {
+    await this.verifyProjectMembership(task.projectId, consultantId);
+    await this.checkConsultantHasNoOtherInProgressTask(consultantId, task.id);
+
+    return this.uow.withTransaction(async (txUow) => {
+      // Re-acquire with a pessimistic lock to prevent two consultants racing on the same task
+      const locked = await txUow.tasks
+        .createQueryBuilder('task')
+        .setLock('pessimistic_write_or_fail')
+        .where('task.id = :taskId', { taskId: task.id })
+        .andWhere('task.kanban_status = :status', { status: TaskKanbanStatus.TO_DO })
+        .andWhere('task.assigned_to IS NULL')
+        .getOne();
+
+      if (!locked) {
+        throw new TranslatableException({
+          messageKey: 'error.task.already_assigned',
+          errorCode: ERROR_CODES.TASK_ALREADY_ASSIGNED,
+          status: HttpStatus.CONFLICT,
+        });
+      }
+
+      locked.assignedTo = consultantId;
+      locked.assignedAt = new Date();
+      locked.kanbanStatus = TaskKanbanStatus.IN_PROGRESS;
+      return txUow.tasks.save(locked);
+    });
+  }
+
+  /** Handles in_progress → to_do: clears assignment and resets status. */
+  private async handleConsultantUnassign(task: Task): Promise<Task> {
+    task.assignedTo = null;
+    task.assignedAt = null;
+    task.kanbanStatus = TaskKanbanStatus.TO_DO;
+    return this.uow.tasks.save(task);
+  }
+
+  /**
+   * Enforces the one-task-in-progress constraint. Throws 409 if the consultant
+   * already has a different task currently in `in_progress`.
+   */
+  private async checkConsultantHasNoOtherInProgressTask(
+    consultantId: string,
+    excludeTaskId: string,
+  ): Promise<void> {
+    const count = await this.uow.tasks.count({
+      where: {
+        assignedTo: consultantId,
+        kanbanStatus: TaskKanbanStatus.IN_PROGRESS,
+        id: Not(excludeTaskId),
+      },
+    });
+
+    if (count > 0) {
+      this.logger.warn(
+        `updateConsultantStatus — already in progress | consultantId: ${consultantId}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.task.consultant_already_in_progress',
+        errorCode: ERROR_CODES.TASK_CONSULTANT_ALREADY_IN_PROGRESS,
+        status: HttpStatus.CONFLICT,
+      });
+    }
+  }
 
   /**
    * Payment gate: pre-paid businesses pay task.price; credit businesses pass

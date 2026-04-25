@@ -8,7 +8,11 @@ import {
   UpdateTaskBusinessStatusDto,
   UpdateTaskConsultantStatusDto,
 } from '../dto/requests';
-import { ConsultantTaskResponseDto, TaskResponseDto } from '../dto/responses';
+import {
+  ConsultantTaskResponseDto,
+  TaskHistoryResponseDto,
+  TaskResponseDto,
+} from '../dto/responses';
 
 /**
  * Contract for all task operation actions available to business users and consultants.
@@ -48,34 +52,30 @@ export interface ITaskOperationsService {
 
   /**
    * Transitions a task status on behalf of the assigned consultant, using the
-   * restricted `CONSULTANT_TRANSITIONS` map. The caller must be the consultant
-   * currently assigned to the task.
+   * restricted `CONSULTANT_TRANSITIONS` map.
+   *
+   * Special transitions:
+   * - `to_do → in_progress`: auto-assigns the consultant (race-safe, pessimistic lock).
+   *   Requires the consultant to be an ACTIVE project member and have no other task
+   *   currently `in_progress`.
+   * - `in_progress → to_do`: auto-unassigns the consultant (caller must be assignee).
+   * - `in_review → in_progress`: allowed without assignment change.
+   * - `in_progress → in_review`, `revision_requested → in_progress`: allowed as before.
+   * - Any transition from `done` is forbidden.
    *
    * @param taskId - UUID of the task to update.
    * @param dto    - Contains the target `status` value.
    * @returns The updated task DTO reflecting the new status.
    * @throws TranslatableException (404) — task not found.
-   * @throws TranslatableException (403) — caller is not the assigned consultant.
+   * @throws TranslatableException (403) — caller is not the assigned consultant (non-claim paths).
+   * @throws TranslatableException (409) — consultant already has another task `in_progress`.
    * @throws TranslatableException (422) — transition not allowed from the current status.
+   * @throws TranslatableException (422) — caller is not an active project member (to_do → in_progress).
    */
   updateConsultantStatus(
     taskId: string,
     dto: UpdateTaskConsultantStatusDto,
   ): Promise<TaskResponseDto>;
-
-  /**
-   * Allows a consultant to self-assign to an unassigned `to_do` task.
-   *
-   * Uses `SELECT FOR UPDATE SKIP LOCKED` (pessimistic write) to prevent two
-   * consultants from claiming the same task simultaneously. The consultant must
-   * be an `ACTIVE` member of the task's project.
-   *
-   * @param taskId - UUID of the task to claim.
-   * @returns The updated task DTO with `kanban_status: assigned` and the caller set as `assigned_to`.
-   * @throws TranslatableException (409) — task is already assigned or no longer in `to_do`.
-   * @throws TranslatableException (422) — caller is not an active project member.
-   */
-  claimTask(taskId: string): Promise<TaskResponseDto>;
 
   /**
    * Allows the project-owning business to manually assign a specific consultant
@@ -91,6 +91,24 @@ export interface ITaskOperationsService {
    * @throws TranslatableException (422) — target consultant is not an active project member.
    */
   assignTask(taskId: string, dto: AssignTaskDto): Promise<TaskResponseDto>;
+
+  /**
+   * Returns a paginated list of status and assignment history entries for a task,
+   * ordered by `changed_at` descending. Accessible by both business and consultant
+   * platform users.
+   *
+   * Filters to change types: `STATUS_CHANGE`, `ASSIGNMENT`, `UNASSIGNMENT`.
+   * Rows are written automatically by the `trg_log_task_change` database trigger.
+   *
+   * @param taskId      - UUID of the task whose history to retrieve.
+   * @param pageOptions - Pagination parameters (page, take).
+   * @returns Paginated wrapper containing history DTOs and page metadata.
+   * @throws TranslatableException (404) — task not found.
+   */
+  getTaskHistory(
+    taskId: string,
+    pageOptions: PageOptionsDto,
+  ): Promise<PageDto<TaskHistoryResponseDto>>;
 
   /**
    * Returns a paginated list of all tasks belonging to a project, ordered by
