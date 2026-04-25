@@ -1,6 +1,7 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EnvironmentsService } from '@common/modules/environments';
+import { IStorageProvider, IUploadInput, STORAGE_PROVIDER } from '@common/modules/file-storage';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { FileEntity } from '@database/entities';
@@ -10,17 +11,12 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import * as crypto from 'crypto';
 
-import { STORAGE_PROVIDER } from './constants';
 import { FileResponseDto } from './dto/responses';
-import { IFilesService, IStorageProvider, IUploadInput } from './interfaces';
+import { IFilesService } from './interfaces';
 
 @Injectable()
 export class FilesService implements IFilesService {
   private readonly logger: AppLogger;
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
 
   constructor(
     @Inject(STORAGE_PROVIDER) private readonly storage: IStorageProvider,

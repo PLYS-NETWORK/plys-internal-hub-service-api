@@ -14,7 +14,7 @@ import { AwsS3Module } from './common/modules/aws-s3';
 import { CopyleaksModule } from './common/modules/copyleaks';
 import { EmailModule } from './common/modules/email';
 import { EnvironmentsModule, EnvironmentsService } from './common/modules/environments';
-import { FilesModule } from './common/modules/files';
+import { FileStorageModule } from './common/modules/file-storage';
 import { I18nModule } from './common/modules/i18n';
 import { PaymentModule } from './common/modules/payment';
 import { RedisModule } from './common/modules/redis';
@@ -26,6 +26,7 @@ import { getTypeOrmConfig } from './database/typeorm.config';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { FilesModule } from './modules/files';
 import { PaymentsModule } from './modules/payments';
 import { ProfilesModule } from './modules/profiles/profiles.module';
 import { ProjectsModule } from './modules/projects/projects.module';
@@ -57,10 +58,11 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     PaymentModule,
     UnitOfWorkModule,
     AwsS3Module,
-    FilesModule,
+    FileStorageModule,
     ApplicationsModule,
     AuthModule,
     BillingModule,
+    FilesModule,
     PaymentsModule,
     ProfilesModule,
     ProjectsModule,

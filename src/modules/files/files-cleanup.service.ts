@@ -1,4 +1,5 @@
 import { EnvironmentsService } from '@common/modules/environments';
+import { IStorageProvider, STORAGE_PROVIDER } from '@common/modules/file-storage';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { FileEntity } from '@database/entities';
@@ -6,9 +7,6 @@ import { FileStorageProvider } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-
-import { STORAGE_PROVIDER } from './constants';
-import { IStorageProvider } from './interfaces';
 
 const PURGE_BATCH_SIZE = 100;
 const MS_PER_DAY = 86_400_000;
@@ -27,10 +25,6 @@ const MS_PER_DAY = 86_400_000;
 @Injectable()
 export class FilesCleanupService {
   private readonly logger: AppLogger;
-
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
 
   constructor(
     @Inject(STORAGE_PROVIDER) private readonly activeProvider: IStorageProvider,
@@ -92,19 +86,15 @@ export class FilesCleanupService {
 
   /**
    * Returns the storage provider matching the row's `storage_provider`
-   * column. Today there is only one implemented provider (local); when
-   * S3/GCS land, this method gains additional cases. Until then, rows
-   * authored under inactive providers fall through to a `null` return
-   * and the cron logs them as skipped byte-cleanups.
+   * column. Currently only the active provider is reachable; rows authored
+   * under a different provider fall through to a `null` return so the
+   * cron logs them as skipped byte-cleanups but still hard-deletes the row.
    */
   private providerForRow(file: FileEntity): IStorageProvider | null {
     if (file.storageProvider === this.activeProvider.name) {
       return this.activeProvider;
     }
     if (file.storageProvider === FileStorageProvider.LOCAL) {
-      // Local provider is always present in this build, even when the
-      // active one differs — but with the current single-provider build
-      // this branch overlaps with the one above.
       return this.activeProvider.name === FileStorageProvider.LOCAL ? this.activeProvider : null;
     }
     return null;

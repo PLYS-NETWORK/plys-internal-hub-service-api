@@ -1,13 +1,13 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
+import { FileContentValidator } from '@common/modules/file-storage';
 import { Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FastifyRequest } from 'fastify';
 
 import { FileResponseDto } from './dto/responses';
 import { FilesService } from './files.service';
-import { FileContentValidator } from './validators';
 
 @ApiTags('Files')
 @ApiBearerAuth()
