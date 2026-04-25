@@ -2,7 +2,7 @@
   "name": "api-gateway-service",
   "version": "1.0.0",
   "description": "Marketplace backend API service",
-  "author": "",
+  "author": "huuphuc9410@gmail.com",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -87,12 +87,22 @@
     "eslint-plugin-prettier": "^5.0.0",
     "eslint-plugin-simple-import-sort": "^10.0.0",
     "husky": "^9.0.0",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.0.0",
     "source-map-support": "^0.5.21",
     "ts-jest": "^29.0.0",
     "ts-node": "^10.9.0",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.1.0"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix --max-warnings=0",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "jest": {
     "moduleFileExtensions": [

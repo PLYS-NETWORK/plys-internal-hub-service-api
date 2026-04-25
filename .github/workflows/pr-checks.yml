@@ -1,0 +1,46 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: pr-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint, Type, Test, Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm exec eslint "{src,apps,libs,test}/**/*.ts" --max-warnings=0
+
+      - name: Type check
+        run: pnpm exec tsc --noEmit -p tsconfig.json
+
+      - name: Unit tests
+        run: pnpm test -- --ci --runInBand
+
+      - name: Build
+        run: pnpm build
