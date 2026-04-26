@@ -34,4 +34,30 @@ export interface IPaymentProvider {
    * Throws NotImplementedException if the provider does not support payouts.
    */
   createTransfer(params: ICreateTransferParams): Promise<ITransferResult>;
+
+  /**
+   * Re-fetches an existing checkout session from the provider and returns the
+   * normalized session shape (including the redirect URL) so a frontend can
+   * resume an interrupted checkout. The session must already exist on the
+   * provider — this method does not create one.
+   *
+   * @param processorInvoiceId - Provider-side checkout/session ID stored as
+   *   `processorEventId` on the local transaction (Polar checkout ID, Stripe
+   *   session ID).
+   * @returns Normalized session with the redirect URL refreshed from the provider.
+   * @throws InternalServerErrorException — provider failed to return the session.
+   */
+  retrieveCheckoutSession(processorInvoiceId: string): Promise<ICheckoutSession>;
+
+  /**
+   * Best-effort cancellation of a pending checkout session on the provider side.
+   * Some providers (e.g. Polar) do not expose a cancel/expire endpoint and must
+   * throw `NotImplementedException`; callers are expected to swallow that and
+   * fall back to local state cleanup.
+   *
+   * @param processorInvoiceId - Provider-side checkout/session ID.
+   * @throws NotImplementedException — provider does not support cancellation.
+   * @throws InternalServerErrorException — provider call failed.
+   */
+  cancelCheckoutSession(processorInvoiceId: string): Promise<void>;
 }

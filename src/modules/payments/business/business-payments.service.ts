@@ -6,6 +6,7 @@ import { EnvironmentsService } from '@common/modules/environments';
 import { AppLogger } from '@common/modules/logger';
 import { PaymentService } from '@common/modules/payment/payment.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { BusinessTransaction } from '@database/entities/finance/business-transaction.entity';
 import {
   BusinessTransactionType,
   CheckoutPaymentType,
@@ -15,13 +16,14 @@ import {
   TransactionStatus,
 } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, NotImplementedException } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import { CreateTopUpDto } from '../dto/requests/create-top-up.dto';
 import { ListBusinessTransactionsDto } from '../dto/requests/list-business-transactions.dto';
 import { SettleInvoiceDto } from '../dto/requests/settle-invoice.dto';
 import {
+  CancelTopUpResponseDto,
   SettleInvoiceResponseDto,
   TopUpResponseDto,
   TransactionResponseDto,
@@ -275,5 +277,141 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
     );
 
     return new PageDto(data, meta);
+  }
+
+  /** @inheritdoc */
+  public async continueTopUp(transactionId: string): Promise<TopUpResponseDto> {
+    const userId = this.requestContext.userId!;
+    this.logger.log(`continueTopUp — start | userId: ${userId}, transactionId: ${transactionId}`);
+
+    const transaction = await this.loadOwnedPendingTopUp(transactionId);
+
+    if (!transaction.processorEventId) {
+      this.logger.error(
+        `continueTopUp — transaction missing processorEventId | transactionId: ${transactionId}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.payment.checkout_failed',
+        errorCode: ERROR_CODES.PAYMENT_CHECKOUT_FAILED,
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
+    }
+
+    const checkoutSession = await this.paymentService.retrieveCheckoutSession(
+      transaction.processorEventId,
+    );
+
+    this.logger.log(
+      `continueTopUp — complete | transactionId: ${transaction.id}, redirectUrl: ${checkoutSession.processorPaymentUrl}`,
+    );
+
+    return plainToInstance(
+      TopUpResponseDto,
+      {
+        transaction_id: transaction.id,
+        redirect_url: checkoutSession.processorPaymentUrl,
+      },
+      { excludeExtraneousValues: true },
+    );
+  }
+
+  /** @inheritdoc */
+  public async cancelTopUp(transactionId: string): Promise<CancelTopUpResponseDto> {
+    const userId = this.requestContext.userId!;
+    this.logger.log(`cancelTopUp — start | userId: ${userId}, transactionId: ${transactionId}`);
+
+    const transaction = await this.loadOwnedPendingTopUp(transactionId);
+
+    // Best-effort provider-side cancellation. Polar throws NotImplementedException
+    // (its checkouts auto-expire); other transient errors are also tolerated so the
+    // user can always abandon a pending row locally even if the provider is down.
+    if (transaction.processorEventId) {
+      try {
+        await this.paymentService.cancelCheckoutSession(transaction.processorEventId);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (error instanceof NotImplementedException) {
+          this.logger.warn(
+            `cancelTopUp — provider does not support cancellation, proceeding with local cleanup | transactionId: ${transactionId}, reason: ${message}`,
+          );
+        } else {
+          this.logger.warn(
+            `cancelTopUp — provider cancellation failed, proceeding with local cleanup | transactionId: ${transactionId}, error: ${message}`,
+          );
+        }
+      }
+    }
+
+    transaction.status = TransactionStatus.FAILED;
+    transaction.note = 'Cancelled by user';
+    await this.uow.businessTransactions.save(transaction);
+
+    this.logger.log(`cancelTopUp — complete | transactionId: ${transaction.id}`);
+
+    return plainToInstance(
+      CancelTopUpResponseDto,
+      {
+        transaction_id: transaction.id,
+        status: transaction.status,
+      },
+      { excludeExtraneousValues: true },
+    );
+  }
+
+  // Loads a transaction owned by the calling business, asserting it is a pending
+  // top-up. Used by both continueTopUp and cancelTopUp.
+  private async loadOwnedPendingTopUp(transactionId: string): Promise<BusinessTransaction> {
+    const userId = this.requestContext.userId!;
+
+    const businessProfile = await this.uow.businessProfiles.findOne({ where: { userId } });
+    if (!businessProfile) {
+      throw new TranslatableException({
+        messageKey: 'error.business_profile.not_found',
+        errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    const transaction = await this.uow.businessTransactions.findOne({
+      where: { id: transactionId },
+    });
+
+    if (!transaction) {
+      this.logger.warn(
+        `loadOwnedPendingTopUp — transaction not found | transactionId: ${transactionId}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.payment.transaction_not_found',
+        errorCode: ERROR_CODES.PAYMENT_TRANSACTION_NOT_FOUND,
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    if (transaction.businessId !== businessProfile.id) {
+      this.logger.warn(
+        `loadOwnedPendingTopUp — caller does not own transaction | transactionId: ${transactionId}, callerBusinessId: ${businessProfile.id}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.payment.transaction_not_owned',
+        errorCode: ERROR_CODES.PAYMENT_TRANSACTION_NOT_OWNED,
+        status: HttpStatus.FORBIDDEN,
+      });
+    }
+
+    if (
+      transaction.type !== BusinessTransactionType.TOP_UP ||
+      transaction.status !== TransactionStatus.PENDING
+    ) {
+      this.logger.warn(
+        `loadOwnedPendingTopUp — transaction not a pending top-up | transactionId: ${transactionId}, type: ${transaction.type}, status: ${transaction.status}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.payment.transaction_not_pending',
+        errorCode: ERROR_CODES.PAYMENT_TRANSACTION_NOT_PENDING,
+        status: HttpStatus.CONFLICT,
+      });
+    }
+
+    return transaction;
   }
 }

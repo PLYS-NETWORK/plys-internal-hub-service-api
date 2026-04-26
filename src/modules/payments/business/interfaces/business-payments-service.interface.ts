@@ -4,6 +4,7 @@ import { CreateTopUpDto } from '../../dto/requests/create-top-up.dto';
 import { ListBusinessTransactionsDto } from '../../dto/requests/list-business-transactions.dto';
 import { SettleInvoiceDto } from '../../dto/requests/settle-invoice.dto';
 import {
+  CancelTopUpResponseDto,
   SettleInvoiceResponseDto,
   TopUpResponseDto,
   TransactionResponseDto,
@@ -57,4 +58,32 @@ export interface IBusinessPaymentsService {
    * @throws TranslatableException (404) — business profile not found for caller.
    */
   listTransactions(dto: ListBusinessTransactionsDto): Promise<PageDto<TransactionResponseDto>>;
+
+  /**
+   * Re-fetches the existing checkout session for a pending top-up so the
+   * caller can be redirected back to the same hosted payment page after
+   * having closed the gateway tab. Does not create a new transaction or
+   * checkout session.
+   *
+   * @param transactionId - UUID of the pending top-up transaction.
+   * @returns DTO with `transaction_id` and the freshly retrieved `redirect_url`.
+   * @throws TranslatableException (404) — business profile or transaction not found.
+   * @throws TranslatableException (403) — transaction does not belong to caller.
+   * @throws TranslatableException (409) — transaction is not a pending top-up.
+   * @throws TranslatableException (500) — payment provider failed to retrieve session.
+   */
+  continueTopUp(transactionId: string): Promise<TopUpResponseDto>;
+
+  /**
+   * Cancels a pending top-up transaction. Best-effort attempt to cancel the
+   * provider-side checkout session (Polar does not support programmatic
+   * cancellation — the local transaction is always marked `FAILED` regardless).
+   *
+   * @param transactionId - UUID of the pending top-up transaction.
+   * @returns DTO with `transaction_id` and the new transaction `status`.
+   * @throws TranslatableException (404) — business profile or transaction not found.
+   * @throws TranslatableException (403) — transaction does not belong to caller.
+   * @throws TranslatableException (409) — transaction is not a pending top-up.
+   */
+  cancelTopUp(transactionId: string): Promise<CancelTopUpResponseDto>;
 }

@@ -232,9 +232,13 @@ export class WebhookProcessorService {
       return;
     }
 
-    if (transaction.status === TransactionStatus.COMPLETED) {
-      this.logger.log(
-        `handlePaymentSucceeded — already completed | transactionId: ${transactionId}`,
+    // Reject any non-PENDING status — closes the cancel→pay race where a user
+    // cancels locally (status=FAILED) and then completes payment on the gateway
+    // before the cancellation propagates. Crediting a FAILED row would corrupt
+    // the account balance.
+    if (transaction.status !== TransactionStatus.PENDING) {
+      this.logger.warn(
+        `[${this.rid}] handlePaymentSucceeded — skipping non-pending transaction | transactionId: ${transactionId}, status: ${transaction.status}`,
       );
       return;
     }
@@ -279,6 +283,15 @@ export class WebhookProcessorService {
     if (!transaction) {
       this.logger.warn(
         `handlePaymentFailed — transaction not found | transactionId: ${transactionId}`,
+      );
+      return;
+    }
+
+    // Skip non-PENDING transactions — same reasoning as handlePaymentSucceeded:
+    // a user-cancelled (FAILED) or already-completed row must not be re-stamped.
+    if (transaction.status !== TransactionStatus.PENDING) {
+      this.logger.warn(
+        `[${this.rid}] handlePaymentFailed — skipping non-pending transaction | transactionId: ${transactionId}, status: ${transaction.status}`,
       );
       return;
     }

@@ -60,7 +60,10 @@
     "insufficient_balance": "Yetersiz hesap bakiyesi.",
     "unsupported_platform": "Desteklenmeyen ödeme platformu.",
     "checkout_failed": "Ödeme işlemi başarısız oldu.",
-    "transfer_failed": "Para transferi başarısız oldu."
+    "transfer_failed": "Para transferi başarısız oldu.",
+    "transaction_not_found": "İşlem bulunamadı.",
+    "transaction_not_owned": "Bu işleme erişim yetkiniz yok.",
+    "transaction_not_pending": "Bu işlem mevcut durumunda değiştirilemez."
   },
   "database": {
     "unique_violation": "Bu değerlere sahip bir kayıt zaten mevcut",

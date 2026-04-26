@@ -64,7 +64,10 @@
     "insufficient_balance": "Insufficient account balance.",
     "unsupported_platform": "Unsupported payment platform.",
     "checkout_failed": "Payment checkout failed.",
-    "transfer_failed": "Payment transfer failed."
+    "transfer_failed": "Payment transfer failed.",
+    "transaction_not_found": "Transaction not found.",
+    "transaction_not_owned": "You do not have access to this transaction.",
+    "transaction_not_pending": "This transaction cannot be modified in its current state."
   },
   "database": {
     "unique_violation": "A record with these values already exists",

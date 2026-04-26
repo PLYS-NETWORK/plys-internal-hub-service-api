@@ -59,4 +59,31 @@ export interface IPaymentService {
    * @throws InternalServerErrorException — provider failed to create the transfer.
    */
   createTransfer(params: ICreateTransferParams): Promise<ITransferResult>;
+
+  /**
+   * Re-fetches an existing hosted checkout session from the active provider.
+   *
+   * Used by the "continue top-up" flow when a buyer closed the gateway tab —
+   * we look up the original `processorEventId` and ask the provider for a fresh
+   * redirect URL so the frontend can resume the same session.
+   *
+   * @param processorInvoiceId - Provider-side checkout/session ID.
+   * @returns Normalized session with the current redirect URL.
+   * @throws InternalServerErrorException — provider failed to return the session.
+   */
+  retrieveCheckoutSession(processorInvoiceId: string): Promise<ICheckoutSession>;
+
+  /**
+   * Best-effort cancellation of a pending checkout session on the provider side.
+   *
+   * Used by the "cancel top-up" flow so the buyer does not have to wait for the
+   * gateway's auto-expiry. Providers that do not support programmatic cancellation
+   * (e.g. Polar) throw `NotImplementedException`; the caller is expected to catch
+   * it and proceed with local state cleanup.
+   *
+   * @param processorInvoiceId - Provider-side checkout/session ID.
+   * @throws NotImplementedException — active provider does not support cancellation.
+   * @throws InternalServerErrorException — provider call failed.
+   */
+  cancelCheckoutSession(processorInvoiceId: string): Promise<void>;
 }

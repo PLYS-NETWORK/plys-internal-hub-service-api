@@ -41,5 +41,9 @@
   },
   "billing": {
     "invoice_checkout_initiated": "Invoice payment initiated."
+  },
+  "payment": {
+    "top_up_resumed": "Top-up resumed.",
+    "top_up_cancelled": "Top-up cancelled."
   }
 }

@@ -132,6 +132,37 @@ export class PolarPaymentProvider implements IPaymentProvider {
     throw new NotImplementedException('Polar does not support transfers. Use Stripe for payouts.');
   }
 
+  /** @inheritdoc */
+  public async retrieveCheckoutSession(processorInvoiceId: string): Promise<ICheckoutSession> {
+    try {
+      const checkout = await this.client.checkouts.get({ id: processorInvoiceId });
+
+      return {
+        processorInvoiceId: checkout.id,
+        // Polar does not expose a payment-intent at checkout creation time;
+        // the order ID is only known after `checkout.order_created`.
+        processorPaymentIntentId: null,
+        processorPaymentUrl: checkout.url,
+      };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Polar retrieveCheckoutSession failed: ${message}`);
+      throw new InternalServerErrorException(
+        'Failed to retrieve payment session. Please try again.',
+      );
+    }
+  }
+
+  /** @inheritdoc */
+  public async cancelCheckoutSession(_processorInvoiceId: string): Promise<void> {
+    // Polar's SDK does not expose a server-side cancel/expire for checkouts —
+    // they auto-expire on Polar's side. Callers must catch this and fall back
+    // to local state cleanup.
+    throw new NotImplementedException(
+      'Polar checkouts cannot be cancelled programmatically; they auto-expire.',
+    );
+  }
+
   /**
    * Fetches the Polar product and asserts it is configured as a custom-price product.
    * A fixed-price product ignores the `amount` param, breaking the amount-lock contract.

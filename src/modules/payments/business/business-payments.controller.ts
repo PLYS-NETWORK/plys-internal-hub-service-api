@@ -11,6 +11,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   Query,
   UseGuards,
@@ -20,7 +21,9 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateTopUpDto } from '../dto/requests/create-top-up.dto';
 import { ListBusinessTransactionsDto } from '../dto/requests/list-business-transactions.dto';
 import { SettleInvoiceDto } from '../dto/requests/settle-invoice.dto';
+import { TransactionIdParamDto } from '../dto/requests/transaction-id-param.dto';
 import {
+  CancelTopUpResponseDto,
   SettleInvoiceResponseDto,
   TopUpResponseDto,
   TransactionResponseDto,
@@ -44,6 +47,32 @@ export class BusinessPaymentsController {
   ): Promise<ITranslatedPayload<TopUpResponseDto>> {
     const data = await this.businessPaymentsService.createTopUp(dto);
     return { messageKey: 'success.payment.top_up_initiated', data };
+  }
+
+  @Post('top-up/:transaction_id/continue')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard, PlatformGuard)
+  @Roles(UserRole.USER)
+  @Platform(ActivePlatform.BUSINESS)
+  @ApiOperation({ summary: 'Resume a pending top-up by re-fetching the checkout URL' })
+  public async continueTopUp(
+    @Param() params: TransactionIdParamDto,
+  ): Promise<ITranslatedPayload<TopUpResponseDto>> {
+    const data = await this.businessPaymentsService.continueTopUp(params.transactionId);
+    return { messageKey: 'success.payment.top_up_resumed', data };
+  }
+
+  @Post('top-up/:transaction_id/cancel')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard, PlatformGuard)
+  @Roles(UserRole.USER)
+  @Platform(ActivePlatform.BUSINESS)
+  @ApiOperation({ summary: 'Cancel a pending top-up without waiting for gateway timeout' })
+  public async cancelTopUp(
+    @Param() params: TransactionIdParamDto,
+  ): Promise<ITranslatedPayload<CancelTopUpResponseDto>> {
+    const data = await this.businessPaymentsService.cancelTopUp(params.transactionId);
+    return { messageKey: 'success.payment.top_up_cancelled', data };
   }
 
   @Post('settle-invoice')

@@ -41,5 +41,9 @@
   },
   "billing": {
     "invoice_checkout_initiated": "Fatura ödemesi başlatıldı."
+  },
+  "payment": {
+    "top_up_resumed": "Bakiye yükleme işlemine devam edildi.",
+    "top_up_cancelled": "Bakiye yükleme işlemi iptal edildi."
   }
 }

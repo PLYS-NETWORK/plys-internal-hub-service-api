@@ -132,6 +132,38 @@ export class StripePaymentProvider implements IPaymentProvider {
     }
   }
 
+  /** @inheritdoc */
+  public async retrieveCheckoutSession(processorInvoiceId: string): Promise<ICheckoutSession> {
+    try {
+      const session = await this.client.checkout.sessions.retrieve(processorInvoiceId);
+
+      return {
+        processorInvoiceId: session.id,
+        processorPaymentIntentId:
+          typeof session.payment_intent === 'string' ? session.payment_intent : null,
+        processorPaymentUrl: session.url ?? '',
+      };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Stripe retrieveCheckoutSession failed: ${message}`);
+      throw new InternalServerErrorException(
+        'Failed to retrieve payment session. Please try again.',
+      );
+    }
+  }
+
+  /** @inheritdoc */
+  public async cancelCheckoutSession(processorInvoiceId: string): Promise<void> {
+    try {
+      await this.client.checkout.sessions.expire(processorInvoiceId);
+      this.logger.log(`Stripe checkout expired: ${processorInvoiceId}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Stripe cancelCheckoutSession failed: ${message}`);
+      throw new InternalServerErrorException('Failed to cancel payment session. Please try again.');
+    }
+  }
+
   private mapEventType(rawType: string): WebhookEventType {
     const map: Record<string, WebhookEventType> = {
       'payment_intent.succeeded': WebhookEventType.PAYMENT_SUCCEEDED,

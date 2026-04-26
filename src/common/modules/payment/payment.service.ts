@@ -80,6 +80,29 @@ export class PaymentService implements IPaymentService {
     return this.registry.create(PaymentProcessor.STRIPE).createTransfer(params);
   }
 
+  /**
+   * Re-fetches an existing checkout session from the active provider so the
+   * frontend can resume an interrupted top-up at the same redirect URL.
+   */
+  public async retrieveCheckoutSession(processorInvoiceId: string): Promise<ICheckoutSession> {
+    this.logger.log(
+      `Retrieving checkout session via ${this.env.paymentProcessor} for ${processorInvoiceId}`,
+    );
+    return this.activeProvider().retrieveCheckoutSession(processorInvoiceId);
+  }
+
+  /**
+   * Best-effort cancellation of a pending checkout session on the active provider.
+   * Re-throws `NotImplementedException` for callers to handle (Polar does not
+   * support programmatic cancellation).
+   */
+  public async cancelCheckoutSession(processorInvoiceId: string): Promise<void> {
+    this.logger.log(
+      `Cancelling checkout session via ${this.env.paymentProcessor} for ${processorInvoiceId}`,
+    );
+    return this.activeProvider().cancelCheckoutSession(processorInvoiceId);
+  }
+
   // Resolves the currently configured payment provider from the registry.
   private activeProvider(): IPaymentProvider {
     return this.registry.create(this.env.paymentProcessor as PaymentProcessor);
