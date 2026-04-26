@@ -18,7 +18,10 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { PlatformGuard } from '../../common/guards/platform.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { ConsultantProjectResponseDto } from './dto/responses';
+import {
+  ConsultantProjectListItemResponseDto,
+  ConsultantProjectResponseDto,
+} from './dto/responses';
 import { ConsultantProjectService } from './services/consultant-project.service';
 
 @ApiTags('Projects - Consultant')
@@ -37,7 +40,7 @@ export class ConsultantProjectController {
   })
   public async findMatchingProjects(
     @Query() pageOptions: PageOptionsDto,
-  ): Promise<ITranslatedPayload<PageDto<ConsultantProjectResponseDto>>> {
+  ): Promise<ITranslatedPayload<PageDto<ConsultantProjectListItemResponseDto>>> {
     const data = await this.consultantProjectService.findMatchingProjects(pageOptions);
     return { messageKey: 'success.ok', data };
   }

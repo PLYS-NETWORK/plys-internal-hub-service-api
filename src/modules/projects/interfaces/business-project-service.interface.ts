@@ -7,7 +7,7 @@ import {
   UpdateProjectDto,
   UpdateProjectStatusDto,
 } from '../dto/requests';
-import { BusinessProjectResponseDto } from '../dto/responses';
+import { BusinessProjectListItemResponseDto, BusinessProjectResponseDto } from '../dto/responses';
 import { ProjectMemberResponseDto } from '../dto/responses/project-member-response.dto';
 import { PublishValidationResponseDto } from '../dto/responses/publish-validation-response.dto';
 
@@ -38,13 +38,17 @@ export interface IBusinessProjectService {
    * `title` contains the keyword (case-insensitive, ILIKE). Use `sort_by`
    * and `order_by` to control ordering; defaults to `created_at DESC`.
    *
-   * Required skills for all returned projects are loaded in a single batch
-   * query to avoid N+1.
+   * Tasks are NOT echoed back; the list payload exposes aggregate counters
+   * instead — `total_tasks`, `total_completed_tasks` (kanban_status = `done`),
+   * `total_costs` (publish-style: `sum(price) × (1 + commission_rate)`),
+   * `total_members` (active project members), and `total_applications` (every
+   * status). Skills, member counts, and application counts are loaded with
+   * batch queries to keep the endpoint at O(1) round-trips per page.
    *
    * @param dto - Pagination + filter parameters.
-   * @returns Paginated wrapper containing project DTOs and page metadata.
+   * @returns Paginated wrapper containing list-item DTOs and page metadata.
    */
-  listMyProjects(dto: ListProjectsDto): Promise<PageDto<BusinessProjectResponseDto>>;
+  listMyProjects(dto: ListProjectsDto): Promise<PageDto<BusinessProjectListItemResponseDto>>;
 
   /**
    * Returns a single project by ID, enforcing that it belongs to the calling

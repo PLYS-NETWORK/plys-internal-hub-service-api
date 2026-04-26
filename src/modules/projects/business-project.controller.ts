@@ -28,7 +28,7 @@ import {
   UpdateProjectDto,
   UpdateProjectStatusDto,
 } from './dto/requests';
-import { BusinessProjectResponseDto } from './dto/responses';
+import { BusinessProjectListItemResponseDto, BusinessProjectResponseDto } from './dto/responses';
 import { ProjectMemberResponseDto } from './dto/responses/project-member-response.dto';
 import { PublishValidationResponseDto } from './dto/responses/publish-validation-response.dto';
 import { BusinessProjectService } from './services/business-project.service';
@@ -57,7 +57,7 @@ export class BusinessProjectController {
   @ApiOperation({ summary: 'List own projects (paginated, filterable by keywords)' })
   public async listMyProjects(
     @Query() dto: ListProjectsDto,
-  ): Promise<ITranslatedPayload<PageDto<BusinessProjectResponseDto>>> {
+  ): Promise<ITranslatedPayload<PageDto<BusinessProjectListItemResponseDto>>> {
     const data = await this.businessProjectService.listMyProjects(dto);
     return { messageKey: 'success.ok', data };
   }

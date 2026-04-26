@@ -17,7 +17,10 @@ import { plainToInstance } from 'class-transformer';
 import { I18nService } from 'nestjs-i18n';
 import { In } from 'typeorm';
 
-import { ConsultantProjectResponseDto } from '../dto/responses';
+import {
+  ConsultantProjectListItemResponseDto,
+  ConsultantProjectResponseDto,
+} from '../dto/responses';
 import { IConsultantProjectService } from '../interfaces/consultant-project-service.interface';
 
 @Injectable()
@@ -37,7 +40,7 @@ export class ConsultantProjectService implements IConsultantProjectService {
   /** @inheritdoc */
   public async findMatchingProjects(
     pageOptions: PageOptionsDto,
-  ): Promise<PageDto<ConsultantProjectResponseDto>> {
+  ): Promise<PageDto<ConsultantProjectListItemResponseDto>> {
     const consultantId = await this.resolveConsultantId();
     this.logger.log(
       `findMatchingProjects — start | consultantId: ${consultantId}, page: ${pageOptions.page}`,
@@ -63,9 +66,9 @@ export class ConsultantProjectService implements IConsultantProjectService {
     const projectIds = projects.map((p) => p.id);
     const businessIds = [...new Set(projects.map((p) => p.businessId))];
 
-    const [skills, questions, businessProfiles] = await Promise.all([
+    const [skills, projectsWithQuestions, businessProfiles] = await Promise.all([
       this.loadSkillsForProjects(projectIds),
-      this.loadQuestionsForProjects(projectIds),
+      this.loadProjectIdsWithInterviewQuestions(projectIds),
       this.loadBusinessProfiles(businessIds),
     ]);
 
@@ -75,10 +78,10 @@ export class ConsultantProjectService implements IConsultantProjectService {
     const skillTranslations = this.translateSkillKeys(allSkills);
 
     const data = projects.map((p) =>
-      this.toResponseDto(
+      this.toListItemResponseDto(
         p,
         skills.get(p.id) ?? [],
-        questions.get(p.id) ?? [],
+        projectsWithQuestions.has(p.id),
         businessProfiles.get(p.businessId),
         skillTranslations,
       ),
@@ -179,6 +182,23 @@ export class ConsultantProjectService implements IConsultantProjectService {
     return byProject;
   }
 
+  // Returns the subset of `projectIds` that have at least one interview
+  // question. Used by the consultant list to flag `need_interview` without
+  // pulling the full question text — cheaper than `loadQuestionsForProjects`
+  // when the list view only needs a boolean.
+  private async loadProjectIdsWithInterviewQuestions(projectIds: string[]): Promise<Set<string>> {
+    if (projectIds.length === 0) return new Set();
+
+    const rows = await this.uow.projectInterviewQuestions.find({
+      where: projectIds.map((id) => ({ projectId: id })),
+      select: { projectId: true },
+    });
+
+    const out = new Set<string>();
+    for (const r of rows) out.add(r.projectId);
+    return out;
+  }
+
   // Batch-loads business profiles by IDs (avoids N+1 when multiple projects
   // share the same business or each project has a different owner).
   private async loadBusinessProfiles(businessIds: string[]): Promise<Map<string, BusinessProfile>> {
@@ -206,6 +226,49 @@ export class ConsultantProjectService implements IConsultantProjectService {
       out.set(key, this.translateSkillKey(key, lang));
     }
     return out;
+  }
+
+  // Builds the slim consultant list-item DTO. Drops business_id / status /
+  // started_at / cancelled_at (not actionable for a discovery feed) and
+  // collapses the interview questions to a single boolean — the full set is
+  // fetched on the project detail screen when the consultant decides to apply.
+  private toListItemResponseDto(
+    project: Project,
+    skills: ProjectRequiredSkill[],
+    needInterview: boolean,
+    businessProfile?: BusinessProfile,
+    skillTranslations?: Map<string, string>,
+  ): ConsultantProjectListItemResponseDto {
+    const lang = this.requestContext.lang;
+    const translate = (name: string): string =>
+      skillTranslations?.get(name) ?? this.translateSkillKey(name, lang);
+
+    return plainToInstance(
+      ConsultantProjectListItemResponseDto,
+      {
+        id: project.id,
+        title: project.title,
+        introduction: project.introduction,
+        required_consultants: project.requiredConsultants,
+        published_at: project.publishedAt,
+        payment_type: businessProfile?.allowPaymentCredit ? 'monthly' : 'per_task',
+        company_name: businessProfile?.companyName ?? '',
+        company_address: {
+          address_line: businessProfile?.addressLine ?? null,
+          city: businessProfile?.city ?? null,
+          state_province: businessProfile?.stateProvince ?? null,
+          postal_code: businessProfile?.postalCode ?? null,
+          country_code: businessProfile?.countryCode ?? null,
+        },
+        is_partner_platform: businessProfile?.isPartnerPlatform ?? false,
+        skills: skills.map((s) => ({
+          skill_id: s.skillId,
+          skill_name: translate(s.skill.name),
+        })),
+        need_interview: needInterview,
+      },
+      { excludeExtraneousValues: true },
+    );
   }
 
   private toResponseDto(

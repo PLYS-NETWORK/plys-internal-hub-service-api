@@ -1,7 +1,10 @@
 import { PageDto } from '@common/dto/page.dto';
 import { PageOptionsDto } from '@common/dto/page-options.dto';
 
-import { ConsultantProjectResponseDto } from '../dto/responses';
+import {
+  ConsultantProjectListItemResponseDto,
+  ConsultantProjectResponseDto,
+} from '../dto/responses';
 
 /**
  * Contract for project discovery operations performed by a consultant user.
@@ -28,11 +31,19 @@ export interface IConsultantProjectService {
    * Required skills for all returned projects are loaded in a single batch
    * query to avoid N+1.
    *
+   * The list payload is slimmed for discovery: `business_id`, `status`,
+   * `started_at`, and `cancelled_at` are omitted (status is implicitly
+   * `public` for the consultant list); the full interview question set is
+   * collapsed to a `need_interview: boolean` flag. Full question text is
+   * available via `getProjectDetail`.
+   *
    * @param pageOptions - Pagination parameters (page, limit, order).
-   * @returns Paginated wrapper containing matched project DTOs and page metadata.
+   * @returns Paginated wrapper containing matched list-item DTOs and page metadata.
    * @throws TranslatableException (403) — caller has no consultant profile.
    */
-  findMatchingProjects(pageOptions: PageOptionsDto): Promise<PageDto<ConsultantProjectResponseDto>>;
+  findMatchingProjects(
+    pageOptions: PageOptionsDto,
+  ): Promise<PageDto<ConsultantProjectListItemResponseDto>>;
 
   /**
    * Returns the detail of a single `public` project by ID.

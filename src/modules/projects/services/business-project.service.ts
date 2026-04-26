@@ -19,6 +19,7 @@ import {
   BusinessTransactionType,
   PaymentMethod,
   ProjectStatus,
+  TaskKanbanStatus,
   TransactionStatus,
 } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
@@ -33,7 +34,7 @@ import {
   UpdateProjectDto,
   UpdateProjectStatusDto,
 } from '../dto/requests';
-import { BusinessProjectResponseDto } from '../dto/responses';
+import { BusinessProjectListItemResponseDto, BusinessProjectResponseDto } from '../dto/responses';
 import { ProjectMemberResponseDto } from '../dto/responses/project-member-response.dto';
 import { PublishValidationResponseDto } from '../dto/responses/publish-validation-response.dto';
 import { IBusinessProjectService } from '../interfaces';
@@ -132,14 +133,16 @@ export class BusinessProjectService implements IBusinessProjectService {
   }
 
   /** @inheritdoc */
-  public async listMyProjects(dto: ListProjectsDto): Promise<PageDto<BusinessProjectResponseDto>> {
-    const businessId = await this.resolveBusinessId();
+  public async listMyProjects(
+    dto: ListProjectsDto,
+  ): Promise<PageDto<BusinessProjectListItemResponseDto>> {
+    const businessProfile = await this.resolveBusinessProfile();
     this.logger.log(
-      `listMyProjects — start | businessId: ${businessId}, page: ${dto.page}, keywords: ${dto.keywords ?? 'none'}`,
+      `listMyProjects — start | businessId: ${businessProfile.id}, page: ${dto.page}, keywords: ${dto.keywords ?? 'none'}`,
     );
 
     const [projects, itemCount] = await this.uow.projects.findByBusinessId(
-      businessId,
+      businessProfile.id,
       dto.skip,
       dto.limit,
       dto.keywords,
@@ -148,29 +151,41 @@ export class BusinessProjectService implements IBusinessProjectService {
     );
 
     const projectIds = projects.map((p) => p.id);
-    const [skills, questions, tasks] = await Promise.all([
+    const [skills, questions, tasks, memberCounts, applicationCounts] = await Promise.all([
       this.loadSkillsForProjects(projectIds),
       this.loadQuestionsForProjects(projectIds),
       this.loadTasksForProjects(projectIds),
+      this.uow.projectMembers.countActiveByProjectIds(projectIds),
+      this.uow.projectApplications.countByProjectIds(projectIds),
     ]);
 
     const allSkills: ProjectRequiredSkill[] = [];
     for (const list of skills.values()) allSkills.push(...list);
     const skillTranslations = this.translateSkillKeys(allSkills);
 
+    // Commission-rate snapshot is taken from the business profile once per
+    // request — for credit-billed businesses it collapses to '0' so the
+    // displayed total equals the raw task subtotal (matches publish flow).
+    const commissionRate = businessProfile.allowPaymentCredit
+      ? '0'
+      : (businessProfile.commissionRate ?? DEFAULT_COMMISSION_RATE);
+
     const data = projects.map((p) =>
-      this.toResponseDto(
+      this.toListItemResponseDto(
         p,
         skills.get(p.id) ?? [],
         questions.get(p.id) ?? [],
         tasks.get(p.id) ?? [],
+        memberCounts.get(p.id) ?? 0,
+        applicationCounts.get(p.id) ?? 0,
+        commissionRate,
         skillTranslations,
       ),
     );
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
 
     this.logger.log(
-      `listMyProjects — complete | businessId: ${businessId}, returned: ${data.length}, total: ${itemCount}`,
+      `listMyProjects — complete | businessId: ${businessProfile.id}, returned: ${data.length}, total: ${itemCount}`,
     );
     return new PageDto(data, meta);
   }
@@ -914,6 +929,67 @@ export class BusinessProjectService implements IBusinessProjectService {
       out.set(key, this.translateSkillKey(key, lang));
     }
     return out;
+  }
+
+  // Builds the slim list-item DTO for `listMyProjects`. Tasks are NOT echoed
+  // back; instead they collapse into aggregate counters (`total_tasks`,
+  // `total_completed_tasks`, `total_costs`). Member/application counts come
+  // from pre-aggregated map lookups passed by the caller.
+  private toListItemResponseDto(
+    project: Project,
+    skills: ProjectRequiredSkill[],
+    questions: ProjectInterviewQuestion[],
+    tasks: Task[],
+    activeMemberCount: number,
+    applicationCount: number,
+    commissionRate: string,
+    skillTranslations?: Map<string, string>,
+  ): BusinessProjectListItemResponseDto {
+    const lang = this.requestContext.lang;
+    const translate = (name: string): string =>
+      skillTranslations?.get(name) ?? this.translateSkillKey(name, lang);
+
+    const completedTaskCount = tasks.reduce(
+      (n, t) => (t.kanbanStatus === TaskKanbanStatus.DONE ? n + 1 : n),
+      0,
+    );
+    // Publish-style total: subtotal × (1 + commissionRate). Money is fixed-point
+    // to avoid floating drift on numeric(10,2) prices summed across many tasks.
+    const projectAmount = Money.sum(tasks.map((t) => t.price));
+    const totalCosts = projectAmount.add(projectAmount.mulRate(commissionRate));
+
+    return plainToInstance(
+      BusinessProjectListItemResponseDto,
+      {
+        id: project.id,
+        business_id: project.businessId,
+        title: project.title,
+        introduction: project.introduction,
+        status: project.status,
+        required_consultants: project.requiredConsultants,
+        published_at: project.publishedAt,
+        started_at: project.startedAt,
+        completed_at: project.completedAt,
+        cancelled_at: project.cancelledAt,
+        created_at: project.createdAt,
+        skills: skills.map((s) => ({
+          skill_id: s.skillId,
+          skill_name: translate(s.skill.name),
+        })),
+        interview_questions: questions.map((q) => ({
+          id: q.id,
+          question_text: q.questionText,
+          display_order: q.displayOrder,
+          is_required: q.isRequired,
+        })),
+        total_tasks: tasks.length,
+        total_completed_tasks: completedTaskCount,
+        total_costs: totalCosts.toFixedString(),
+        total_members: activeMemberCount,
+        total_applications: applicationCount,
+      },
+      { excludeExtraneousValues: true },
+    );
   }
 
   private toResponseDto(
