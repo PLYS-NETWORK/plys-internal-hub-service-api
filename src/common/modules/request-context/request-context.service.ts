@@ -70,6 +70,10 @@ export class RequestContextService {
     return this.storage.getStore()?.activePlatform ?? null;
   }
 
+  public get timezone(): string | null {
+    return this.storage.getStore()?.timezone ?? null;
+  }
+
   // Called by JwtContextMiddleware after the JWT is verified.
   public setUser(
     userId: string,

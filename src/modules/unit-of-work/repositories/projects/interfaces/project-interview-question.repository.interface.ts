@@ -1,5 +1,16 @@
 import { AbstractRepository } from '@common/repositories';
 import { ProjectInterviewQuestion } from '@database/entities';
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface IProjectInterviewQuestionRepository extends AbstractRepository<ProjectInterviewQuestion> {}
+export interface IProjectInterviewQuestionRepository extends AbstractRepository<ProjectInterviewQuestion> {
+  /**
+   * Returns the number of distinct projects (within the given set) that have
+   * at least one interview question configured.
+   */
+  countDistinctProjectIds(projectIds: string[]): Promise<number>;
+
+  /**
+   * Returns the count of `is_required = true` questions per project.
+   * Projects with zero required questions are absent from the map.
+   */
+  countRequiredByProjectIds(projectIds: string[]): Promise<Map<string, number>>;
+}

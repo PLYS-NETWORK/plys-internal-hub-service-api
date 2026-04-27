@@ -31,9 +31,30 @@ export class RequestContextMiddleware implements NestMiddleware {
       path: req.url,
       method: req.method,
       lang: this.resolveLocale(req),
+      timezone: this.resolveTimezone(req),
     };
 
     this.requestContextService.run(context, next);
+  }
+
+  // Read `x-timezone`, trim, and accept only valid IANA zones. Anything
+  // unrecognised (`Foo/Bar`, garbage, blank) collapses to null so downstream
+  // helpers fall back to UTC instead of throwing on `dayjs.tz`.
+  private resolveTimezone(req: FastifyRequest): string | null {
+    const header = req.headers['x-timezone'];
+    const raw = Array.isArray(header) ? header[0] : header;
+    if (typeof raw !== 'string') return null;
+
+    const value = raw.trim();
+    if (!value) return null;
+
+    try {
+      // Intl.DateTimeFormat throws RangeError for unsupported time zones.
+      Intl.DateTimeFormat(undefined, { timeZone: value });
+      return value;
+    } catch {
+      return null;
+    }
   }
 
   // Resolution order: custom `lang` header → Accept-Language → default `en`.

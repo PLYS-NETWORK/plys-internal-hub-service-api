@@ -31,6 +31,7 @@ import { PaymentsModule } from './modules/payments';
 import { ProfilesModule } from './modules/profiles/profiles.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { SkillsModule } from './modules/skills/skills.module';
+import { StatisticsModule } from './modules/statistics/statistics.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { UnitOfWorkModule } from './modules/unit-of-work/unit-of-work.module';
 import { UsersModule } from './modules/users/users.module';
@@ -67,6 +68,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     ProfilesModule,
     ProjectsModule,
     SkillsModule,
+    StatisticsModule,
     TasksModule,
     UsersModule,
     WebhooksModule,

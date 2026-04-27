@@ -41,4 +41,15 @@ export class ProjectMemberRepository
     }
     return byProject;
   }
+
+  /** @inheritdoc */
+  public async countActiveTotalByProjectIds(projectIds: string[]): Promise<number> {
+    if (projectIds.length === 0) return 0;
+    const row = await this.createQueryBuilder('pm')
+      .select('COUNT(*)', 'count')
+      .where('pm.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('pm.status = :status', { status: ProjectMemberStatus.ACTIVE })
+      .getRawOne<{ count: string }>();
+    return Number(row?.count ?? 0);
+  }
 }

@@ -11,4 +11,10 @@ export interface IProjectMemberRepository extends AbstractRepository<ProjectMemb
    * @returns Map of `projectId → number of ACTIVE members`.
    */
   countActiveByProjectIds(projectIds: string[]): Promise<Map<string, number>>;
+
+  /**
+   * Returns the **summed** active-member count across the given projects in a
+   * single query — used for the funnel-stage `active` count.
+   */
+  countActiveTotalByProjectIds(projectIds: string[]): Promise<number>;
 }

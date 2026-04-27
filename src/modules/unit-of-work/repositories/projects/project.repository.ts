@@ -1,12 +1,12 @@
 import { Order } from '@common/dto/page-options.dto';
 import { AbstractRepository } from '@common/repositories';
 import { Project } from '@database/entities';
-import { ProjectStatus } from '@database/enums';
+import { PROJECT_STATUSES, ProjectStatus } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 
-import { IProjectRepository } from './interfaces';
+import { IProjectRepository, IProjectTrendPoint, ProjectTrendGrouping } from './interfaces';
 
 // Columns the caller is allowed to sort by. Any unrecognised value falls back
 // to the default (created_at) to prevent SQL injection via the sort_by param.
@@ -107,5 +107,91 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
 
   public async findPublicById(id: string): Promise<Project | null> {
     return this.findOne({ where: { id, status: ProjectStatus.PUBLIC } });
+  }
+
+  public async findIdsByBusinessId(businessId: string): Promise<string[]> {
+    const rows = await this.createQueryBuilder('project')
+      .select('project.id', 'id')
+      .where('project.business_id = :businessId', { businessId })
+      .andWhere('project.deleted_at IS NULL')
+      .getRawMany<{ id: string }>();
+    return rows.map((r) => r.id);
+  }
+
+  public async findIdsAndTitlesByBusinessId(
+    businessId: string,
+  ): Promise<Array<{ id: string; title: string }>> {
+    return this.createQueryBuilder('project')
+      .select('project.id', 'id')
+      .addSelect('project.title', 'title')
+      .where('project.business_id = :businessId', { businessId })
+      .andWhere('project.deleted_at IS NULL')
+      .getRawMany<{ id: string; title: string }>();
+  }
+
+  // Returns counts keyed by every value of `ProjectStatus`. Statuses with zero
+  // matches are still present (zero-filled) so callers do not need to merge maps.
+  public async countByBusinessIdGroupedByStatus(
+    businessId: string,
+    from?: string,
+    to?: string,
+  ): Promise<Record<ProjectStatus, number>> {
+    const qb = this.createQueryBuilder('project')
+      .select('project.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('project.business_id = :businessId', { businessId })
+      .andWhere('project.deleted_at IS NULL');
+
+    if (from) qb.andWhere('project.created_at >= :from', { from });
+    if (to) qb.andWhere('project.created_at <= :to', { to });
+
+    const rows = await qb
+      .groupBy('project.status')
+      .getRawMany<{ status: ProjectStatus; count: string }>();
+
+    const out = {} as Record<ProjectStatus, number>;
+    for (const status of PROJECT_STATUSES) out[status] = 0;
+    for (const row of rows) out[row.status] = Number(row.count);
+    return out;
+  }
+
+  // Time-series of created/published counts grouped by week or month.
+  // Uses `to_char(date_trunc(...))` so Postgres formats the period_label without
+  // round-tripping JS Date objects.
+  public async countCreatedByBusinessIdGroupedByPeriod(
+    businessId: string,
+    period: ProjectTrendGrouping,
+    from?: string,
+    to?: string,
+  ): Promise<IProjectTrendPoint[]> {
+    const truncUnit = period === 'weekly' ? 'week' : 'month';
+    const labelFormat = period === 'weekly' ? 'IYYY-"W"IW' : 'YYYY-MM';
+
+    const qb = this.createQueryBuilder('project')
+      .select(
+        `to_char(date_trunc('${truncUnit}', project.created_at), '${labelFormat}')`,
+        'period_label',
+      )
+      .addSelect('COUNT(*)', 'created_count')
+      .addSelect(
+        `COUNT(*) FILTER (WHERE project.status IN ('public', 'in_progress', 'done') AND project.published_at IS NOT NULL AND date_trunc('${truncUnit}', project.published_at) = date_trunc('${truncUnit}', project.created_at))`,
+        'published_count',
+      )
+      .where('project.business_id = :businessId', { businessId })
+      .andWhere('project.deleted_at IS NULL');
+
+    if (from) qb.andWhere('project.created_at >= :from', { from });
+    if (to) qb.andWhere('project.created_at <= :to', { to });
+
+    const rows = await qb
+      .groupBy('period_label')
+      .orderBy('period_label', 'ASC')
+      .getRawMany<{ period_label: string; created_count: string; published_count: string }>();
+
+    return rows.map((row) => ({
+      period_label: row.period_label,
+      created_count: Number(row.created_count),
+      published_count: Number(row.published_count),
+    }));
   }
 }

@@ -37,6 +37,7 @@ import {
 @Entity('tasks')
 @Index('idx_tasks_project_status', ['projectId', 'kanbanStatus'])
 @Index('idx_tasks_billing_period', ['billingPeriodId'])
+@Index('idx_tasks_due_date', ['dueDate'])
 export class Task extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_tasks' })
   public readonly id!: string;
@@ -144,6 +145,11 @@ export class Task extends AuditableEntity {
 
   @Column({ name: 'approved_at', type: 'timestamptz', nullable: true })
   public approvedAt!: Date | null;
+
+  // Optional deadline used by dashboard "overdue" reporting.
+  // A task is overdue when due_date < now() AND kanban_status NOT IN ('done', 'cancelled').
+  @Column({ name: 'due_date', type: 'timestamptz', nullable: true })
+  public dueDate!: Date | null;
 
   // FK to billing_periods added in Domain 8 migration.
   @Column({ name: 'billing_period_id', type: 'uuid', nullable: true })

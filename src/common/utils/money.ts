@@ -76,6 +76,19 @@ export class Money {
     return new Money(divRound(product, denominator));
   }
 
+  /** Multiplies the amount by an integer count (e.g. drafts × avg-publish-price). */
+  public mulInteger(count: number): Money {
+    if (!Number.isInteger(count)) throw new Error(`mulInteger requires an integer: ${count}`);
+    return new Money(this.minor * BigInt(count));
+  }
+
+  /** Integer-divides the amount with half-away-from-zero rounding (e.g. averaging). */
+  public divInteger(divisor: number): Money {
+    if (!Number.isInteger(divisor) || divisor === 0)
+      throw new Error(`divInteger requires a non-zero integer: ${divisor}`);
+    return new Money(divRound(this.minor, BigInt(divisor)));
+  }
+
   public gte(other: Money): boolean {
     return this.minor >= other.minor;
   }
