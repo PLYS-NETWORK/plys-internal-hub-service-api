@@ -1,5 +1,6 @@
 import { AbstractRepository } from '@common/repositories';
 import { ProjectApplication } from '@database/entities';
+import { ApplicationStatus } from '@database/enums';
 
 export interface IApplicationFunnelCounts {
   applied: number;
@@ -14,6 +15,7 @@ export interface IApplicationsPerProjectRow {
   pending_count: number;
   approved_count: number;
   rejected_count: number;
+  withdrawn_count: number;
 }
 
 export interface IPendingApplicationRow {
@@ -63,6 +65,13 @@ export interface IProjectApplicationRepository extends AbstractRepository<Projec
 
   /** Total `pending` applications across the given projects. */
   countPendingByProjectIds(projectIds: string[]): Promise<number>;
+
+  /**
+   * Returns the count of applications matching a single project + status —
+   * used by the project overview header / members card to surface things like
+   * pending-approval count without dragging in the full per-project group-by.
+   */
+  countByProjectIdAndStatus(projectId: string, status: ApplicationStatus): Promise<number>;
 
   /**
    * Returns a page of `pending` applications joined to project + consultant +

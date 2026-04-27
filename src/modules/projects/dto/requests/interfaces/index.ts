@@ -1,3 +1,4 @@
+export { IActivityFeedRequest } from './activity-feed.request.interface';
 export { ICreateProjectRequest } from './create-project.request.interface';
 export { IInterviewQuestionItemRequest } from './interview-question-item.request.interface';
 export { ITaskItemRequest } from './task-item.request.interface';

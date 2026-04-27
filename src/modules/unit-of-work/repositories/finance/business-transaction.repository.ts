@@ -7,6 +7,7 @@ import { EntityManager } from 'typeorm';
 
 import {
   IBusinessTransactionRepository,
+  ILatestPublishPayment,
   IPublishingSpendSummary,
   ISpendTrendPoint,
 } from './interfaces';
@@ -68,5 +69,25 @@ export class BusinessTransactionRepository
     if (to) qb.andWhere('bt.created_at <= :to', { to });
 
     return qb.groupBy('period_label').orderBy('period_label', 'ASC').getRawMany<ISpendTrendPoint>();
+  }
+
+  /** @inheritdoc */
+  public async findLatestPublishPaymentByProjectId(
+    projectId: string,
+  ): Promise<ILatestPublishPayment | null> {
+    const row = await this.createQueryBuilder('bt')
+      .select('bt.total_amount', 'amount')
+      .addSelect('bt.created_at', 'paid_at')
+      .where('bt.project_id = :projectId', { projectId })
+      .andWhere('bt.type = :type', { type: BusinessTransactionType.PROJECT_PUBLISHED })
+      .andWhere('bt.status = :status', { status: TransactionStatus.COMPLETED })
+      .orderBy('bt.created_at', 'DESC')
+      .limit(1)
+      .getRawOne<{ amount: string; paid_at: Date }>();
+
+    if (!row) return null;
+    // Currency hard-coded to USD until the multi-currency story lands — matches
+    // the `Currency` enum which only has USD today.
+    return { amount: row.amount, paid_at: row.paid_at, currency: 'USD' };
   }
 }

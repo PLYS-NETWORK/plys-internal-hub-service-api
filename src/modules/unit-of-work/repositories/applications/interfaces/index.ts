@@ -5,4 +5,4 @@ export {
   IPendingApplicationRow,
   IProjectApplicationRepository,
 } from './project-application.repository.interface';
-export { IProjectMemberRepository } from './project-member.repository.interface';
+export { IActiveMemberRow, IProjectMemberRepository } from './project-member.repository.interface';

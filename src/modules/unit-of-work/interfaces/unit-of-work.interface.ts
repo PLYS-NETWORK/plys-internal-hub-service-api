@@ -12,6 +12,7 @@ import {
   IInterviewAnswerRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
+  IProjectActivityRepository,
   IProjectApplicationRepository,
   IProjectInterviewQuestionRepository,
   IProjectMemberRepository,
@@ -52,6 +53,7 @@ export interface IUnitOfWork {
   readonly projects: IProjectRepository;
   readonly projectInterviewQuestions: IProjectInterviewQuestionRepository;
   readonly projectRequiredSkills: IProjectRequiredSkillRepository;
+  readonly projectActivity: IProjectActivityRepository;
 
   // Domain 4 — Tasks
   readonly tasks: ITaskRepository;

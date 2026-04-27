@@ -96,6 +96,10 @@ export class ProjectApplicationRepository
         `COUNT(*) FILTER (WHERE pa.status = '${ApplicationStatus.REJECTED}')`,
         'rejected_count',
       )
+      .addSelect(
+        `COUNT(*) FILTER (WHERE pa.status = '${ApplicationStatus.WITHDRAWN}')`,
+        'withdrawn_count',
+      )
       .where('pa.project_id IN (:...projectIds)', { projectIds });
 
     this.applyProjectIdFilter(qb, projectIdFilter);
@@ -111,6 +115,7 @@ export class ProjectApplicationRepository
         pending_count: string;
         approved_count: string;
         rejected_count: string;
+        withdrawn_count: string;
       }>();
 
     return rows.map((r) => ({
@@ -120,7 +125,21 @@ export class ProjectApplicationRepository
       pending_count: Number(r.pending_count),
       approved_count: Number(r.approved_count),
       rejected_count: Number(r.rejected_count),
+      withdrawn_count: Number(r.withdrawn_count),
     }));
+  }
+
+  /** @inheritdoc */
+  public async countByProjectIdAndStatus(
+    projectId: string,
+    status: ApplicationStatus,
+  ): Promise<number> {
+    const row = await this.createQueryBuilder('pa')
+      .select('COUNT(*)', 'count')
+      .where('pa.project_id = :projectId', { projectId })
+      .andWhere('pa.status = :status', { status })
+      .getRawOne<{ count: string }>();
+    return Number(row?.count ?? 0);
   }
 
   /** @inheritdoc */

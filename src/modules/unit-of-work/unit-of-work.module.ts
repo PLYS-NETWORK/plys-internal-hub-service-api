@@ -14,6 +14,7 @@ import {
   InterviewAnswerRepository,
   InvoiceLineItemRepository,
   InvoiceRepository,
+  ProjectActivityRepository,
   ProjectApplicationRepository,
   ProjectInterviewQuestionRepository,
   ProjectMemberRepository,
@@ -48,6 +49,7 @@ const repositories = [
   // Domain 3 — Projects
   ProjectRepository,
   ProjectRequiredSkillRepository,
+  ProjectActivityRepository,
   // Domain 4 — Tasks
   TaskRepository,
   TaskDisputeRepository,

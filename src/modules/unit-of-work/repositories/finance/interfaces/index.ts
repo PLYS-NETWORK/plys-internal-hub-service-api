@@ -1,6 +1,7 @@
 export { IBillingPeriodRepository } from './billing-period.repository.interface';
 export {
   IBusinessTransactionRepository,
+  ILatestPublishPayment,
   IPublishingSpendSummary,
   ISpendTrendPoint,
 } from './business-transaction.repository.interface';

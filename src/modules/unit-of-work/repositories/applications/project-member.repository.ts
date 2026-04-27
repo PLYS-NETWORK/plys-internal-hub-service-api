@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 
-import { IProjectMemberRepository } from './interfaces';
+import { IActiveMemberRow, IProjectMemberRepository } from './interfaces';
 
 @Injectable()
 export class ProjectMemberRepository
@@ -51,5 +51,32 @@ export class ProjectMemberRepository
       .andWhere('pm.status = :status', { status: ProjectMemberStatus.ACTIVE })
       .getRawOne<{ count: string }>();
     return Number(row?.count ?? 0);
+  }
+
+  /** @inheritdoc */
+  public async findActiveByProjectIdWithUser(projectId: string): Promise<IActiveMemberRow[]> {
+    const rows = await this.createQueryBuilder('pm')
+      .innerJoin('pm.consultant', 'cp')
+      .innerJoin('cp.user', 'u')
+      .select('u.id', 'user_id')
+      .addSelect('cp.full_name', 'full_name')
+      .addSelect('pm.joined_at', 'joined_at')
+      .addSelect('u.last_login_at', 'last_login_at')
+      .where('pm.project_id = :projectId', { projectId })
+      .andWhere('pm.status = :status', { status: ProjectMemberStatus.ACTIVE })
+      .orderBy('pm.joined_at', 'ASC')
+      .getRawMany<{
+        user_id: string;
+        full_name: string;
+        joined_at: Date;
+        last_login_at: Date | null;
+      }>();
+
+    return rows.map((r) => ({
+      user_id: r.user_id,
+      full_name: r.full_name,
+      joined_at: r.joined_at,
+      last_login_at: r.last_login_at,
+    }));
   }
 }
