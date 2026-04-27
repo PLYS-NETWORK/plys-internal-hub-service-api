@@ -89,10 +89,17 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       message = exception.message;
     }
 
-    this.logger.error(
-      `[${request.method}] ${request.url} → ${status}`,
-      exception instanceof Error ? exception.stack : String(exception),
-    );
+    // Log severity is driven by the response status. 5xx are real server
+    // problems (we want stack traces and ERROR alerts); 4xx are normal client
+    // mishaps (expired token, validation, missing resource) that would create
+    // alert noise if treated as errors. We drop the stack for 4xx and downgrade
+    // to WARN so dashboards stay clean.
+    const detail = this.formatLogDetail(exception, errorCode, status, request);
+    if (status >= 500) {
+      this.logger.error(detail, exception instanceof Error ? exception.stack : String(exception));
+    } else {
+      this.logger.warn(detail);
+    }
 
     const requestId = this.requestContext.requestId;
     const deviceId = (request.headers as Record<string, string | undefined>)['x-device-id'] ?? null;
@@ -106,6 +113,25 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       deviceId,
     );
     response.code(status).send(body);
+  }
+
+  // Builds a single, diagnostic log line. Avoids the useless default
+  // "Translatable Exception" string from HttpException's superclass by
+  // pulling `messageKey` out of the typed exception.
+  private formatLogDetail(
+    exception: unknown,
+    errorCode: ErrorCode,
+    status: number,
+    request: FastifyRequest,
+  ): string {
+    const base = `[${request.method}] ${request.url} → ${status} | code: ${errorCode}`;
+    if (exception instanceof TranslatableException) {
+      return `${base}, key: ${exception.messageKey}`;
+    }
+    if (exception instanceof Error) {
+      return `${base}, error: ${exception.message}`;
+    }
+    return base;
   }
 
   private mapHttpStatusToErrorCode(status: number): ErrorCode {
