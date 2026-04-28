@@ -13,7 +13,7 @@ on:
         default: 'main'
 
 jobs:
-  # ── Guard ──────────────────────────────────────────────────────
+  # ── Guard: require confirmation ────────────────────────────────
   guard:
     name: Confirm deployment
     runs-on: ubuntu-latest
@@ -88,6 +88,11 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
           script: |
+            export NVM_DIR="$HOME/.nvm"
+            source "$NVM_DIR/nvm.sh"
+            export PNPM_HOME="$HOME/.local/share/pnpm"
+            export PATH="$PNPM_HOME:$PATH"
+
             if [ -d "/apps/prod/current/dist" ]; then
               BACKUP_DIR="/apps/prod/backup_$(date +%Y%m%d_%H%M%S)"
               cp -r /apps/prod/current/dist "$BACKUP_DIR"
@@ -116,6 +121,10 @@ jobs:
           port: ${{ secrets.VPS_SSH_PORT }}
           script: |
             set -e
+            export NVM_DIR="$HOME/.nvm"
+            source "$NVM_DIR/nvm.sh"
+            export PNPM_HOME="$HOME/.local/share/pnpm"
+            export PATH="$PNPM_HOME:$PATH"
 
             APP_DIR="/apps/prod"
             DEPLOY_DIR="$APP_DIR/current"
