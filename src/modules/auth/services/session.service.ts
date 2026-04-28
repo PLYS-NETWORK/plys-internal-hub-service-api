@@ -9,7 +9,6 @@ import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { plainToInstance } from 'class-transformer';
-import { randomBytes } from 'crypto';
 
 import { AuthResponseDto } from '../dto/responses/auth-response.dto';
 import { UserResponseDto } from '../dto/responses/user-response.dto';
@@ -58,50 +57,67 @@ export class SessionService implements ISessionService {
    * revoked.
    */
   public async refresh(refreshToken: string, context: ISessionContext): Promise<AuthResponseDto> {
-    this.logger.log(`refresh — start`);
+    this.logger.log(
+      `refresh — start | tokenTail: ${refreshToken.slice(-8)}, tokenHash prefix: ${sha256(refreshToken).slice(0, 12)}`,
+    );
     const tokenHash = sha256(refreshToken);
 
-    const result = await this.uow.withTransaction(async (tx) => {
-      const session = await tx.userSessions.findActiveByTokenForUpdate(tokenHash);
+    // Capture reuse signal outside the transaction so we can revoke AFTER the
+    // transaction rolls back. The delete is intentionally committed in its own
+    // operation — it must not be undone when the containing TX rolls back.
+    let reuseUserId: string | null = null;
 
-      if (!session) {
-        // Either the token never existed or it has already been used. Detect
-        // reuse so we can revoke all sessions for the impacted user.
-        const existing = await tx.userSessions.findByToken(tokenHash);
-        if (existing && existing.usedAt) {
-          this.logger.error(
-            `refresh — token reuse detected | userId: ${existing.userId}, sessionId: ${existing.id}`,
-          );
-          await tx.userSessions.delete({ userId: existing.userId });
-        } else {
-          this.logger.warn(`refresh — session not found`);
+    let result: { userId: string; user: { email: string; platform: ActivePlatform } };
+    try {
+      result = await this.uow.withTransaction(async (tx) => {
+        const session = await tx.userSessions.findActiveByTokenForUpdate(tokenHash);
+        this.logger.log(
+          `refresh — findActiveByTokenForUpdate | found: ${!!session}, sessionId: ${session?.id ?? 'n/a'}, userId: ${session?.userId ?? 'n/a'}`,
+        );
+
+        if (!session) {
+          const existing = await tx.userSessions.findByToken(tokenHash);
+          if (existing?.usedAt) {
+            reuseUserId = existing.userId;
+            this.logger.error(
+              `refresh — token reuse detected | userId: ${existing.userId}, sessionId: ${existing.id}`,
+            );
+          } else {
+            this.logger.warn(`refresh — session not found`);
+          }
+          throw new TranslatableException({
+            messageKey: 'error.auth.token_invalid',
+            errorCode: ERROR_CODES.AUTH_TOKEN_INVALID,
+            status: HttpStatus.UNAUTHORIZED,
+          });
         }
-        throw new TranslatableException({
-          messageKey: 'error.auth.token_invalid',
-          errorCode: ERROR_CODES.AUTH_TOKEN_INVALID,
-          status: HttpStatus.UNAUTHORIZED,
-        });
+
+        if (session.expiresAt < new Date()) {
+          this.logger.warn(`refresh — session expired | sessionId: ${session.id}`);
+          await tx.userSessions.delete({ id: session.id });
+          throw new TranslatableException({
+            messageKey: 'error.auth.token_expired',
+            errorCode: ERROR_CODES.AUTH_TOKEN_EXPIRED,
+            status: HttpStatus.UNAUTHORIZED,
+          });
+        }
+
+        session.usedAt = new Date();
+        await tx.userSessions.save(session);
+
+        return { userId: session.userId, user: session.user };
+      });
+    } catch (err) {
+      if (reuseUserId) {
+        // Revoke all sessions in a separate, committed operation.
+        await this.revokeAllSessionsForUser(reuseUserId);
       }
+      throw err;
+    }
 
-      if (session.expiresAt < new Date()) {
-        this.logger.warn(`refresh — session expired | sessionId: ${session.id}`);
-        await tx.userSessions.delete({ id: session.id });
-        throw new TranslatableException({
-          messageKey: 'error.auth.token_expired',
-          errorCode: ERROR_CODES.AUTH_TOKEN_EXPIRED,
-          status: HttpStatus.UNAUTHORIZED,
-        });
-      }
-
-      // Mark as consumed inside the lock — second concurrent caller will find
-      // no active row and be rejected.
-      session.usedAt = new Date();
-      await tx.userSessions.save(session);
-
-      return { userId: session.userId, user: session.user };
-    });
-
-    this.logger.log(`refresh — complete | userId: ${result.userId}`);
+    this.logger.log(
+      `refresh — transaction complete | userId: ${result.userId}, platform: ${result.user.platform}`,
+    );
     return this.createSession(result.userId, result.user.email, result.user.platform, context);
   }
 
@@ -133,13 +149,27 @@ export class SessionService implements ISessionService {
       });
     }
 
-    // Generate an opaque refresh token; only its SHA-256 is persisted
-    const rawRefreshToken = randomBytes(48).toString('base64url');
+    // Sign a JWT refresh token; only its SHA-256 is persisted so a DB breach
+    // never exposes a usable token. The strategy verifies the JWT signature
+    // before the controller receives the request.
+    const rawRefreshToken = this.jwtService.sign(
+      { sub: userId },
+      {
+        secret: this.envService.jwtRefreshSecret,
+        expiresIn: this.envService.jwtRefreshExpiration,
+        algorithm: 'HS256',
+        issuer: this.envService.jwtIssuer,
+        audience: this.envService.jwtAudience,
+      },
+    );
     const sessionTokenHash = sha256(rawRefreshToken);
 
     const refreshExpirationMs = parseDuration(this.envService.jwtRefreshExpiration);
     const expiresAt = new Date(Date.now() + refreshExpirationMs);
 
+    this.logger.log(
+      `createSession — inserting session | userId: ${userId}, platform: ${activePlatform}, hashPrefix: ${sessionTokenHash.slice(0, 12)}, ipAddress: ${context.ipAddress || null}, deviceId: ${context.deviceId}, expiresAt: ${expiresAt.toISOString()}`,
+    );
     const session = this.uow.userSessions.create({
       userId,
       sessionToken: sessionTokenHash,
@@ -150,7 +180,20 @@ export class SessionService implements ISessionService {
       expiresAt,
       usedAt: null,
     });
-    await this.uow.userSessions.save(session);
+    try {
+      await this.uow.userSessions.save(session);
+      this.logger.log(`createSession — session saved | sessionId: ${session.id}`);
+    } catch (err: unknown) {
+      const qfe = err as {
+        name?: string;
+        message?: string;
+        driverError?: { code?: string; message?: string; detail?: string };
+      };
+      this.logger.error(
+        `createSession — save failed | name: ${qfe?.name}, message: ${qfe?.message}, pgCode: ${qfe?.driverError?.code}, pgDetail: ${qfe?.driverError?.detail ?? qfe?.driverError?.message}`,
+      );
+      throw err;
+    }
 
     const jwtPayload: Omit<JwtPayload, 'iat' | 'exp'> = {
       sub: userId,
