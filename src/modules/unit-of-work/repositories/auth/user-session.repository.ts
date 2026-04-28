@@ -24,8 +24,11 @@ export class UserSessionRepository
 
   /** @inheritdoc */
   public async findActiveByTokenForUpdate(tokenHash: string): Promise<UserSession | null> {
+    // INNER JOIN is required here: PostgreSQL rejects FOR UPDATE with outer joins (0A000).
+    // Every session row has a non-null FK to users (CASCADE DELETE removes orphans), so
+    // INNER JOIN and LEFT JOIN are semantically equivalent — but only INNER is lock-safe.
     return this.createQueryBuilder('us')
-      .leftJoinAndSelect('us.user', 'user')
+      .innerJoinAndSelect('us.user', 'user')
       .where('us.session_token = :tokenHash', { tokenHash })
       .andWhere('us.used_at IS NULL')
       .setLock('pessimistic_write')
