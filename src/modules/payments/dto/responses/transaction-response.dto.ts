@@ -19,6 +19,18 @@ export class TransactionResponseDto implements ITransactionResponse {
   public readonly amount!: string;
 
   @Expose()
+  @ApiPropertyOptional({ name: 'commission_rate', example: '0.1500', nullable: true })
+  public readonly commission_rate!: string | null;
+
+  @Expose()
+  @ApiPropertyOptional({ name: 'commission_amount', example: '15.00', nullable: true })
+  public readonly commission_amount!: string | null;
+
+  @Expose()
+  @ApiProperty({ name: 'total_amount', example: '115.00' })
+  public readonly total_amount!: string;
+
+  @Expose()
   @ApiProperty({ enum: TransactionStatus, example: TransactionStatus.COMPLETED })
   public readonly status!: TransactionStatus;
 
