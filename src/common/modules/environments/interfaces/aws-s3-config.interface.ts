@@ -16,4 +16,10 @@ export interface IAwsS3Config {
 
   /** Default TTL (seconds) for presigned GET URLs handed back to clients. */
   readonly awsS3PresignTtlSeconds: number;
+
+  /**
+   * Custom S3-compatible endpoint URL (e.g. Hetzner, MinIO, Cloudflare R2).
+   * Empty string = use the AWS default endpoint for the configured region.
+   */
+  readonly awsS3Endpoint: string;
 }

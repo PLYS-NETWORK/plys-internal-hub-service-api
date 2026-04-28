@@ -1,8 +1,9 @@
 import { AwsS3ClientService } from '@common/modules/aws-s3';
+import { EnvironmentsService } from '@common/modules/environments';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { FileStorageProvider } from '@database/enums';
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 
 import { IStorageProvider, IStoredObject, IUploadInput } from '../interfaces';
 
@@ -17,13 +18,14 @@ import { IStorageProvider, IStoredObject, IUploadInput } from '../interfaces';
  * presigned GET URLs valid for `AWS_S3_PRESIGN_TTL_SECONDS` by default.
  */
 @Injectable()
-export class S3StorageProvider implements IStorageProvider {
+export class S3StorageProvider implements IStorageProvider, OnApplicationBootstrap {
   public readonly name = FileStorageProvider.S3;
 
   private readonly logger: AppLogger;
 
   constructor(
     private readonly s3: AwsS3ClientService,
+    private readonly env: EnvironmentsService,
     private readonly requestContext: RequestContextService,
   ) {
     this.logger = new AppLogger(S3StorageProvider.name, requestContext);
@@ -31,15 +33,16 @@ export class S3StorageProvider implements IStorageProvider {
 
   /** @inheritdoc */
   public async put(input: IUploadInput, keyHint: string): Promise<IStoredObject> {
-    this.logger.log(`put — start | key: ${keyHint}, size: ${input.size}`);
+    const key = this.buildKey(keyHint);
+    this.logger.log(`put — start | key: ${key}, size: ${input.size}`);
     await this.s3.putObject({
-      key: keyHint,
+      key,
       body: input.buffer,
       contentType: input.mimeType,
     });
-    const url = await this.s3.presignGetUrl({ key: keyHint });
-    this.logger.log(`put — complete | key: ${keyHint}`);
-    return { key: keyHint, url };
+    const url = await this.s3.presignGetUrl({ key });
+    this.logger.log(`put — complete | key: ${key}`);
+    return { key, url };
   }
 
   /** @inheritdoc */
@@ -52,5 +55,23 @@ export class S3StorageProvider implements IStorageProvider {
     this.logger.log(`remove — start | key: ${key}`);
     await this.s3.removeObject({ key });
     this.logger.log(`remove — complete | key: ${key}`);
+  }
+
+  public async onApplicationBootstrap(): Promise<void> {
+    try {
+      await this.s3.checkConnectivity();
+    } catch (err) {
+      // Log as error but do NOT crash — a transient network hiccup or
+      // misconfigured endpoint should not block the entire app from booting.
+      // The real failure will surface on the first actual S3 operation.
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`onApplicationBootstrap — S3 connectivity check failed | error: ${msg}`);
+    }
+  }
+
+  // Prefixes key with the current environment so objects are isolated per env
+  // inside a shared bucket: e.g. production/2026/04/<uuid>.png
+  private buildKey(keyHint: string): string {
+    return `${this.env.nodeEnv}/${keyHint}`;
   }
 }

@@ -64,4 +64,14 @@ export interface IAwsS3ClientService {
    * @throws TranslatableException(FILE_STORAGE_ERROR) on unrecoverable failure.
    */
   removeObject(params: IRemoveParams): Promise<void>;
+
+  /**
+   * Verifies S3 connectivity and bucket accessibility via a lightweight
+   * `HeadBucket` request (no data transferred). Intended for startup health
+   * checks; throws on auth failure, missing bucket, or network error.
+   *
+   * @param bucket Target bucket; falls back to `AWS_S3_DEFAULT_BUCKET` when omitted.
+   * @throws Raw SDK error (not wrapped) so callers can inspect the actual failure reason.
+   */
+  checkConnectivity(bucket?: string): Promise<void>;
 }

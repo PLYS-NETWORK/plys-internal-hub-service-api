@@ -27,6 +27,7 @@ import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { FilesModule } from './modules/files';
+import { HealthModule } from './modules/health/health.module';
 import { PaymentsModule } from './modules/payments';
 import { ProfilesModule } from './modules/profiles/profiles.module';
 import { ProjectsModule } from './modules/projects/projects.module';
@@ -64,6 +65,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     AuthModule,
     BillingModule,
     FilesModule,
+    HealthModule,
     PaymentsModule,
     ProfilesModule,
     ProjectsModule,

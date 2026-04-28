@@ -249,4 +249,8 @@ export class EnvironmentsService implements IEnvironmentsService {
   public get awsS3PresignTtlSeconds(): number {
     return this.configService.getOrThrow<number>('app.awsS3.presignTtlSeconds');
   }
+
+  public get awsS3Endpoint(): string {
+    return this.configService.get<string>('app.awsS3.endpoint') ?? '';
+  }
 }

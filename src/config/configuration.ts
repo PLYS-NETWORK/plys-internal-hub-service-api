@@ -84,6 +84,9 @@ export default registerAs('app', () => ({
     secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY ?? '',
     defaultBucket: process.env.AWS_S3_DEFAULT_BUCKET ?? '',
     presignTtlSeconds: parseInt(process.env.AWS_S3_PRESIGN_TTL_SECONDS ?? '900', 10),
+    // Custom S3-compatible endpoint for non-AWS providers (Hetzner, MinIO, R2).
+    // Empty string tells the SDK to use the AWS default endpoint.
+    endpoint: process.env.AWS_S3_ENDPOINT ?? '',
   },
   files: {
     // Pluggable storage backend. `local` and `s3` are wired; `gcs` is reserved.

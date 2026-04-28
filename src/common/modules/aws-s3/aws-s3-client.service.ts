@@ -1,6 +1,7 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -56,9 +57,25 @@ export class AwsS3ClientService implements IAwsS3ClientService {
     const credentials =
       accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : undefined;
 
-    this.client = new S3Client({ region, credentials });
+    const rawEndpoint = this.env.awsS3Endpoint;
+    const endpoint = rawEndpoint
+      ? rawEndpoint.startsWith('http://') || rawEndpoint.startsWith('https://')
+        ? rawEndpoint
+        : `https://${rawEndpoint}`
+      : undefined;
+
+    this.client = new S3Client({
+      region,
+      credentials,
+      endpoint,
+      // S3-compatible providers (Hetzner, MinIO, R2) require path-style URLs
+      // because they don't support virtual-hosted-style bucket subdomains.
+      // forcePathStyle is only applied when a custom endpoint is set so that
+      // native AWS requests continue to use virtual-hosted style.
+      forcePathStyle: true,
+    });
     this.logger.log(
-      `getClient — initialised | region: ${region}, credentialMode: ${credentials ? 'static' : 'default-chain'}`,
+      `getClient — initialised | region: ${region}, credentialMode: ${credentials ? 'static' : 'default-chain'}${endpoint ? `, endpoint: ${endpoint}` : ''}, is connected: ${this.client ? 'yes' : 'no'}`,
     );
     return this.client;
   }
@@ -126,6 +143,22 @@ export class AwsS3ClientService implements IAwsS3ClientService {
         errorCode: ERROR_CODES.FILE_STORAGE_ERROR,
         status: HttpStatus.INTERNAL_SERVER_ERROR,
       });
+    }
+  }
+
+  /** @inheritdoc */
+  public async checkConnectivity(bucket?: string): Promise<void> {
+    const Bucket = this.resolveBucket(bucket);
+    this.logger.log(`checkConnectivity — start | bucket: ${Bucket}`);
+    try {
+      await this.getClient().send(new HeadBucketCommand({ Bucket }));
+      this.logger.log(`checkConnectivity — complete | bucket: ${Bucket}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`checkConnectivity — failed | bucket: ${Bucket}, error: ${msg}`);
+      // Rethrow the raw SDK error so callers (e.g. startup health checks) see
+      // the actual failure reason rather than a generic TranslatableException.
+      throw err;
     }
   }
 

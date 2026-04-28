@@ -1,0 +1,112 @@
+name: Deploy to Dev — dev.ployos.com
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  deploy:
+    name: Build & Deploy to Dev
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── 2. Setup Node + pnpm ─────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: latest
+
+      - name: Get pnpm store path
+        id: pnpm-cache
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      # ── 3. Install & Build ───────────────────────────────────────
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      # ── 4. Deploy via SSH ────────────────────────────────────────
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT }}
+          script: |
+            set -e
+
+            APP_DIR="/apps/dev"
+            DEPLOY_DIR="$APP_DIR/current"
+            REPO_URL="https://github.com/${{ github.repository }}.git"
+
+            echo "==> [marketplace-ployos-dev] Pulling latest code..."
+            if [ -d "$DEPLOY_DIR/.git" ]; then
+              cd "$DEPLOY_DIR"
+              git fetch origin
+              git reset --hard origin/develop
+            else
+              git clone --branch develop "$REPO_URL" "$DEPLOY_DIR"
+            fi
+
+            cd "$DEPLOY_DIR"
+
+            echo "==> Installing production dependencies..."
+            pnpm install --frozen-lockfile --prod
+
+            echo "==> Building app..."
+            pnpm run build
+
+            echo "==> Copying environment file..."
+            cp "$APP_DIR/.env.development" "$DEPLOY_DIR/.env.development"
+
+            echo "==> Running database migrations..."
+            NODE_ENV=development pnpm run migration:run
+
+            echo "==> Restarting PM2..."
+            cd "$APP_DIR"
+            pm2 startOrReload ecosystem.config.js
+            pm2 save
+
+            echo "✓ marketplace-ployos-dev deployed successfully"
+
+      # ── 5. Health Check ──────────────────────────────────────────
+      - name: Health check
+        run: |
+          sleep 10
+          curl --fail --silent --max-time 10 https://dev.ployos.com/health \
+            | grep '"status":"ok"' \
+            || (echo "❌ Health check failed" && exit 1)
+          echo "✅ Health check passed"
+
+      # ── 6. Summary ───────────────────────────────────────────────
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "## ✅ Dev Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project**: marketplace-ployos" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: development" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: develop" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: https://dev.ployos.com" >> $GITHUB_STEP_SUMMARY
