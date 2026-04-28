@@ -20,7 +20,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
@@ -38,15 +38,35 @@ jobs:
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-
 
-      # ── 3. Install & Build ───────────────────────────────────────
+      # ── 3. Install & Build on CI runner ──────────────────────────
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm run build
 
-      # ── 4. Deploy via SSH ────────────────────────────────────────
-      - name: Deploy to VPS
+      # ── 4. Prepare deploy package ─────────────────────────────────
+      - name: Prepare deploy package
+        run: |
+          mkdir -p deploy-package
+          cp -r dist deploy-package/
+          cp package.json deploy-package/
+          cp pnpm-lock.yaml deploy-package/
+
+      # ── 5. Upload to VPS via SCP ──────────────────────────────────
+      - name: Upload to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT }}
+          source: 'deploy-package/*'
+          target: '/apps/dev/current'
+          strip_components: 1 # removes "deploy-package/" prefix
+
+      # ── 6. Install deps + reload PM2 on VPS ──────────────────────
+      - name: Restart app on VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -58,24 +78,11 @@ jobs:
 
             APP_DIR="/apps/dev"
             DEPLOY_DIR="$APP_DIR/current"
-            REPO_URL="https://github.com/${{ github.repository }}.git"
-
-            echo "==> [marketplace-ployos-dev] Pulling latest code..."
-            if [ -d "$DEPLOY_DIR/.git" ]; then
-              cd "$DEPLOY_DIR"
-              git fetch origin
-              git reset --hard origin/develop
-            else
-              git clone --branch develop "$REPO_URL" "$DEPLOY_DIR"
-            fi
 
             cd "$DEPLOY_DIR"
 
             echo "==> Installing production dependencies..."
             pnpm install --frozen-lockfile --prod
-
-            echo "==> Building app..."
-            pnpm run build
 
             echo "==> Copying environment file..."
             cp "$APP_DIR/.env.development" "$DEPLOY_DIR/.env.development"
@@ -90,7 +97,7 @@ jobs:
 
             echo "✓ marketplace-ployos-dev deployed successfully"
 
-      # ── 5. Health Check ──────────────────────────────────────────
+      # ── 7. Health Check ───────────────────────────────────────────
       - name: Health check
         run: |
           sleep 10
@@ -99,7 +106,7 @@ jobs:
             || (echo "❌ Health check failed" && exit 1)
           echo "✅ Health check passed"
 
-      # ── 6. Summary ───────────────────────────────────────────────
+      # ── 8. Summary ────────────────────────────────────────────────
       - name: Deployment summary
         if: success()
         run: |
