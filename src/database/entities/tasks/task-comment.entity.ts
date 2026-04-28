@@ -38,7 +38,7 @@ export class TaskComment extends AuditableEntity {
   })
   public author!: User;
 
-  @Column({ name: 'comment', type: 'jsonb' })
+  @Column({ name: 'comment', type: 'jsonb', default: {} })
   public comment!: Record<string, unknown>;
 
   @Column({ name: 'is_edited', type: 'boolean', default: false })
