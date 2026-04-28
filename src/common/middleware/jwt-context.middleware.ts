@@ -3,6 +3,7 @@ import { TranslatableException } from '@common/exceptions/translatable.exception
 import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
 import { EnvironmentsService } from '@common/modules/environments';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable, NestMiddleware } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { FastifyReply, FastifyRequest } from 'fastify';
@@ -13,12 +14,13 @@ export class JwtContextMiddleware implements NestMiddleware {
     private readonly jwtService: JwtService,
     private readonly envService: EnvironmentsService,
     private readonly requestContext: RequestContextService,
+    private readonly uow: UnitOfWorkService,
   ) {}
 
   // Runs after RequestContextMiddleware (AsyncLocalStorage is already established).
   // Extracts the Bearer token, verifies it, and writes the user identity into the
   // request context so all guards/services can read it without touching request.user.
-  public use(req: FastifyRequest, _res: FastifyReply, next: () => void): void {
+  public async use(req: FastifyRequest, _res: FastifyReply, next: () => void): Promise<void> {
     const authorization = req.headers['authorization'];
     if (authorization?.startsWith('Bearer ')) {
       const token = authorization.slice(7);
@@ -62,6 +64,27 @@ export class JwtContextMiddleware implements NestMiddleware {
           throw new TranslatableException({
             messageKey: 'error.auth.device_mismatch',
             errorCode: ERROR_CODES.AUTH_DEVICE_MISMATCH,
+            status: HttpStatus.UNAUTHORIZED,
+          });
+        }
+
+        // Session-existence check: JWTs are stateless, so a logged-out / rotated /
+        // revoked session would otherwise keep accepting its access token until the
+        // short TTL expires. Reject when the row is gone (logout, password reset),
+        // when usedAt is stamped (refresh has rotated the pair), or when the session
+        // window has elapsed.
+        if (!payload.sessionId) {
+          throw new TranslatableException({
+            messageKey: 'error.auth.token_invalid',
+            errorCode: ERROR_CODES.AUTH_TOKEN_INVALID,
+            status: HttpStatus.UNAUTHORIZED,
+          });
+        }
+        const session = await this.uow.userSessions.findByActiveId(payload.sessionId);
+        if (!session || session.usedAt !== null || session.expiresAt < new Date()) {
+          throw new TranslatableException({
+            messageKey: 'error.auth.token_invalid',
+            errorCode: ERROR_CODES.AUTH_TOKEN_INVALID,
             status: HttpStatus.UNAUTHORIZED,
           });
         }
