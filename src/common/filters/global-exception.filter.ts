@@ -4,7 +4,8 @@ import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { StandardizedResponse } from '@common/response/standardized-response';
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
-import { FastifyReply, FastifyRequest } from 'fastify';
+import { HttpAdapterHost } from '@nestjs/core';
+import { FastifyRequest } from 'fastify';
 import { I18nService } from 'nestjs-i18n';
 import { QueryFailedError } from 'typeorm';
 
@@ -13,6 +14,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger: AppLogger;
 
   constructor(
+    private readonly httpAdapterHost: HttpAdapterHost,
     private readonly i18n: I18nService,
     private readonly requestContext: RequestContextService,
   ) {
@@ -20,9 +22,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   }
 
   public catch(exception: unknown, host: ArgumentsHost): void {
+    const { httpAdapter } = this.httpAdapterHost;
     const ctx = host.switchToHttp();
     const request = ctx.getRequest<FastifyRequest>();
-    const response = ctx.getResponse<FastifyReply>();
     const lang = this.requestContext.lang;
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -105,7 +107,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       requestId,
       deviceId,
     );
-    response.code(status).send(body);
+    httpAdapter.reply(ctx.getResponse(), body, status);
   }
 
   private mapHttpStatusToErrorCode(status: number): ErrorCode {
