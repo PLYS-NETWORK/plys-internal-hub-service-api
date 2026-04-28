@@ -172,9 +172,12 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
         `to_char(date_trunc('${truncUnit}', project.created_at), '${labelFormat}')`,
         'period_label',
       )
-      .addSelect('COUNT(*)', 'created_count')
       .addSelect(
-        `COUNT(*) FILTER (WHERE project.status IN ('public', 'in_progress', 'done') AND project.published_at IS NOT NULL AND date_trunc('${truncUnit}', project.published_at) = date_trunc('${truncUnit}', project.created_at))`,
+        `COUNT(*) FILTER (WHERE project.status IN ('draft', 'setting_up', 'configured'))`,
+        'created_count',
+      )
+      .addSelect(
+        `COUNT(*) FILTER (WHERE project.status IN ('public', 'in_progress', 'done'))`,
         'published_count',
       )
       .where('project.business_id = :businessId', { businessId })
