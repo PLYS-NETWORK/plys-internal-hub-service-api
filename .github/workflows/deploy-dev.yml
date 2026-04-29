@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - develop
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy (default: develop)'
+        required: false
+        default: 'develop'
 
 jobs:
   deploy:
@@ -14,6 +20,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.2.2
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
 
       - name: Setup Node + pnpm
         uses: ./.github/actions/deploy-dev/setup
@@ -47,4 +55,5 @@ jobs:
         if: success()
         uses: ./.github/actions/deploy-dev/summary
         with:
+          branch: ${{ github.event.inputs.branch || github.ref_name }}
           actor: ${{ github.actor }}

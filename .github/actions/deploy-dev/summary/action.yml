@@ -2,6 +2,9 @@ name: 'Deployment summary (dev)'
 description: 'Append the dev deployment summary to the GitHub job summary'
 
 inputs:
+  branch:
+    description: 'Deployed branch'
+    required: true
   actor:
     description: 'GitHub actor who triggered the workflow'
     required: true
@@ -15,7 +18,7 @@ runs:
         echo "## ✅ Dev Deployment Successful" >> $GITHUB_STEP_SUMMARY
         echo "- **Project**: marketplace-ployos" >> $GITHUB_STEP_SUMMARY
         echo "- **Environment**: development" >> $GITHUB_STEP_SUMMARY
-        echo "- **Branch**: develop" >> $GITHUB_STEP_SUMMARY
+        echo "- **Branch**: ${{ inputs.branch }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Triggered by**: ${{ inputs.actor }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Time**: $(date -u)" >> $GITHUB_STEP_SUMMARY
         echo "- **URL**: https://dev.ployos.com" >> $GITHUB_STEP_SUMMARY
