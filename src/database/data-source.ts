@@ -17,7 +17,7 @@ export const AppDataSource = new DataSource({
   port: parseInt(process.env.DB_PORT ?? '5432', 10),
   username: process.env.DB_USERNAME ?? 'postgres',
   password: process.env.DB_PASSWORD ?? 'password',
-  database: process.env.DB_NAME ?? 'marketplace',
+  database: process.env.DB_DATABASE ?? 'marketplace',
   synchronize: false,
   logging: true,
   entities: [path.resolve(__dirname, 'entities', '**', '*.entity.{ts,js}')],
