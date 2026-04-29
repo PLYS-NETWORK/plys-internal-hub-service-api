@@ -6,9 +6,9 @@ dist/
 build/
 
 # environment
+.env
 .env.*
-.env.local
-.env.*.local
+!.env.example
 
 # logs
 logs/
