@@ -19,7 +19,7 @@ jobs:
         uses: ./.github/actions/deploy-dev/setup
 
       - name: Install & Build
-        uses: ./.github/actions/deploy-dev/build
+        uses: ./.github/actions/deploy-dev/install-build
 
       - name: Prepare deploy package
         uses: ./.github/actions/deploy-dev/package
