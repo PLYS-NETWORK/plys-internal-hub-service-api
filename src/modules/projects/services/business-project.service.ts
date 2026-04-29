@@ -17,6 +17,7 @@ import {
 } from '@database/entities';
 import {
   BusinessTransactionType,
+  Currency,
   PaymentMethod,
   ProjectStatus,
   TaskKanbanStatus,
@@ -151,35 +152,20 @@ export class BusinessProjectService implements IBusinessProjectService {
     );
 
     const projectIds = projects.map((p) => p.id);
-    const [skills, questions, tasks, memberCounts, applicationCounts] = await Promise.all([
-      this.loadSkillsForProjects(projectIds),
-      this.loadQuestionsForProjects(projectIds),
+    const [tasks, applicationCounts, publishTotals, avatarsByProject] = await Promise.all([
       this.loadTasksForProjects(projectIds),
-      this.uow.projectMembers.countActiveByProjectIds(projectIds),
       this.uow.projectApplications.countByProjectIds(projectIds),
+      this.uow.businessTransactions.findPublishPaymentsByProjectIds(projectIds),
+      this.uow.projectApplications.findApplicantAvatarsByProjectIds(projectIds),
     ]);
-
-    const allSkills: ProjectRequiredSkill[] = [];
-    for (const list of skills.values()) allSkills.push(...list);
-    const skillTranslations = this.translateSkillKeys(allSkills);
-
-    // Commission-rate snapshot is taken from the business profile once per
-    // request — for credit-billed businesses it collapses to '0' so the
-    // displayed total equals the raw task subtotal (matches publish flow).
-    const commissionRate = businessProfile.allowPaymentCredit
-      ? '0'
-      : (businessProfile.commissionRate ?? DEFAULT_COMMISSION_RATE);
 
     const data = projects.map((p) =>
       this.toListItemResponseDto(
         p,
-        skills.get(p.id) ?? [],
-        questions.get(p.id) ?? [],
         tasks.get(p.id) ?? [],
-        memberCounts.get(p.id) ?? 0,
         applicationCounts.get(p.id) ?? 0,
-        commissionRate,
-        skillTranslations,
+        publishTotals.get(p.id),
+        avatarsByProject.get(p.id) ?? [],
       ),
     );
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
@@ -860,26 +846,6 @@ export class BusinessProjectService implements IBusinessProjectService {
     return ProjectStatus.DRAFT;
   }
 
-  // Loads interview questions for a list of project IDs in a single query (avoids N+1).
-  private async loadQuestionsForProjects(
-    projectIds: string[],
-  ): Promise<Map<string, ProjectInterviewQuestion[]>> {
-    if (projectIds.length === 0) return new Map();
-
-    const allQuestions = await this.uow.projectInterviewQuestions.find({
-      where: projectIds.map((id) => ({ projectId: id })),
-      order: { displayOrder: 'ASC' },
-    });
-
-    const byProject = new Map<string, ProjectInterviewQuestion[]>();
-    for (const question of allQuestions) {
-      const list = byProject.get(question.projectId) ?? [];
-      list.push(question);
-      byProject.set(question.projectId, list);
-    }
-    return byProject;
-  }
-
   // Loads tasks for a list of project IDs in a single query (avoids N+1).
   private async loadTasksForProjects(projectIds: string[]): Promise<Map<string, Task[]>> {
     if (projectIds.length === 0) return new Map();
@@ -898,95 +864,42 @@ export class BusinessProjectService implements IBusinessProjectService {
     return byProject;
   }
 
-  // Loads required skills for a list of project IDs in a single query (avoids N+1).
-  private async loadSkillsForProjects(
-    projectIds: string[],
-  ): Promise<Map<string, ProjectRequiredSkill[]>> {
-    if (projectIds.length === 0) return new Map();
-
-    const allSkills = await this.uow.projectRequiredSkills.find({
-      where: projectIds.map((id) => ({ projectId: id })),
-      relations: { skill: true },
-    });
-
-    const byProject = new Map<string, ProjectRequiredSkill[]>();
-    for (const skill of allSkills) {
-      const list = byProject.get(skill.projectId) ?? [];
-      list.push(skill);
-      byProject.set(skill.projectId, list);
-    }
-    return byProject;
-  }
-
-  // Translates each unique skill key once per request locale, so a list of
-  // N projects sharing M skills runs at most M i18n calls instead of N×M.
-  private translateSkillKeys(skills: ProjectRequiredSkill[]): Map<string, string> {
-    const lang = this.requestContext.lang;
-    const out = new Map<string, string>();
-    for (const s of skills) {
-      const key = s.skill.name;
-      if (out.has(key)) continue;
-      out.set(key, this.translateSkillKey(key, lang));
-    }
-    return out;
-  }
-
-  // Builds the slim list-item DTO for `listMyProjects`. Tasks are NOT echoed
-  // back; instead they collapse into aggregate counters (`total_tasks`,
-  // `total_completed_tasks`, `total_costs`). Member/application counts come
-  // from pre-aggregated map lookups passed by the caller.
+  // Builds the slim list-item DTO for `listMyProjects`. Cost resolution:
+  // when a completed PROJECT_PUBLISHED transaction exists for the project we
+  // surface its locked `total_amount` (already includes commission for
+  // pre-paid). Otherwise we fall back to the raw sum of task prices — credit
+  // businesses never have a publish transaction, and pre-publish projects
+  // haven't been charged yet.
   private toListItemResponseDto(
     project: Project,
-    skills: ProjectRequiredSkill[],
-    questions: ProjectInterviewQuestion[],
     tasks: Task[],
-    activeMemberCount: number,
     applicationCount: number,
-    commissionRate: string,
-    skillTranslations?: Map<string, string>,
+    publishTotalAmount: string | undefined,
+    applicationAvatars: string[],
   ): BusinessProjectListItemResponseDto {
-    const lang = this.requestContext.lang;
-    const translate = (name: string): string =>
-      skillTranslations?.get(name) ?? this.translateSkillKey(name, lang);
-
     const completedTaskCount = tasks.reduce(
       (n, t) => (t.kanbanStatus === TaskKanbanStatus.DONE ? n + 1 : n),
       0,
     );
-    // Publish-style total: subtotal × (1 + commissionRate). Money is fixed-point
-    // to avoid floating drift on numeric(10,2) prices summed across many tasks.
-    const projectAmount = Money.sum(tasks.map((t) => t.price));
-    const totalCosts = projectAmount.add(projectAmount.mulRate(commissionRate));
+    const totalCost = publishTotalAmount ?? Money.sum(tasks.map((t) => t.price)).toFixedString();
 
     return plainToInstance(
       BusinessProjectListItemResponseDto,
       {
         id: project.id,
-        business_id: project.businessId,
         title: project.title,
-        introduction: project.introduction,
         status: project.status,
-        required_consultants: project.requiredConsultants,
+        created_at: project.createdAt,
         published_at: project.publishedAt,
         started_at: project.startedAt,
         completed_at: project.completedAt,
         cancelled_at: project.cancelledAt,
-        created_at: project.createdAt,
-        skills: skills.map((s) => ({
-          skill_id: s.skillId,
-          skill_name: translate(s.skill.name),
-        })),
-        interview_questions: questions.map((q) => ({
-          id: q.id,
-          question_text: q.questionText,
-          display_order: q.displayOrder,
-          is_required: q.isRequired,
-        })),
+        total_applications: applicationCount,
         total_tasks: tasks.length,
         total_completed_tasks: completedTaskCount,
-        total_costs: totalCosts.toFixedString(),
-        total_members: activeMemberCount,
-        total_applications: applicationCount,
+        total_cost: totalCost,
+        currency: Currency.USD,
+        application_avatars: applicationAvatars,
       },
       { excludeExtraneousValues: true },
     );

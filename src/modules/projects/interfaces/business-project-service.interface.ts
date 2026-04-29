@@ -40,10 +40,14 @@ export interface IBusinessProjectService {
    *
    * Tasks are NOT echoed back; the list payload exposes aggregate counters
    * instead — `total_tasks`, `total_completed_tasks` (kanban_status = `done`),
-   * `total_costs` (publish-style: `sum(price) × (1 + commission_rate)`),
-   * `total_members` (active project members), and `total_applications` (every
-   * status). Skills, member counts, and application counts are loaded with
-   * batch queries to keep the endpoint at O(1) round-trips per page.
+   * `total_cost`, `currency`, `total_applications` (every status), and the
+   * `application_avatars` array (one entry per distinct applicant with an
+   * avatar set). `total_cost` resolves to the locked `total_amount` of the
+   * completed `PROJECT_PUBLISHED` transaction when one exists; otherwise the
+   * raw sum of task prices (credit businesses and pre-publish projects fall
+   * here). Tasks, application counts, publish payments, and applicant avatars
+   * are loaded with batch queries to keep the endpoint at O(1) round-trips
+   * per page.
    *
    * @param dto - Pagination + filter parameters.
    * @returns Paginated wrapper containing list-item DTOs and page metadata.
