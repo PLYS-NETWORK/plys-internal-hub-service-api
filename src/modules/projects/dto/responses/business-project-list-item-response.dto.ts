@@ -1,10 +1,8 @@
-import { ProjectStatus } from '@database/enums';
+import { Currency, ProjectStatus } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
-import { Exclude, Expose, Type } from 'class-transformer';
+import { Exclude, Expose } from 'class-transformer';
 
 import { IBusinessProjectListItemResponse } from './interfaces/business-project-list-item.response.interface';
-import { ProjectInterviewQuestionResponseDto } from './project-interview-question-response.dto';
-import { ProjectSkillResponseDto } from './project-skill-response.dto';
 
 @Exclude()
 export class BusinessProjectListItemResponseDto implements IBusinessProjectListItemResponse {
@@ -13,37 +11,16 @@ export class BusinessProjectListItemResponseDto implements IBusinessProjectListI
   public readonly id!: string;
 
   @Expose()
-  @ApiProperty({ name: 'business_id', example: '550e8400-e29b-41d4-a716-446655440000' })
-  public readonly business_id!: string;
-
-  @Expose()
   @ApiProperty({ example: 'Build an e-commerce platform' })
   public readonly title!: string;
-
-  @Expose()
-  @ApiProperty({
-    type: 'object',
-    additionalProperties: true,
-    nullable: true,
-    example: {
-      type: 'doc',
-      content: [
-        {
-          type: 'paragraph',
-          content: [{ type: 'text', text: 'We need a full-stack team...' }],
-        },
-      ],
-    },
-  })
-  public readonly introduction!: Record<string, unknown> | null;
 
   @Expose()
   @ApiProperty({ enum: ProjectStatus, example: ProjectStatus.DRAFT })
   public readonly status!: ProjectStatus;
 
   @Expose()
-  @ApiProperty({ name: 'required_consultants', example: 2 })
-  public readonly required_consultants!: number;
+  @ApiProperty({ name: 'created_at' })
+  public readonly created_at!: Date;
 
   @Expose()
   @ApiProperty({ name: 'published_at', nullable: true })
@@ -62,18 +39,8 @@ export class BusinessProjectListItemResponseDto implements IBusinessProjectListI
   public readonly cancelled_at!: Date | null;
 
   @Expose()
-  @ApiProperty({ name: 'created_at' })
-  public readonly created_at!: Date;
-
-  @Expose()
-  @ApiProperty({ type: [ProjectSkillResponseDto] })
-  @Type(() => ProjectSkillResponseDto)
-  public readonly skills!: ProjectSkillResponseDto[];
-
-  @Expose()
-  @ApiProperty({ name: 'interview_questions', type: [ProjectInterviewQuestionResponseDto] })
-  @Type(() => ProjectInterviewQuestionResponseDto)
-  public readonly interview_questions!: ProjectInterviewQuestionResponseDto[];
+  @ApiProperty({ name: 'total_applications', example: 27 })
+  public readonly total_applications!: number;
 
   @Expose()
   @ApiProperty({ name: 'total_tasks', example: 8 })
@@ -85,18 +52,23 @@ export class BusinessProjectListItemResponseDto implements IBusinessProjectListI
 
   @Expose()
   @ApiProperty({
-    name: 'total_costs',
+    name: 'total_cost',
     example: '12500.00',
     description:
-      'Project cost incl. platform commission, returned as a fixed-point decimal string. Formula: sum(task.price) × (1 + business.commission_rate); commission is 0 for credit-billed businesses.',
+      'Project cost as a fixed-point decimal string. Equals the locked `total_amount` of the PROJECT_PUBLISHED transaction when one exists; otherwise the raw sum of task prices.',
   })
-  public readonly total_costs!: string;
+  public readonly total_cost!: string;
 
   @Expose()
-  @ApiProperty({ name: 'total_members', example: 4 })
-  public readonly total_members!: number;
+  @ApiProperty({ enum: Currency, example: Currency.USD })
+  public readonly currency!: Currency;
 
   @Expose()
-  @ApiProperty({ name: 'total_applications', example: 27 })
-  public readonly total_applications!: number;
+  @ApiProperty({
+    name: 'application_avatars',
+    type: [String],
+    example: ['https://cdn.example.com/u/abc.png', 'https://cdn.example.com/u/def.png'],
+    description: 'Distinct applicant avatar URLs (one per consultant who applied).',
+  })
+  public readonly application_avatars!: string[];
 }

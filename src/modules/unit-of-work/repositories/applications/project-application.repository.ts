@@ -233,6 +233,35 @@ export class ProjectApplicationRepository
     return [items, total];
   }
 
+  /** @inheritdoc */
+  public async findApplicantAvatarsByProjectIds(
+    projectIds: string[],
+  ): Promise<Map<string, string[]>> {
+    if (projectIds.length === 0) return new Map();
+
+    // DISTINCT ON (project_id, consultant_id) collapses re-applications by the
+    // same consultant to a single row, and the join filters out NULL avatars
+    // so the service receives only renderable URLs.
+    const rows = await this.createQueryBuilder('pa')
+      .innerJoin('pa.consultant', 'consultant')
+      .select('DISTINCT ON (pa.project_id, pa.consultant_id) pa.project_id', 'project_id')
+      .addSelect('consultant.avatar_url', 'avatar_url')
+      .where('pa.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('consultant.avatar_url IS NOT NULL')
+      .orderBy('pa.project_id')
+      .addOrderBy('pa.consultant_id')
+      .addOrderBy('pa.applied_at', 'ASC')
+      .getRawMany<{ project_id: string; avatar_url: string }>();
+
+    const byProject = new Map<string, string[]>();
+    for (const row of rows) {
+      const list = byProject.get(row.project_id) ?? [];
+      list.push(row.avatar_url);
+      byProject.set(row.project_id, list);
+    }
+    return byProject;
+  }
+
   private applyDateRange(
     qb: SelectQueryBuilder<ProjectApplication>,
     from?: string,

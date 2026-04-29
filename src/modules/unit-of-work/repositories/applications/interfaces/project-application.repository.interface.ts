@@ -84,4 +84,16 @@ export interface IProjectApplicationRepository extends AbstractRepository<Projec
     skip: number,
     take: number,
   ): Promise<[IPendingApplicationRow[], number]>;
+
+  /**
+   * Bulk-loads distinct applicant avatar URLs per project in a single
+   * round-trip. Each consultant appears at most once per project even if they
+   * applied multiple times (e.g., re-applied after a rejection). `null` avatar
+   * URLs are excluded so consumers don't have to filter again.
+   *
+   * @param projectIds - Project UUIDs to aggregate over.
+   * @returns Map of `projectId → avatar_url[]`. Projects with no applicants
+   *          (or applicants with only null avatars) are absent from the map.
+   */
+  findApplicantAvatarsByProjectIds(projectIds: string[]): Promise<Map<string, string[]>>;
 }
