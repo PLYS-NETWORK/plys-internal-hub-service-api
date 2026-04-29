@@ -90,4 +90,27 @@ export class BusinessTransactionRepository
     // the `Currency` enum which only has USD today.
     return { amount: row.amount, paid_at: row.paid_at, currency: 'USD' };
   }
+
+  /** @inheritdoc */
+  public async findPublishPaymentsByProjectIds(projectIds: string[]): Promise<Map<string, string>> {
+    if (projectIds.length === 0) return new Map();
+
+    // DISTINCT ON gives us the latest transaction per project in one pass —
+    // Postgres-specific, but the rest of this codebase already targets Postgres.
+    const rows = await this.createQueryBuilder('bt')
+      .select('DISTINCT ON (bt.project_id) bt.project_id', 'project_id')
+      .addSelect('bt.total_amount', 'total_amount')
+      .where('bt.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('bt.type = :type', { type: BusinessTransactionType.PROJECT_PUBLISHED })
+      .andWhere('bt.status = :status', { status: TransactionStatus.COMPLETED })
+      .orderBy('bt.project_id')
+      .addOrderBy('bt.created_at', 'DESC')
+      .getRawMany<{ project_id: string; total_amount: string }>();
+
+    const byProject = new Map<string, string>();
+    for (const row of rows) {
+      byProject.set(row.project_id, row.total_amount);
+    }
+    return byProject;
+  }
 }

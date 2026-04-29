@@ -52,4 +52,16 @@ export interface IBusinessTransactionRepository extends AbstractRepository<Busin
    * `payment` block. `null` when the project has not been paid for yet.
    */
   findLatestPublishPaymentByProjectId(projectId: string): Promise<ILatestPublishPayment | null>;
+
+  /**
+   * Bulk-loads the latest completed `PROJECT_PUBLISHED` `total_amount` per
+   * project in a single round-trip. Used by the business project list to
+   * decide between "transaction total" (when present) and "task-price sum"
+   * (fallback) for the displayed cost. Projects without a completed publish
+   * transaction are absent from the map.
+   *
+   * @param projectIds - Project UUIDs to look up.
+   * @returns Map of `projectId → totalAmount` (fixed-point string).
+   */
+  findPublishPaymentsByProjectIds(projectIds: string[]): Promise<Map<string, string>>;
 }
