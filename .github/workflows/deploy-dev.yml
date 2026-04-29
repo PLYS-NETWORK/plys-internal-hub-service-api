@@ -5,11 +5,6 @@ on:
     branches:
       - develop
   workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch to deploy (default: develop)'
-        required: false
-        default: 'develop'
 
 jobs:
   deploy:
@@ -18,10 +13,12 @@ jobs:
     environment: dev
 
     steps:
+      # Always deploy `develop` — the dev environment tracks that branch
+      # regardless of which branch the manual trigger was launched from.
       - name: Checkout code
         uses: actions/checkout@v4.2.2
         with:
-          ref: ${{ github.event.inputs.branch || github.ref }}
+          ref: develop
 
       - name: Setup Node + pnpm
         uses: ./.github/actions/deploy-dev/setup
@@ -55,5 +52,5 @@ jobs:
         if: success()
         uses: ./.github/actions/deploy-dev/summary
         with:
-          branch: ${{ github.event.inputs.branch || github.ref_name }}
+          branch: develop
           actor: ${{ github.actor }}
