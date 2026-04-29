@@ -8,7 +8,7 @@ runs:
       shell: bash
       run: |
         sleep 15
-        curl --fail --silent --max-time 15 https://ployos.com/health \
+        curl --fail --silent --max-time 15 https://ployos.com/api/v1/health \
           | grep '"status":"ok"' \
           || (echo "❌ Health check failed" && exit 1)
         echo "✅ Health check passed"
