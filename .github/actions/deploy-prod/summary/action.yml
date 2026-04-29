@@ -1,0 +1,24 @@
+name: 'Deployment summary (prod)'
+description: 'Append the prod deployment summary to the GitHub job summary'
+
+inputs:
+  branch:
+    description: 'Deployed branch'
+    required: true
+  actor:
+    description: 'GitHub actor who triggered the workflow'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Deployment summary
+      shell: bash
+      run: |
+        echo "## ✅ Production Deployment Successful" >> $GITHUB_STEP_SUMMARY
+        echo "- **Project**: marketplace-ployos" >> $GITHUB_STEP_SUMMARY
+        echo "- **Environment**: production" >> $GITHUB_STEP_SUMMARY
+        echo "- **Branch**: ${{ inputs.branch }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Triggered by**: ${{ inputs.actor }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Time**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+        echo "- **URL**: https://ployos.com" >> $GITHUB_STEP_SUMMARY

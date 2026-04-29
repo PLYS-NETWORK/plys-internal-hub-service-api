@@ -13,22 +13,20 @@ on:
         default: 'main'
 
 jobs:
-  # ── Guard: require confirmation ────────────────────────────────
   guard:
     name: Confirm deployment
     runs-on: ubuntu-latest
     steps:
-      - name: Validate confirmation
-        run: |
-          if [ "${{ github.event.inputs.confirm }}" != "deploy" ]; then
-            echo "❌ Deployment cancelled. You must type 'deploy' to confirm."
-            exit 1
-          fi
-          echo "✅ Confirmed. Proceeding with production deployment."
-          echo "   Branch      : ${{ github.event.inputs.branch }}"
-          echo "   Triggered by: ${{ github.actor }}"
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
 
-  # ── Deploy ─────────────────────────────────────────────────────
+      - name: Validate confirmation
+        uses: ./.github/actions/deploy-prod/guard
+        with:
+          confirm: ${{ github.event.inputs.confirm }}
+          branch: ${{ github.event.inputs.branch }}
+          actor: ${{ github.actor }}
+
   deploy:
     name: Build & Deploy to Production
     runs-on: ubuntu-latest
@@ -36,139 +34,50 @@ jobs:
     environment: production
 
     steps:
-      # ── 1. Checkout ──────────────────────────────────────────────
       - name: Checkout code
         uses: actions/checkout@v4.2.2
         with:
           ref: ${{ github.event.inputs.branch }}
 
-      # ── 2. Setup Node + pnpm ─────────────────────────────────────
-      - name: Setup Node.js
-        uses: actions/setup-node@v4.4.0
-        with:
-          node-version: '22'
+      - name: Setup Node + pnpm
+        uses: ./.github/actions/deploy-prod/setup
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.1.0
-        with:
-          version: latest
+      - name: Install & Build
+        uses: ./.github/actions/deploy-prod/build
 
-      - name: Get pnpm store path
-        id: pnpm-cache
-        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Cache pnpm store
-        uses: actions/cache@v4.2.3
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-
-      # ── 3. Install & Build on CI runner ──────────────────────────
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        run: pnpm run build
-
-      # ── 4. Prepare deploy package ─────────────────────────────────
       - name: Prepare deploy package
-        run: |
-          mkdir -p deploy-package
-          cp -r dist deploy-package/
-          cp package.json deploy-package/
-          cp pnpm-lock.yaml deploy-package/
-          mkdir -p deploy-package/dist/database/seeds/data
-          cp src/database/seeds/data/*.json deploy-package/dist/database/seeds/data/
+        uses: ./.github/actions/deploy-prod/package
 
-      # ── 5. Backup current dist on VPS ─────────────────────────────
       - name: Backup current deployment
-        uses: appleboy/ssh-action@v1.0.3
+        uses: ./.github/actions/deploy-prod/backup
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
-          script: |
-            export NVM_DIR="$HOME/.nvm"
-            source "$NVM_DIR/nvm.sh"
-            export PNPM_HOME="$HOME/.local/share/pnpm"
-            export PATH="$PNPM_HOME:$PATH"
 
-            if [ -d "/apps/prod/current/dist" ]; then
-              BACKUP_DIR="/apps/prod/backup_$(date +%Y%m%d_%H%M%S)"
-              cp -r /apps/prod/current/dist "$BACKUP_DIR"
-              echo "Backup saved to $BACKUP_DIR"
-            fi
-
-      # ── 6. Upload to VPS via SCP ──────────────────────────────────
       - name: Upload to VPS
-        uses: appleboy/scp-action@v0.1.7
+        uses: ./.github/actions/deploy-prod/upload
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
-          source: 'deploy-package/*'
-          target: '/apps/prod/current'
-          strip_components: 1
 
-      # ── 7. Install deps + reload PM2 on VPS ──────────────────────
       - name: Restart app on VPS
-        uses: appleboy/ssh-action@v1.0.3
+        uses: ./.github/actions/deploy-prod/restart
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
-          script: |
-            set -e
-            export NVM_DIR="$HOME/.nvm"
-            source "$NVM_DIR/nvm.sh"
-            export PNPM_HOME="$HOME/.local/share/pnpm"
-            export PATH="$PNPM_HOME:$PATH"
 
-            APP_DIR="/apps/prod"
-            DEPLOY_DIR="$APP_DIR/current"
-
-            cd "$DEPLOY_DIR"
-
-            echo "==> Installing production dependencies..."
-            pnpm install --frozen-lockfile --prod
-
-            echo "==> Copying environment file..."
-            cp "$APP_DIR/.env.production" "$DEPLOY_DIR/.env.production"
-
-            echo "==> Running database seeds..."
-            NODE_ENV=production node dist/database/seeds/seed-runner.js
-
-            echo "==> Reloading PM2 (zero-downtime, migrations auto-run on app startup)..."
-            cd "$APP_DIR"
-            pm2 startOrReload ecosystem.config.js
-            pm2 save
-
-            echo "==> Cleaning old backups (keep last 3)..."
-            ls -dt "$APP_DIR"/backup_* 2>/dev/null | tail -n +4 | xargs rm -rf || true
-
-            echo "✓ marketplace-ployos-prod deployed successfully"
-
-      # ── 8. Health Check ───────────────────────────────────────────
       - name: Health check
-        run: |
-          sleep 15
-          curl --fail --silent --max-time 15 https://ployos.com/health \
-            | grep '"status":"ok"' \
-            || (echo "❌ Health check failed" && exit 1)
-          echo "✅ Health check passed"
+        uses: ./.github/actions/deploy-prod/health-check
 
-      # ── 9. Summary ────────────────────────────────────────────────
       - name: Deployment summary
         if: success()
-        run: |
-          echo "## ✅ Production Deployment Successful" >> $GITHUB_STEP_SUMMARY
-          echo "- **Project**: marketplace-ployos" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment**: production" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch**: ${{ github.event.inputs.branch }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Triggered by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Time**: $(date -u)" >> $GITHUB_STEP_SUMMARY
-          echo "- **URL**: https://ployos.com" >> $GITHUB_STEP_SUMMARY
+        uses: ./.github/actions/deploy-prod/summary
+        with:
+          branch: ${{ github.event.inputs.branch }}
+          actor: ${{ github.actor }}

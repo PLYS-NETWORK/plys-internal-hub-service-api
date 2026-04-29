@@ -12,114 +12,39 @@ jobs:
     environment: dev
 
     steps:
-      # ── 1. Checkout ──────────────────────────────────────────────
       - name: Checkout code
         uses: actions/checkout@v4.2.2
 
-      # ── 2. Setup Node + pnpm ─────────────────────────────────────
-      - name: Setup Node.js
-        uses: actions/setup-node@v4.4.0
-        with:
-          node-version: '22'
+      - name: Setup Node + pnpm
+        uses: ./.github/actions/deploy-dev/setup
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4.1.0
-        with:
-          version: latest
+      - name: Install & Build
+        uses: ./.github/actions/deploy-dev/build
 
-      - name: Get pnpm store path
-        id: pnpm-cache
-        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Cache pnpm store
-        uses: actions/cache@v4.2.3
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-
-      # ── 3. Install & Build on CI runner ──────────────────────────
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        run: pnpm run build
-
-      # ── 4. Prepare deploy package ─────────────────────────────────
       - name: Prepare deploy package
-        run: |
-          mkdir -p deploy-package
-          cp -r dist deploy-package/
-          cp package.json deploy-package/
-          cp pnpm-lock.yaml deploy-package/
-          mkdir -p deploy-package/dist/database/seeds/data
-          cp src/database/seeds/data/*.json deploy-package/dist/database/seeds/data/
+        uses: ./.github/actions/deploy-dev/package
 
-      # ── 5. Upload to VPS via SCP ──────────────────────────────────
       - name: Upload to VPS
-        uses: appleboy/scp-action@v0.1.7
+        uses: ./.github/actions/deploy-dev/upload
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
-          source: 'deploy-package/*'
-          target: '/apps/dev/current'
-          strip_components: 1
 
-      # ── 6. Install deps + reload PM2 on VPS ──────────────────────
       - name: Restart app on VPS
-        uses: appleboy/ssh-action@v1.0.3
+        uses: ./.github/actions/deploy-dev/restart
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
-          script: |
-            set -e
-            export NVM_DIR="$HOME/.nvm"
-            source "$NVM_DIR/nvm.sh"
-            export PNPM_HOME="$HOME/.local/share/pnpm"
-            export PATH="$PNPM_HOME:$PATH"
 
-            APP_DIR="/apps/dev"
-            DEPLOY_DIR="$APP_DIR/current"
-
-            cd "$DEPLOY_DIR"
-
-            echo "==> Installing production dependencies..."
-            pnpm install --frozen-lockfile --prod
-
-            echo "==> Copying environment file..."
-            cp "$APP_DIR/.env.development" "$DEPLOY_DIR/.env.development"
-
-            echo "==> Running database seeds..."
-            NODE_ENV=development node dist/database/seeds/seed-runner.js
-
-            echo "==> Restarting PM2 (migrations auto-run on app startup)..."
-            cd "$APP_DIR"
-            pm2 startOrReload ecosystem.config.js
-            pm2 save
-
-            echo "✓ marketplace-ployos-dev deployed successfully"
-
-      # ── 7. Health Check ───────────────────────────────────────────
       - name: Health check
-        run: |
-          sleep 10
-          curl --fail --silent --max-time 10 https://dev.ployos.com/health \
-            | grep '"status":"ok"' \
-            || (echo "❌ Health check failed" && exit 1)
-          echo "✅ Health check passed"
+        uses: ./.github/actions/deploy-dev/health-check
 
-      # ── 8. Summary ────────────────────────────────────────────────
       - name: Deployment summary
         if: success()
-        run: |
-          echo "## ✅ Dev Deployment Successful" >> $GITHUB_STEP_SUMMARY
-          echo "- **Project**: marketplace-ployos" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment**: development" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch**: develop" >> $GITHUB_STEP_SUMMARY
-          echo "- **Triggered by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Time**: $(date -u)" >> $GITHUB_STEP_SUMMARY
-          echo "- **URL**: https://dev.ployos.com" >> $GITHUB_STEP_SUMMARY
+        uses: ./.github/actions/deploy-dev/summary
+        with:
+          actor: ${{ github.actor }}
