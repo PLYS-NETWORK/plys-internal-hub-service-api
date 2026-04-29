@@ -1,5 +1,3 @@
-import './load-env';
-
 import { AppDataSource } from '@database/data-source';
 import { User } from '@database/entities/auth/user.entity';
 import { Skill } from '@database/entities/profiles/skill.entity';

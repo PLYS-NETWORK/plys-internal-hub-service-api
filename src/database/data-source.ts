@@ -1,7 +1,14 @@
-import 'dotenv/config';
-
+import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { DataSource } from 'typeorm';
+
+import { resolveEnvFilePath } from '../config/env-file.config';
+
+// Load the env file matching NODE_ENV (.env.production / .env.development / .env)
+// from the current working directory. Must run before AppDataSource is constructed
+// because process.env.DB_* is read inline below.
+dotenv.config({ path: path.resolve(process.cwd(), resolveEnvFilePath()) });
+
 // Standalone DataSource for TypeORM CLI (migration:generate, migration:run, etc.)
 // Not used by NestJS DI — AppModule uses TypeOrmModule.forRootAsync instead.
 export const AppDataSource = new DataSource({
