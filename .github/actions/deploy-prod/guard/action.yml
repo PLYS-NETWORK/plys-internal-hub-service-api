@@ -1,0 +1,27 @@
+name: 'Confirm production deployment'
+description: 'Validate that the operator typed "deploy" before allowing the prod workflow to proceed'
+
+inputs:
+  confirm:
+    description: 'Confirmation string supplied via workflow_dispatch'
+    required: true
+  branch:
+    description: 'Branch the operator chose to deploy'
+    required: true
+  actor:
+    description: 'GitHub actor who triggered the workflow'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate confirmation
+      shell: bash
+      run: |
+        if [ "${{ inputs.confirm }}" != "deploy" ]; then
+          echo "❌ Deployment cancelled. You must type 'deploy' to confirm."
+          exit 1
+        fi
+        echo "✅ Confirmed. Proceeding with production deployment."
+        echo "   Branch      : ${{ inputs.branch }}"
+        echo "   Triggered by: ${{ inputs.actor }}"

@@ -9,7 +9,7 @@ export default registerAs('app', () => ({
     port: parseInt(process.env.DB_PORT ?? '5432', 10),
     username: process.env.DB_USERNAME ?? 'postgres',
     password: process.env.DB_PASSWORD ?? 'password',
-    name: process.env.DB_NAME ?? 'marketplace',
+    name: process.env.DB_DATABASE ?? 'marketplace',
   },
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET ?? '',

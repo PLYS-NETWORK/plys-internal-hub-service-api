@@ -1,5 +1,3 @@
-import 'dotenv/config';
-
 import { AppDataSource } from '@database/data-source';
 import { User } from '@database/entities/auth/user.entity';
 import { Skill } from '@database/entities/profiles/skill.entity';
@@ -210,11 +208,15 @@ async function main(): Promise<void> {
   await AppDataSource.initialize();
   console.log('DataSource initialized');
 
-  // In development (no migration files), synchronize the schema so tables exist.
-  // Never sync in production — use migrations:run instead.
-  if (process.env.NODE_ENV !== 'production') {
+  // Sync only on a developer's machine. Deployed envs (development + production) need real
+  // tables before seeding, so run pending migrations here too — runMigrations() is idempotent
+  // against the `migrations` table, so the app's own migrationsRun on startup becomes a no-op.
+  if (process.env.NODE_ENV === 'local') {
     await AppDataSource.synchronize();
     console.log('Schema synchronized');
+  } else {
+    const executed = await AppDataSource.runMigrations();
+    console.log(`Migrations applied: ${executed.length}`);
   }
 
   try {

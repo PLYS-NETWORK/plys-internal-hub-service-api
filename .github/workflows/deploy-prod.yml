@@ -13,137 +13,71 @@ on:
         default: 'main'
 
 jobs:
-  # ── Guard: require confirmation ────────────────────────────────
   guard:
     name: Confirm deployment
     runs-on: ubuntu-latest
     steps:
-      - name: Validate confirmation
-        run: |
-          if [ "${{ github.event.inputs.confirm }}" != "deploy" ]; then
-            echo "❌ Deployment cancelled. You must type 'deploy' to confirm."
-            exit 1
-          fi
-          echo "✅ Confirmed. Proceeding with production deployment."
-          echo "   Branch      : ${{ github.event.inputs.branch }}"
-          echo "   Triggered by: ${{ github.actor }}"
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
 
-  # ── Deploy ─────────────────────────────────────────────────────
+      - name: Validate confirmation
+        uses: ./.github/actions/deploy-prod/guard
+        with:
+          confirm: ${{ github.event.inputs.confirm }}
+          branch: ${{ github.event.inputs.branch }}
+          actor: ${{ github.actor }}
+
   deploy:
     name: Build & Deploy to Production
     runs-on: ubuntu-latest
     needs: guard
-    environment: production # add required reviewers in GitHub env settings
+    environment: production
 
     steps:
-      # ── 1. Checkout ──────────────────────────────────────────────
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
         with:
           ref: ${{ github.event.inputs.branch }}
 
-      # ── 2. Setup Node + pnpm ─────────────────────────────────────
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
+      - name: Setup Node + pnpm
+        uses: ./.github/actions/deploy-prod/setup
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: latest
+      - name: Install & Build
+        uses: ./.github/actions/deploy-prod/install-build
 
-      - name: Get pnpm store path
-        id: pnpm-cache
-        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+      - name: Prepare deploy package
+        uses: ./.github/actions/deploy-prod/package
 
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
-
-      # ── 3. Install & Build ───────────────────────────────────────
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        run: pnpm run build
-
-      # ── 4. Deploy via SSH ────────────────────────────────────────
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Backup current deployment
+        uses: ./.github/actions/deploy-prod/backup
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
-          script: |
-            set -e
 
-            APP_DIR="/apps/prod"
-            DEPLOY_DIR="$APP_DIR/current"
-            REPO_URL="https://github.com/${{ github.repository }}.git"
-            BRANCH="${{ github.event.inputs.branch }}"
+      - name: Upload to VPS
+        uses: ./.github/actions/deploy-prod/upload
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT }}
 
-            echo "==> [marketplace-ployos-prod] Creating backup..."
-            if [ -d "$DEPLOY_DIR/dist" ]; then
-              BACKUP_DIR="$APP_DIR/backup_$(date +%Y%m%d_%H%M%S)"
-              cp -r "$DEPLOY_DIR/dist" "$BACKUP_DIR"
-              echo "    Backup saved to $BACKUP_DIR"
-            fi
+      - name: Restart app on VPS
+        uses: ./.github/actions/deploy-prod/restart
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT }}
 
-            echo "==> Pulling latest code from branch: $BRANCH..."
-            if [ -d "$DEPLOY_DIR/.git" ]; then
-              cd "$DEPLOY_DIR"
-              git fetch origin
-              git reset --hard origin/$BRANCH
-            else
-              git clone --branch "$BRANCH" "$REPO_URL" "$DEPLOY_DIR"
-            fi
-
-            cd "$DEPLOY_DIR"
-
-            echo "==> Installing production dependencies..."
-            pnpm install --frozen-lockfile --prod
-
-            echo "==> Building app..."
-            pnpm run build
-
-            echo "==> Copying environment file..."
-            cp "$APP_DIR/.env.production" "$DEPLOY_DIR/.env.production"
-
-            echo "==> Running database migrations..."
-            NODE_ENV=production pnpm run migration:run
-
-            echo "==> Reloading PM2 (zero-downtime)..."
-            cd "$APP_DIR"
-            pm2 startOrReload ecosystem.config.js
-            pm2 save
-
-            echo "==> Cleaning old backups (keep last 3)..."
-            ls -dt "$APP_DIR"/backup_* 2>/dev/null | tail -n +4 | xargs rm -rf || true
-
-            echo "✓ marketplace-ployos-prod deployed successfully"
-
-      # ── 5. Health Check ──────────────────────────────────────────
       - name: Health check
-        run: |
-          sleep 15
-          curl --fail --silent --max-time 15 https://ployos.com/health \
-            | grep '"status":"ok"' \
-            || (echo "❌ Health check failed" && exit 1)
-          echo "✅ Health check passed"
+        uses: ./.github/actions/deploy-prod/health-check
 
-      # ── 6. Summary ───────────────────────────────────────────────
       - name: Deployment summary
         if: success()
-        run: |
-          echo "## ✅ Production Deployment Successful" >> $GITHUB_STEP_SUMMARY
-          echo "- **Project**: marketplace-ployos" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment**: production" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch**: ${{ github.event.inputs.branch }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Triggered by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Time**: $(date -u)" >> $GITHUB_STEP_SUMMARY
-          echo "- **URL**: https://ployos.com" >> $GITHUB_STEP_SUMMARY
+        uses: ./.github/actions/deploy-prod/summary
+        with:
+          branch: ${{ github.event.inputs.branch }}
+          actor: ${{ github.actor }}

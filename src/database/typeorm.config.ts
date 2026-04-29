@@ -10,8 +10,8 @@ export function getTypeOrmConfig(envService: EnvironmentsService): TypeOrmModule
     username: envService.dbUsername,
     password: envService.dbPassword,
     database: envService.dbName,
-    // Never use synchronize: true in production — use migrations instead.
-    synchronize: !envService.isProduction,
+    // Schema sync is for local iteration only — deployed envs (dev + prod) rely on migrations.
+    synchronize: envService.isLocal,
     logging: !envService.isProduction,
     entities: [path.resolve(__dirname, 'entities', '**', '*.entity.{ts,js}')],
     migrations: [path.resolve(__dirname, 'migrations', '*.{ts,js}')],
@@ -19,7 +19,9 @@ export function getTypeOrmConfig(envService: EnvironmentsService): TypeOrmModule
     // that self-registers via dataSource.subscribers.push(this) in its constructor.
     // Listing glob patterns here breaks TypeORM 0.3.x which expects class references.
     autoLoadEntities: true,
-    // Automatically run pending migrations in production.
-    migrationsRun: envService.isProduction,
+    // Run pending migrations on startup in every deployed env so the `migrations` table
+    // is created and applied migrations are recorded in both development and production.
+    migrationsRun: !envService.isLocal,
+    migrationsTableName: 'migrations',
   };
 }

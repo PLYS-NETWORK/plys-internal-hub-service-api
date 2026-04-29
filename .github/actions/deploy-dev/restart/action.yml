@@ -1,0 +1,54 @@
+name: 'Restart app on VPS (dev)'
+description: 'Install prod deps, run seeds, and reload PM2 on the dev VPS'
+
+inputs:
+  host:
+    description: 'VPS host'
+    required: true
+  username:
+    description: 'VPS username'
+    required: true
+  key:
+    description: 'SSH private key'
+    required: true
+  port:
+    description: 'SSH port'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Restart app on VPS
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ inputs.host }}
+        username: ${{ inputs.username }}
+        key: ${{ inputs.key }}
+        port: ${{ inputs.port }}
+        script: |
+          set -e
+          export NVM_DIR="$HOME/.nvm"
+          source "$NVM_DIR/nvm.sh"
+          export PNPM_HOME="$HOME/.local/share/pnpm"
+          export PATH="$PNPM_HOME:$PATH"
+
+          APP_DIR="/apps/dev"
+          DEPLOY_DIR="$APP_DIR/current"
+
+          cd "$DEPLOY_DIR"
+
+          echo "==> Installing production dependencies..."
+          pnpm install --frozen-lockfile --prod
+
+          echo "==> Copying environment file..."
+          cp "$APP_DIR/.env.development" "$DEPLOY_DIR/.env.development"
+
+          echo "==> Running database seeds..."
+          NODE_ENV=development node dist/database/seeds/seed-runner.js
+
+          echo "==> Restarting PM2 (migrations auto-run on app startup)..."
+          cd "$APP_DIR"
+          pm2 startOrReload ecosystem.config.js
+          pm2 save
+
+          echo "✓ marketplace-ployos-dev deployed successfully"

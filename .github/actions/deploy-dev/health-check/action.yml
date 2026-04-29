@@ -1,0 +1,14 @@
+name: 'Health check (dev)'
+description: 'Hit the dev /health endpoint and verify status: ok'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Health check
+      shell: bash
+      run: |
+        sleep 10
+        curl --fail --silent --max-time 10 https://dev.ployos.com/health \
+          | grep '"status":"ok"' \
+          || (echo "❌ Health check failed" && exit 1)
+        echo "✅ Health check passed"
