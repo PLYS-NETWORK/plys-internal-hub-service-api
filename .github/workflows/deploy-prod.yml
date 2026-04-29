@@ -78,6 +78,8 @@ jobs:
           cp -r dist deploy-package/
           cp package.json deploy-package/
           cp pnpm-lock.yaml deploy-package/
+          mkdir -p deploy-package/dist/database/seeds/data
+          cp src/database/seeds/data/*.json deploy-package/dist/database/seeds/data/
 
       # ── 5. Backup current dist on VPS ─────────────────────────────
       - name: Backup current deployment
@@ -137,10 +139,10 @@ jobs:
             echo "==> Copying environment file..."
             cp "$APP_DIR/.env.production" "$DEPLOY_DIR/.env.production"
 
-            echo "==> Running database migrations..."
-            NODE_ENV=production pnpm run migration:run
+            echo "==> Running database seeds..."
+            NODE_ENV=production node dist/database/seeds/seed-runner.js
 
-            echo "==> Reloading PM2 (zero-downtime)..."
+            echo "==> Reloading PM2 (zero-downtime, migrations auto-run on app startup)..."
             cd "$APP_DIR"
             pm2 startOrReload ecosystem.config.js
             pm2 save

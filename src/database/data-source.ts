@@ -15,6 +15,7 @@ export const AppDataSource = new DataSource({
   logging: true,
   entities: [path.resolve(__dirname, 'entities', '**', '*.entity.{ts,js}')],
   migrations: [path.resolve(__dirname, 'migrations', '*.{ts,js}')],
+  migrationsTableName: 'migrations',
   // AuditSubscriber is a NestJS @Injectable — it cannot be loaded via glob here.
   // It self-registers via dataSource.subscribers.push(this) inside NestJS DI.
 });

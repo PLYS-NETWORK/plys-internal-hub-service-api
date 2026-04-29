@@ -52,6 +52,8 @@ jobs:
           cp -r dist deploy-package/
           cp package.json deploy-package/
           cp pnpm-lock.yaml deploy-package/
+          mkdir -p deploy-package/dist/database/seeds/data
+          cp src/database/seeds/data/*.json deploy-package/dist/database/seeds/data/
 
       # ── 5. Upload to VPS via SCP ──────────────────────────────────
       - name: Upload to VPS
@@ -91,10 +93,10 @@ jobs:
             echo "==> Copying environment file..."
             cp "$APP_DIR/.env.development" "$DEPLOY_DIR/.env.development"
 
-            echo "==> Running database migrations..."
-            NODE_ENV=development pnpm run migration:run
+            echo "==> Running database seeds..."
+            NODE_ENV=development node dist/database/seeds/seed-runner.js
 
-            echo "==> Restarting PM2..."
+            echo "==> Restarting PM2 (migrations auto-run on app startup)..."
             cd "$APP_DIR"
             pm2 startOrReload ecosystem.config.js
             pm2 save

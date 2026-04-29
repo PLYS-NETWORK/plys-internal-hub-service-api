@@ -19,6 +19,10 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.nodeEnv === 'production';
   }
 
+  public get isLocal(): boolean {
+    return this.nodeEnv === 'local';
+  }
+
   public get allowedOrigins(): string[] {
     return this.configService.getOrThrow<string[]>('app.allowedOrigins');
   }
