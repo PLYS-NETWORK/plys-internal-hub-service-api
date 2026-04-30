@@ -142,6 +142,17 @@ export interface IRedisService {
   keys(pattern: string): Promise<string[]>;
 
   /**
+   * Sets `key` to `value` only if `key` does not already exist (SET NX EX).
+   * Atomic — safe to use as a distributed lock primitive.
+   *
+   * @param key        - Redis key to write.
+   * @param value      - String value to store.
+   * @param ttlSeconds - Expiry in seconds.
+   * @returns `true` if the key was set (lock acquired), `false` if it already existed.
+   */
+  setNx(key: string, value: string, ttlSeconds: number): Promise<boolean>;
+
+  /**
    * Sends a PING command to Redis to verify the connection is alive.
    *
    * @returns The string `"PONG"` on a healthy connection.
