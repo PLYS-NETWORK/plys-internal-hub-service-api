@@ -1,0 +1,97 @@
+import { Platform } from '@common/decorators/platform.decorator';
+import { Roles } from '@common/decorators/roles.decorator';
+import { PageDto } from '@common/dto/page.dto';
+import { PlatformGuard } from '@common/guards/platform.guard';
+import { RolesGuard } from '@common/guards/roles.guard';
+import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
+import { ActivePlatform, UserRole } from '@database/enums';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+
+import { CreateDraftTaskDto, ListDraftTasksDto, TaskIdsDto } from '../dto/requests';
+import {
+  AddToBoardValidationResponseDto,
+  DraftTaskResponseDto,
+  PayTasksResponseDto,
+} from '../dto/responses';
+import { BacklogsService } from '../services/backlogs.service';
+
+@ApiTags('Business Projects — Backlogs')
+@ApiBearerAuth()
+@Controller('projects/business/:id/backlogs')
+@UseGuards(RolesGuard, PlatformGuard)
+@Roles(UserRole.USER)
+@Platform(ActivePlatform.BUSINESS)
+export class BacklogsController {
+  constructor(private readonly backlogsService: BacklogsService) {}
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a single draft task' })
+  public async createDraftTask(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateDraftTaskDto,
+  ): Promise<ITranslatedPayload<DraftTaskResponseDto>> {
+    const data = await this.backlogsService.createDraftTask(id, dto);
+    return { messageKey: 'success.created', data };
+  }
+
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List draft tasks (paginated, optional title keyword)' })
+  public async listDraftTasks(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() dto: ListDraftTasksDto,
+  ): Promise<ITranslatedPayload<PageDto<DraftTaskResponseDto>>> {
+    const data = await this.backlogsService.listDraftTasks(id, dto);
+    return { messageKey: 'success.ok', data };
+  }
+
+  @Delete()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Hard-delete one or more draft tasks (atomic)' })
+  public async bulkDelete(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: TaskIdsDto,
+  ): Promise<void> {
+    await this.backlogsService.bulkDelete(id, dto);
+  }
+
+  @Post('add-to-board')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Validate moving drafts to the board (no state change, no charge)',
+  })
+  public async addToBoard(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: TaskIdsDto,
+  ): Promise<ITranslatedPayload<AddToBoardValidationResponseDto>> {
+    const data = await this.backlogsService.addToBoardValidation(id, dto);
+    return { messageKey: 'success.ok', data };
+  }
+
+  @Post('pay-tasks')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Authorise & settle: charge the business and promote drafts to TO_DO',
+  })
+  public async payTasks(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: TaskIdsDto,
+  ): Promise<ITranslatedPayload<PayTasksResponseDto>> {
+    const data = await this.backlogsService.payTasks(id, dto);
+    return { messageKey: 'success.ok', data };
+  }
+}

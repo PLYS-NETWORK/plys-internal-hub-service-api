@@ -18,6 +18,7 @@ import {
   IProjectMemberRepository,
   IProjectRepository,
   IProjectRequiredSkillRepository,
+  IProjectStatusHistoryRepository,
   ISkillRepository,
   ITaskCommentAttachmentRepository,
   ITaskCommentRepository,
@@ -54,6 +55,7 @@ export interface IUnitOfWork {
   readonly projectInterviewQuestions: IProjectInterviewQuestionRepository;
   readonly projectRequiredSkills: IProjectRequiredSkillRepository;
   readonly projectActivity: IProjectActivityRepository;
+  readonly projectStatusHistory: IProjectStatusHistoryRepository;
 
   // Domain 4 — Tasks
   readonly tasks: ITaskRepository;

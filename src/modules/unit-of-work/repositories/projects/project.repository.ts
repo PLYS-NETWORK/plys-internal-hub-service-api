@@ -84,7 +84,7 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
     if (skillIds.length === 0) return [[], 0];
 
     const qb = this.createQueryBuilder('project')
-      .where('project.status = :status', { status: ProjectStatus.PUBLIC })
+      .where('project.status = :status', { status: ProjectStatus.PUBLISHED })
       // createQueryBuilder does not auto-filter soft-deleted rows; without this
       // a soft-deleted-but-still-PUBLIC project would leak into discovery.
       .andWhere('project.deleted_at IS NULL')
@@ -106,7 +106,7 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
   }
 
   public async findPublicById(id: string): Promise<Project | null> {
-    return this.findOne({ where: { id, status: ProjectStatus.PUBLIC } });
+    return this.findOne({ where: { id, status: ProjectStatus.PUBLISHED } });
   }
 
   public async findIdsByBusinessId(businessId: string): Promise<string[]> {
@@ -177,7 +177,7 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
         'created_count',
       )
       .addSelect(
-        `COUNT(*) FILTER (WHERE project.status IN ('public', 'in_progress', 'done'))`,
+        `COUNT(*) FILTER (WHERE project.status IN ('published', 'in_progress', 'done'))`,
         'published_count',
       )
       .where('project.business_id = :businessId', { businessId })

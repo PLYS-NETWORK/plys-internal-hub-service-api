@@ -2,7 +2,7 @@
  * Categories of activity events the feed accepts as a `?types=` filter.
  * The repository pre-bakes one LIKE pattern per category onto the union.
  */
-export type ActivityType = 'task' | 'application' | 'member';
+export type ActivityType = 'task' | 'application' | 'member' | 'project';
 
 /** Concrete event types — the union of every `event_type` the SQL emits. */
 export type ActivityEventType =
@@ -10,7 +10,8 @@ export type ActivityEventType =
   | 'application_received'
   | 'application_approved'
   | 'application_rejected'
-  | 'member_joined';
+  | 'member_joined'
+  | 'project_status_changed';
 
 /**
  * Raw event row returned from the activity-feed UNION. The service layer
