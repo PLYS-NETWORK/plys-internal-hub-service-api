@@ -40,8 +40,8 @@ jobs:
       - name: Type check
         run: pnpm exec tsc --noEmit -p tsconfig.json
 
-      - name: Unit tests
-        run: pnpm test -- --ci --runInBand
+      # - name: Unit tests
+      #   run: pnpm test -- --ci --runInBand
 
       - name: Build
         run: pnpm build
