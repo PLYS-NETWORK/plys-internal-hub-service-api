@@ -222,6 +222,10 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.configService.getOrThrow<number>('app.files.purgeAfterDays');
   }
 
+  public get filesOrphanGraceHours(): number {
+    return this.configService.getOrThrow<number>('app.files.orphanGraceHours');
+  }
+
   public get filesMaxImagePixels(): number | null {
     return this.configService.get<number | null>('app.files.maxImagePixels') ?? null;
   }

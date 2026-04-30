@@ -4,15 +4,16 @@ import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { Task } from '@database/entities';
 import { ProjectMemberStatus, TaskKanbanStatus } from '@database/enums';
+import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { In } from 'typeorm';
 
-import { AssignTaskDto, UpdateTaskPositionsDto } from '../dto/requests';
-import { BoardTaskDetailResponseDto, BoardTaskResponseDto } from '../dto/responses';
-import { IBoardService } from '../interfaces/board.service.interface';
-import { BusinessAccessService } from './business-access.service';
+import { AssignTaskDto, UpdateTaskPositionsDto } from '../../dto/requests';
+import { BoardTaskDetailResponseDto, BoardTaskResponseDto } from '../../dto/responses';
+import { IBoardService } from '../../interfaces/board.service.interface';
+import { BusinessAccessService } from '../business-access.service';
 
 const NON_DRAFT_STATUSES: TaskKanbanStatus[] = [
   TaskKanbanStatus.TO_DO,
@@ -306,7 +307,7 @@ export class BoardService implements IBoardService {
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
   private async loadAssignableTask(
-    tx: { tasks: typeof this.uow.tasks },
+    tx: IUnitOfWork,
     projectId: string,
     taskId: string,
   ): Promise<Task> {

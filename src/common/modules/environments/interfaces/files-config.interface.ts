@@ -19,6 +19,14 @@ export interface IFilesConfig {
   /** Soft-deleted files older than this many days are purged by the daily cron. */
   readonly filesPurgeAfterDays: number;
 
+  /**
+   * Grace window before an orphaned upload (purpose IS NULL, no attachment
+   * references) is soft-deleted by the daily cron. Tunes the trade-off
+   * between "users can finish their attach flow" and "we reclaim storage
+   * promptly".
+   */
+  readonly filesOrphanGraceHours: number;
+
   /** Optional W*H cap for image uploads. `null` disables the check. */
   readonly filesMaxImagePixels: number | null;
 

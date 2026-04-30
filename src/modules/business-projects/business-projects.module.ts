@@ -12,7 +12,10 @@ import { BusinessProjectsController } from './controllers/projects.controller';
 import { SettingsController } from './controllers/settings.controller';
 import { ApplicationsService } from './services/applications.service';
 import { BacklogsService } from './services/backlogs.service';
-import { BoardService } from './services/board.service';
+import { BoardService } from './services/board/board.service';
+import { BoardCommentsService } from './services/board/board-comments.service';
+import { BoardEvidencesService } from './services/board/board-evidences.service';
+import { BoardHistoryService } from './services/board/board-history.service';
 import { BusinessAccessService } from './services/business-access.service';
 import { BusinessProjectOverviewService } from './services/overview.service';
 import { BusinessProjectsService } from './services/projects.service';
@@ -44,6 +47,9 @@ import { SettingsService } from './services/settings.service';
     SettingsService,
     ApplicationsService,
     BoardService,
+    BoardCommentsService,
+    BoardHistoryService,
+    BoardEvidencesService,
   ],
 })
 export class BusinessProjectsModule {}

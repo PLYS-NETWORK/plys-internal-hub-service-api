@@ -49,6 +49,8 @@
     "project_not_in_progress": "Görevler yalnızca devam eden projeler için yönetilebilir.",
     "comment_not_found": "Görev yorumu bulunamadı.",
     "comment_forbidden": "Bu yorum üzerinde işlem yapma yetkiniz yok.",
+    "comment_file_not_owned": "Eklenen dosyalardan biri veya birkaçı size ait değil ya da mevcut değil.",
+    "comment_empty_update": "Güncellemek için comment veya file_ids alanlarından en az birini gönderin.",
     "evidence_not_found": "Görev kanıtı bulunamadı.",
     "evidence_forbidden": "Bu kanıt üzerinde işlem yapma yetkiniz yok.",
     "evidence_not_assignee": "Bu göreve atanan danışman dışında kimse görev kanıtlarını yönetemez.",
