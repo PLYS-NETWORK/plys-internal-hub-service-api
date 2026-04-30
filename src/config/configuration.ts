@@ -98,6 +98,9 @@ export default registerAs('app', () => ({
     userQuotaBytes: parseInt(process.env.FILES_USER_QUOTA_BYTES ?? '524288000', 10),
     userMaxCount: parseInt(process.env.FILES_USER_MAX_COUNT ?? '1000', 10),
     purgeAfterDays: parseInt(process.env.FILES_PURGE_AFTER_DAYS ?? '30', 10),
+    // Grace window for orphaned uploads (purpose IS NULL, never attached).
+    // Default 24h gives users time to finish a multi-step attach flow.
+    orphanGraceHours: parseInt(process.env.FILES_ORPHAN_GRACE_HOURS ?? '24', 10),
     // Optional per-image pixel cap (W*H). Blank disables.
     maxImagePixels: process.env.FILES_MAX_IMAGE_PIXELS
       ? parseInt(process.env.FILES_MAX_IMAGE_PIXELS, 10)
