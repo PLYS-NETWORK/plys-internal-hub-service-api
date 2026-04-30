@@ -19,4 +19,16 @@ export interface IBusinessProfileRepository extends AbstractRepository<BusinessP
    * @returns The locked BusinessProfile, or null if it does not exist.
    */
   findByIdForUpdate(id: string): Promise<BusinessProfile | null>;
+
+  /**
+   * Returns the profile only when BOTH the id and the owning user match. Used
+   * everywhere the business id arrives from a JWT claim — defends against a
+   * tampered claim trying to read a different tenant's profile by always
+   * binding the lookup to the authenticated userId.
+   *
+   * @param userId - UUID of the owning user (from RequestContextService).
+   * @param businessId - BusinessProfile id (from RequestContextService.businessId / JWT).
+   * @returns The matching BusinessProfile, or null when either id is wrong.
+   */
+  findOneByUserAndId(userId: string, businessId: string): Promise<BusinessProfile | null>;
 }

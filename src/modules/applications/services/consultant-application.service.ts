@@ -18,7 +18,7 @@ import { ApplicationResponseDto, ConsultantApplicationListItemResponseDto } from
 
 /** Statuses where the project accepts new applications. */
 const ACCEPTING_STATUSES = new Set<ProjectStatus>([
-  ProjectStatus.PUBLIC,
+  ProjectStatus.PUBLISHED,
   ProjectStatus.IN_PROGRESS,
 ]);
 

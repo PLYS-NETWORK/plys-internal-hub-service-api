@@ -6,5 +6,6 @@ export { Currency } from './currency.enum';
 export { InvoiceStatus } from './invoice-status.enum';
 export { PaymentMethod } from './payment-method.enum';
 export { PaymentProcessor } from './payment-processor.enum';
+export { PAYMENT_TYPES, PaymentType } from './payment-type.enum';
 export { TransactionStatus } from './transaction-status.enum';
 export { WebhookStatus } from './webhook-status.enum';

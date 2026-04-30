@@ -12,7 +12,7 @@ import { ProjectTrendResponseDto } from '../../dto/responses/project-trend-respo
 import { IProjectStatisticsService, IStatisticsScope } from '../interfaces';
 
 const PUBLISHED_LIFECYCLE: readonly ProjectStatus[] = [
-  ProjectStatus.PUBLIC,
+  ProjectStatus.PUBLISHED,
   ProjectStatus.IN_PROGRESS,
   ProjectStatus.DONE,
 ];

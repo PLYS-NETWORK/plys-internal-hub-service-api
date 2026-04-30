@@ -70,6 +70,10 @@ export class RequestContextService {
     return this.storage.getStore()?.activePlatform ?? null;
   }
 
+  public get businessId(): string | null {
+    return this.storage.getStore()?.businessId ?? null;
+  }
+
   public get timezone(): string | null {
     return this.storage.getStore()?.timezone ?? null;
   }
@@ -82,6 +86,7 @@ export class RequestContextService {
     sessionId: string,
     deviceId: string | null,
     activePlatform: ActivePlatform,
+    businessId: string | null = null,
   ): void {
     const store = this.storage.getStore();
     if (store) {
@@ -91,6 +96,7 @@ export class RequestContextService {
       store.sessionId = sessionId;
       store.deviceId = deviceId;
       store.activePlatform = activePlatform;
+      store.businessId = businessId;
     }
   }
 }

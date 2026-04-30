@@ -20,6 +20,7 @@ import {
   ProjectMemberRepository,
   ProjectRepository,
   ProjectRequiredSkillRepository,
+  ProjectStatusHistoryRepository,
   SkillRepository,
   TaskCommentAttachmentRepository,
   TaskCommentRepository,
@@ -50,6 +51,7 @@ const repositories = [
   ProjectRepository,
   ProjectRequiredSkillRepository,
   ProjectActivityRepository,
+  ProjectStatusHistoryRepository,
   // Domain 4 — Tasks
   TaskRepository,
   TaskDisputeRepository,

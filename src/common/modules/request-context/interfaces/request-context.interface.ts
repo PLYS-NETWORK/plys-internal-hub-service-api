@@ -18,6 +18,12 @@ export interface IRequestContext {
   sessionId: string | null;
   /** Active platform (e.g. `business`, `consultant`, `admin_platform`), or `null` if not set. */
   activePlatform: ActivePlatform | null;
+  /**
+   * BusinessProfile id when active platform is BUSINESS. `null` for non-business
+   * platforms or unauthenticated requests. Sourced from the JWT payload after
+   * verification.
+   */
+  businessId: string | null;
   /** Caller-supplied device identifier (e.g. from `x-device-id` header), or `null` if not provided. */
   deviceId: string | null;
   /** Client IP address, derived from `x-forwarded-for` or `req.ip`. */

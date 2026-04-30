@@ -26,6 +26,7 @@ import { getTypeOrmConfig } from './database/typeorm.config';
 import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { BusinessProjectsModule } from './modules/business-projects/business-projects.module';
 import { FilesModule } from './modules/files';
 import { HealthModule } from './modules/health/health.module';
 import { PaymentsModule } from './modules/payments';
@@ -64,6 +65,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     ApplicationsModule,
     AuthModule,
     BillingModule,
+    BusinessProjectsModule,
     FilesModule,
     HealthModule,
     PaymentsModule,

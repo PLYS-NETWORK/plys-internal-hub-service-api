@@ -12,7 +12,7 @@ import { BillingSummaryResponseDto } from '../../dto/responses/billing-summary-r
 import { IBillingStatisticsService, IStatisticsScope } from '../interfaces';
 
 const PUBLISHED_LIFECYCLE: readonly ProjectStatus[] = [
-  ProjectStatus.PUBLIC,
+  ProjectStatus.PUBLISHED,
   ProjectStatus.IN_PROGRESS,
   ProjectStatus.DONE,
 ];

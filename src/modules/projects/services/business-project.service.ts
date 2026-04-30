@@ -52,7 +52,7 @@ const SETUP_STATUSES = new Set<ProjectStatus>([
 
 /** Statuses where the project is locked and cannot be edited. */
 const LOCKED_STATUSES = new Set<ProjectStatus>([
-  ProjectStatus.PUBLIC,
+  ProjectStatus.PUBLISHED,
   ProjectStatus.IN_PROGRESS,
   ProjectStatus.DONE,
   ProjectStatus.CANCELLED,
@@ -326,7 +326,7 @@ export class BusinessProjectService implements IBusinessProjectService {
 
     // Recall: public → configured. Pre-paid businesses get a refund of the
     // original PROJECT_PUBLISHED charge. Credit businesses just transition.
-    if (project.status === ProjectStatus.PUBLIC && dto.status === ProjectStatus.CONFIGURED) {
+    if (project.status === ProjectStatus.PUBLISHED && dto.status === ProjectStatus.CONFIGURED) {
       return this.handleRecall(project);
     }
 
@@ -492,7 +492,7 @@ export class BusinessProjectService implements IBusinessProjectService {
         await txUow.businessTransactions.save(txn);
       }
 
-      project.status = ProjectStatus.PUBLIC;
+      project.status = ProjectStatus.PUBLISHED;
       const saved = await txUow.projects.save(project);
       return { updatedProject: saved, eligibility: lockedEligibility };
     });

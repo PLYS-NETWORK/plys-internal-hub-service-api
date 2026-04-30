@@ -64,7 +64,7 @@ export class ConsultantProjectResponseDto implements IConsultantProjectResponse 
   public readonly introduction!: Record<string, unknown> | null;
 
   @Expose()
-  @ApiProperty({ enum: ProjectStatus, example: ProjectStatus.PUBLIC })
+  @ApiProperty({ enum: ProjectStatus, example: ProjectStatus.PUBLISHED })
   public readonly status!: ProjectStatus;
 
   @Expose()
