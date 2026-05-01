@@ -3,6 +3,7 @@ import { TranslatableException } from '@common/exceptions/translatable.exception
 import { IStorageProvider, STORAGE_PROVIDER } from '@common/modules/file-storage';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { DateUtil } from '@common/utils/date';
 import { BusinessProfile, FileEntity, TaskComment } from '@database/entities';
 import { TaskKanbanStatus } from '@database/enums';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
@@ -137,7 +138,7 @@ export class BoardCommentsService implements IBoardCommentsService {
       if (dto.comment !== undefined) {
         existing.comment = dto.comment;
         existing.isEdited = true;
-        existing.editedAt = new Date();
+        existing.editedAt = DateUtil.nowDate();
       }
       const persisted = (await tx.taskComments.save(existing)) as TaskComment;
 

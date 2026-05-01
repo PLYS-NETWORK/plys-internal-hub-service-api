@@ -4,6 +4,7 @@ import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { DateUtil } from '@common/utils/date';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -194,7 +195,7 @@ export class BillingAdminService implements IBillingAdminService {
 
     // Reload to get the stamped notifiedAt set by sendInvoiceEmail
     const updated = await this.uow.invoices.findOne({ where: { id: invoiceId } });
-    const notifiedAt = updated?.notifiedAt ?? new Date();
+    const notifiedAt = updated?.notifiedAt ?? DateUtil.nowDate();
 
     this.logger.log(`[${this.rid}] sendBillEmail — complete | invoiceId: ${invoiceId}`);
 

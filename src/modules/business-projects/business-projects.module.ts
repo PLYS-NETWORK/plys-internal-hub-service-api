@@ -1,6 +1,5 @@
 import { EmailModule } from '@common/modules/email';
 import { EnvironmentsModule } from '@common/modules/environments';
-import { ProjectsModule } from '@modules/projects/projects.module';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
 import { Module } from '@nestjs/common';
 
@@ -18,19 +17,13 @@ import { BoardEvidencesService } from './services/board/board-evidences.service'
 import { BoardHistoryService } from './services/board/board-history.service';
 import { BusinessAccessService } from './services/business-access.service';
 import { BusinessProjectOverviewService } from './services/overview.service';
-import { BusinessProjectsService } from './services/projects.service';
+import { ProjectPublishService } from './services/projects/project-publish.service';
+import { ProjectRepublishService } from './services/projects/project-republish.service';
+import { BusinessProjectsService } from './services/projects/projects.service';
 import { SettingsService } from './services/settings.service';
 
 @Module({
-  imports: [
-    UnitOfWorkModule,
-    EmailModule,
-    EnvironmentsModule,
-    // Imported for the publish-flow delegation in BusinessProjectsService.
-    // When the legacy ProjectsModule is decommissioned, the publish/validate
-    // logic should be inlined here and this import dropped.
-    ProjectsModule,
-  ],
+  imports: [UnitOfWorkModule, EmailModule, EnvironmentsModule],
   controllers: [
     BusinessProjectsController,
     BusinessProjectOverviewController,
@@ -42,6 +35,8 @@ import { SettingsService } from './services/settings.service';
   providers: [
     BusinessAccessService,
     BusinessProjectsService,
+    ProjectPublishService,
+    ProjectRepublishService,
     BusinessProjectOverviewService,
     BacklogsService,
     SettingsService,

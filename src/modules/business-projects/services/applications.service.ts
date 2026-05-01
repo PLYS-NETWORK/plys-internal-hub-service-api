@@ -6,6 +6,7 @@ import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { DateUtil } from '@common/utils/date';
 import { ApplicationStatus, ProjectMemberStatus } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
@@ -216,7 +217,7 @@ export class ApplicationsService implements IApplicationsService {
       this.assertPending(locked.status, 'approve');
 
       locked.status = ApplicationStatus.ACCEPTED;
-      locked.reviewedAt = new Date();
+      locked.reviewedAt = DateUtil.nowDate();
       locked.reviewedBy = userId;
       const saved = await tx.projectApplications.save(locked);
 
@@ -267,7 +268,7 @@ export class ApplicationsService implements IApplicationsService {
       this.assertPending(locked.status, 'reject');
 
       locked.status = ApplicationStatus.REJECTED;
-      locked.reviewedAt = new Date();
+      locked.reviewedAt = DateUtil.nowDate();
       locked.reviewedBy = userId;
       locked.rejectionReason = dto.rejectionReason ?? null;
       return tx.projectApplications.save(locked);

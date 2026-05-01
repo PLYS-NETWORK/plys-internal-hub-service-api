@@ -18,6 +18,7 @@ import { Invoice } from './invoice.entity';
 @Traceable()
 @Entity('business_transactions')
 @Unique('uq_business_transactions_processor_event_id', ['processorEventId'])
+@Unique('uq_business_transactions_number', ['transactionNumber'])
 @Index('idx_business_txn_business', ['businessId'])
 @Index('idx_business_txn_project', ['projectId'])
 export class BusinessTransaction extends TraceableEntity {
@@ -25,6 +26,14 @@ export class BusinessTransaction extends TraceableEntity {
     primaryKeyConstraintName: 'pk_business_transactions',
   })
   public readonly id!: string;
+
+  /**
+   * Human-facing identifier `[PLS][SHORT_TYPE][YYYYMMDD][N]` (no separators)
+   * — generated atomically per ledger per day by `TransactionNumberService`.
+   * Quoted on receipts, refunds, and invoices for support lookups.
+   */
+  @Column({ name: 'transaction_number', type: 'varchar', length: 32 })
+  public transactionNumber!: string;
 
   @Column({ name: 'business_id', type: 'uuid' })
   public businessId!: string;

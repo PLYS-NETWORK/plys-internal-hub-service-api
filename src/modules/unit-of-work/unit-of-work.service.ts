@@ -64,6 +64,7 @@ import {
   TaskEvidenceRepository,
   TaskHistoryRepository,
   TaskRepository,
+  TransactionNumberService,
   UserRepository,
   UserSessionRepository,
   UserSsoProviderRepository,
@@ -104,6 +105,7 @@ class TransactionalUnitOfWork implements IUnitOfWork {
     public readonly invoiceLineItems: IInvoiceLineItemRepository,
     public readonly consultantTransactions: IConsultantTransactionRepository,
     public readonly businessTransactions: IBusinessTransactionRepository,
+    public readonly transactionNumbers: TransactionNumberService,
     public readonly webhookEvents: IWebhookEventRepository,
     public readonly files: IFileRepository,
   ) {}
@@ -155,6 +157,7 @@ export class UnitOfWorkService implements IUnitOfWork {
     public readonly invoiceLineItems: InvoiceLineItemRepository,
     public readonly consultantTransactions: ConsultantTransactionRepository,
     public readonly businessTransactions: BusinessTransactionRepository,
+    public readonly transactionNumbers: TransactionNumberService,
     public readonly webhookEvents: WebhookEventRepository,
     // Domain 9 — Files
     public readonly files: FileRepository,
@@ -199,6 +202,7 @@ export class UnitOfWorkService implements IUnitOfWork {
         this.invoiceLineItems.withManager(manager),
         this.consultantTransactions.withManager(manager),
         this.businessTransactions.withManager(manager),
+        this.transactionNumbers.withManager(manager),
         this.webhookEvents.withManager(manager),
         this.files.withManager(manager),
       );

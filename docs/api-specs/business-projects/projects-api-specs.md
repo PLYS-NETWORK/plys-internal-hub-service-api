@@ -60,9 +60,34 @@
 - **Scope:** `@Roles(USER)`, `@Platform(BUSINESS)`
 - **Path params:** `id` (UUID v4)
 - **Response 204:** empty body
-- **Errors (delegated to legacy `ProjectsService`):**
+- **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|
   | 422 | `PROJECT_INVALID_STATUS_TRANSITION` | Project not in a publishable state (e.g., already PUBLISHED, CANCELLED). |
   | 422 | `PROJECT_INSUFFICIENT_BALANCE` | Pre-paid balance below `total_amount`. |
   | 422 | `PROJECT_CANNOT_PUBLISH` | Validation rules in [PublishValidationService](../../../src/modules/projects) blocked publishing (no tasks, missing skills, etc.). |
+
+### 5. Re-publish project (revert PUBLISHED → CONFIGURED, refund pre-paid)
+
+- **Endpoint:** `PATCH /projects/business/:id/re-publish`
+- **Method:** `PATCH`
+- **Scope:** `@Roles(USER)`, `@Platform(BUSINESS)`
+- **Path params:** `id` (UUID v4)
+- **Pre-condition:** project status **must be** `PUBLISHED`.
+- **Behaviour:**
+  - Flips status `PUBLISHED → CONFIGURED` so the business can edit settings before publishing again.
+  - **Pre-paid businesses** (`business_profile.allow_payment_credit = false`):
+    1. Locks the business profile row (`SELECT … FOR UPDATE`).
+    2. Loads the latest completed `PROJECT_PUBLISHED` transaction for the project.
+    3. Credits `account_balance` by the original transaction's `amount`.
+    4. Inserts a `BusinessTransaction` row with `type = REFUND`, `status = COMPLETED`, `amount = total_amount = original.amount`, `project_id = :id`, `note = "Re-publish refund: <project title>"`.
+    5. All four steps execute inside a single DB transaction; the lock prevents a concurrent task-payment from racing with the refund.
+  - **Credit-based businesses** (`allow_payment_credit = true`): pure status flip — no wallet write, no refund row.
+  - No member impact, no email.
+- **Response 200:** `data: null`. Success message key `success.project.re_published`.
+- **Errors:**
+  | HTTP | error_code | When |
+  |------|------------|------|
+  | 422 | `PROJECT_INVALID_STATUS_TRANSITION` | Project is not currently `PUBLISHED`. |
+  | 422 | `PROJECT_RECALL_TRANSACTION_NOT_FOUND` | Pre-paid business: no completed `PROJECT_PUBLISHED` transaction on file for the project, so the refund amount cannot be determined. |
+  | 403 | `BUSINESS_PROFILE_NOT_FOUND` | Defensive — the locked profile vanished mid-transaction. |

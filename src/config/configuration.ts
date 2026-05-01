@@ -91,7 +91,7 @@ export default registerAs('app', () => ({
   files: {
     // Pluggable storage backend. `local` and `s3` are wired; `gcs` is reserved.
     storageProvider: (process.env.FILES_STORAGE_PROVIDER ?? 'local') as 'local' | 's3' | 'gcs',
-    maxSizeBytes: parseInt(process.env.FILES_MAX_SIZE_BYTES ?? '10485760', 10),
+    maxSizeBytes: parseInt(process.env.FILES_MAX_SIZE_BYTES ?? '52428800', 10),
     allowedMimeList: process.env.FILES_ALLOWED_MIME?.split(',')
       .map((s) => s.trim())
       .filter((s) => s.length > 0) ?? ['image/png', 'image/jpeg', 'application/pdf'],

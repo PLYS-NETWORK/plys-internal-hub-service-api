@@ -3,7 +3,7 @@ import * as path from 'path';
 
 export interface IBusinessProjectPublishedReceiptTemplateOptions {
   readonly businessName: string;
-  readonly receiptNumber: string;
+  readonly transactionNumber: string;
   readonly paidDate: string;
   readonly projectTitle: string;
   /** How the business paid — e.g. 'Account Balance', 'Credit Card'. Never hardcode at call site. */
@@ -25,7 +25,7 @@ export async function buildBusinessProjectPublishedReceiptEmail(
 ): Promise<string> {
   const {
     businessName,
-    receiptNumber,
+    transactionNumber,
     paidDate,
     projectTitle,
     paymentMethod,
@@ -39,7 +39,7 @@ export async function buildBusinessProjectPublishedReceiptEmail(
 
   return ejs.renderFile(path.join(__dirname, 'project-published-receipt.template.ejs'), {
     businessName,
-    receiptNumber,
+    transactionNumber,
     paidDate,
     projectTitle,
     paymentMethod,

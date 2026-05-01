@@ -58,7 +58,7 @@ export interface IApplicationStatusEmailOptions {
 
 export interface IMonthlyInvoiceEmailOptions {
   readonly businessName: string;
-  readonly invoiceNumber: string;
+  readonly transactionNumber: string;
   readonly billingPeriod: string;
   readonly dueDate: string;
   readonly taskTotal: string;

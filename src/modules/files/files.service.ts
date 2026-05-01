@@ -5,7 +5,7 @@ import { IStorageProvider, IUploadInput, STORAGE_PROVIDER } from '@common/module
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { FileEntity } from '@database/entities';
-import { UserRole } from '@database/enums';
+import { FileStorageProvider, UserRole } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -34,7 +34,9 @@ export class FilesService implements IFilesService {
       `upload — start | userId: ${ownerUserId}, size: ${input.size}, mime: ${input.mimeType}`,
     );
 
-    await this.assertWithinUserQuota(ownerUserId, input.size);
+    if (this.storage.name === FileStorageProvider.LOCAL) {
+      await this.assertWithinUserQuota(ownerUserId, input.size);
+    }
 
     // Server-generated key — never derived from the client filename. Sharded
     // by yyyy/mm to avoid huge flat directories on the local provider.

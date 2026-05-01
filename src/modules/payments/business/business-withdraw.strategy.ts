@@ -91,7 +91,12 @@ export class BusinessWithdrawStrategy implements IWithdrawStrategy {
     // Execute withdraw in transaction
     const amountStr = amount.toFixed(2);
     const savedTransaction = await this.uow.withTransaction(async (txUow) => {
+      const transactionNumber = await txUow.transactionNumbers.next(
+        'PLS',
+        BusinessTransactionType.WITHDRAW,
+      );
       const transaction = txUow.businessTransactions.create({
+        transactionNumber,
         businessId: businessProfile.id,
         type: BusinessTransactionType.WITHDRAW,
         amount: amountStr,
