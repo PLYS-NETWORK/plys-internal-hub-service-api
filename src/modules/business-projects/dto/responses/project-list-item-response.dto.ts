@@ -11,6 +11,10 @@ export class ProjectListItemResponseDto implements IProjectListItemResponse {
   public readonly id!: string;
 
   @Expose()
+  @ApiProperty({ example: 'WEB' })
+  public readonly code!: string;
+
+  @Expose()
   @ApiProperty({ example: 'AI-powered customer support automation' })
   public readonly title!: string;
 

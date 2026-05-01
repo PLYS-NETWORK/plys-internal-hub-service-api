@@ -1,4 +1,4 @@
-import { AssignTaskDto, UpdateTaskPositionsDto } from '../dto/requests';
+import { AssignTaskDto, ChangeTaskStatusesDto, ReorderTasksDto } from '../dto/requests';
 import { BoardTaskDetailResponseDto, BoardTaskResponseDto } from '../dto/responses';
 
 /**
@@ -10,11 +10,37 @@ export interface IBoardService {
   listTasks(projectId: string): Promise<BoardTaskResponseDto[]>;
 
   /**
-   * Bulk position write after a kanban drag. All-or-nothing under a single
-   * transaction. Each id must belong to this project and be non-DRAFT.
-   * @throws TranslatableException 422 TASK_INVALID_STATUS_TRANSITION.
+   * Reorders tasks within a single column. Every task in the payload must
+   * already be in `dto.currentStatus`; this endpoint never moves tasks
+   * between columns. Position updates are written in batches of 50 inside
+   * one transaction with the project row pessimistically locked.
+   *
+   * @param projectId The owning project (must be owned by the calling business).
+   * @param dto       The current column and per-task `display_order` values.
+   * @throws TranslatableException 422 TASK_INVALID_STATUS_TRANSITION when
+   *   `currentStatus` is DRAFT/DONE/CANCELLED, when the payload contains
+   *   duplicate `display_order` values, or when any referenced task is not
+   *   currently in `currentStatus`.
+   * @throws TranslatableException 404 PROJECT_NOT_FOUND when the project is
+   *   not owned by the calling business.
    */
-  updatePositions(projectId: string, dto: UpdateTaskPositionsDto): Promise<void>;
+  reorderTasks(projectId: string, dto: ReorderTasksDto): Promise<void>;
+
+  /**
+   * Moves tasks between columns. Each task lands at the **end** of its
+   * destination column in payload order. DRAFT/DONE/CANCELLED are owned by
+   * other flows (backlog payment, approval, cancellation) and rejected
+   * here in either direction.
+   *
+   * @param projectId The owning project.
+   * @param dto       Per-task target `kanban_status` values.
+   * @throws TranslatableException 422 TASK_INVALID_STATUS_TRANSITION when
+   *   any source or target status is in {DRAFT, DONE, CANCELLED}, or when a
+   *   task is already in its requested target status (no-op move).
+   * @throws TranslatableException 404 PROJECT_NOT_FOUND when the project is
+   *   not owned by the calling business.
+   */
+  changeTaskStatuses(projectId: string, dto: ChangeTaskStatusesDto): Promise<void>;
 
   /** Full task detail (counts only — comment/evidence bodies on existing endpoints). */
   getTaskDetail(projectId: string, taskId: string): Promise<BoardTaskDetailResponseDto>;

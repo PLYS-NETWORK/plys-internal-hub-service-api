@@ -2,6 +2,7 @@ import { TaskDifficulty } from '@database/enums';
 
 export interface IDraftTaskResponse {
   id: string;
+  code: string;
   title: string;
   description: Record<string, unknown> | null;
   price: string;

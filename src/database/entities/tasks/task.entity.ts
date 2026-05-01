@@ -35,15 +35,31 @@ import {
 // `billing_periods` exists.
 @Auditable()
 @Entity('tasks')
-@Index('idx_tasks_project_status', ['projectId', 'kanbanStatus'])
+// Replaces the older idx_tasks_project_status — strict superset, removes the
+// Sort step from the board's `ORDER BY display_order ASC` listing query.
+@Index('idx_tasks_project_status_order', ['projectId', 'kanbanStatus', 'displayOrder'])
 @Index('idx_tasks_billing_period', ['billingPeriodId'])
 @Index('idx_tasks_due_date', ['dueDate'])
+@Index('idx_tasks_code', ['code'])
+@Index('uq_tasks_project_code_seq', ['projectId', 'codeSeq'], { unique: true })
 export class Task extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_tasks' })
   public readonly id!: string;
 
   @Column({ name: 'project_id', type: 'uuid' })
   public projectId!: string;
+
+  // Human-readable identifier of the form `<projects.code>-<code_seq>`
+  // (e.g. `WEB-1`). Stored denormalized so it survives a project rename and
+  // so it can be indexed for direct lookups.
+  @Column({ type: 'varchar', length: 20 })
+  public code!: string;
+
+  // Per-project monotonically-increasing counter — never reused even after a
+  // task is soft-deleted. Source of truth for `code` formatting; allocated
+  // via TaskCodeService inside a transaction with pg_advisory_xact_lock.
+  @Column({ name: 'code_seq', type: 'int' })
+  public codeSeq!: number;
 
   @ManyToOne(() => Project, { onDelete: 'CASCADE' })
   @JoinColumn({

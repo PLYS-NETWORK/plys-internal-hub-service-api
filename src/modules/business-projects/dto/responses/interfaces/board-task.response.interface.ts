@@ -8,6 +8,7 @@ export interface IBoardTaskAssignee {
 
 export interface IBoardTaskResponse {
   id: string;
+  code: string;
   title: string;
   price: string;
   difficulty_level: TaskDifficulty;

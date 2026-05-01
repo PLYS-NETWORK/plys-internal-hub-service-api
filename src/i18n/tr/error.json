@@ -39,7 +39,8 @@
     "insufficient_balance": "Bu projeyi yayınlamak için yeterli hesap bakiyesi yok.",
     "recall_transaction_not_found": "Geri çağırma iadesi için orijinal yayın işlemi bulunamadı.",
     "cannot_be_deleted": "Yalnızca taslak, kurulum aşamasında veya yapılandırılmış projeler silinebilir.",
-    "invalid_status_transition": "Geçersiz proje durumu geçişi."
+    "invalid_status_transition": "Geçersiz proje durumu geçişi.",
+    "code_already_exists": "Bu kodla bir proje işletmenizde zaten mevcut."
   },
   "task": {
     "not_found": "Görev bulunamadı.",

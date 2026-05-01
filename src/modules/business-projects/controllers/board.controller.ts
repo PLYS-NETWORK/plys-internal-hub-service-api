@@ -24,9 +24,10 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import {
   AssignTaskDto,
+  ChangeTaskStatusesDto,
   CreateBoardCommentDto,
+  ReorderTasksDto,
   UpdateBoardCommentDto,
-  UpdateTaskPositionsDto,
 } from '../dto/requests';
 import {
   BoardCommentResponseDto,
@@ -64,14 +65,30 @@ export class BoardController {
     return { messageKey: 'success.ok', data };
   }
 
-  @Patch('positions')
+  @Patch('orders')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Bulk-update kanban_status + display_order after a drag (atomic)' })
-  public async updatePositions(
+  @ApiOperation({
+    summary:
+      'Reorder tasks within a single column. Every task in the payload must already be in `current_status`.',
+  })
+  public async reorderTasks(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateTaskPositionsDto,
+    @Body() dto: ReorderTasksDto,
   ): Promise<void> {
-    await this.boardService.updatePositions(id, dto);
+    await this.boardService.reorderTasks(id, dto);
+  }
+
+  @Patch('statuses')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary:
+      'Move tasks between columns. Each moved task is appended to the END of its destination column in payload order.',
+  })
+  public async changeTaskStatuses(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ChangeTaskStatusesDto,
+  ): Promise<void> {
+    await this.boardService.changeTaskStatuses(id, dto);
   }
 
   @Get(':taskId')
