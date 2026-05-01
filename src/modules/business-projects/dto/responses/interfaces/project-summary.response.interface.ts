@@ -2,6 +2,7 @@ import { ProjectStatus } from '@database/enums';
 
 export interface IProjectSummaryResponse {
   id: string;
+  code: string;
   title: string;
   introduction: Record<string, unknown> | null;
   status: ProjectStatus;

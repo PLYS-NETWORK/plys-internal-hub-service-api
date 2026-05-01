@@ -22,39 +22,67 @@
 - **Endpoint:** `GET /projects/business/:id/board`
 - **Method:** `GET`
 - **Path params:** `id` (UUID v4)
-- **Response 200:** [`IBoardTaskResponse[]`](../../../src/modules/business-projects/dto/responses/interfaces/board-task.response.interface.ts) — array of `{ id, title, price, difficulty_level, kanban_status, display_order, assignee: { consultant_id, full_name, avatar_url } | null, comments_count, evidences_count }`. Excludes DRAFT tasks.
+- **Response 200:** [`IBoardTaskResponse[]`](../../../src/modules/business-projects/dto/responses/interfaces/board-task.response.interface.ts) — array of `{ id, code, title, price, difficulty_level, kanban_status, display_order, assignee: { consultant_id, full_name, avatar_url } | null, comments_count, evidences_count }`. Excludes DRAFT tasks. Ordered by `display_order ASC` within each `kanban_status`. `code` is the human form `<project_code>-<n>` (e.g. `WEB-1`).
 - **Errors:** cross-cutting only.
 
-### 2. Bulk-update kanban status & order (after drag)
+### 2. Reorder tasks within a single column
 
-- **Endpoint:** `PATCH /projects/business/:id/board/positions`
+- **Endpoint:** `PATCH /projects/business/:id/board/orders`
 - **Method:** `PATCH`
 - **Path params:** `id` (UUID v4)
-- **Request body:** [`UpdateTaskPositionsDto`](../../../src/modules/business-projects/dto/requests/update-task-positions.dto.ts)
+- **Request body:** [`ReorderTasksDto`](../../../src/modules/business-projects/dto/requests/reorder-tasks.dto.ts)
   | Field | Type | Required | Notes |
   |-------|------|----------|-------|
-  | `tasks` | `TaskPositionItemDto[]` | yes | size 1–100 |
-  | `tasks[].task_id` | `string` (UUID v4) | yes | |
-  | `tasks[].kanban_status` | `TaskKanbanStatus` | yes | enum (target column) |
-  | `tasks[].display_order` | `number` | yes | integer ≥ 0 |
+  | `current_status` | `TaskKanbanStatus` | yes | The column the tasks currently live in. Cannot be `DRAFT`, `DONE`, or `CANCELLED`. |
+  | `tasks` | `TaskOrderItemDto[]` | yes | size 1–200 |
+  | `tasks[].id` | `string` (UUID v4) | yes | task primary key |
+  | `tasks[].display_order` | `number` | yes | integer ≥ 1; must be unique within the payload |
+- **Behaviour:**
+  - Updates `display_order` only — never moves tasks between columns.
+  - Service runs inside `withTransaction`, takes a `pessimistic_write` lock on the project row (mirrors [BacklogsService.payTasks](../../../src/modules/business-projects/services/backlogs.service.ts) locking the business profile) so concurrent reorders on the same project serialise.
+  - Affected task rows are then `pessimistic_write`-locked and validated to all currently sit in `current_status`.
+  - Updates are issued via batched bulk SQL (`UPDATE … FROM (VALUES …)` in chunks of `BATCH_SIZE = 50`); `version` is bumped manually so the optimistic-lock invariant survives the bulk path. A 200-task payload becomes 4 UPDATE statements + 1 locked SELECT.
+  - The DB partial unique index `uq_tasks_project_status_order` (on `(project_id, kanban_status, display_order) WHERE deleted_at IS NULL`, added by [migration 20260501000002](../../../src/database/migrations/20260501000002-AddProjectAndTaskCodes.ts)) enforces the per-column uniqueness invariant.
 - **Response 204:** empty body. Atomic — single transaction.
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|
-  | 422 | `TASK_INVALID_STATUS_TRANSITION` | Not all task IDs belong to this project, any source task is DRAFT, or any target `kanban_status` is DRAFT. Thrown by [BoardService.updatePositions](../../../src/modules/business-projects/services/board/board.service.ts). |
+  | 422 | `TASK_INVALID_STATUS_TRANSITION` | `current_status` is `DRAFT`/`DONE`/`CANCELLED`; payload has duplicate `display_order` values; a referenced `id` does not belong to this project (or is soft-deleted); any task is not currently in `current_status`. Thrown by [BoardService.reorderTasks](../../../src/modules/business-projects/services/board/board.service.ts). |
 
-### 3. Task detail
+### 3. Move tasks between columns
+
+- **Endpoint:** `PATCH /projects/business/:id/board/statuses`
+- **Method:** `PATCH`
+- **Path params:** `id` (UUID v4)
+- **Request body:** [`ChangeTaskStatusesDto`](../../../src/modules/business-projects/dto/requests/change-task-statuses.dto.ts)
+  | Field | Type | Required | Notes |
+  |-------|------|----------|-------|
+  | `tasks` | `TaskStatusItemDto[]` | yes | size 1–200 |
+  | `tasks[].id` | `string` (UUID v4) | yes | task primary key |
+  | `tasks[].kanban_status` | `TaskKanbanStatus` | yes | Target column. Cannot be `DRAFT`, `DONE`, or `CANCELLED` — those transitions are owned by other flows (backlog payment, approval, cancellation). |
+- **Behaviour:**
+  - Each moved task is **appended to the END** of its destination column. When multiple tasks target the same destination in one request, payload order determines tail order.
+  - Service runs inside `withTransaction` with a project-row `pessimistic_write` lock; affected task rows are `pessimistic_write`-locked too.
+  - A no-op move (`task.kanban_status === payload.kanban_status`) is rejected so the contract stays unambiguous around end-of-column placement.
+  - Updates use batched bulk SQL (`BATCH_SIZE = 50`). Each batch's CTE re-reads `MAX(display_order)` per destination, so batch _N+1_ observes batch _N_'s writes within the same transaction (Postgres MVCC) — no order collisions across batches.
+- **Response 204:** empty body. Atomic — single transaction.
+- **Errors:**
+  | HTTP | error_code | When |
+  |------|------------|------|
+  | 422 | `TASK_INVALID_STATUS_TRANSITION` | Any target `kanban_status` is `DRAFT`/`DONE`/`CANCELLED`; any current task status is `DRAFT`/`DONE`/`CANCELLED`; a referenced `id` does not belong to this project; a task is already in its requested target status (no-op move). Thrown by [BoardService.changeTaskStatuses](../../../src/modules/business-projects/services/board/board.service.ts). |
+
+### 4. Task detail
 
 - **Endpoint:** `GET /projects/business/:id/board/:taskId`
 - **Method:** `GET`
 - **Path params:** `id` (UUID v4), `taskId` (UUID v4)
-- **Response 200:** [`IBoardTaskDetailResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-task.response.interface.ts) — extends `IBoardTaskResponse` with `{ description, platform_fee_amount, consultant_payout, approved_by, approved_at, due_date, version, created_at, updated_at }`.
+- **Response 200:** [`IBoardTaskDetailResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-task.response.interface.ts) — extends `IBoardTaskResponse` (so includes `code`) with `{ description, platform_fee_amount, consultant_payout, approved_by, approved_at, due_date, version, created_at, updated_at }`.
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|
   | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT status (drafts are board-invisible). |
 
-### 4. Assign task to a project member
+### 5. Assign task to a project member
 
 - **Endpoint:** `POST /projects/business/:id/board/:taskId/assign`
 - **Method:** `POST`
@@ -71,7 +99,7 @@
   | 422 | `TASK_INVALID_STATUS_TRANSITION` | Task is DRAFT, CANCELLED, or DONE (not assignable). |
   | 422 | `TASK_CONSULTANT_NOT_PROJECT_MEMBER` | Consultant is not an active member of the project. |
 
-### 5. Unassign task
+### 6. Unassign task
 
 - **Endpoint:** `POST /projects/business/:id/board/:taskId/unassign`
 - **Method:** `POST`
@@ -91,7 +119,7 @@
 > **Storage cleanup model:** detached / deleted attachments soft-delete the underlying `files` row. The actual storage object is reclaimed by the daily 03:00 UTC purge cron after `FILES_PURGE_AFTER_DAYS` — the `file_url` may still resolve briefly after the API returns 204.
 > Common path: `:taskId` must belong to the project and must NOT be in DRAFT (drafts have no board surface).
 
-### 6. Create a task comment
+### 7. Create a task comment
 
 - **Endpoint:** `POST /projects/business/:id/board/:taskId/comments`
 - **Method:** `POST`
@@ -108,7 +136,7 @@
   | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT. |
   | 400 | `TASK_COMMENT_FILE_NOT_OWNED` | Any supplied `file_id` is missing, soft-deleted, or owned by a different user. |
 
-### 7. Update own task comment
+### 8. Update own task comment
 
 - **Endpoint:** `PATCH /projects/business/:id/board/:taskId/comments/:commentId`
 - **Method:** `PATCH`
@@ -128,7 +156,7 @@
   | 400 | `TASK_COMMENT_EMPTY_UPDATE` | Neither `comment` nor `file_ids` was supplied. |
   | 400 | `TASK_COMMENT_FILE_NOT_OWNED` | Any supplied `file_id` is missing, soft-deleted, or owned by another user. |
 
-### 8. Delete own task comment
+### 9. Delete own task comment
 
 - **Endpoint:** `DELETE /projects/business/:id/board/:taskId/comments/:commentId`
 - **Method:** `DELETE`
@@ -148,7 +176,7 @@
 > **Service:** [BoardHistoryService](../../../src/modules/business-projects/services/board/board-history.service.ts)
 > Rows are append-only, populated by DB trigger `trg_log_task_change`. Filters to `change_type IN (STATUS_CHANGE, ASSIGNMENT, UNASSIGNMENT)`.
 
-### 9. List task history
+### 10. List task history
 
 - **Endpoint:** `GET /projects/business/:id/board/:taskId/history`
 - **Method:** `GET`
@@ -171,7 +199,7 @@
 > **Service:** [BoardEvidencesService](../../../src/modules/business-projects/services/board/board-evidences.service.ts)
 > Read-only on the BUSINESS surface. Mutations live on the consultant routes via the existing `TaskEvidencesService`.
 
-### 10. List task evidences
+### 11. List task evidences
 
 - **Endpoint:** `GET /projects/business/:id/board/:taskId/evidences`
 - **Method:** `GET`

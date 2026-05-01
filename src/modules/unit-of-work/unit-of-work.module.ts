@@ -22,6 +22,7 @@ import {
   ProjectRequiredSkillRepository,
   ProjectStatusHistoryRepository,
   SkillRepository,
+  TaskCodeService,
   TaskCommentAttachmentRepository,
   TaskCommentRepository,
   TaskDisputeRepository,
@@ -81,7 +82,7 @@ const repositories = [
 ];
 
 @Module({
-  providers: [UnitOfWorkService, TransactionNumberService, ...repositories],
-  exports: [UnitOfWorkService, TransactionNumberService],
+  providers: [UnitOfWorkService, TransactionNumberService, TaskCodeService, ...repositories],
+  exports: [UnitOfWorkService, TransactionNumberService, TaskCodeService],
 })
 export class UnitOfWorkModule {}

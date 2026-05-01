@@ -67,33 +67,50 @@ export class BacklogsService implements IBacklogsService {
     this.logger.log(
       `[${this.rid}] createDraftTask — start | projectId: ${projectId}, title: ${dto.title}`,
     );
-    await this.access.resolveOwnedProject(projectId);
+    const { project } = await this.access.resolveOwnedProject(projectId);
 
-    const maxOrder = await this.uow.tasks
-      .createQueryBuilder('t')
-      .select('COALESCE(MAX(t.display_order), 0)', 'max_order')
-      .where('t.project_id = :projectId', { projectId })
-      .andWhere('t.kanban_status = :draft', { draft: TaskKanbanStatus.DRAFT })
-      .andWhere('t.deleted_at IS NULL')
-      .getRawOne<{ max_order: number }>();
+    // Run inside a transaction so the advisory lock from `taskCodes.next` and
+    // the subsequent INSERT participate in one atomic unit — concurrent
+    // creates on the same project serialise on the lock.
+    const savedId = await this.uow.withTransaction(async (tx) => {
+      const maxOrder = await tx.tasks
+        .createQueryBuilder('t')
+        .select('COALESCE(MAX(t.display_order), 0)', 'max_order')
+        .where('t.project_id = :projectId', { projectId })
+        .andWhere('t.kanban_status = :draft', { draft: TaskKanbanStatus.DRAFT })
+        .andWhere('t.deleted_at IS NULL')
+        .getRawOne<{ max_order: number }>();
 
-    const task = this.uow.tasks.create({
-      projectId,
-      title: dto.title,
-      description: dto.description ?? null,
-      price: Number(dto.price),
-      difficultyLevel: dto.difficultyLevel,
-      kanbanStatus: TaskKanbanStatus.DRAFT,
-      creationMode: TaskCreationMode.MANUAL,
-      displayOrder: Number(maxOrder?.max_order ?? 0) + 1,
+      const { codeSeq, code } = await tx.taskCodes.next(projectId, project.code);
+
+      const task = tx.tasks.create({
+        projectId,
+        code,
+        codeSeq,
+        title: dto.title,
+        description: dto.description ?? null,
+        price: Number(dto.price),
+        difficultyLevel: dto.difficultyLevel,
+        kanbanStatus: TaskKanbanStatus.DRAFT,
+        creationMode: TaskCreationMode.MANUAL,
+        displayOrder: Number(maxOrder?.max_order ?? 0) + 1,
+      });
+      const saved = await tx.tasks.save(task);
+      return saved.id;
     });
-    const saved = await this.uow.tasks.save(task);
-    // Re-read so the STORED generated columns (`platform_fee_amount`,
-    // `consultant_payout`) are populated on the response.
-    const reloaded = await this.uow.tasks.findOne({ where: { id: saved.id } });
 
-    this.logger.log(`[${this.rid}] createDraftTask — complete | taskId: ${saved.id}`);
-    return this.toDraftTaskResponse(reloaded ?? saved);
+    // Re-read outside the transaction so the STORED generated columns
+    // (`platform_fee_amount`, `consultant_payout`) are populated.
+    const reloaded = await this.uow.tasks.findOne({ where: { id: savedId } });
+    if (!reloaded) {
+      // Should be unreachable — we just inserted in a committed transaction.
+      throw new Error(`createDraftTask: failed to reload task ${savedId}`);
+    }
+
+    this.logger.log(
+      `[${this.rid}] createDraftTask — complete | taskId: ${reloaded.id}, code: ${reloaded.code}`,
+    );
+    return this.toDraftTaskResponse(reloaded);
   }
 
   /** @inheritdoc */
@@ -358,6 +375,7 @@ export class BacklogsService implements IBacklogsService {
       DraftTaskResponseDto,
       {
         id: task.id,
+        code: task.code,
         title: task.title,
         description: task.description,
         price: Number(task.price).toFixed(2),

@@ -20,6 +20,7 @@ export class BoardTaskAssigneeDto implements IBoardTaskAssignee {
 @Exclude()
 export class BoardTaskResponseDto implements IBoardTaskResponse {
   @Expose() @ApiProperty() public readonly id!: string;
+  @Expose() @ApiProperty({ example: 'WEB-1' }) public readonly code!: string;
   @Expose() @ApiProperty() public readonly title!: string;
   @Expose() @ApiProperty({ example: '500.00' }) public readonly price!: string;
   @Expose()

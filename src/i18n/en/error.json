@@ -43,7 +43,8 @@
     "insufficient_balance": "Insufficient account balance to publish this project.",
     "recall_transaction_not_found": "Original publication transaction not found for recall refund.",
     "cannot_be_deleted": "Only draft, setting-up, or configured projects can be deleted.",
-    "invalid_status_transition": "Invalid project status transition."
+    "invalid_status_transition": "Invalid project status transition.",
+    "code_already_exists": "A project with this code already exists for your business."
   },
   "task": {
     "not_found": "Task not found.",

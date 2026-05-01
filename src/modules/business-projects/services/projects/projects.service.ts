@@ -1,5 +1,7 @@
+import { ERROR_CODES } from '@common/constants/error-codes';
 import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
+import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import {
@@ -9,7 +11,7 @@ import {
   TaskKanbanStatus,
 } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { ILike } from 'typeorm';
 
@@ -38,11 +40,26 @@ export class BusinessProjectsService implements IBusinessProjectsService {
   public async createProject(dto: CreateProjectDto): Promise<ProjectSummaryResponseDto> {
     const { id: businessId } = await this.access.resolveBusinessProfile();
     this.logger.log(
-      `[${this.rid}] createProject — start | businessId: ${businessId}, title: ${dto.title}`,
+      `[${this.rid}] createProject — start | businessId: ${businessId}, code: ${dto.code}, title: ${dto.title}`,
     );
+
+    const existing = await this.uow.projects.findOne({
+      where: { businessId, code: dto.code },
+    });
+    if (existing) {
+      this.logger.warn(
+        `[${this.rid}] createProject — code already exists | businessId: ${businessId}, code: ${dto.code}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.project.code_already_exists',
+        errorCode: ERROR_CODES.PROJECT_CODE_ALREADY_EXISTS,
+        status: HttpStatus.CONFLICT,
+      });
+    }
 
     const project = this.uow.projects.create({
       businessId,
+      code: dto.code,
       title: dto.title,
       introduction: dto.introduction ?? null,
       status: ProjectStatus.DRAFT,
@@ -83,6 +100,7 @@ export class BusinessProjectsService implements IBusinessProjectsService {
         ProjectListItemResponseDto,
         {
           id: p.id,
+          code: p.code,
           title: p.title,
           status: p.status,
           created_at: p.createdAt,
@@ -149,6 +167,7 @@ export class BusinessProjectsService implements IBusinessProjectsService {
 
   private toSummaryResponseDto(project: {
     id: string;
+    code: string;
     title: string;
     introduction: Record<string, unknown> | null;
     status: ProjectStatus;
@@ -161,6 +180,7 @@ export class BusinessProjectsService implements IBusinessProjectsService {
       ProjectSummaryResponseDto,
       {
         id: project.id,
+        code: project.code,
         title: project.title,
         introduction: project.introduction,
         status: project.status,
