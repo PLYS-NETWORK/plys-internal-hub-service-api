@@ -45,7 +45,14 @@ export class BusinessProjectsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create a new project (DRAFT)' })
+  @ApiOperation({
+    summary: 'Create a new project (DRAFT)',
+    description:
+      'Creates a project owned by the authenticated business profile. ' +
+      'The required `code` is a human-readable identifier (uppercase A-Z and 0-9, 2-8 characters) ' +
+      'that must be unique within the business profile and is used as the prefix for task codes ' +
+      '(e.g. `WEB-1`). Returns 409 `PROJECT_CODE_ALREADY_EXISTS` if the code is already taken.',
+  })
   public async createProject(
     @Body() dto: CreateProjectDto,
   ): Promise<ITranslatedPayload<ProjectSummaryResponseDto>> {

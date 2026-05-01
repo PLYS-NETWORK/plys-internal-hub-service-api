@@ -19,10 +19,10 @@ export const STATUS_MIN_TASKS = 1;
 export const STATUS_MAX_TASKS = 200;
 
 export class TaskStatusItemDto implements ITaskStatusItem {
-  @Expose({ name: 'task_id' })
-  @ApiProperty({ name: 'task_id' })
+  @Expose({ name: 'id' })
+  @ApiProperty({ name: 'id' })
   @IsUUID('4')
-  public readonly taskId!: string;
+  public readonly id!: string;
 
   @Expose({ name: 'kanban_status' })
   @ApiProperty({

@@ -1,7 +1,7 @@
 import { TaskKanbanStatus } from '@database/enums';
 
 export interface ITaskStatusItem {
-  taskId: string;
+  id: string;
   kanbanStatus: TaskKanbanStatus;
 }
 

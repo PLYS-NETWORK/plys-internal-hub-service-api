@@ -57,7 +57,13 @@ export class BoardController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'List non-draft tasks (kanban board) with assignee + counts' })
+  @ApiOperation({
+    summary: 'List non-draft tasks (kanban board) with assignee + counts',
+    description:
+      'Returns every task in the project except DRAFT, ordered by `display_order` ASC ' +
+      'within each `kanban_status`. Each task carries its human code (`<project_code>-<n>`) ' +
+      'plus the assigned consultant (when present) and live `comments_count` / `evidences_count`.',
+  })
   public async listTasks(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<ITranslatedPayload<BoardTaskResponseDto[]>> {
@@ -68,8 +74,14 @@ export class BoardController {
   @Patch('orders')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary:
-      'Reorder tasks within a single column. Every task in the payload must already be in `current_status`.',
+    summary: 'Reorder tasks within a single kanban column',
+    description:
+      'Updates `display_order` for tasks that already live in `current_status`. ' +
+      'Up to 200 tasks per request; the service applies the changes in batches of 50 inside ' +
+      'a single transaction with a project-level pessimistic lock so concurrent reorders ' +
+      'serialise. Returns 422 `TASK_INVALID_STATUS_TRANSITION` when `current_status` is ' +
+      'DRAFT/DONE/CANCELLED, when the payload contains duplicate `display_order` values, ' +
+      'when a referenced task is missing, or when any task is not currently in `current_status`.',
   })
   public async reorderTasks(
     @Param('id', ParseUUIDPipe) id: string,
@@ -81,8 +93,16 @@ export class BoardController {
   @Patch('statuses')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary:
-      'Move tasks between columns. Each moved task is appended to the END of its destination column in payload order.',
+    summary: 'Move tasks between kanban columns',
+    description:
+      'Moves tasks to a new `kanban_status`. Each moved task is appended to the END of its ' +
+      'destination column in the order it appears in the request body. Up to 200 tasks per ' +
+      'request, batched 50 at a time inside one transaction with a project-level pessimistic ' +
+      'lock. DRAFT/DONE/CANCELLED are owned by other flows (backlog payment, approval, ' +
+      'cancellation) and rejected here in either direction. ' +
+      'Returns 422 `TASK_INVALID_STATUS_TRANSITION` when any source or target status is in ' +
+      '{DRAFT, DONE, CANCELLED}, when a referenced task is missing, or when a task is already ' +
+      'in its requested target status (no-op moves).',
   })
   public async changeTaskStatuses(
     @Param('id', ParseUUIDPipe) id: string,

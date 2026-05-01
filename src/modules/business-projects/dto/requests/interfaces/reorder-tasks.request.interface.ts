@@ -1,7 +1,7 @@
 import { TaskKanbanStatus } from '@database/enums';
 
 export interface ITaskOrderItem {
-  taskId: string;
+  id: string;
   displayOrder: number;
 }
 

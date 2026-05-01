@@ -25,10 +25,15 @@
 - **Request body:** [`ICreateProjectRequest`](../../../src/modules/business-projects/dto/requests/interfaces/create-project.request.interface.ts)
   | Field | Type | Required | Notes |
   |-------|------|----------|-------|
-  | `title` | `string` | yes | |
-  | `introduction` | `Record<string, unknown> \| null` | no | rich-text JSON |
-- **Response 201:** [`IProjectSummaryResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-summary.response.interface.ts) — `{ id, title, introduction, status, required_consultants, published_at, created_at, updated_at }`
-- **Errors:** cross-cutting only.
+  | `code` | `string` | yes | Human-readable identifier, unique per business profile. Pattern `^[A-Z0-9]{2,8}$` (uppercase A-Z and 0-9, 2–8 chars). Used as the prefix for task codes (e.g. `WEB-1`). |
+  | `title` | `string` | yes | length 3–300 |
+  | `introduction` | `Record<string, unknown> \| null` | no | rich-text JSON (TipTap/ProseMirror) |
+- **Behaviour:** Service checks `(business_id, code)` uniqueness with a pre-flight `findOne` against [BusinessProjectsService.createProject](../../../src/modules/business-projects/services/projects/projects.service.ts). The DB-level unique constraint `uq_projects_business_code` (added by [migration 20260501000002](../../../src/database/migrations/20260501000002-AddProjectAndTaskCodes.ts)) acts as a safety net for the race window between check and insert; in that case clients see the generic `DATABASE_UNIQUE_VIOLATION` (409).
+- **Response 201:** [`IProjectSummaryResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-summary.response.interface.ts) — `{ id, code, title, introduction, status, required_consultants, published_at, created_at, updated_at }`
+- **Errors:**
+  | HTTP | error_code | When |
+  |------|------------|------|
+  | 409 | `PROJECT_CODE_ALREADY_EXISTS` | A project with the same `code` already exists for the calling business profile. |
 
 ### 2. List own projects
 
@@ -41,7 +46,7 @@
   | `page` | `number` | no | default 1 |
   | `take` | `number` | no | default 20, max 100 |
   | `keywords` | `string` | no | length 2–200, trimmed |
-- **Response 200:** `PageDto<`[`IProjectListItemResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-list-item.response.interface.ts)`>` — items: `{ id, title, status, created_at, published_at, required_consultants, total_tasks, total_active_members, total_pending_applications }`. Meta: `{ page, take, item_count, page_count, has_previous_page, has_next_page }`.
+- **Response 200:** `PageDto<`[`IProjectListItemResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-list-item.response.interface.ts)`>` — items: `{ id, code, title, status, created_at, published_at, required_consultants, total_tasks, total_active_members, total_pending_applications }`. Meta: `{ page, take, item_count, page_count, has_previous_page, has_next_page }`.
 - **Errors:** cross-cutting only.
 
 ### 3. Pre-flight publish validation

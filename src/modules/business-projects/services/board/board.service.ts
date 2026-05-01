@@ -168,7 +168,7 @@ export class BoardService implements IBoardService {
     await this.uow.withTransaction(async (tx) => {
       await this.lockProjectRow(tx, projectId);
 
-      const ids = dto.tasks.map((t) => t.taskId);
+      const ids = dto.tasks.map((t) => t.id);
       const existing = await tx.tasks
         .createQueryBuilder('t')
         .where('t.id IN (:...ids)', { ids })
@@ -187,7 +187,7 @@ export class BoardService implements IBoardService {
         if (task.kanbanStatus !== dto.currentStatus) {
           this.invalidStatusTransition(
             'reorderTasks',
-            `taskId=${task.id} status=${task.kanbanStatus} expected=${dto.currentStatus}`,
+            `id=${task.id} status=${task.kanbanStatus} expected=${dto.currentStatus}`,
           );
         }
       }
@@ -216,17 +216,14 @@ export class BoardService implements IBoardService {
 
     for (const t of dto.tasks) {
       if (TERMINAL_OR_DRAFT.has(t.kanbanStatus)) {
-        this.invalidStatusTransition(
-          'changeTaskStatuses',
-          `taskId=${t.taskId} target=${t.kanbanStatus}`,
-        );
+        this.invalidStatusTransition('changeTaskStatuses', `id=${t.id} target=${t.kanbanStatus}`);
       }
     }
 
     await this.uow.withTransaction(async (tx) => {
       await this.lockProjectRow(tx, projectId);
 
-      const ids = dto.tasks.map((t) => t.taskId);
+      const ids = dto.tasks.map((t) => t.id);
       const existing = await tx.tasks
         .createQueryBuilder('t')
         .where('t.id IN (:...ids)', { ids })
@@ -242,12 +239,12 @@ export class BoardService implements IBoardService {
         );
       }
 
-      const targetById = new Map(dto.tasks.map((t) => [t.taskId, t.kanbanStatus]));
+      const targetById = new Map(dto.tasks.map((t) => [t.id, t.kanbanStatus]));
       for (const task of existing) {
         if (TERMINAL_OR_DRAFT.has(task.kanbanStatus)) {
           this.invalidStatusTransition(
             'changeTaskStatuses',
-            `taskId=${task.id} source=${task.kanbanStatus}`,
+            `id=${task.id} source=${task.kanbanStatus}`,
           );
         }
         if (task.kanbanStatus === targetById.get(task.id)) {
@@ -438,7 +435,7 @@ export class BoardService implements IBoardService {
     const params: unknown[] = [];
     const values = batch
       .map((t) => {
-        params.push(t.taskId, t.displayOrder);
+        params.push(t.id, t.displayOrder);
         const base = params.length;
         return `($${base - 1}::uuid, $${base}::int)`;
       })
@@ -470,7 +467,7 @@ export class BoardService implements IBoardService {
     const params: unknown[] = [];
     const valueRows = batch
       .map((t, idx) => {
-        params.push(t.taskId, t.kanbanStatus, idx + 1);
+        params.push(t.id, t.kanbanStatus, idx + 1);
         const base = params.length;
         return `($${base - 2}::uuid, $${base - 1}::varchar, $${base}::int)`;
       })

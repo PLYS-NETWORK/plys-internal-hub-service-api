@@ -20,10 +20,10 @@ export const REORDER_MIN_TASKS = 1;
 export const REORDER_MAX_TASKS = 200;
 
 export class TaskOrderItemDto implements ITaskOrderItem {
-  @Expose({ name: 'task_id' })
-  @ApiProperty({ name: 'task_id' })
+  @Expose({ name: 'id' })
+  @ApiProperty({ name: 'id' })
   @IsUUID('4')
-  public readonly taskId!: string;
+  public readonly id!: string;
 
   @Expose({ name: 'display_order' })
   @ApiProperty({ name: 'display_order', minimum: 1 })
