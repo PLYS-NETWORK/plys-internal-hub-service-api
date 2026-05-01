@@ -4,7 +4,7 @@ import { IStorageProvider, STORAGE_PROVIDER } from '@common/modules/file-storage
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { FileEntity, TaskEvidence, TaskEvidenceAttachment } from '@database/entities';
-import { ProjectMemberStatus } from '@database/enums';
+import { FilePurpose, ProjectMemberStatus } from '@database/enums';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
@@ -64,6 +64,10 @@ export class TaskEvidencesService implements ITaskEvidencesService {
 
       if (attachmentSeeds.length) {
         await this.insertAttachments(tx, persisted.id, attachmentSeeds);
+        await tx.files.markAsAttached(
+          attachmentSeeds.map((s) => s.fileId),
+          FilePurpose.TASK_EVIDENCE,
+        );
       }
 
       return persisted;
@@ -151,6 +155,22 @@ export class TaskEvidencesService implements ITaskEvidencesService {
     const attachmentSeeds =
       dto.fileIds === undefined ? null : await this.resolveAttachmentSeeds(dto.fileIds, userId);
 
+    // Capture detached file_ids so we can clear their `purpose` and let the
+    // weekly orphan-cleanup cron reclaim them after the grace window.
+    const detachedFileIds: string[] = [];
+    if (attachmentSeeds !== null) {
+      const previous = await this.uow.taskEvidenceAttachments.find({
+        where: { evidenceId },
+        select: { fileId: true },
+      });
+      const keep = new Set(attachmentSeeds.map((s) => s.fileId));
+      for (const row of previous) {
+        if (row.fileId && !keep.has(row.fileId)) {
+          detachedFileIds.push(row.fileId);
+        }
+      }
+    }
+
     const saved = await this.uow.withTransaction(async (tx: IUnitOfWork) => {
       if (dto.remarks !== undefined) {
         evidence.remarks = dto.remarks;
@@ -163,6 +183,13 @@ export class TaskEvidencesService implements ITaskEvidencesService {
         await tx.taskEvidenceAttachments.delete({ evidenceId });
         if (attachmentSeeds.length) {
           await this.insertAttachments(tx, evidenceId, attachmentSeeds);
+          await tx.files.markAsAttached(
+            attachmentSeeds.map((s) => s.fileId),
+            FilePurpose.TASK_EVIDENCE,
+          );
+        }
+        if (detachedFileIds.length) {
+          await tx.files.markAsOrphaned(detachedFileIds);
         }
       }
 
@@ -175,7 +202,7 @@ export class TaskEvidencesService implements ITaskEvidencesService {
     });
 
     this.logger.log(
-      `updateEvidence — complete | evidenceId: ${saved.id}, attachments: ${attachments.length}`,
+      `updateEvidence — complete | evidenceId: ${saved.id}, attachments: ${attachments.length}, detached: ${detachedFileIds.length}`,
     );
     return this.taskMapper.toTaskEvidenceResponseDto(saved, attachments);
   }
@@ -194,10 +221,27 @@ export class TaskEvidencesService implements ITaskEvidencesService {
       throw this.evidenceForbidden();
     }
 
-    evidence.isDeleted = true;
-    await this.uow.taskEvidences.save(evidence);
+    const attachmentRows = await this.uow.taskEvidenceAttachments.find({
+      where: { evidenceId },
+      select: { fileId: true },
+    });
+    const fileIds = attachmentRows.map((a) => a.fileId).filter((id): id is string => id !== null);
 
-    this.logger.log(`deleteEvidence — complete | evidenceId: ${evidenceId}`);
+    await this.uow.withTransaction(async (tx: IUnitOfWork) => {
+      evidence.isDeleted = true;
+      await tx.taskEvidences.save(evidence);
+      // Hard-delete the snapshot rows so the LEFT-JOIN safety net in the
+      // orphan-cleanup cron is consistent with `purpose IS NULL`. Listing
+      // already filters `isDeleted = false`, so the rows have no readers.
+      await tx.taskEvidenceAttachments.delete({ evidenceId });
+      if (fileIds.length) {
+        await tx.files.markAsOrphaned(fileIds);
+      }
+    });
+
+    this.logger.log(
+      `deleteEvidence — complete | evidenceId: ${evidenceId}, files: ${fileIds.length}`,
+    );
   }
 
   // ─── Private helpers ───────────────────────────────────────────────────────
