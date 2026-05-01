@@ -15,6 +15,7 @@ import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } 
 // Drives the consultant discovery query (status = 'PUBLIC' ORDER BY published_at DESC).
 // A composite index avoids a sort step on the filtered set.
 @Index('idx_projects_status_published_at', ['status', 'publishedAt'])
+@Index('uq_projects_business_code', ['businessId', 'code'], { unique: true })
 export class Project extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_projects' })
   public readonly id!: string;
@@ -28,6 +29,11 @@ export class Project extends AuditableEntity {
     foreignKeyConstraintName: 'fk_projects_to_business_profiles',
   })
   public business!: BusinessProfile;
+
+  // Human-readable identifier scoped to the business (uppercase A-Z/0-9, 2-8 chars).
+  // Used as the prefix for task codes ([code]-[N]). Unique within business_id.
+  @Column({ type: 'varchar', length: 8 })
+  public code!: string;
 
   @Column({ type: 'varchar', length: 300 })
   public title!: string;

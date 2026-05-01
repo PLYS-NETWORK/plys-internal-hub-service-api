@@ -156,4 +156,15 @@ export abstract class AbstractRepository<T extends ObjectLiteral> {
   public createQueryBuilder(alias?: string): SelectQueryBuilder<T> {
     return this.repository.createQueryBuilder(alias);
   }
+
+  /**
+   * Runs raw SQL on the EntityManager bound to this repository — preserves
+   * transaction context when the repository was cloned via `withManager`.
+   * Use sparingly; prefer `createQueryBuilder` when the operation can be
+   * expressed via TypeORM. The escape hatch exists for SQL features TypeORM
+   * does not model (e.g. `UPDATE ... FROM (VALUES ...)`).
+   */
+  public query<TResult = unknown>(sql: string, parameters?: unknown[]): Promise<TResult> {
+    return this.repository.manager.query(sql, parameters);
+  }
 }

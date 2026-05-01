@@ -11,6 +11,10 @@ export class DraftTaskResponseDto implements IDraftTaskResponse {
   public readonly id!: string;
 
   @Expose()
+  @ApiProperty({ example: 'WEB-1' })
+  public readonly code!: string;
+
+  @Expose()
   @ApiProperty({ example: 'Implement OAuth flow' })
   public readonly title!: string;
 

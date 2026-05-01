@@ -2,6 +2,7 @@ import { ProjectStatus } from '@database/enums';
 
 export interface IProjectListItemResponse {
   id: string;
+  code: string;
   title: string;
   status: ProjectStatus;
   created_at: Date;
