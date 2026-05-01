@@ -29,6 +29,7 @@ import {
   TaskEvidenceRepository,
   TaskHistoryRepository,
   TaskRepository,
+  TransactionNumberService,
   UserRepository,
   UserSessionRepository,
   UserSsoProviderRepository,
@@ -80,7 +81,7 @@ const repositories = [
 ];
 
 @Module({
-  providers: [UnitOfWorkService, ...repositories],
-  exports: [UnitOfWorkService],
+  providers: [UnitOfWorkService, TransactionNumberService, ...repositories],
+  exports: [UnitOfWorkService, TransactionNumberService],
 })
 export class UnitOfWorkModule {}

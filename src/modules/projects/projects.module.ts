@@ -1,33 +1,18 @@
-import { EmailModule } from '@common/modules/email';
-import { EnvironmentsModule } from '@common/modules/environments';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
 import { Module } from '@nestjs/common';
 
-import { BusinessProjectController } from './business-project.controller';
-import { BusinessProjectOverviewController } from './business-project-overview.controller';
 import { ConsultantProjectController } from './consultant-project.controller';
-import { BusinessProjectService } from './services/business-project.service';
-import { BusinessProjectOverviewService } from './services/business-project-overview.service';
 import { ConsultantProjectService } from './services/consultant-project.service';
-import { ProjectInterviewQuestionsService } from './services/project-interview-questions.service';
-import { ProjectRequiredSkillsService } from './services/project-required-skills.service';
-import { ProjectTasksService } from './services/project-tasks.service';
 
+/**
+ * Consultant-side project discovery (`/projects-consultant`). The business
+ * side moved to `BusinessProjectsModule` (`/projects/business`); this module
+ * keeps only the read-only consultant flow.
+ */
 @Module({
-  imports: [UnitOfWorkModule, EmailModule, EnvironmentsModule],
-  controllers: [
-    BusinessProjectController,
-    BusinessProjectOverviewController,
-    ConsultantProjectController,
-  ],
-  providers: [
-    BusinessProjectService,
-    BusinessProjectOverviewService,
-    ConsultantProjectService,
-    ProjectInterviewQuestionsService,
-    ProjectRequiredSkillsService,
-    ProjectTasksService,
-  ],
-  exports: [BusinessProjectService, ConsultantProjectService],
+  imports: [UnitOfWorkModule],
+  controllers: [ConsultantProjectController],
+  providers: [ConsultantProjectService],
+  exports: [ConsultantProjectService],
 })
 export class ProjectsModule {}

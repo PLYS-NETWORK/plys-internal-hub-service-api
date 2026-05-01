@@ -4,4 +4,5 @@ export { ConsultantTransactionRepository } from './consultant-transaction.reposi
 export * from './interfaces';
 export { InvoiceRepository } from './invoice.repository';
 export { InvoiceLineItemRepository } from './invoice-line-item.repository';
+export { TransactionNumberService } from './transaction-number.service';
 export { WebhookEventRepository } from './webhook-event.repository';

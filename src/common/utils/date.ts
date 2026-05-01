@@ -97,6 +97,11 @@ export const DateUtil = {
     return tz ? dayjs().tz(tz) : dayjs.utc();
   },
 
+  /** Current instant as a native JS Date — replaces ad-hoc `new Date()` for timestamp captures. */
+  nowDate(tz?: string): Date {
+    return (tz ? dayjs().tz(tz) : dayjs.utc()).toDate();
+  },
+
   /** ISO 8601 string. */
   toIso(input: DateInput, tz?: string): string {
     return toDayjs(input, tz).toISOString();

@@ -26,7 +26,9 @@ import {
   ProjectSummaryResponseDto,
   PublishValidationResponseDto,
 } from '../dto/responses';
-import { BusinessProjectsService } from '../services/projects.service';
+import { ProjectPublishService } from '../services/projects/project-publish.service';
+import { ProjectRepublishService } from '../services/projects/project-republish.service';
+import { BusinessProjectsService } from '../services/projects/projects.service';
 
 @ApiTags('Business Projects — Main')
 @ApiBearerAuth()
@@ -35,7 +37,11 @@ import { BusinessProjectsService } from '../services/projects.service';
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
 export class BusinessProjectsController {
-  constructor(private readonly projectsService: BusinessProjectsService) {}
+  constructor(
+    private readonly projectsService: BusinessProjectsService,
+    private readonly publishService: ProjectPublishService,
+    private readonly republishService: ProjectRepublishService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -63,7 +69,7 @@ export class BusinessProjectsController {
   public async validatePublish(
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<ITranslatedPayload<PublishValidationResponseDto>> {
-    const data = await this.projectsService.validatePublish(id);
+    const data = await this.publishService.validatePublish(id);
     return { messageKey: 'success.ok', data };
   }
 
@@ -71,6 +77,18 @@ export class BusinessProjectsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Atomically publish the project and settle payment' })
   public async confirmPublish(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
-    await this.projectsService.confirmPublish(id);
+    await this.publishService.confirmPublish(id);
+  }
+
+  @Patch(':id/re-publish')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Revert a PUBLISHED project to CONFIGURED so it can be re-published',
+  })
+  public async republish(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<ITranslatedPayload<null>> {
+    await this.republishService.republish(id);
+    return { messageKey: 'success.project.re_published', data: null };
   }
 }

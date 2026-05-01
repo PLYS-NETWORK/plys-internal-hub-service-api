@@ -245,7 +245,12 @@ export class BacklogsService implements IBacklogsService {
           ? TransactionStatus.COMPLETED
           : TransactionStatus.PENDING;
 
+      const transactionNumber = await tx.transactionNumbers.next(
+        'PLS',
+        BusinessTransactionType.TASK_ADDED,
+      );
       const txn = tx.businessTransactions.create({
+        transactionNumber,
         businessId: profile.id,
         type: BusinessTransactionType.TASK_ADDED,
         amount: pricing.projectAmount.toFixedString(),

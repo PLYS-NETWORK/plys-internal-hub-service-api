@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ployos - Payment Receipt</title>
+    <title>Ployos - Refund Issued</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;800;900&family=Inter:wght@400;500;600&display=swap"
       rel="stylesheet"
@@ -63,14 +63,14 @@
                 <table
                   cellpadding="0"
                   cellspacing="0"
-                  style="background-color: #89f5e7; border-radius: 12px; margin: 0 0 24px"
+                  style="background-color: #ffe8a8; border-radius: 12px; margin: 0 0 24px"
                 >
                   <tr>
                     <td style="padding: 6px 12px">
                       <table cellpadding="0" cellspacing="0">
                         <tr>
                           <td style="padding-right: 8px; vertical-align: middle">
-                            <span style="color: #00201d; font-size: 18px">✓</span>
+                            <span style="color: #5b3a00; font-size: 18px">↺</span>
                           </td>
                           <td style="vertical-align: middle">
                             <span
@@ -79,10 +79,10 @@
                                 font-weight: 600;
                                 font-size: 14px;
                                 letter-spacing: 0.05em;
-                                color: #00201d;
+                                color: #5b3a00;
                                 text-transform: uppercase;
                               "
-                              >Payment Successful</span
+                              >Refund Issued</span
                             >
                           </td>
                         </tr>
@@ -101,7 +101,7 @@
                     margin: 0 0 16px;
                   "
                 >
-                  Receipt for your recent project payment.
+                  Your project has been reverted for re-publish.
                 </h2>
 
                 <p
@@ -115,8 +115,9 @@
                   "
                 >
                   Hi <strong><%= businessName %></strong>,<br /><br />
-                  Thank you for your business. This ledger entry confirms that we have successfully
-                  processed your payment for the architectural milestone detailed below.
+                  We&rsquo;ve moved your project back to the configured state so you can adjust it
+                  before publishing again. The original publish charge has been refunded in full to
+                  your account balance.
                 </p>
               </td>
             </tr>
@@ -134,7 +135,7 @@
                     <td style="padding: 32px">
                       <!-- Metadata Grid -->
                       <table width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 32px">
-                        <!-- Row 1: Receipt Number & Date -->
+                        <!-- Row 1: Refund Reference & Date -->
                         <tr>
                           <td style="width: 50%; padding: 0 16px 24px 0">
                             <p
@@ -147,7 +148,7 @@
                                 margin: 0 0 4px;
                               "
                             >
-                              Receipt Number
+                              Refund Reference
                             </p>
                             <p
                               style="
@@ -172,7 +173,7 @@
                                 margin: 0 0 4px;
                               "
                             >
-                              Date Paid
+                              Refund Date
                             </p>
                             <p
                               style="
@@ -183,7 +184,7 @@
                                 margin: 0;
                               "
                             >
-                              <%= paidDate %>
+                              <%= refundDate %>
                             </p>
                           </td>
                         </tr>
@@ -217,7 +218,7 @@
                           </td>
                         </tr>
 
-                        <!-- Row 3: Payment Method -->
+                        <!-- Row 3: Refund Method -->
                         <tr>
                           <td colspan="2">
                             <p
@@ -230,7 +231,7 @@
                                 margin: 0 0 4px;
                               "
                             >
-                              Payment Method
+                              Refunded To
                             </p>
                             <table cellpadding="0" cellspacing="0">
                               <tr>
@@ -247,7 +248,7 @@
                                       margin: 0;
                                     "
                                   >
-                                    <%= paymentMethod %>
+                                    <%= refundMethod %>
                                   </p>
                                 </td>
                               </tr>
@@ -273,7 +274,7 @@
                                 margin: 0 0 4px;
                               "
                             >
-                              Amount Paid
+                              Amount Refunded
                             </p>
                             <p
                               style="
@@ -300,7 +301,7 @@
                                 justify-content: center;
                               "
                             >
-                              <span style="color: #444651; font-size: 24px">📄</span>
+                              <span style="color: #444651; font-size: 24px">↺</span>
                             </div>
                           </td>
                         </tr>
@@ -336,7 +337,7 @@
                           text-decoration: none;
                         "
                       >
-                        View Project Dashboard
+                        Edit &amp; Re-publish
                         <span style="margin-left: 8px; font-size: 18px">→</span>
                       </a>
                     </td>
@@ -351,12 +352,8 @@
                     margin: 0;
                   "
                 >
-                  Need a formal PDF invoice?
-                  <a
-                    href="<%= invoiceDownloadUrl %>"
-                    style="color: #00236f; text-decoration: underline"
-                    >Download it here</a
-                  >.
+                  Refunds are credited instantly to your Ployos account balance and can be applied
+                  to any future publication.
                 </p>
               </td>
             </tr>

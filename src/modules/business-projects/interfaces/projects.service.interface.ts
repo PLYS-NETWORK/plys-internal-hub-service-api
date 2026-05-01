@@ -1,17 +1,13 @@
 import { PageDto } from '@common/dto/page.dto';
 
 import { CreateProjectDto, ListProjectsDto } from '../dto/requests';
-import {
-  ProjectListItemResponseDto,
-  ProjectSummaryResponseDto,
-  PublishValidationResponseDto,
-} from '../dto/responses';
+import { ProjectListItemResponseDto, ProjectSummaryResponseDto } from '../dto/responses';
 
 /**
- * Business-facing project operations on the main controller surface
- * (`POST /projects/business`, `GET /projects/business`, publish-validation,
- * publish). The remaining business flows live on dedicated controllers and
- * their services (overview, backlogs, settings, applications, board).
+ * Core CRUD operations for business projects on the main controller surface
+ * (`POST /projects/business`, `GET /projects/business`). Publish/republish
+ * flows live on dedicated services (`IProjectPublishService`,
+ * `IProjectRepublishService`) — the controller composes all three.
  */
 export interface IBusinessProjectsService {
   /**
@@ -35,29 +31,4 @@ export interface IBusinessProjectsService {
    * @throws TranslatableException 403 BUSINESS_PROFILE_NOT_FOUND.
    */
   listMyProjects(dto: ListProjectsDto): Promise<PageDto<ProjectListItemResponseDto>>;
-
-  /**
-   * Returns a read-only validation result for the publish modal. Mirrors the
-   * legacy `validatePublish` — does not change any state.
-   *
-   * @param projectId Project to validate.
-   * @returns Publish eligibility, project amount, commission, account balance.
-   * @throws TranslatableException 404 PROJECT_NOT_FOUND when the project does
-   *   not exist or is not owned by the calling business.
-   */
-  validatePublish(projectId: string): Promise<PublishValidationResponseDto>;
-
-  /**
-   * Atomically transitions the project to PUBLISHED and settles payment.
-   * Re-runs validation inside the locked transaction; pre-flight
-   * `validatePublish` is advisory only.
-   *
-   * @param projectId Project to publish.
-   * @throws TranslatableException 404 PROJECT_NOT_FOUND.
-   * @throws TranslatableException 422 PROJECT_INSUFFICIENT_BALANCE
-   *   (pre-paid only, locked re-check).
-   * @throws TranslatableException 422 PROJECT_CANNOT_PUBLISH for any other
-   *   non-eligibility (zero tasks, wrong status, etc.).
-   */
-  confirmPublish(projectId: string): Promise<void>;
 }

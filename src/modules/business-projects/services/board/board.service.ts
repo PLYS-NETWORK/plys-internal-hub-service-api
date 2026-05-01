@@ -2,6 +2,7 @@ import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { DateUtil } from '@common/utils/date';
 import { Task } from '@database/entities';
 import { ProjectMemberStatus, TaskKanbanStatus } from '@database/enums';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
@@ -262,7 +263,7 @@ export class BoardService implements IBoardService {
       }
 
       task.assignedTo = dto.consultantId;
-      task.assignedAt = new Date();
+      task.assignedAt = DateUtil.nowDate();
       if (task.kanbanStatus === TaskKanbanStatus.TO_DO) {
         task.kanbanStatus = TaskKanbanStatus.ASSIGNED;
       }

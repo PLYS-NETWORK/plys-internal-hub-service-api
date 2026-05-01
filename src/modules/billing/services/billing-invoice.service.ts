@@ -1,5 +1,6 @@
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { DateUtil } from '@common/utils/date';
 import {
   BillingPeriodStatus,
   BusinessTransactionType,
@@ -85,7 +86,7 @@ export class BillingInvoiceService {
 
       // 3. Mark invoice as PAID
       invoice.status = InvoiceStatus.PAID;
-      invoice.paidAt = new Date();
+      invoice.paidAt = DateUtil.nowDate();
       await txUow.invoices.save(invoice);
 
       // 4. Mark business transaction as COMPLETED

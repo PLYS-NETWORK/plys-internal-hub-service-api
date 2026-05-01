@@ -14,8 +14,12 @@ const SHARED_TAGS = ['Auth', 'Skills', 'Payments'] as const;
 
 const BUSINESS_TAGS = [
   'Business Profiles',
-  'Projects - Business',
-  'Tasks - Business',
+  'Business Projects — Main',
+  'Business Projects — Overview',
+  'Business Projects — Backlogs',
+  'Business Projects — Settings',
+  'Business Projects — Applications',
+  'Business Projects — Board',
   'Applications - Business',
   'Business Payments',
 ] as const;

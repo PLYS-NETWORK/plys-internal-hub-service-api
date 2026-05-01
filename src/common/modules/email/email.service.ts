@@ -23,6 +23,7 @@ import {
   buildBusinessMonthlyInvoiceEmail,
   buildBusinessProjectPublishedReceiptEmail,
   buildBusinessProjectPublishedSuccessEmail,
+  buildBusinessProjectRepublishRefundEmail,
   buildBusinessVerifyRegistrationEmail,
   buildBusinessWelcomeEmail,
   buildConsultantAiDetectedEmail,
@@ -34,6 +35,7 @@ import {
   type IBusinessMonthlyInvoiceTemplateOptions,
   type IBusinessProjectPublishedReceiptTemplateOptions,
   type IBusinessProjectPublishedSuccessTemplateOptions,
+  type IBusinessProjectRepublishRefundTemplateOptions,
 } from './templates';
 
 /**
@@ -271,6 +273,26 @@ export class EmailService implements IEmailService {
       this.logger.error(
         `sendProjectPublishedSuccessEmail — failed | to: ${to} | error: ${message}`,
       );
+      throw err;
+    }
+  }
+
+  public async sendProjectRepublishRefundEmail(
+    to: string,
+    options: IBusinessProjectRepublishRefundTemplateOptions,
+  ): Promise<void> {
+    this.logger.log(`sendProjectRepublishRefundEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        from: this.env.resendPloyosEmail,
+        to,
+        subject: 'Refund Issued - Project Reverted for Re-publish',
+        html: await buildBusinessProjectRepublishRefundEmail(options),
+      });
+      this.logger.log(`sendProjectRepublishRefundEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`sendProjectRepublishRefundEmail — failed | to: ${to} | error: ${message}`);
       throw err;
     }
   }

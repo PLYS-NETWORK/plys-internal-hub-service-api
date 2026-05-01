@@ -90,7 +90,12 @@ export class ConsultantWithdrawStrategy implements IWithdrawStrategy {
 
     // Execute withdraw in transaction
     const savedTransaction = await this.uow.withTransaction(async (txUow) => {
+      const transactionNumber = await txUow.transactionNumbers.next(
+        'LN',
+        ConsultantTransactionType.WITHDRAWAL,
+      );
       const transaction = txUow.consultantTransactions.create({
+        transactionNumber,
         consultantId: consultantProfile.id,
         type: ConsultantTransactionType.WITHDRAWAL,
         amount: amount.toFixed(2),

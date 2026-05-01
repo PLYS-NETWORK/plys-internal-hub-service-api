@@ -8,20 +8,15 @@ import {
   ProjectStatus,
   TaskKanbanStatus,
 } from '@database/enums';
-import { BusinessProjectService } from '@modules/projects/services/business-project.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { ILike } from 'typeorm';
 
-import { CreateProjectDto, ListProjectsDto } from '../dto/requests';
-import {
-  ProjectListItemResponseDto,
-  ProjectSummaryResponseDto,
-  PublishValidationResponseDto,
-} from '../dto/responses';
-import { IBusinessProjectsService } from '../interfaces/projects.service.interface';
-import { BusinessAccessService } from './business-access.service';
+import { CreateProjectDto, ListProjectsDto } from '../../dto/requests';
+import { ProjectListItemResponseDto, ProjectSummaryResponseDto } from '../../dto/responses';
+import { IBusinessProjectsService } from '../../interfaces/projects.service.interface';
+import { BusinessAccessService } from '../business-access.service';
 
 @Injectable()
 export class BusinessProjectsService implements IBusinessProjectsService {
@@ -31,11 +26,6 @@ export class BusinessProjectsService implements IBusinessProjectsService {
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly access: BusinessAccessService,
-    // Reused from the legacy projects module for the publish flow. Until the
-    // legacy module is decommissioned this delegation avoids a 200-line copy
-    // of the wallet/commission settlement logic — when legacy goes, the publish
-    // body should be inlined here.
-    private readonly legacyBusinessProjects: BusinessProjectService,
   ) {
     this.logger = new AppLogger(BusinessProjectsService.name, requestContext);
   }
@@ -111,48 +101,6 @@ export class BusinessProjectsService implements IBusinessProjectsService {
       `[${this.rid}] listMyProjects — complete | returned: ${data.length}, total: ${itemCount}`,
     );
     return new PageDto(data, meta);
-  }
-
-  /** @inheritdoc */
-  public async validatePublish(projectId: string): Promise<PublishValidationResponseDto> {
-    const { id: businessId } = await this.access.resolveBusinessProfile();
-    this.logger.log(
-      `[${this.rid}] validatePublish — start | projectId: ${projectId}, businessId: ${businessId}`,
-    );
-    await this.access.resolveOwnedProject(projectId);
-
-    // Delegate to legacy — it implements the same business contract today.
-    const legacyResponse = await this.legacyBusinessProjects.validatePublish(projectId);
-
-    this.logger.log(
-      `[${this.rid}] validatePublish — complete | projectId: ${projectId}, can_publish: ${legacyResponse.can_publish}`,
-    );
-
-    // Legacy uses `'pre-paid'`; the new module's contract uses the snake_case
-    // `'pre_paid'` enum value. Rewrite on the wire.
-    return plainToInstance(
-      PublishValidationResponseDto,
-      {
-        ...legacyResponse,
-        payment_type: legacyResponse.payment_type === 'credit' ? 'credit' : 'pre_paid',
-      },
-      { excludeExtraneousValues: true },
-    );
-  }
-
-  /** @inheritdoc */
-  public async confirmPublish(projectId: string): Promise<void> {
-    const { id: businessId } = await this.access.resolveBusinessProfile();
-    this.logger.log(
-      `[${this.rid}] confirmPublish — start | projectId: ${projectId}, businessId: ${businessId}`,
-    );
-    await this.access.resolveOwnedProject(projectId);
-
-    // Delegate to legacy — wallet lock + balance check + transaction insert
-    // + status flip all happen inside the legacy `withTransaction` block.
-    await this.legacyBusinessProjects.confirmPublish(projectId);
-
-    this.logger.log(`[${this.rid}] confirmPublish — complete | projectId: ${projectId}`);
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
