@@ -20,12 +20,20 @@ import { Invoice } from './invoice.entity';
 @Traceable()
 @Entity('consultant_transactions')
 @Unique('uq_consultant_transactions_processor_event_id', ['processorEventId'])
+@Unique('uq_consultant_transactions_number', ['transactionNumber'])
 @Index('idx_consultant_txn_consultant_created', ['consultantId'])
 @Index('idx_consultant_txn_project', ['projectId'])
 @Index('idx_consultant_txn_task', ['taskId'])
 export class ConsultantTransaction extends TraceableEntity {
   @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_consultant_transactions' })
   public readonly id!: string;
+
+  /**
+   * Human-facing identifier `[LN][SHORT_TYPE][YYYYMMDD][N]` (no separators)
+   * — generated atomically per ledger per day by `TransactionNumberService`.
+   */
+  @Column({ name: 'transaction_number', type: 'varchar', length: 32 })
+  public transactionNumber!: string;
 
   @Column({ name: 'consultant_id', type: 'uuid' })
   public consultantId!: string;

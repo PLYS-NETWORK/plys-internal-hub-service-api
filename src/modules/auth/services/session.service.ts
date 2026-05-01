@@ -195,6 +195,17 @@ export class SessionService implements ISessionService {
       throw err;
     }
 
+    // BusinessProfile.id is embedded in the access token only when the user is
+    // signing in as a business — keeps a fast `requestContext.businessId` path
+    // for the project-business module without an extra DB lookup per request.
+    // Repositories still double-check ownership via findOneByUserAndId so a
+    // tampered claim cannot grant cross-tenant access.
+    let businessId: string | undefined;
+    if (activePlatform === ActivePlatform.BUSINESS) {
+      const businessProfile = await this.uow.businessProfiles.findByUserId(userId);
+      businessId = businessProfile?.id;
+    }
+
     const jwtPayload: Omit<JwtPayload, 'iat' | 'exp'> = {
       sub: userId,
       email,
@@ -202,6 +213,7 @@ export class SessionService implements ISessionService {
       activePlatform,
       sessionId: session.id,
       deviceId: context.deviceId,
+      ...(businessId ? { businessId } : {}),
     };
 
     const accessExpiresIn = this.envService.jwtAccessExpiration;

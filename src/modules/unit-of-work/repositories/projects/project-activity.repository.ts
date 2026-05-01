@@ -13,6 +13,7 @@ const TYPE_PATTERNS: Record<ActivityType, string> = {
   task: 'task\\_%',
   application: 'application\\_%',
   member: 'member\\_%',
+  project: 'project\\_%',
 };
 
 /**
@@ -181,6 +182,21 @@ export class ProjectActivityRepository implements IProjectActivityRepository {
         FROM project_members pm
         JOIN consultant_profiles cp ON cp.id = pm.consultant_id
         WHERE pm.project_id = $1 AND pm.status = 'active'
+
+        UNION ALL
+
+        -- project_status_changed: every row in project_status_history. Populated
+        -- by the trg_log_project_status_change trigger on UPDATE projects.status.
+        SELECT 'project_status_changed'::text,
+               psh.id,
+               psh.changed_at,
+               psh.changed_by,
+               jsonb_build_object(
+                 'from_status', psh.previous_status,
+                 'to_status',   psh.new_status
+               )
+        FROM project_status_history psh
+        WHERE psh.project_id = $1
       )
     `;
   }

@@ -9,7 +9,7 @@ import { DashboardSummaryResponseDto } from '../../dto/responses/dashboard-summa
 import { IDashboardSummaryService, IStatisticsScope } from '../interfaces';
 
 const PUBLISHED_LIFECYCLE: readonly ProjectStatus[] = [
-  ProjectStatus.PUBLIC,
+  ProjectStatus.PUBLISHED,
   ProjectStatus.IN_PROGRESS,
   ProjectStatus.DONE,
 ];

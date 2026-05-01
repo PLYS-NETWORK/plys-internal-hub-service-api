@@ -3,7 +3,7 @@ import * as path from 'path';
 
 export interface IBusinessMonthlyInvoiceTemplateOptions {
   readonly businessName: string;
-  readonly invoiceNumber: string;
+  readonly transactionNumber: string;
   readonly billingPeriod: string;
   readonly dueDate: string;
   readonly taskTotal: string;
@@ -21,7 +21,7 @@ export async function buildBusinessMonthlyInvoiceEmail(
 ): Promise<string> {
   const {
     businessName,
-    invoiceNumber,
+    transactionNumber,
     billingPeriod,
     dueDate,
     taskTotal,
@@ -33,7 +33,7 @@ export async function buildBusinessMonthlyInvoiceEmail(
 
   return ejs.renderFile(path.join(__dirname, 'monthly-invoice.template.ejs'), {
     businessName,
-    invoiceNumber,
+    transactionNumber,
     billingPeriod,
     dueDate,
     taskTotal,

@@ -22,6 +22,7 @@ export class RequestContextMiddleware implements NestMiddleware {
       userRole: null,
       sessionId: null,
       activePlatform: null,
+      businessId: null,
       deviceId: null,
       ipAddress:
         (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0].trim() ??

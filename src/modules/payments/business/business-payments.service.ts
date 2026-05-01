@@ -57,17 +57,25 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
       });
     }
 
-    // Create pending transaction
+    // Create pending transaction. Wrapped in `withTransaction` so the
+    // transaction-number advisory lock has an active xact to attach to.
     const amountStr = dto.amount.toFixed(2);
-    const transaction = this.uow.businessTransactions.create({
-      businessId: businessProfile.id,
-      type: BusinessTransactionType.TOP_UP,
-      amount: amountStr,
-      totalAmount: amountStr,
-      status: TransactionStatus.PENDING,
-      note: 'Top-up via payment checkout',
+    const savedTransaction = await this.uow.withTransaction(async (txUow) => {
+      const transactionNumber = await txUow.transactionNumbers.next(
+        'PLS',
+        BusinessTransactionType.TOP_UP,
+      );
+      const transaction = txUow.businessTransactions.create({
+        transactionNumber,
+        businessId: businessProfile.id,
+        type: BusinessTransactionType.TOP_UP,
+        amount: amountStr,
+        totalAmount: amountStr,
+        status: TransactionStatus.PENDING,
+        note: 'Top-up via payment checkout',
+      });
+      return txUow.businessTransactions.save(transaction);
     });
-    const savedTransaction = await this.uow.businessTransactions.save(transaction);
 
     try {
       const checkoutSession = await this.paymentService.createCheckoutSession({

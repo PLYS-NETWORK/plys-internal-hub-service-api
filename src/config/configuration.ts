@@ -91,13 +91,16 @@ export default registerAs('app', () => ({
   files: {
     // Pluggable storage backend. `local` and `s3` are wired; `gcs` is reserved.
     storageProvider: (process.env.FILES_STORAGE_PROVIDER ?? 'local') as 'local' | 's3' | 'gcs',
-    maxSizeBytes: parseInt(process.env.FILES_MAX_SIZE_BYTES ?? '10485760', 10),
+    maxSizeBytes: parseInt(process.env.FILES_MAX_SIZE_BYTES ?? '52428800', 10),
     allowedMimeList: process.env.FILES_ALLOWED_MIME?.split(',')
       .map((s) => s.trim())
       .filter((s) => s.length > 0) ?? ['image/png', 'image/jpeg', 'application/pdf'],
     userQuotaBytes: parseInt(process.env.FILES_USER_QUOTA_BYTES ?? '524288000', 10),
     userMaxCount: parseInt(process.env.FILES_USER_MAX_COUNT ?? '1000', 10),
     purgeAfterDays: parseInt(process.env.FILES_PURGE_AFTER_DAYS ?? '30', 10),
+    // Grace window for orphaned uploads (purpose IS NULL, never attached).
+    // Default 24h gives users time to finish a multi-step attach flow.
+    orphanGraceHours: parseInt(process.env.FILES_ORPHAN_GRACE_HOURS ?? '24', 10),
     // Optional per-image pixel cap (W*H). Blank disables.
     maxImagePixels: process.env.FILES_MAX_IMAGE_PIXELS
       ? parseInt(process.env.FILES_MAX_IMAGE_PIXELS, 10)

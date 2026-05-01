@@ -1,6 +1,7 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { DateUtil } from '@common/utils/date';
 import { Task } from '@database/entities';
 import {
   BusinessTransactionType,
@@ -43,7 +44,12 @@ export class TaskPaymentService implements ITaskPaymentService {
         await txUow.businessProfiles.save(businessProfile);
 
         const priceStr = price.toFixed(2);
+        const transactionNumber = await txUow.transactionNumbers.next(
+          'PLS',
+          BusinessTransactionType.TASK_ADDED,
+        );
         const txn = txUow.businessTransactions.create({
+          transactionNumber,
           businessId: businessProfile.id,
           type: BusinessTransactionType.TASK_ADDED,
           amount: priceStr,
@@ -71,7 +77,7 @@ export class TaskPaymentService implements ITaskPaymentService {
     return this.uow.withTransaction(async (txUow) => {
       task.kanbanStatus = TaskKanbanStatus.DONE;
       task.approvedBy = userId;
-      task.approvedAt = new Date();
+      task.approvedAt = DateUtil.nowDate();
 
       if (task.assignedTo) {
         const consultantProfile = await txUow.consultantProfiles.findOne({
@@ -88,7 +94,12 @@ export class TaskPaymentService implements ITaskPaymentService {
             ).toFixed(2);
             await txUow.consultantProfiles.save(consultantProfile);
 
+            const transactionNumber = await txUow.transactionNumbers.next(
+              'LN',
+              ConsultantTransactionType.CREDIT_CLEARED,
+            );
             const txn = txUow.consultantTransactions.create({
+              transactionNumber,
               consultantId: consultantProfile.id,
               type: ConsultantTransactionType.CREDIT_CLEARED,
               amount: payoutAmount.toFixed(2),
@@ -100,7 +111,12 @@ export class TaskPaymentService implements ITaskPaymentService {
             await txUow.consultantTransactions.save(txn);
           } else {
             // Credit: pending — settled on 5th of month
+            const transactionNumber = await txUow.transactionNumbers.next(
+              'LN',
+              ConsultantTransactionType.CREDIT_PENDING,
+            );
             const txn = txUow.consultantTransactions.create({
+              transactionNumber,
               consultantId: consultantProfile.id,
               type: ConsultantTransactionType.CREDIT_PENDING,
               amount: payoutAmount.toFixed(2),

@@ -20,6 +20,7 @@ import {
   ProjectMemberRepository,
   ProjectRepository,
   ProjectRequiredSkillRepository,
+  ProjectStatusHistoryRepository,
   SkillRepository,
   TaskCommentAttachmentRepository,
   TaskCommentRepository,
@@ -28,6 +29,7 @@ import {
   TaskEvidenceRepository,
   TaskHistoryRepository,
   TaskRepository,
+  TransactionNumberService,
   UserRepository,
   UserSessionRepository,
   UserSsoProviderRepository,
@@ -50,6 +52,7 @@ const repositories = [
   ProjectRepository,
   ProjectRequiredSkillRepository,
   ProjectActivityRepository,
+  ProjectStatusHistoryRepository,
   // Domain 4 — Tasks
   TaskRepository,
   TaskDisputeRepository,
@@ -78,7 +81,7 @@ const repositories = [
 ];
 
 @Module({
-  providers: [UnitOfWorkService, ...repositories],
-  exports: [UnitOfWorkService],
+  providers: [UnitOfWorkService, TransactionNumberService, ...repositories],
+  exports: [UnitOfWorkService, TransactionNumberService],
 })
 export class UnitOfWorkModule {}

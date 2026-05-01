@@ -32,4 +32,11 @@ export class BusinessProfileRepository
       .setLock('pessimistic_write')
       .getOne();
   }
+
+  public async findOneByUserAndId(
+    userId: string,
+    businessId: string,
+  ): Promise<BusinessProfile | null> {
+    return this.findOne({ where: { id: businessId, userId } });
+  }
 }

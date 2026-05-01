@@ -96,6 +96,7 @@ export class JwtContextMiddleware implements NestMiddleware {
           payload.sessionId,
           payload.deviceId,
           payload.activePlatform,
+          payload.businessId ?? null,
         );
       } catch (err) {
         if (err instanceof TranslatableException) {

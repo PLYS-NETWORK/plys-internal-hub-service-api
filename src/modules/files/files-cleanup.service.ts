@@ -10,10 +10,16 @@ import { Cron } from '@nestjs/schedule';
 
 const PURGE_BATCH_SIZE = 100;
 const MS_PER_DAY = 86_400_000;
+const MS_PER_HOUR = 3_600_000;
 
 /**
- * Daily background job that reclaims storage from rows soft-deleted more
- * than `FILES_PURGE_AFTER_DAYS` ago. Runs at 03:00 UTC by default.
+ * Daily background jobs that reclaim storage. Two passes run on the same
+ * 03:00 UTC schedule, in order:
+ *   1. `purgeOrphanedUploads` — soft-deletes uploads that were never attached
+ *      to anything (`purpose IS NULL`, no attachment row references) and are
+ *      older than `FILES_ORPHAN_GRACE_HOURS`.
+ *   2. `purgeExpiredSoftDeletes` — physically removes the byte object and
+ *      hard-deletes rows soft-deleted more than `FILES_PURGE_AFTER_DAYS` ago.
  *
  * Per-row provider routing means a file written under `local` is still
  * reclaimable after the active default switches — the row's
@@ -36,6 +42,58 @@ export class FilesCleanupService {
   }
 
   @Cron('0 3 * * *')
+  public async runDailyCleanup(): Promise<void> {
+    // Run orphan sweep first so freshly orphaned rows enter the soft-delete
+    // pipeline immediately rather than waiting another 24h to be picked up.
+    await this.purgeOrphanedUploads();
+    await this.purgeExpiredSoftDeletes();
+  }
+
+  /**
+   * Soft-deletes uploads that have outlived their grace window without ever
+   * being attached. Schema-extension safety: when a NEW table starts
+   * referencing `files.id` via an `*_attachments.file_id` column, add a
+   * matching `LEFT JOIN ... WHERE ... IS NULL` clause to the candidate
+   * query below — otherwise this sweep will incorrectly reclaim files that
+   * are in active use elsewhere. Reference tables today:
+   *   - task_comment_attachments
+   *   - task_evidence_attachments
+   */
+  public async purgeOrphanedUploads(): Promise<void> {
+    const cutoff = new Date(Date.now() - this.env.filesOrphanGraceHours * MS_PER_HOUR);
+    this.logger.log(
+      `purgeOrphanedUploads — start | cutoff: ${cutoff.toISOString()}, batchSize: ${PURGE_BATCH_SIZE}`,
+    );
+
+    let total = 0;
+    try {
+      for (;;) {
+        const batch = await this.uow.files
+          .createQueryBuilder('f')
+          .leftJoin('task_comment_attachments', 'tca', 'tca.file_id = f.id')
+          .leftJoin('task_evidence_attachments', 'tea', 'tea.file_id = f.id')
+          .where('f.purpose IS NULL')
+          .andWhere('f.deleted_at IS NULL')
+          .andWhere('f.created_at < :cutoff', { cutoff })
+          .andWhere('tca.id IS NULL')
+          .andWhere('tea.id IS NULL')
+          .orderBy('f.created_at', 'ASC')
+          .take(PURGE_BATCH_SIZE)
+          .getMany();
+        if (batch.length === 0) break;
+
+        const ids = batch.map((f) => f.id);
+        await this.uow.files.softDelete(ids);
+        total += ids.length;
+      }
+      this.logger.log(`purgeOrphanedUploads — complete | softDeleted: ${total}`);
+    } catch (err) {
+      this.logger.error(
+        `purgeOrphanedUploads — failed | softDeletedSoFar: ${total}, error: ${(err as Error).message}`,
+      );
+    }
+  }
+
   public async purgeExpiredSoftDeletes(): Promise<void> {
     const cutoff = new Date(Date.now() - this.env.filesPurgeAfterDays * MS_PER_DAY);
     this.logger.log(

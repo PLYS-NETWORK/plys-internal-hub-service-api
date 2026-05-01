@@ -2,6 +2,7 @@ import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { DateUtil } from '@common/utils/date';
 import { ConsultantTransaction } from '@database/entities/finance/consultant-transaction.entity';
 import { Invoice } from '@database/entities/finance/invoice.entity';
 import {
@@ -77,9 +78,10 @@ export class BillingSettlementService {
 
   @Cron('0 8 1 * *')
   public async settleMonthlyCredits(): Promise<void> {
-    const now = new Date();
-    const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
-    const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    const tz = this.requestContext.timezone ?? undefined;
+    const prevMonthDate = DateUtil.subtract(DateUtil.now(tz), 1, 'month', tz);
+    const prevMonth = prevMonthDate.month(); // dayjs months are 0-indexed
+    const prevYear = prevMonthDate.year();
 
     // Phase 1: create all invoices for the period
     await this.runSettlement(prevYear, prevMonth);
@@ -199,22 +201,35 @@ export class BillingSettlementService {
     const month = periodStart.getMonth(); // 0-indexed
     const year = periodStart.getFullYear();
 
+    const tz = this.requestContext.timezone ?? undefined;
     const dueDate = invoiceWithRelations.dueDate
-      ? new Date(invoiceWithRelations.dueDate).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        })
+      ? DateUtil.format(invoiceWithRelations.dueDate, 'MMMM D, YYYY', tz)
       : '';
 
     // Use the snapshotted breakdown stored on the invoice — no reverse-computation needed.
     const taskTotal = invoiceWithRelations.taskTotal;
     const commissionAmount = invoiceWithRelations.commissionAmount;
 
+    // The MONTHLY_BILLING txn was written in the same xact as the invoice, so
+    // exactly one row matches. Quoting `transaction_number` on the email gives
+    // support a stable lookup id.
+    const settlementTxn = await this.uow.businessTransactions.findOne({
+      where: {
+        invoiceId: invoiceWithRelations.id,
+        type: BusinessTransactionType.MONTHLY_BILLING,
+      },
+    });
+    if (!settlementTxn) {
+      this.logger.warn(
+        `[${this.rid}] sendInvoiceEmail — no MONTHLY_BILLING txn found | invoiceId: ${invoiceWithRelations.id}`,
+      );
+      return;
+    }
+
     try {
       await this.emailService.sendMonthlyInvoiceEmail(businessProfile.user.email, {
         businessName: businessProfile.companyName,
-        invoiceNumber: invoiceWithRelations.id,
+        transactionNumber: settlementTxn.transactionNumber,
         billingPeriod: `${MONTH_NAMES[month]} ${year}`,
         dueDate,
         taskTotal,
@@ -228,7 +243,7 @@ export class BillingSettlementService {
       });
 
       // Stamp notifiedAt so this invoice is skipped in future dispatch runs
-      await this.uow.invoices.update(invoiceWithRelations.id, { notifiedAt: new Date() });
+      await this.uow.invoices.update(invoiceWithRelations.id, { notifiedAt: DateUtil.nowDate() });
 
       this.logger.log(
         `[${this.rid}] sendInvoiceEmail — complete | invoiceId: ${invoiceWithRelations.id}`,
@@ -361,7 +376,12 @@ export class BillingSettlementService {
       }
 
       // 7. Create business transaction for the invoice
+      const businessTxnNumber = await txUow.transactionNumbers.next(
+        'PLS',
+        BusinessTransactionType.MONTHLY_BILLING,
+      );
       const businessTxn = txUow.businessTransactions.create({
+        transactionNumber: businessTxnNumber,
         businessId,
         type: BusinessTransactionType.MONTHLY_BILLING,
         amount: taskTotal.toFixed(2),
@@ -381,7 +401,7 @@ export class BillingSettlementService {
       if (billingPeriod) {
         billingPeriod.status = BillingPeriodStatus.FINALIZED;
         billingPeriod.totalAmount = invoiceTotal.toFixed(2);
-        billingPeriod.finalizedAt = new Date();
+        billingPeriod.finalizedAt = DateUtil.nowDate();
         await txUow.billingPeriods.save(billingPeriod);
       }
 

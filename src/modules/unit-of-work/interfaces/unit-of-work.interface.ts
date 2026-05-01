@@ -18,6 +18,7 @@ import {
   IProjectMemberRepository,
   IProjectRepository,
   IProjectRequiredSkillRepository,
+  IProjectStatusHistoryRepository,
   ISkillRepository,
   ITaskCommentAttachmentRepository,
   ITaskCommentRepository,
@@ -30,6 +31,7 @@ import {
   IUserSessionRepository,
   IUserSsoProviderRepository,
   IWebhookEventRepository,
+  TransactionNumberService,
 } from '@modules/unit-of-work/repositories';
 
 // One typed repository accessor per entity. Service code injects IUnitOfWork
@@ -54,6 +56,7 @@ export interface IUnitOfWork {
   readonly projectInterviewQuestions: IProjectInterviewQuestionRepository;
   readonly projectRequiredSkills: IProjectRequiredSkillRepository;
   readonly projectActivity: IProjectActivityRepository;
+  readonly projectStatusHistory: IProjectStatusHistoryRepository;
 
   // Domain 4 — Tasks
   readonly tasks: ITaskRepository;
@@ -79,6 +82,7 @@ export interface IUnitOfWork {
   readonly invoiceLineItems: IInvoiceLineItemRepository;
   readonly consultantTransactions: IConsultantTransactionRepository;
   readonly businessTransactions: IBusinessTransactionRepository;
+  readonly transactionNumbers: TransactionNumberService;
   readonly webhookEvents: IWebhookEventRepository;
 
   // Domain 9 — Files
