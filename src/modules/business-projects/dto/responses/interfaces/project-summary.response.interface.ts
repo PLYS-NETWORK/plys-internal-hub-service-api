@@ -1,4 +1,4 @@
-import { ProjectStatus } from '@database/enums';
+import { ProjectPaymentType, ProjectStatus } from '@database/enums';
 
 export interface IProjectSummaryResponse {
   id: string;
@@ -6,6 +6,7 @@ export interface IProjectSummaryResponse {
   title: string;
   introduction: Record<string, unknown> | null;
   status: ProjectStatus;
+  payment_type: ProjectPaymentType;
   required_consultants: number;
   published_at: Date | null;
   created_at: Date;

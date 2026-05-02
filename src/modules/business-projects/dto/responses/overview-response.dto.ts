@@ -1,6 +1,7 @@
 import {
   ProjectActivityEventType,
   ProjectMemberActiveStatus,
+  ProjectPaymentType,
   ProjectStatus,
 } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
@@ -41,6 +42,14 @@ export class OverviewSummaryDto implements IOverviewSummary {
   @Expose()
   @ApiProperty({ enum: ProjectStatus })
   public readonly status!: ProjectStatus;
+
+  @Expose()
+  @ApiProperty({
+    name: 'payment_type',
+    enum: ProjectPaymentType,
+    example: ProjectPaymentType.PER_TASK,
+  })
+  public readonly payment_type!: ProjectPaymentType;
 
   @Expose()
   @ApiProperty({

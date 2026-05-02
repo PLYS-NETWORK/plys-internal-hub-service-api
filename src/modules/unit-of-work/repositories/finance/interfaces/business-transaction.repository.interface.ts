@@ -17,15 +17,6 @@ export interface ISpendTrendPoint {
   amount: string;
 }
 
-export interface ILatestPublishPayment {
-  /** Total amount charged for the publish — fixed-point string. */
-  amount: string;
-  /** Timestamp when the transaction was recorded. */
-  paid_at: Date;
-  /** ISO 4217 currency code. */
-  currency: string;
-}
-
 export interface IBusinessTransactionRepository extends AbstractRepository<BusinessTransaction> {
   /**
    * Returns the publishing-spend summary for a business — total spend, distinct
@@ -45,23 +36,4 @@ export interface IBusinessTransactionRepository extends AbstractRepository<Busin
     from?: string,
     to?: string,
   ): Promise<ISpendTrendPoint[]>;
-
-  /**
-   * Returns the most recent completed `PROJECT_PUBLISHED` transaction for a
-   * single project. Used by the project overview header to populate the
-   * `payment` block. `null` when the project has not been paid for yet.
-   */
-  findLatestPublishPaymentByProjectId(projectId: string): Promise<ILatestPublishPayment | null>;
-
-  /**
-   * Bulk-loads the latest completed `PROJECT_PUBLISHED` `total_amount` per
-   * project in a single round-trip. Used by the business project list to
-   * decide between "transaction total" (when present) and "task-price sum"
-   * (fallback) for the displayed cost. Projects without a completed publish
-   * transaction are absent from the map.
-   *
-   * @param projectIds - Project UUIDs to look up.
-   * @returns Map of `projectId → totalAmount` (fixed-point string).
-   */
-  findPublishPaymentsByProjectIds(projectIds: string[]): Promise<Map<string, string>>;
 }

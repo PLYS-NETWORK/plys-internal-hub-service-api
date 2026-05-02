@@ -65,7 +65,7 @@ export class BoardEvidencesService implements IBoardEvidencesService {
 
     const rows = await baseQb
       // The author is a User; we display them through their consultant_profile
-      // (only consultants can author evidences per TaskEvidencesService).
+      // (only consultants can author evidences per ConsultantBoardEvidencesService).
       .leftJoin('consultant_profiles', 'cp', 'cp.user_id = te.author_id')
       .select('te.id', 'evidence_id')
       .addSelect('te.task_id', 'task_id')

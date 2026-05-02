@@ -7,6 +7,7 @@ import { RequestContextService } from '@common/modules/request-context/request-c
 import {
   ApplicationStatus,
   ProjectMemberStatus,
+  ProjectPaymentType,
   ProjectStatus,
   TaskKanbanStatus,
 } from '@database/enums';
@@ -103,6 +104,7 @@ export class BusinessProjectsService implements IBusinessProjectsService {
           code: p.code,
           title: p.title,
           status: p.status,
+          payment_type: p.paymentType,
           created_at: p.createdAt,
           published_at: p.publishedAt,
           required_consultants: p.requiredConsultants,
@@ -171,6 +173,7 @@ export class BusinessProjectsService implements IBusinessProjectsService {
     title: string;
     introduction: Record<string, unknown> | null;
     status: ProjectStatus;
+    paymentType: ProjectPaymentType;
     requiredConsultants: number;
     publishedAt: Date | null;
     createdAt: Date;
@@ -184,6 +187,7 @@ export class BusinessProjectsService implements IBusinessProjectsService {
         title: project.title,
         introduction: project.introduction,
         status: project.status,
+        payment_type: project.paymentType,
         required_consultants: project.requiredConsultants,
         published_at: project.publishedAt,
         created_at: project.createdAt,

@@ -1,4 +1,3 @@
-import { Order } from '@common/dto/page-options.dto';
 import { AbstractRepository } from '@common/repositories';
 import { Project } from '@database/entities';
 import { PROJECT_STATUSES, ProjectStatus } from '@database/enums';
@@ -7,23 +6,6 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 
 import { IProjectRepository, IProjectTrendPoint, ProjectTrendGrouping } from './interfaces';
-
-// Columns the caller is allowed to sort by. Any unrecognised value falls back
-// to the default (created_at) to prevent SQL injection via the sort_by param.
-const SORTABLE_COLUMNS: Record<string, string> = {
-  title: 'project.title',
-  status: 'project.status',
-  required_consultants: 'project.requiredConsultants',
-  created_at: 'project.createdAt',
-};
-const DEFAULT_SORT_COLUMN = 'project.createdAt';
-
-// Escapes the LIKE wildcards a caller might inject via free-text search.
-// Without this, a query of "%" or "_" would force a full-table scan and
-// match unintended rows.
-function escapeLikePattern(value: string): string {
-  return value.replace(/[\\%_]/g, '\\$&');
-}
 
 @Injectable()
 export class ProjectRepository extends AbstractRepository<Project> implements IProjectRepository {
@@ -38,55 +20,21 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
     return new ProjectRepository(manager) as this;
   }
 
-  public async findByBusinessId(
-    businessId: string,
-    skip: number,
-    take: number,
-    keywords?: string,
-    sortBy?: string,
-    orderBy?: Order,
-  ): Promise<[Project[], number]> {
-    const sortColumn = (sortBy && SORTABLE_COLUMNS[sortBy]) ?? DEFAULT_SORT_COLUMN;
-    const sortDirection = orderBy ?? Order.DESC;
-
-    const qb = this.createQueryBuilder('project')
-      .where('project.business_id = :businessId', { businessId })
-      .andWhere('project.deleted_at IS NULL')
-      .orderBy(sortColumn, sortDirection)
-      // Tiebreaker so pages remain stable when multiple rows share the
-      // primary sort value (offset pagination would otherwise skip/duplicate).
-      .addOrderBy('project.id', 'ASC')
-      .skip(skip)
-      .take(take);
-
-    if (keywords) {
-      qb.andWhere('project.title ILIKE :keywords ESCAPE :esc', {
-        keywords: `%${escapeLikePattern(keywords)}%`,
-        esc: '\\',
-      });
-    }
-
-    return qb.getManyAndCount();
-  }
-
   public async findByIdAndBusinessId(id: string, businessId: string): Promise<Project | null> {
     return this.findOne({ where: { id, businessId } });
   }
 
-  // Returns public projects where at least one required skill is in the given set.
-  // Uses a subquery (IN) instead of JOIN to avoid duplicate rows when multiple
-  // required skills match the consultant's skill list.
-  public async findPublicMatchingSkills(
+  /** @inheritdoc */
+  public async findAccessibleMatchingSkills(
     skillIds: string[],
+    statuses: ProjectStatus[],
     skip: number,
     take: number,
   ): Promise<[Project[], number]> {
-    if (skillIds.length === 0) return [[], 0];
+    if (skillIds.length === 0 || statuses.length === 0) return [[], 0];
 
     const qb = this.createQueryBuilder('project')
-      .where('project.status = :status', { status: ProjectStatus.PUBLISHED })
-      // createQueryBuilder does not auto-filter soft-deleted rows; without this
-      // a soft-deleted-but-still-PUBLIC project would leak into discovery.
+      .where('project.status IN (:...statuses)', { statuses })
       .andWhere('project.deleted_at IS NULL')
       .andWhere((subQb) => {
         const sub = subQb
@@ -105,8 +53,27 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
     return qb.getManyAndCount();
   }
 
-  public async findPublicById(id: string): Promise<Project | null> {
-    return this.findOne({ where: { id, status: ProjectStatus.PUBLISHED } });
+  /** @inheritdoc */
+  public async findAccessibleByIdForConsultant(
+    id: string,
+    consultantId: string,
+    statuses: ProjectStatus[],
+  ): Promise<Project | null> {
+    if (statuses.length === 0) return null;
+    return this.createQueryBuilder('project')
+      .where('project.id = :id', { id })
+      .andWhere('project.deleted_at IS NULL')
+      .andWhere(
+        `(project.status IN (:...statuses)
+          OR EXISTS (
+            SELECT 1 FROM project_members pm
+             WHERE pm.project_id = project.id
+               AND pm.consultant_id = :consultantId
+               AND pm.status = 'active'
+          ))`,
+        { statuses, consultantId },
+      )
+      .getOne();
   }
 
   public async findIdsByBusinessId(businessId: string): Promise<string[]> {
@@ -116,17 +83,6 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
       .andWhere('project.deleted_at IS NULL')
       .getRawMany<{ id: string }>();
     return rows.map((r) => r.id);
-  }
-
-  public async findIdsAndTitlesByBusinessId(
-    businessId: string,
-  ): Promise<Array<{ id: string; title: string }>> {
-    return this.createQueryBuilder('project')
-      .select('project.id', 'id')
-      .addSelect('project.title', 'title')
-      .where('project.business_id = :businessId', { businessId })
-      .andWhere('project.deleted_at IS NULL')
-      .getRawMany<{ id: string; title: string }>();
   }
 
   // Returns counts keyed by every value of `ProjectStatus`. Statuses with zero

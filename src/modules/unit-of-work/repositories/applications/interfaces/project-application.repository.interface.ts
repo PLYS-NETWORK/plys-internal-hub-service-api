@@ -30,16 +30,6 @@ export interface IPendingApplicationRow {
 
 export interface IProjectApplicationRepository extends AbstractRepository<ProjectApplication> {
   /**
-   * Returns application counts grouped by `projectId` in a single round-trip.
-   * Counts every status (pending, accepted, rejected, withdrawn). Projects with
-   * no applications are absent from the map (callers should fall back to `0`).
-   *
-   * @param projectIds - Project UUIDs to aggregate over.
-   * @returns Map of `projectId → total application count`.
-   */
-  countByProjectIds(projectIds: string[]): Promise<Map<string, number>>;
-
-  /**
    * Returns the funnel counts for the given projects in a single SQL round-trip.
    * `applied`   = COUNT(*) (every status)
    * `reviewed`  = COUNT WHERE reviewed_at IS NOT NULL
@@ -86,14 +76,20 @@ export interface IProjectApplicationRepository extends AbstractRepository<Projec
   ): Promise<[IPendingApplicationRow[], number]>;
 
   /**
-   * Bulk-loads distinct applicant avatar URLs per project in a single
-   * round-trip. Each consultant appears at most once per project even if they
-   * applied multiple times (e.g., re-applied after a rejection). `null` avatar
-   * URLs are excluded so consumers don't have to filter again.
-   *
-   * @param projectIds - Project UUIDs to aggregate over.
-   * @returns Map of `projectId → avatar_url[]`. Projects with no applicants
-   *          (or applicants with only null avatars) are absent from the map.
+   * True when the consultant currently has a non-terminal application for the
+   * project (`PENDING` or `ACCEPTED`). Used to drive the consultant
+   * discovery feed's `is_applied` flag.
    */
-  findApplicantAvatarsByProjectIds(projectIds: string[]): Promise<Map<string, string[]>>;
+  existsActiveByConsultantAndProject(consultantId: string, projectId: string): Promise<boolean>;
+
+  /**
+   * For each (consultant, project) pair with an active application
+   * (`PENDING` or `ACCEPTED`), returns the project ids the consultant has
+   * already applied to. Used to drive the consultant discovery feed's
+   * `is_applied` flag in a single round-trip.
+   */
+  findActiveProjectIdsByConsultantAndProjects(
+    consultantId: string,
+    projectIds: string[],
+  ): Promise<Set<string>>;
 }
