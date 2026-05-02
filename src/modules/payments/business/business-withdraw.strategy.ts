@@ -5,6 +5,8 @@ import { AppLogger } from '@common/modules/logger';
 import { PaymentService } from '@common/modules/payment/payment.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { BusinessTransactionType, Currency, TransactionStatus } from '@database/enums';
+import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-type.enum';
+import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -21,6 +23,7 @@ export class BusinessWithdrawStrategy implements IWithdrawStrategy {
     private readonly requestContext: RequestContextService,
     private readonly paymentService: PaymentService,
     private readonly env: EnvironmentsService,
+    private readonly notificationDispatcher: NotificationDispatcherService,
   ) {
     this.logger = new AppLogger(BusinessWithdrawStrategy.name, requestContext);
   }
@@ -138,6 +141,30 @@ export class BusinessWithdrawStrategy implements IWithdrawStrategy {
     });
 
     this.logger.log(`execute — complete | transactionId: ${savedTransaction.id}`);
+
+    // Fire-and-forget — only fires for terminal-completed withdrawals. Failed
+    // transfers throw inside the transaction (rolled back) so we won't reach
+    // here for a non-COMPLETED status.
+    if (savedTransaction.status === TransactionStatus.COMPLETED) {
+      const newBalance = (currentBalance - amount).toFixed(2);
+      void this.notificationDispatcher
+        .dispatch({
+          userId,
+          type: NOTIFICATION_TYPES.WITHDRAW_COMPLETED,
+          metadata: {
+            transaction_id: savedTransaction.id,
+            transaction_number: savedTransaction.transactionNumber,
+            amount,
+            currency: 'USD',
+            new_balance: parseFloat(newBalance),
+          },
+          actorId: userId,
+        })
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          this.logger.error(`execute — notification dispatch failed | error: ${msg}`);
+        });
+    }
 
     return plainToInstance(
       WithdrawResponseDto,

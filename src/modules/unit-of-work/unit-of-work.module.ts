@@ -14,6 +14,7 @@ import {
   InterviewAnswerRepository,
   InvoiceLineItemRepository,
   InvoiceRepository,
+  NotificationRepository,
   ProjectActivityRepository,
   ProjectApplicationRepository,
   ProjectInterviewQuestionRepository,
@@ -79,6 +80,8 @@ const repositories = [
   ProjectInterviewQuestionRepository,
   // Domain 9 — Files
   FileRepository,
+  // Domain 10 — Notifications
+  NotificationRepository,
 ];
 
 @Module({

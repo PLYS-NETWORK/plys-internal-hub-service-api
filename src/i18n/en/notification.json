@@ -1,0 +1,34 @@
+{
+  "profile_updated": {
+    "title": "Profile updated",
+    "body": "Your profile was updated. Changed: {fields}"
+  },
+  "password_changed": {
+    "title": "Password changed",
+    "body": "Your password was changed. If this wasn't you, secure your account immediately."
+  },
+  "project_published": {
+    "title": "Project published",
+    "body": "Your project \"{title}\" ({code}) is now live and accepting applications."
+  },
+  "project_unpublished": {
+    "title": "Project unpublished",
+    "body": "Your project \"{title}\" ({code}) is back in configuration mode."
+  },
+  "new_application": {
+    "title": "New application received",
+    "body": "{consultant} just applied to your project \"{title}\"."
+  },
+  "top_up_completed": {
+    "title": "Top-up successful",
+    "body": "Your top-up of {amount} {currency} was credited to your account."
+  },
+  "withdraw_completed": {
+    "title": "Withdrawal sent",
+    "body": "Your withdrawal of {amount} {currency} has been processed."
+  },
+  "withdraw_reversed": {
+    "title": "Withdrawal reversed",
+    "body": "Your withdrawal of {amount} {currency} was reversed: {reason}. The amount has been credited back."
+  }
+}

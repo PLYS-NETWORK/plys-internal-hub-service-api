@@ -9,6 +9,8 @@ import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ConsultantProfile } from '@database/entities';
 import { ApplicationStatus, ProjectStatus } from '@database/enums';
+import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-type.enum';
+import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -32,6 +34,7 @@ export class ConsultantApplicationService {
     private readonly emailService: EmailService,
     private readonly copyleaksService: CopyleaksService,
     private readonly envService: EnvironmentsService,
+    private readonly notificationDispatcher: NotificationDispatcherService,
   ) {
     this.logger = new AppLogger(ConsultantApplicationService.name, requestContext);
   }
@@ -227,6 +230,37 @@ export class ConsultantApplicationService {
     // 8. Send notification emails AFTER transaction commits (fire-and-forget)
     const applicationUrl = `${this.envService.ployosUrl}/c/${project.businessId}/projects/${project.id}`;
     this.sendNotificationEmails(project, consultantProfile, matchedSkills, applicationUrl);
+
+    // 8b. In-app notification to the BUSINESS owner of the project. We look up
+    // the owner via project.businessId so the notification routes to the human
+    // user, not the BusinessProfile id. Fire-and-forget; errors are logged.
+    void this.uow.businessProfiles
+      .findByActiveId(project.businessId)
+      .then((ownerProfile) => {
+        if (!ownerProfile) {
+          this.logger.warn(
+            `applyToProject — owner profile vanished | businessId: ${project.businessId}`,
+          );
+          return null;
+        }
+        return this.notificationDispatcher.dispatch({
+          userId: ownerProfile.userId,
+          type: NOTIFICATION_TYPES.NEW_APPLICATION,
+          metadata: {
+            project_id: project.id,
+            project_code: project.code,
+            project_title: project.title,
+            application_id: application.id,
+            consultant_id: consultantProfile.id,
+            consultant_name: consultantProfile.fullName,
+          },
+          actorId: consultantProfile.userId,
+        });
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error(`applyToProject — notification dispatch failed | error: ${msg}`);
+      });
 
     // 9. Build response DTO
     return plainToInstance(

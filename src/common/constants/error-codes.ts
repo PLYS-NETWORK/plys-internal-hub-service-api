@@ -120,6 +120,10 @@ export const ERROR_CODES = {
   FILE_QUOTA_EXCEEDED: 'FILE_QUOTA_EXCEEDED',
   FILE_FORBIDDEN: 'FILE_FORBIDDEN',
   FILE_DIMENSIONS_EXCEEDED: 'FILE_DIMENSIONS_EXCEEDED',
+
+  // ─── Notifications ────────────────────────────────────────────────────────
+  NOTIFICATION_NOT_FOUND: 'NOTIFICATION_NOT_FOUND',
+  NOTIFICATION_FORBIDDEN: 'NOTIFICATION_FORBIDDEN',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

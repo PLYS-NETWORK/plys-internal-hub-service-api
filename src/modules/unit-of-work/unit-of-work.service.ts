@@ -27,6 +27,7 @@ import {
   IInterviewAnswerRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
+  INotificationRepository,
   InterviewAnswerRepository,
   InvoiceLineItemRepository,
   InvoiceRepository,
@@ -50,6 +51,7 @@ import {
   IUserSessionRepository,
   IUserSsoProviderRepository,
   IWebhookEventRepository,
+  NotificationRepository,
   ProjectActivityRepository,
   ProjectApplicationRepository,
   ProjectInterviewQuestionRepository,
@@ -111,6 +113,7 @@ class TransactionalUnitOfWork implements IUnitOfWork {
     public readonly transactionNumbers: TransactionNumberService,
     public readonly webhookEvents: IWebhookEventRepository,
     public readonly files: IFileRepository,
+    public readonly notifications: INotificationRepository,
   ) {}
 
   // Already inside a transaction — pass-through to avoid nested QueryRunners.
@@ -165,6 +168,8 @@ export class UnitOfWorkService implements IUnitOfWork {
     public readonly webhookEvents: WebhookEventRepository,
     // Domain 9 — Files
     public readonly files: FileRepository,
+    // Domain 10 — Notifications
+    public readonly notifications: NotificationRepository,
   ) {}
 
   public async withTransaction<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T> {
@@ -210,6 +215,7 @@ export class UnitOfWorkService implements IUnitOfWork {
         this.transactionNumbers.withManager(manager),
         this.webhookEvents.withManager(manager),
         this.files.withManager(manager),
+        this.notifications.withManager(manager),
       );
 
       const result = await work(txUow);

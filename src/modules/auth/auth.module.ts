@@ -1,5 +1,6 @@
 import { EnvironmentsService } from '@common/modules/environments';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
 import { UsersModule } from '@modules/users/users.module';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
@@ -34,6 +35,7 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
     UsersModule,
     PassportModule,
     JwtModule.register({}),
+    NotificationsModule,
     // Single permissive default tier applies to every controller method
     // (60 requests / minute / IP). Auth-sensitive endpoints override this
     // via `@Throttle({ default: { limit, ttl } })` for strict limits.

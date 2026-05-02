@@ -46,5 +46,9 @@
   "payment": {
     "top_up_resumed": "Top-up resumed.",
     "top_up_cancelled": "Top-up cancelled."
+  },
+  "notification": {
+    "read": "Notification marked as read.",
+    "read_all": "All notifications marked as read."
   }
 }

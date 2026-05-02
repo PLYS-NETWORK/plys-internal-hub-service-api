@@ -13,6 +13,8 @@ import {
   ProjectStatus,
   TransactionStatus,
 } from '@database/enums';
+import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-type.enum';
+import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 
@@ -29,6 +31,7 @@ export class ProjectRepublishService implements IProjectRepublishService {
     private readonly access: BusinessAccessService,
     private readonly emailService: EmailService,
     private readonly env: EnvironmentsService,
+    private readonly notificationDispatcher: NotificationDispatcherService,
   ) {
     this.logger = new AppLogger(ProjectRepublishService.name, requestContext);
   }
@@ -138,6 +141,25 @@ export class ProjectRepublishService implements IProjectRepublishService {
         refundedAmount.transactionNumber,
       );
     }
+
+    // Fire-and-forget — fires for both refund and CREDIT paths so the user
+    // always gets confirmation that the project is back in CONFIGURED state.
+    void this.notificationDispatcher
+      .dispatch({
+        userId: businessProfile.userId,
+        type: NOTIFICATION_TYPES.PROJECT_UNPUBLISHED,
+        metadata: {
+          project_id: project.id,
+          project_code: project.code,
+          project_title: project.title,
+          ...(refundedAmount !== null ? { refund_amount: parseFloat(refundedAmount.amount) } : {}),
+        },
+        actorId: this.requestContext.userId ?? null,
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error(`[${this.rid}] republish — notification dispatch failed | error: ${msg}`);
+      });
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
