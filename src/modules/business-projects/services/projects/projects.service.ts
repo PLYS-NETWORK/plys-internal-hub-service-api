@@ -96,8 +96,9 @@ export class BusinessProjectsService implements IBusinessProjectsService {
       this.countPendingApplicationsPerProject(projectIds),
     ]);
 
-    const data = projects.map((p) =>
-      plainToInstance(
+    const data = projects.map((p) => {
+      const tasks = taskCounts.get(p.id);
+      return plainToInstance(
         ProjectListItemResponseDto,
         {
           id: p.id,
@@ -108,13 +109,14 @@ export class BusinessProjectsService implements IBusinessProjectsService {
           created_at: p.createdAt,
           published_at: p.publishedAt,
           required_consultants: p.requiredConsultants,
-          total_tasks: taskCounts.get(p.id) ?? 0,
+          total_tasks: tasks?.total ?? 0,
+          total_completed_tasks: tasks?.completed ?? 0,
           total_active_members: memberCounts.get(p.id) ?? 0,
           total_pending_applications: applicationCounts.get(p.id) ?? 0,
         },
         { excludeExtraneousValues: true },
-      ),
-    );
+      );
+    });
 
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
     this.logger.log(
@@ -125,18 +127,23 @@ export class BusinessProjectsService implements IBusinessProjectsService {
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
-  private async countTasksPerProject(projectIds: string[]): Promise<Map<string, number>> {
+  private async countTasksPerProject(
+    projectIds: string[],
+  ): Promise<Map<string, { total: number; completed: number }>> {
     if (projectIds.length === 0) return new Map();
     const rows = await this.uow.tasks
       .createQueryBuilder('t')
       .select('t.project_id', 'project_id')
-      .addSelect('COUNT(*)::int', 'count')
+      .addSelect('COUNT(*)::int', 'total')
+      .addSelect('COUNT(*) FILTER (WHERE t.kanban_status = :done)::int', 'completed')
       .where('t.project_id IN (:...projectIds)', { projectIds })
-      .andWhere('t.kanban_status != :draft', { draft: TaskKanbanStatus.DRAFT })
       .andWhere('t.deleted_at IS NULL')
+      .setParameter('done', TaskKanbanStatus.DONE)
       .groupBy('t.project_id')
-      .getRawMany<{ project_id: string; count: number }>();
-    return new Map(rows.map((r) => [r.project_id, Number(r.count)]));
+      .getRawMany<{ project_id: string; total: number; completed: number }>();
+    return new Map(
+      rows.map((r) => [r.project_id, { total: Number(r.total), completed: Number(r.completed) }]),
+    );
   }
 
   private async countActiveMembersPerProject(projectIds: string[]): Promise<Map<string, number>> {

@@ -1,5 +1,6 @@
 import { EmailModule } from '@common/modules/email';
 import { EnvironmentsModule } from '@common/modules/environments';
+import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
 import { Module } from '@nestjs/common';
 
@@ -23,7 +24,7 @@ import { BusinessProjectsService } from './services/projects/projects.service';
 import { SettingsService } from './services/settings.service';
 
 @Module({
-  imports: [UnitOfWorkModule, EmailModule, EnvironmentsModule],
+  imports: [UnitOfWorkModule, EmailModule, EnvironmentsModule, NotificationsModule],
   controllers: [
     BusinessProjectsController,
     BusinessProjectOverviewController,

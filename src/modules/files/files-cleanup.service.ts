@@ -2,7 +2,7 @@ import { EnvironmentsService } from '@common/modules/environments';
 import { IStorageProvider, STORAGE_PROVIDER } from '@common/modules/file-storage';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { FileEntity } from '@database/entities';
+import { FileEntity, TaskCommentAttachment, TaskEvidenceAttachment } from '@database/entities';
 import { FileStorageProvider } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Inject, Injectable } from '@nestjs/common';
@@ -80,8 +80,8 @@ export class FilesCleanupService {
       for (;;) {
         const batch = await this.uow.files
           .createQueryBuilder('f')
-          .leftJoin('task_comment_attachments', 'tca', 'tca.file_id = f.id')
-          .leftJoin('task_evidence_attachments', 'tea', 'tea.file_id = f.id')
+          .leftJoin(TaskCommentAttachment, 'tca', 'tca.file_id = f.id')
+          .leftJoin(TaskEvidenceAttachment, 'tea', 'tea.file_id = f.id')
           .where('f.purpose IS NULL')
           .andWhere('f.deleted_at IS NULL')
           .andWhere('f.created_at < :cutoff', { cutoff })

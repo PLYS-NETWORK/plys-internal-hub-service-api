@@ -103,5 +103,9 @@
     "quota_exceeded": "Depolama kotanız aşıldı.",
     "forbidden": "Bu dosyaya erişim yetkiniz yok.",
     "dimensions_exceeded": "Görüntü boyutları izin verilen maksimumu aşıyor."
+  },
+  "notification": {
+    "not_found": "Bildirim bulunamadı.",
+    "forbidden": "Bu bildirime erişim yetkiniz yok."
   }
 }

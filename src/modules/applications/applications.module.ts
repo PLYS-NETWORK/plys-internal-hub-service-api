@@ -1,3 +1,4 @@
+import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
 import { Module } from '@nestjs/common';
 
@@ -5,7 +6,7 @@ import { ConsultantApplicationController } from './consultant-application.contro
 import { ConsultantApplicationService } from './services/consultant-application.service';
 
 @Module({
-  imports: [UnitOfWorkModule],
+  imports: [UnitOfWorkModule, NotificationsModule],
   controllers: [ConsultantApplicationController],
   providers: [ConsultantApplicationService],
 })

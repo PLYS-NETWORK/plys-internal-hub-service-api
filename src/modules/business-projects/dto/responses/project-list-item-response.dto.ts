@@ -43,6 +43,10 @@ export class ProjectListItemResponseDto implements IProjectListItemResponse {
   public readonly total_tasks!: number;
 
   @Expose()
+  @ApiProperty({ name: 'total_completed_tasks', example: 4 })
+  public readonly total_completed_tasks!: number;
+
+  @Expose()
   @ApiProperty({ name: 'total_active_members', example: 3 })
   public readonly total_active_members!: number;
 

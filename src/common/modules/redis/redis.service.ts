@@ -10,6 +10,12 @@ import { IRedisService } from './interfaces';
 export class RedisService implements IRedisService, OnModuleInit, OnModuleDestroy {
   private readonly logger: AppLogger;
   private client!: Redis;
+  // Lazily-initialised second client dedicated to subscriber mode. ioredis puts
+  // a subscribed connection into "subscriber mode" where it can no longer issue
+  // regular commands, so we keep a separate connection only for psubscribe.
+  private subscriberClient: Redis | null = null;
+  private readonly patternHandlers: Map<string, Array<(channel: string, message: string) => void>> =
+    new Map();
 
   constructor(
     private readonly env: EnvironmentsService,
@@ -57,7 +63,58 @@ export class RedisService implements IRedisService, OnModuleInit, OnModuleDestro
 
   public async onModuleDestroy(): Promise<void> {
     this.logger.log(`[system] Redis — shutting down`);
+    if (this.subscriberClient) {
+      await this.subscriberClient.quit();
+      this.subscriberClient = null;
+    }
     await this.client.quit();
+  }
+
+  /**
+   * Lazily creates the dedicated subscriber connection. ioredis treats a
+   * subscribed connection as read-only — issuing GET/SET/etc. on the same
+   * connection would fail — so subscriber traffic is isolated here.
+   */
+  private getSubscriberClient(): Redis {
+    if (!this.subscriberClient) {
+      this.subscriberClient = new Redis({
+        host: this.env.redisHost,
+        port: this.env.redisPort,
+        password: this.env.redisPassword,
+        db: this.env.redisDb,
+        // No keyPrefix: pub/sub channels are namespace-flat by design — the prefix
+        // would be invisibly prepended to the channel name and break psubscribe patterns.
+        tls: this.env.redisTlsEnabled ? {} : undefined,
+        lazyConnect: false,
+        enableReadyCheck: true,
+        maxRetriesPerRequest: null,
+        retryStrategy: (times: number) => Math.min(times * 50, 2000),
+      });
+
+      this.subscriberClient.on('error', (err: Error) => {
+        this.logger.error(`[system] Redis subscriber — error | message: ${err.message}`);
+      });
+
+      // Single dispatcher for every pmessage — fan out to all handlers registered
+      // for the matching pattern. Handlers register their pattern via psubscribe.
+      this.subscriberClient.on('pmessage', (pattern: string, channel: string, message: string) => {
+        const handlers = this.patternHandlers.get(pattern);
+        if (!handlers) {
+          return;
+        }
+        for (const handler of handlers) {
+          try {
+            handler(channel, message);
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            this.logger.error(
+              `[system] Redis subscriber — handler failed | pattern: ${pattern} | channel: ${channel} | error: ${msg}`,
+            );
+          }
+        }
+      });
+    }
+    return this.subscriberClient;
   }
 
   public async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
@@ -297,6 +354,57 @@ export class RedisService implements IRedisService, OnModuleInit, OnModuleDestro
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`ping — failed | error: ${message}`);
+      throw err;
+    }
+  }
+
+  public async publish(channel: string, message: string): Promise<number> {
+    try {
+      const subscribers = await this.client.publish(channel, message);
+      return subscribers;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`publish — failed | channel: ${channel} | error: ${msg}`);
+      throw err;
+    }
+  }
+
+  public async psubscribe(
+    pattern: string,
+    handler: (channel: string, message: string) => void,
+  ): Promise<void> {
+    const sub = this.getSubscriberClient();
+
+    const existing = this.patternHandlers.get(pattern);
+    if (existing) {
+      existing.push(handler);
+      return;
+    }
+
+    this.patternHandlers.set(pattern, [handler]);
+
+    try {
+      await sub.psubscribe(pattern);
+      this.logger.log(`psubscribe — complete | pattern: ${pattern}`);
+    } catch (err: unknown) {
+      this.patternHandlers.delete(pattern);
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`psubscribe — failed | pattern: ${pattern} | error: ${msg}`);
+      throw err;
+    }
+  }
+
+  public async punsubscribe(pattern: string): Promise<void> {
+    if (!this.subscriberClient) {
+      return;
+    }
+    this.patternHandlers.delete(pattern);
+    try {
+      await this.subscriberClient.punsubscribe(pattern);
+      this.logger.log(`punsubscribe — complete | pattern: ${pattern}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`punsubscribe — failed | pattern: ${pattern} | error: ${msg}`);
       throw err;
     }
   }

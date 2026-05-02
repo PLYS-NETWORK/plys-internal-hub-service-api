@@ -1,0 +1,34 @@
+{
+  "profile_updated": {
+    "title": "Profil güncellendi",
+    "body": "Profiliniz güncellendi. Değiştirilen alanlar: {fields}"
+  },
+  "password_changed": {
+    "title": "Şifre değiştirildi",
+    "body": "Şifreniz değiştirildi. Bu işlemi siz yapmadıysanız hesabınızı hemen güvene alın."
+  },
+  "project_published": {
+    "title": "Proje yayınlandı",
+    "body": "\"{title}\" ({code}) projeniz yayında ve başvurulara açık."
+  },
+  "project_unpublished": {
+    "title": "Proje yayından kaldırıldı",
+    "body": "\"{title}\" ({code}) projeniz tekrar yapılandırma moduna alındı."
+  },
+  "new_application": {
+    "title": "Yeni başvuru alındı",
+    "body": "{consultant}, \"{title}\" projenize başvurdu."
+  },
+  "top_up_completed": {
+    "title": "Yükleme başarılı",
+    "body": "{amount} {currency} tutarındaki yüklemeniz hesabınıza eklendi."
+  },
+  "withdraw_completed": {
+    "title": "Para çekme gönderildi",
+    "body": "{amount} {currency} tutarındaki para çekme işleminiz tamamlandı."
+  },
+  "withdraw_reversed": {
+    "title": "Para çekme iade edildi",
+    "body": "{amount} {currency} tutarındaki para çekme işlemi iade edildi: {reason}. Tutar hesabınıza geri yansıtıldı."
+  }
+}
