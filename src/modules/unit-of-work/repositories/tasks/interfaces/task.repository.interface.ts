@@ -53,4 +53,30 @@ export interface ITaskRepository extends AbstractRepository<Task> {
 
   /** Tasks where `kanban_status <> cancelled` across the given projects. */
   countOpenByProjectIds(projectIds: string[]): Promise<number>;
+
+  /**
+   * Counts a single consultant's tasks in one project grouped by
+   * `kanban_status`. All statuses are zero-filled. DRAFT tasks (which are not
+   * "assigned" in any meaningful sense) are excluded.
+   */
+  countByAssigneeAndProjectGroupedByStatus(
+    consultantId: string,
+    projectId: string,
+  ): Promise<Record<TaskKanbanStatus, number>>;
+
+  /**
+   * True when the consultant currently has another in-progress task assigned
+   * to them (across any project). Used to enforce the
+   * "one in-progress task per consultant" invariant before a status flip to
+   * IN_PROGRESS. `excludeTaskId` lets the caller ignore the row it is about
+   * to update.
+   */
+  existsInProgressByAssignee(consultantId: string, excludeTaskId?: string): Promise<boolean>;
+
+  /**
+   * Returns the average price for several projects in one round-trip. Each
+   * project that has at least one non-DRAFT/non-CANCELLED task gets an entry;
+   * projects without qualifying tasks are absent from the map.
+   */
+  avgPriceByProjectIds(projectIds: string[]): Promise<Map<string, number>>;
 }

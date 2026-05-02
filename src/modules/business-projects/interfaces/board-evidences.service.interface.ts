@@ -6,7 +6,7 @@ import { BoardEvidenceResponseDto } from '../dto/responses';
 /**
  * Read-only listing of consultant-submitted evidences for the BUSINESS
  * surface. Mutations (create/update/delete) live on the consultant-side
- * `TaskEvidencesService` — not exposed here.
+ * `ConsultantBoardEvidencesService` — not exposed here.
  */
 export interface IBoardEvidencesService {
   /**

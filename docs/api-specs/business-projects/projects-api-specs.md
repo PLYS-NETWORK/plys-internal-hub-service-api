@@ -29,7 +29,7 @@
   | `title` | `string` | yes | length 3–300 |
   | `introduction` | `Record<string, unknown> \| null` | no | rich-text JSON (TipTap/ProseMirror) |
 - **Behaviour:** Service checks `(business_id, code)` uniqueness with a pre-flight `findOne` against [BusinessProjectsService.createProject](../../../src/modules/business-projects/services/projects/projects.service.ts). The DB-level unique constraint `uq_projects_business_code` (added by [migration 20260501000002](../../../src/database/migrations/20260501000002-AddProjectAndTaskCodes.ts)) acts as a safety net for the race window between check and insert; in that case clients see the generic `DATABASE_UNIQUE_VIOLATION` (409).
-- **Response 201:** [`IProjectSummaryResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-summary.response.interface.ts) — `{ id, code, title, introduction, status, required_consultants, published_at, created_at, updated_at }`
+- **Response 201:** [`IProjectSummaryResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-summary.response.interface.ts) — `{ id, code, title, introduction, status, payment_type, required_consultants, published_at, created_at, updated_at }`. `payment_type` is `per_task | per_month` (defaults to `per_task`).
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|
@@ -46,7 +46,7 @@
   | `page` | `number` | no | default 1 |
   | `take` | `number` | no | default 20, max 100 |
   | `keywords` | `string` | no | length 2–200, trimmed |
-- **Response 200:** `PageDto<`[`IProjectListItemResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-list-item.response.interface.ts)`>` — items: `{ id, code, title, status, created_at, published_at, required_consultants, total_tasks, total_active_members, total_pending_applications }`. Meta: `{ page, take, item_count, page_count, has_previous_page, has_next_page }`.
+- **Response 200:** `PageDto<`[`IProjectListItemResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-list-item.response.interface.ts)`>` — items: `{ id, code, title, status, payment_type, created_at, published_at, required_consultants, total_tasks, total_active_members, total_pending_applications }`. `payment_type` is `per_task | per_month`. Meta: `{ page, take, item_count, page_count, has_previous_page, has_next_page }`.
 - **Errors:** cross-cutting only.
 
 ### 3. Pre-flight publish validation

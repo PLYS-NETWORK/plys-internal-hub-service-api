@@ -1,6 +1,7 @@
 import {
   ProjectActivityEventType,
   ProjectMemberActiveStatus,
+  ProjectPaymentType,
   ProjectStatus,
 } from '@database/enums';
 
@@ -11,6 +12,7 @@ export interface IOverviewSummary {
   published_at: Date | null;
   business_company_name: string;
   status: ProjectStatus;
+  payment_type: ProjectPaymentType;
   /** Sum of price across all tasks (excluding cancelled). Pre-commission. */
   project_cost: string;
 }

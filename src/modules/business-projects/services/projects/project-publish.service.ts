@@ -11,6 +11,7 @@ import {
   BusinessTransactionType,
   PaymentMethod,
   PaymentType,
+  ProjectPaymentType,
   ProjectStatus,
   TransactionStatus,
 } from '@database/enums';
@@ -187,6 +188,16 @@ export class ProjectPublishService implements IProjectPublishService {
         await txUow.businessTransactions.save(txn);
       }
 
+      // Lock the payment_type at publish time based on the business's billing
+      // mode. CREDIT businesses are billed monthly (PER_MONTH); PRE_PAID
+      // businesses are charged per-task at this very publish call (PER_TASK).
+      // The column is locked here so subsequent toggles of
+      // business_profile.allow_payment_credit do not retroactively rewrite
+      // the consultant overview shape for in-flight projects.
+      project.paymentType =
+        lockedEligibility.paymentType === PaymentType.CREDIT
+          ? ProjectPaymentType.PER_MONTH
+          : ProjectPaymentType.PER_TASK;
       project.status = ProjectStatus.PUBLISHED;
       await txUow.projects.save(project);
       return { eligibility: lockedEligibility, transactionNumber: txnNumber };
