@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rtk read *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); scripts=d.get\\('scripts',{}\\); [print\\(k,':',v\\) for k,v in scripts.items\\(\\) if 'migration' in k or 'typeorm' in k]\")",
+      "Bash(rtk grep *)"
+    ]
+  }
+}

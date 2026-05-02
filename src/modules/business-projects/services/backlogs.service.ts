@@ -19,7 +19,12 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { ILike, In } from 'typeorm';
 
-import { CreateDraftTaskDto, ListDraftTasksDto, TaskIdsDto } from '../dto/requests';
+import {
+  CreateDraftTaskDto,
+  ListDraftTasksDto,
+  TaskIdsDto,
+  UpdateDraftTaskDto,
+} from '../dto/requests';
 import {
   AddToBoardValidationResponseDto,
   DraftTaskResponseDto,
@@ -111,6 +116,39 @@ export class BacklogsService implements IBacklogsService {
       `[${this.rid}] createDraftTask — complete | taskId: ${reloaded.id}, code: ${reloaded.code}`,
     );
     return this.toDraftTaskResponse(reloaded);
+  }
+
+  /** @inheritdoc */
+  public async updateDraftTask(
+    projectId: string,
+    taskId: string,
+    dto: UpdateDraftTaskDto,
+  ): Promise<DraftTaskResponseDto> {
+    this.logger.log(
+      `[${this.rid}] updateDraftTask — start | projectId: ${projectId}, taskId: ${taskId}`,
+    );
+    await this.access.resolveOwnedProject(projectId);
+
+    const task = await this.uow.tasks.findOne({
+      where: { id: taskId, projectId, kanbanStatus: TaskKanbanStatus.DRAFT },
+    });
+    if (!task) {
+      throw new TranslatableException({
+        messageKey: 'error.task.not_found',
+        errorCode: ERROR_CODES.TASK_NOT_FOUND,
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    if (dto.title !== undefined) task.title = dto.title;
+    if (dto.description !== undefined) task.description = dto.description ?? null;
+    if (dto.price !== undefined) task.price = Number(dto.price);
+    if (dto.difficultyLevel !== undefined) task.difficultyLevel = dto.difficultyLevel;
+
+    const saved = await this.uow.tasks.save(task);
+
+    this.logger.log(`[${this.rid}] updateDraftTask — complete | taskId: ${saved.id}`);
+    return this.toDraftTaskResponse(saved);
   }
 
   /** @inheritdoc */
