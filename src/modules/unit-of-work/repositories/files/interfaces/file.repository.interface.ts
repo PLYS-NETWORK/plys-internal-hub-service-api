@@ -1,5 +1,6 @@
 import { AbstractRepository } from '@common/repositories';
 import { FileEntity } from '@database/entities';
+import { FilePurpose } from '@database/enums';
 
 export interface IFileRepository extends AbstractRepository<FileEntity> {
   /**
@@ -32,4 +33,24 @@ export interface IFileRepository extends AbstractRepository<FileEntity> {
 
   /** Hard-deletes the row by id, bypassing soft-delete. */
   hardDelete(id: string): Promise<void>;
+
+  /**
+   * Marks the given files as attached to a specific surface — sets
+   * `files.purpose` so the orphan-cleanup cron will not reclaim them.
+   * Caller is expected to be inside a transaction (use `tx.files`).
+   *
+   * @param fileIds Files to update. No-op when empty.
+   * @param purpose The owning surface (e.g. `TASK_COMMENT`, `TASK_EVIDENCE`).
+   */
+  markAsAttached(fileIds: string[], purpose: FilePurpose): Promise<void>;
+
+  /**
+   * Clears `files.purpose` (back to NULL) so the orphan-cleanup cron will
+   * reclaim them after `FILES_ORPHAN_GRACE_HOURS`. Used when an attachment
+   * is replaced, the parent comment/evidence is deleted, or any other
+   * detach event.
+   *
+   * @param fileIds Files to orphan. No-op when empty.
+   */
+  markAsOrphaned(fileIds: string[]): Promise<void>;
 }

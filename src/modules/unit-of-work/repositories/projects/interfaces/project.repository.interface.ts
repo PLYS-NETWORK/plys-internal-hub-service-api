@@ -1,4 +1,3 @@
-import { Order } from '@common/dto/page-options.dto';
 import { AbstractRepository } from '@common/repositories';
 import { Project } from '@database/entities';
 import { ProjectStatus } from '@database/enums';
@@ -12,27 +11,34 @@ export interface IProjectTrendPoint {
 }
 
 export interface IProjectRepository extends AbstractRepository<Project> {
-  findByBusinessId(
-    businessId: string,
-    skip: number,
-    take: number,
-    keywords?: string,
-    sortBy?: string,
-    orderBy?: Order,
-  ): Promise<[Project[], number]>;
   findByIdAndBusinessId(id: string, businessId: string): Promise<Project | null>;
-  findPublicMatchingSkills(
+
+  /**
+   * Returns projects whose `status` is one of `statuses` and that require at
+   * least one of the supplied skill ids. Used by the consultant discovery
+   * feed; PUBLISHED + IN_PROGRESS are both surfaced because in-progress
+   * projects can still recruit additional members.
+   */
+  findAccessibleMatchingSkills(
     skillIds: string[],
+    statuses: ProjectStatus[],
     skip: number,
     take: number,
   ): Promise<[Project[], number]>;
-  findPublicById(id: string): Promise<Project | null>;
+
+  /**
+   * Returns a project that is either in one of the accessible `statuses` or
+   * has the given consultant as an ACTIVE member. Used by the consultant
+   * project detail endpoint.
+   */
+  findAccessibleByIdForConsultant(
+    id: string,
+    consultantId: string,
+    statuses: ProjectStatus[],
+  ): Promise<Project | null>;
 
   /** Returns project IDs owned by a business. Excludes soft-deleted rows. */
   findIdsByBusinessId(businessId: string): Promise<string[]>;
-
-  /** Returns id+title pairs for a business — used by stats endpoints that need names. */
-  findIdsAndTitlesByBusinessId(businessId: string): Promise<Array<{ id: string; title: string }>>;
 
   /**
    * Counts projects grouped by `status` for a single business. Statuses with

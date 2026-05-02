@@ -1,6 +1,6 @@
 import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { BusinessProfile } from '@database/entities/profiles/business-profile.entity';
-import { ProjectStatus } from '@database/enums';
+import { ProjectPaymentType, ProjectStatus } from '@database/enums';
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 // Top-level project owned by a business.
@@ -15,6 +15,8 @@ import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } 
 // Drives the consultant discovery query (status = 'PUBLIC' ORDER BY published_at DESC).
 // A composite index avoids a sort step on the filtered set.
 @Index('idx_projects_status_published_at', ['status', 'publishedAt'])
+// Consultant overview/list endpoints branch on payment_type — keep it indexed.
+@Index('idx_projects_payment_type', ['paymentType'])
 @Index('uq_projects_business_code', ['businessId', 'code'], { unique: true })
 export class Project extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_projects' })
@@ -43,6 +45,16 @@ export class Project extends AuditableEntity {
 
   @Column({ type: 'varchar', length: 20, default: ProjectStatus.DRAFT })
   public status!: ProjectStatus;
+
+  // Drives consultant overview branching (per-task vs per-month payouts) and
+  // whether avg_price_per_task is meaningful in the discovery list.
+  @Column({
+    name: 'payment_type',
+    type: 'varchar',
+    length: 20,
+    default: ProjectPaymentType.PER_TASK,
+  })
+  public paymentType!: ProjectPaymentType;
 
   @Column({ name: 'required_consultants', type: 'smallint', default: 1 })
   public requiredConsultants!: number;

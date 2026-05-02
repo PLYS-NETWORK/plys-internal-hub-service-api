@@ -12,15 +12,16 @@ export interface IFilesService {
   /**
    * Validates and stores an uploaded file. Caller is responsible for
    * sniffing/sanitising the input via `FileContentValidator` first.
+   * The new row always has `purpose = NULL`; `purpose` is set later by
+   * the attaching surface via `IFileRepository.markAsAttached`.
    *
    * @param input Validated upload payload.
-   * @param opts  Optional metadata: `purpose` tags the row for downstream filtering.
    * @returns Snake_case DTO with id + fresh URL.
    * @throws TranslatableException(FILE_QUOTA_EXCEEDED) when the user is over quota.
    * @throws TranslatableException(FILE_UPLOAD_FAILED)  on unexpected failure.
    * @throws TranslatableException(FILE_STORAGE_ERROR)  when the backend rejects the write.
    */
-  upload(input: IUploadInput, opts?: { purpose?: string }): Promise<FileResponseDto>;
+  upload(input: IUploadInput): Promise<FileResponseDto>;
 
   /**
    * Loads metadata + a freshly issued URL for a single file. Enforces

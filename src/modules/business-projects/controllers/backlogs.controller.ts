@@ -14,13 +14,19 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { CreateDraftTaskDto, ListDraftTasksDto, TaskIdsDto } from '../dto/requests';
+import {
+  CreateDraftTaskDto,
+  ListDraftTasksDto,
+  TaskIdsDto,
+  UpdateDraftTaskDto,
+} from '../dto/requests';
 import {
   AddToBoardValidationResponseDto,
   DraftTaskResponseDto,
@@ -56,6 +62,20 @@ export class BacklogsController {
     @Query() dto: ListDraftTasksDto,
   ): Promise<ITranslatedPayload<PageDto<DraftTaskResponseDto>>> {
     const data = await this.backlogsService.listDraftTasks(id, dto);
+    return { messageKey: 'success.ok', data };
+  }
+
+  @Patch(':taskId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Partially update a draft task (title, description, price, difficulty)',
+  })
+  public async updateDraftTask(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Body() dto: UpdateDraftTaskDto,
+  ): Promise<ITranslatedPayload<DraftTaskResponseDto>> {
+    const data = await this.backlogsService.updateDraftTask(id, taskId, dto);
     return { messageKey: 'success.ok', data };
   }
 

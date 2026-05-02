@@ -34,7 +34,7 @@ export class TaskCodeService implements ITaskCodeService {
     // Two-int advisory lock keyed by ('tasks:code', projectId). Reentrant on
     // the same xact and auto-released on commit/rollback.
     await this.manager.query(
-      `SELECT pg_advisory_xact_lock(hashtext($1)::int8, hashtext($2)::int8)`,
+      `SELECT pg_advisory_xact_lock(hashtext($1)::int4, hashtext($2)::int4)`,
       ['tasks:code', projectId],
     );
 

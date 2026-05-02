@@ -144,6 +144,65 @@ export class TaskRepository extends AbstractRepository<Task> implements ITaskRep
     return Number(row?.count ?? 0);
   }
 
+  /** @inheritdoc */
+  public async countByAssigneeAndProjectGroupedByStatus(
+    consultantId: string,
+    projectId: string,
+  ): Promise<Record<TaskKanbanStatus, number>> {
+    const out = {} as Record<TaskKanbanStatus, number>;
+    for (const status of TASK_KANBAN_STATUSES) out[status] = 0;
+
+    const rows = await this.createQueryBuilder('task')
+      .select('task.kanban_status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('task.assigned_to = :consultantId', { consultantId })
+      .andWhere('task.project_id = :projectId', { projectId })
+      .andWhere(`task.kanban_status <> '${TaskKanbanStatus.DRAFT}'`)
+      .andWhere('task.deleted_at IS NULL')
+      .groupBy('task.kanban_status')
+      .getRawMany<{ status: TaskKanbanStatus; count: string }>();
+
+    for (const row of rows) out[row.status] = Number(row.count);
+    return out;
+  }
+
+  /** @inheritdoc */
+  public async existsInProgressByAssignee(
+    consultantId: string,
+    excludeTaskId?: string,
+  ): Promise<boolean> {
+    const qb = this.createQueryBuilder('task')
+      .select('1', 'present')
+      .where('task.assigned_to = :consultantId', { consultantId })
+      .andWhere(`task.kanban_status = '${TaskKanbanStatus.IN_PROGRESS}'`)
+      .andWhere('task.deleted_at IS NULL');
+    if (excludeTaskId) qb.andWhere('task.id <> :excludeTaskId', { excludeTaskId });
+    const row = await qb.limit(1).getRawOne<{ present: number }>();
+    return row !== undefined;
+  }
+
+  /** @inheritdoc */
+  public async avgPriceByProjectIds(projectIds: string[]): Promise<Map<string, number>> {
+    if (projectIds.length === 0) return new Map();
+
+    const rows = await this.createQueryBuilder('task')
+      .select('task.project_id', 'project_id')
+      .addSelect('AVG(task.price)::numeric(10,2)', 'avg_price')
+      .where('task.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere(
+        `task.kanban_status NOT IN ('${TaskKanbanStatus.DRAFT}', '${TaskKanbanStatus.CANCELLED}')`,
+      )
+      .groupBy('task.project_id')
+      .getRawMany<{ project_id: string; avg_price: string | null }>();
+
+    const out = new Map<string, number>();
+    for (const row of rows) {
+      if (row.avg_price !== null) out.set(row.project_id, Number(row.avg_price));
+    }
+    return out;
+  }
+
   private applyProjectIdFilter(qb: SelectQueryBuilder<Task>, projectIdFilter?: string): void {
     if (projectIdFilter) {
       qb.andWhere('task.project_id = :projectIdFilter', { projectIdFilter });

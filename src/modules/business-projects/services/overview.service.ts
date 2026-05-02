@@ -89,6 +89,7 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
       published_at: project.publishedAt,
       business_company_name: businessProfile.companyName,
       status: project.status,
+      payment_type: project.paymentType,
       project_cost: projectCost.toFixedString(),
     };
 

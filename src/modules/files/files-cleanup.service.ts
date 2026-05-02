@@ -13,13 +13,14 @@ const MS_PER_DAY = 86_400_000;
 const MS_PER_HOUR = 3_600_000;
 
 /**
- * Daily background jobs that reclaim storage. Two passes run on the same
- * 03:00 UTC schedule, in order:
- *   1. `purgeOrphanedUploads` — soft-deletes uploads that were never attached
- *      to anything (`purpose IS NULL`, no attachment row references) and are
- *      older than `FILES_ORPHAN_GRACE_HOURS`.
- *   2. `purgeExpiredSoftDeletes` — physically removes the byte object and
- *      hard-deletes rows soft-deleted more than `FILES_PURGE_AFTER_DAYS` ago.
+ * Background jobs that reclaim storage. Split across two schedules:
+ *   1. `runWeeklyOrphanSweep` (Mon 03:00 UTC) → `purgeOrphanedUploads`
+ *      soft-deletes uploads that were never attached (`purpose IS NULL`,
+ *      no attachment row references) and are older than
+ *      `FILES_ORPHAN_GRACE_HOURS`.
+ *   2. `runDailySoftDeleteSweep` (daily 03:00 UTC) → `purgeExpiredSoftDeletes`
+ *      physically removes the byte object and hard-deletes rows
+ *      soft-deleted more than `FILES_PURGE_AFTER_DAYS` ago.
  *
  * Per-row provider routing means a file written under `local` is still
  * reclaimable after the active default switches — the row's
@@ -41,11 +42,20 @@ export class FilesCleanupService {
     this.logger = new AppLogger(FilesCleanupService.name, requestContext);
   }
 
-  @Cron('0 3 * * *')
-  public async runDailyCleanup(): Promise<void> {
-    // Run orphan sweep first so freshly orphaned rows enter the soft-delete
-    // pipeline immediately rather than waiting another 24h to be picked up.
+  // Weekly orphan sweep — runs Monday 03:00 UTC (start of the work week).
+  // Files attached in the past week are protected by `purpose != NULL`;
+  // the rest are eligible for soft-delete after `FILES_ORPHAN_GRACE_HOURS`.
+  @Cron('0 3 * * 1')
+  public async runWeeklyOrphanSweep(): Promise<void> {
     await this.purgeOrphanedUploads();
+  }
+
+  // Daily byte-reclamation — soft-deleted files past the retention window
+  // have their bytes removed from storage and rows hard-deleted. Runs daily
+  // because it's bound by `FILES_PURGE_AFTER_DAYS` (a per-row deadline)
+  // rather than a sweep cadence.
+  @Cron('0 3 * * *')
+  public async runDailySoftDeleteSweep(): Promise<void> {
     await this.purgeExpiredSoftDeletes();
   }
 

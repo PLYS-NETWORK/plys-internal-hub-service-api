@@ -3,6 +3,7 @@ import { TranslatableException } from '@common/exceptions/translatable.exception
 import { JwtPayload } from '@common/interfaces/jwt-payload.interface';
 import { EnvironmentsService } from '@common/modules/environments';
 import { AppLogger } from '@common/modules/logger';
+import { RedisService } from '@common/modules/redis/redis.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ActivePlatform } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
@@ -15,6 +16,13 @@ import { UserResponseDto } from '../dto/responses/user-response.dto';
 import { ISessionContext, ISessionService } from '../interfaces/auth-service.interface';
 import { parseDuration, sha256 } from '../utils/auth.utils';
 
+// How long to hold the per-token idempotency lock while the DB transaction runs.
+const REFRESH_LOCK_TTL_SECONDS = 5;
+// How long to cache a successful refresh result so concurrent callers can read it.
+const REFRESH_RESULT_TTL_SECONDS = 10;
+// How long a concurrent caller waits before reading the cached result.
+const REFRESH_LOCK_WAIT_MS = 200;
+
 @Injectable()
 export class SessionService implements ISessionService {
   private readonly logger: AppLogger;
@@ -24,6 +32,7 @@ export class SessionService implements ISessionService {
     private readonly jwtService: JwtService,
     private readonly envService: EnvironmentsService,
     private readonly requestContext: RequestContextService,
+    private readonly redis: RedisService,
   ) {
     this.logger = new AppLogger(SessionService.name, requestContext);
   }
@@ -57,17 +66,31 @@ export class SessionService implements ISessionService {
    * revoked.
    */
   public async refresh(refreshToken: string, context: ISessionContext): Promise<AuthResponseDto> {
-    this.logger.log(
-      `refresh — start | tokenTail: ${refreshToken.slice(-8)}, tokenHash prefix: ${sha256(refreshToken).slice(0, 12)}`,
-    );
     const tokenHash = sha256(refreshToken);
+    const keyPrefix = tokenHash.slice(0, 16);
+    const lockKey = `auth:refresh:lock:${keyPrefix}`;
+    const resultKey = `auth:refresh:result:${keyPrefix}`;
 
-    // Capture reuse signal outside the transaction so we can revoke AFTER the
-    // transaction rolls back. The delete is intentionally committed in its own
-    // operation — it must not be undone when the containing TX rolls back.
+    this.logger.log(
+      `refresh — start | tokenTail: ${refreshToken.slice(-8)}, hashPrefix: ${tokenHash.slice(0, 12)}`,
+    );
+
+    // Acquire a short-lived distributed lock so concurrent calls with the same
+    // refresh token (React StrictMode double-mount, multi-tab) do not both
+    // enter the DB transaction. The first caller wins the lock; subsequent
+    // callers wait briefly and read the cached result instead of triggering
+    // the single-use token's replay-detection path.
+    const acquired = await this.redis.setNx(lockKey, '1', REFRESH_LOCK_TTL_SECONDS);
+
+    if (!acquired) {
+      this.logger.log(`refresh — lock busy, awaiting cached result | hashPrefix: ${keyPrefix}`);
+      return this.awaitRefreshResult(resultKey, keyPrefix);
+    }
+
+    // We hold the lock — run the existing single-use rotation logic.
     let reuseUserId: string | null = null;
-
     let result: { userId: string; user: { email: string; platform: ActivePlatform } };
+
     try {
       result = await this.uow.withTransaction(async (tx) => {
         const session = await tx.userSessions.findActiveByTokenForUpdate(tokenHash);
@@ -109,7 +132,6 @@ export class SessionService implements ISessionService {
       });
     } catch (err) {
       if (reuseUserId) {
-        // Revoke all sessions in a separate, committed operation.
         await this.revokeAllSessionsForUser(reuseUserId);
       }
       throw err;
@@ -118,7 +140,51 @@ export class SessionService implements ISessionService {
     this.logger.log(
       `refresh — transaction complete | userId: ${result.userId}, platform: ${result.user.platform}`,
     );
-    return this.createSession(result.userId, result.user.email, result.user.platform, context);
+
+    const dto = await this.createSession(
+      result.userId,
+      result.user.email,
+      result.user.platform,
+      context,
+    );
+
+    // Cache the result so concurrent waiters can return it without re-entering the DB.
+    await this.redis.set(resultKey, JSON.stringify(dto), REFRESH_RESULT_TTL_SECONDS);
+
+    return dto;
+  }
+
+  /**
+   * Called when the per-token lock is already held by another in-flight refresh.
+   * Waits up to two 200 ms intervals for the primary caller to populate the
+   * result cache, then returns the cached AuthResponseDto.
+   *
+   * If the primary call fails (no result appears within ~400 ms), throws a
+   * generic token-invalid error — this avoids triggering replay detection or
+   * session revocation for what is merely a concurrent duplicate request.
+   */
+  private async awaitRefreshResult(resultKey: string, keyPrefix: string): Promise<AuthResponseDto> {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      await new Promise<void>((resolve) => setTimeout(resolve, REFRESH_LOCK_WAIT_MS));
+      const raw = await this.redis.get(resultKey);
+      if (raw) {
+        this.logger.log(
+          `refresh — served from result cache | hashPrefix: ${keyPrefix}, attempt: ${attempt}`,
+        );
+        return plainToInstance(AuthResponseDto, JSON.parse(raw) as object, {
+          excludeExtraneousValues: true,
+        });
+      }
+    }
+
+    this.logger.warn(
+      `refresh — concurrent call timed out waiting for result | hashPrefix: ${keyPrefix}`,
+    );
+    throw new TranslatableException({
+      messageKey: 'error.auth.token_invalid',
+      errorCode: ERROR_CODES.AUTH_TOKEN_INVALID,
+      status: HttpStatus.UNAUTHORIZED,
+    });
   }
 
   public async logout(): Promise<void> {

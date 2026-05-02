@@ -6,4 +6,5 @@ export {
   PROJECT_MEMBER_ACTIVE_STATUSES,
   ProjectMemberActiveStatus,
 } from './project-member-active-status.enum';
+export { PROJECT_PAYMENT_TYPES, ProjectPaymentType } from './project-payment-type.enum';
 export { PROJECT_STATUSES, ProjectStatus } from './project-status.enum';

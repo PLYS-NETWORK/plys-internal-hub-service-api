@@ -20,14 +20,20 @@ export class FilesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Upload a file' })
+  @ApiOperation({
+    summary: 'Upload a file',
+    description:
+      'Stores an uploaded file with `purpose = NULL`. The owning surface ' +
+      '(task comment / evidence) sets the purpose later when the file is ' +
+      'attached. Free uploads that are never attached are reclaimed by the ' +
+      'weekly orphan-cleanup cron after the configured grace window.',
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
         file: { type: 'string', format: 'binary' },
-        purpose: { type: 'string', maxLength: 64 },
       },
       required: ['file'],
     },
@@ -59,14 +65,7 @@ export class FilesController {
     }
 
     const input = await this.validator.validate(buffer, part.filename);
-
-    const purposeField = part.fields['purpose'];
-    const purpose =
-      purposeField && !Array.isArray(purposeField) && purposeField.type === 'field'
-        ? String(purposeField.value ?? '').trim() || undefined
-        : undefined;
-
-    const data = await this.filesService.upload(input, { purpose });
+    const data = await this.filesService.upload(input);
     return { messageKey: 'success.created', data };
   }
 

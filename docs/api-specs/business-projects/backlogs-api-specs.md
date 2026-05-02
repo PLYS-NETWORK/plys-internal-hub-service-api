@@ -46,7 +46,25 @@
 - **Response 200:** `PageDto<`[`IDraftTaskResponse`](../../../src/modules/business-projects/dto/responses/interfaces/draft-task.response.interface.ts)`>` (items + standard pagination meta).
 - **Errors:** cross-cutting only.
 
-### 3. Bulk-delete drafts (atomic)
+### 3. Update a draft task
+
+- **Endpoint:** `PATCH /projects/business/:id/backlogs/:taskId`
+- **Method:** `PATCH`
+- **Path params:** `id` (UUID v4), `taskId` (UUID v4)
+- **Request body:** [`IUpdateDraftTaskRequest`](../../../src/modules/business-projects/dto/requests/interfaces/update-draft-task.request.interface.ts) — all fields optional
+  | Field | Type | Required | Notes |
+  |-------|------|----------|-------|
+  | `title` | `string` | no | length 3–300 |
+  | `description` | `Record<string, unknown> \| null` | no | rich-text JSON; `null` clears it |
+  | `price` | `string` | no | decimal-safe string |
+  | `difficulty_level` | `TaskDifficulty` | no | enum |
+- **Response 200:** [`IDraftTaskResponse`](../../../src/modules/business-projects/dto/responses/interfaces/draft-task.response.interface.ts)
+- **Errors:**
+  | HTTP | error_code | When |
+  |------|------------|------|
+  | 404 | `TASK_NOT_FOUND` | Task does not exist, belongs to a different project, or is not DRAFT. |
+
+### 5. Bulk-delete drafts (atomic)
 
 - **Endpoint:** `DELETE /projects/business/:id/backlogs`
 - **Method:** `DELETE`
@@ -61,7 +79,7 @@
   |------|------------|------|
   | 422 | `TASK_INVALID_STATUS_TRANSITION` | Any supplied task is not DRAFT, or count mismatch (some IDs not in this project). Thrown by [BacklogsService](../../../src/modules/business-projects/services/backlogs.service.ts). |
 
-### 4. Validate move drafts → board (no charge, no state change)
+### 6. Validate move drafts → board (no charge, no state change)
 
 - **Endpoint:** `POST /projects/business/:id/backlogs/add-to-board`
 - **Method:** `POST`
@@ -74,7 +92,7 @@
   | 422 | `PROJECT_INVALID_STATUS_TRANSITION` | Project status is not PUBLISHED or IN_PROGRESS. |
   | 422 | `TASK_INVALID_STATUS_TRANSITION` | Any supplied task is not DRAFT or count mismatch. |
 
-### 5. Pay & promote drafts → TO_DO (atomic)
+### 7. Pay & promote drafts → TO_DO (atomic)
 
 - **Endpoint:** `POST /projects/business/:id/backlogs/pay-tasks`
 - **Method:** `POST`

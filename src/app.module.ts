@@ -27,14 +27,13 @@ import { ApplicationsModule } from './modules/applications/applications.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { BusinessProjectsModule } from './modules/business-projects/business-projects.module';
+import { ConsultantProjectsModule } from './modules/consultant-projects/consultant-projects.module';
 import { FilesModule } from './modules/files';
 import { HealthModule } from './modules/health/health.module';
 import { PaymentsModule } from './modules/payments';
 import { ProfilesModule } from './modules/profiles/profiles.module';
-import { ProjectsModule } from './modules/projects/projects.module';
 import { SkillsModule } from './modules/skills/skills.module';
 import { StatisticsModule } from './modules/statistics/statistics.module';
-import { TasksModule } from './modules/tasks/tasks.module';
 import { UnitOfWorkModule } from './modules/unit-of-work/unit-of-work.module';
 import { UsersModule } from './modules/users/users.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
@@ -66,14 +65,13 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     AuthModule,
     BillingModule,
     BusinessProjectsModule,
+    ConsultantProjectsModule,
     FilesModule,
     HealthModule,
     PaymentsModule,
     ProfilesModule,
-    ProjectsModule,
     SkillsModule,
     StatisticsModule,
-    TasksModule,
     UsersModule,
     WebhooksModule,
   ],

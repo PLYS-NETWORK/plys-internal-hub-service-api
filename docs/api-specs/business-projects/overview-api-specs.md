@@ -27,7 +27,7 @@
 
   ```ts
   {
-    summary: { title, created_at, updated_at, published_at, business_company_name, status, project_cost },
+    summary: { title, created_at, updated_at, published_at, business_company_name, status, payment_type, project_cost },
     statistics: { total_tasks, completed_tasks, in_progress_tasks, total_project_members,
                   total_pending_applications, total_applications, total_approved, total_rejected },
     task_statuses: { draft, to_do, assigned, in_progress, in_review, pending_approval,
@@ -37,6 +37,10 @@
     recent_activity: [{ event_type, event_id, occurred_at, actor: { user_id, name }, payload }] // up to 20
   }
   ```
+
+  `summary.payment_type` is the project-level payout mode set by the business at creation:
+  `per_task` (default — each task is paid on completion) or `per_month` (members are billed
+  monthly for the period worked).
 
 - **Errors:** cross-cutting only (read-only endpoint).
 
@@ -52,6 +56,7 @@ The overview endpoint is the dashboard top-page — one round trip, multiple pan
 | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
 | `title`, `business_company_name`           | Hero card / page header (`title` as H1, company name as subtitle).                       |
 | `status`                                   | Status badge with color-coded pill (DRAFT / PUBLISHED / IN_PROGRESS / DONE / CANCELLED). |
+| `payment_type`                             | Pill next to the status — label: "Per task" or "Per month".                              |
 | `created_at`, `updated_at`, `published_at` | Date metadata row under the title (`relative time` + tooltip with absolute timestamp).   |
 | `project_cost`                             | Stat card (currency) — label: "Total project cost (pre-commission)".                     |
 

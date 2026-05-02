@@ -1,4 +1,4 @@
-import { ProjectStatus } from '@database/enums';
+import { ProjectPaymentType, ProjectStatus } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 
@@ -25,6 +25,14 @@ export class ProjectSummaryResponseDto implements IProjectSummaryResponse {
   @Expose()
   @ApiProperty({ enum: ProjectStatus, example: ProjectStatus.DRAFT })
   public readonly status!: ProjectStatus;
+
+  @Expose()
+  @ApiProperty({
+    name: 'payment_type',
+    enum: ProjectPaymentType,
+    example: ProjectPaymentType.PER_TASK,
+  })
+  public readonly payment_type!: ProjectPaymentType;
 
   @Expose()
   @ApiProperty({ name: 'required_consultants', example: 1 })

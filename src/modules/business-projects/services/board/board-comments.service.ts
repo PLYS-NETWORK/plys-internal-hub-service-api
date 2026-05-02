@@ -5,7 +5,7 @@ import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { DateUtil } from '@common/utils/date';
 import { BusinessProfile, FileEntity, TaskComment } from '@database/entities';
-import { TaskKanbanStatus } from '@database/enums';
+import { FilePurpose, TaskKanbanStatus } from '@database/enums';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
@@ -66,6 +66,10 @@ export class BoardCommentsService implements IBoardCommentsService {
       const persisted = (await tx.taskComments.save(comment)) as TaskComment;
       if (seeds.length) {
         await this.insertAttachments(tx, persisted.id, seeds);
+        await tx.files.markAsAttached(
+          seeds.map((s) => s.fileId),
+          FilePurpose.TASK_COMMENT,
+        );
       }
       return persisted;
     });
@@ -118,8 +122,8 @@ export class BoardCommentsService implements IBoardCommentsService {
     const seeds =
       dto.fileIds === undefined ? null : await this.resolveAttachmentSeeds(dto.fileIds, userId);
 
-    // Capture the file_ids that will be detached so we can soft-delete those
-    // `files` rows after the transaction commits.
+    // Capture the file_ids that will be detached so we can clear their
+    // `purpose` after the new attachments are persisted.
     const detachedFileIds: string[] = [];
     if (seeds !== null) {
       const previous = await this.uow.taskCommentAttachments.find({
@@ -146,15 +150,18 @@ export class BoardCommentsService implements IBoardCommentsService {
         await tx.taskCommentAttachments.delete({ commentId });
         if (seeds.length) {
           await this.insertAttachments(tx, commentId, seeds);
+          await tx.files.markAsAttached(
+            seeds.map((s) => s.fileId),
+            FilePurpose.TASK_COMMENT,
+          );
+        }
+        if (detachedFileIds.length) {
+          await tx.files.markAsOrphaned(detachedFileIds);
         }
       }
 
       return persisted;
     });
-
-    if (detachedFileIds.length) {
-      await this.softDeleteFiles(detachedFileIds);
-    }
 
     const attachments = await this.uow.taskCommentAttachments.find({
       where: { commentId: saved.id },
@@ -197,15 +204,15 @@ export class BoardCommentsService implements IBoardCommentsService {
     await this.uow.withTransaction(async (tx: IUnitOfWork) => {
       existing.isDeleted = true;
       await tx.taskComments.save(existing);
-      // Hard-delete the cheap snapshot rows. The canonical `files` row is
-      // soft-deleted below so the daily purge cron reclaims the storage object
-      // — never delete bytes synchronously inside a request.
+      // Hard-delete the cheap snapshot rows and clear `purpose` on the
+      // canonical files. The weekly orphan-cleanup cron reclaims the bytes
+      // after the grace window — never delete bytes synchronously inside
+      // a request.
       await tx.taskCommentAttachments.delete({ commentId });
+      if (fileIds.length) {
+        await tx.files.markAsOrphaned(fileIds);
+      }
     });
-
-    if (fileIds.length) {
-      await this.softDeleteFiles(fileIds);
-    }
 
     this.logger.log(
       `[${this.rid}] delete — complete | commentId: ${commentId}, files: ${fileIds.length}`,
@@ -284,16 +291,6 @@ export class BoardCommentsService implements IBoardCommentsService {
       }),
     );
     await tx.taskCommentAttachments.save(rows);
-  }
-
-  // Soft-delete bypasses FilesService.remove (which enforces a request-time
-  // owner check we already satisfied at attach time). The daily files purge
-  // cron will reclaim the underlying storage object after the configured
-  // retention window.
-  private async softDeleteFiles(fileIds: string[]): Promise<void> {
-    if (fileIds.length === 0) return;
-    await this.uow.files.softDelete(fileIds);
-    this.logger.log(`[${this.rid}] softDeleteFiles — soft-deleted | count: ${fileIds.length}`);
   }
 
   private toResponseDto(

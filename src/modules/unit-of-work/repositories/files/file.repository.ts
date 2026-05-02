@@ -1,8 +1,9 @@
 import { AbstractRepository } from '@common/repositories';
 import { FileEntity } from '@database/entities';
+import { FilePurpose } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager, IsNull, LessThan } from 'typeorm';
+import { EntityManager, In, IsNull, LessThan } from 'typeorm';
 
 import { IFileRepository } from './interfaces';
 
@@ -52,5 +53,17 @@ export class FileRepository extends AbstractRepository<FileEntity> implements IF
   /** @inheritdoc */
   public async hardDelete(id: string): Promise<void> {
     await this.repository.delete(id);
+  }
+
+  /** @inheritdoc */
+  public async markAsAttached(fileIds: string[], purpose: FilePurpose): Promise<void> {
+    if (fileIds.length === 0) return;
+    await this.repository.update({ id: In(fileIds) }, { purpose });
+  }
+
+  /** @inheritdoc */
+  public async markAsOrphaned(fileIds: string[]): Promise<void> {
+    if (fileIds.length === 0) return;
+    await this.repository.update({ id: In(fileIds) }, { purpose: null });
   }
 }

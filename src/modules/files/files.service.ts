@@ -28,7 +28,7 @@ export class FilesService implements IFilesService {
   }
 
   /** @inheritdoc */
-  public async upload(input: IUploadInput, opts?: { purpose?: string }): Promise<FileResponseDto> {
+  public async upload(input: IUploadInput): Promise<FileResponseDto> {
     const ownerUserId = this.requireUserId();
     this.logger.log(
       `upload — start | userId: ${ownerUserId}, size: ${input.size}, mime: ${input.mimeType}`,
@@ -64,6 +64,8 @@ export class FilesService implements IFilesService {
           });
     }
 
+    // `purpose` always starts NULL — server sets it via markAsAttached when
+    // the file is later referenced by a comment / evidence.
     const row = this.uow.files.create({
       ownerUserId,
       storageProvider: this.storage.name,
@@ -72,7 +74,7 @@ export class FilesService implements IFilesService {
       mimeType: input.mimeType,
       sizeBytes: input.size,
       sha256,
-      purpose: opts?.purpose ?? null,
+      purpose: null,
     });
     const saved = (await this.uow.files.save(row)) as FileEntity;
 
