@@ -10,6 +10,7 @@ export interface IProjectListItemResponse {
   published_at: Date | null;
   required_consultants: number;
   total_tasks: number;
+  total_completed_tasks: number;
   total_active_members: number;
   total_pending_applications: number;
 }
