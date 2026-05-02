@@ -4,6 +4,7 @@ import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { DateUtil } from '@common/utils/date';
 import { TaskDifficulty, TaskKanbanStatus } from '@database/enums';
+import { ProjectStatusService } from '@modules/business-projects/services/projects/project-status.service';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
@@ -61,6 +62,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly access: ConsultantAccessService,
+    private readonly projectStatus: ProjectStatusService,
   ) {
     this.logger = new AppLogger(ConsultantBoardService.name, requestContext);
   }
@@ -187,6 +189,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
       task.assignedAt = DateUtil.nowDate();
       task.kanbanStatus = TaskKanbanStatus.ASSIGNED;
       await tx.tasks.save(task);
+      await this.projectStatus.promoteToInProgressIfPublished(tx, projectId);
     });
 
     this.logger.log(`[${this.rid}] assignSelf — complete | taskId: ${taskId}`);

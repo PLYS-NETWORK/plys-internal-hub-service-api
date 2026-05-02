@@ -1,4 +1,5 @@
 import { FileStorageModule } from '@common/modules/file-storage';
+import { BusinessProjectsModule } from '@modules/business-projects/business-projects.module';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
 import { Module } from '@nestjs/common';
 
@@ -19,7 +20,7 @@ import { ConsultantProjectsService } from './services/projects.service';
  * into `ConsultantProjectsService` here.
  */
 @Module({
-  imports: [UnitOfWorkModule, FileStorageModule],
+  imports: [UnitOfWorkModule, FileStorageModule, BusinessProjectsModule],
   controllers: [
     ConsultantProjectsController,
     ConsultantOverviewController,

@@ -70,7 +70,8 @@ export class ConsultantBoardController {
     description:
       'Atomic claim using SELECT...FOR UPDATE on the (TO_DO, unassigned) row. ' +
       'Returns 422 TASK_INVALID_STATUS_TRANSITION when the task is missing, in another status, ' +
-      'or already assigned.',
+      'or already assigned. ' +
+      'Side effect: auto-transitions the project from `published` to `in_progress` on the first assignment.',
   })
   public async assignSelf(
     @Param('id', ParseUUIDPipe) id: string,

@@ -33,11 +33,16 @@
 - **Request body:** [`IUpdateProjectSettingsRequest`](../../../src/modules/business-projects/dto/requests/interfaces/update-project-settings.request.interface.ts)
   | Field | Type | Required | Notes |
   |-------|------|----------|-------|
-  | `title` | `string` | no | |
+  | `title` | `string` | no | length 3–300 |
   | `introduction` | `Record<string, unknown> \| null` | no | rich-text JSON |
-  | `required_skills` | `string[]` | no | full replacement of skill IDs |
-  | `max_consultants` | `number` | no | |
-- **Response 200:** [`IProjectSummaryResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-summary.response.interface.ts)
+  | `required_skills` | `string[]` | no | full replacement of skill IDs (array, max 50) |
+  | `max_consultants` | `number` | no | integer, **min `0`**, max `10`. `0` is a legitimate value for a freshly-created project that hasn't yet decided how many consultants to hire. |
+- **Response 200:** [`IProjectSummaryResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-summary.response.interface.ts) — the returned `status` reflects the post-recompute value (see side effect below).
+- **Side effect — auto status transition (bidirectional):** after the writes (title / introduction / `required_consultants` / skills) commit, [ProjectStatusService.recomputeAutoStatus](../../../src/modules/business-projects/services/projects/project-status.service.ts) re-derives the status from the three completeness signals (`drafts > 0`, `required_skills > 0`, `required_consultants > 0`):
+  - All three set → `configured`.
+  - At least one draft task but skills or consultants still missing → `setting_up`.
+  - No draft tasks → `draft`.
+  - No-op when the project has been published (`published_at IS NOT NULL`) or is in `done / cancelled`. The DTO response carries the new status, so the FE never needs a separate refetch.
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|

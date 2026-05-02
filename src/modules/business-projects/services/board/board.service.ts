@@ -20,6 +20,7 @@ import {
 import { BoardTaskDetailResponseDto, BoardTaskResponseDto } from '../../dto/responses';
 import { IBoardService } from '../../interfaces/board.service.interface';
 import { BusinessAccessService } from '../business-access.service';
+import { ProjectStatusService } from '../projects/project-status.service';
 
 const NON_DRAFT_STATUSES: TaskKanbanStatus[] = [
   TaskKanbanStatus.TO_DO,
@@ -70,6 +71,7 @@ export class BoardService implements IBoardService {
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly access: BusinessAccessService,
+    private readonly projectStatus: ProjectStatusService,
   ) {
     this.logger = new AppLogger(BoardService.name, requestContext);
   }
@@ -375,6 +377,7 @@ export class BoardService implements IBoardService {
         task.kanbanStatus = TaskKanbanStatus.ASSIGNED;
       }
       await tx.tasks.save(task);
+      await this.projectStatus.promoteToInProgressIfPublished(tx, projectId);
     });
 
     this.logger.log(`[${this.rid}] assign — complete | taskId: ${taskId}`);

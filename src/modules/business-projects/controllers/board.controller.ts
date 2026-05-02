@@ -124,7 +124,11 @@ export class BoardController {
 
   @Post(':taskId/assign')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Assign an active project member to the task' })
+  @ApiOperation({
+    summary: 'Assign an active project member to the task',
+    description:
+      'Side effect: auto-transitions the project from `published` to `in_progress` on the first assignment. Once `in_progress`, republish is rejected.',
+  })
   public async assign(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('taskId', ParseUUIDPipe) taskId: string,

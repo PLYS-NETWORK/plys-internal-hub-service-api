@@ -32,6 +32,7 @@ import {
 } from '../dto/responses';
 import { IBacklogsService } from '../interfaces/backlogs.service.interface';
 import { BusinessAccessService } from './business-access.service';
+import { ProjectStatusService } from './projects/project-status.service';
 
 const DEFAULT_COMMISSION_RATE = '0.25';
 
@@ -56,6 +57,7 @@ export class BacklogsService implements IBacklogsService {
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly access: BusinessAccessService,
+    private readonly projectStatus: ProjectStatusService,
   ) {
     this.logger = new AppLogger(BacklogsService.name, requestContext);
   }
@@ -101,6 +103,7 @@ export class BacklogsService implements IBacklogsService {
         displayOrder: Number(maxOrder?.max_order ?? 0) + 1,
       });
       const saved = await tx.tasks.save(task);
+      await this.projectStatus.recomputeAutoStatus(tx, projectId);
       return saved.id;
     });
 
@@ -196,6 +199,7 @@ export class BacklogsService implements IBacklogsService {
       });
       this.assertAllTasksAreDraft(dto.taskIds, tasks);
       await tx.tasks.delete({ id: In(dto.taskIds) });
+      await this.projectStatus.recomputeAutoStatus(tx, projectId);
     });
 
     this.logger.log(

@@ -56,7 +56,7 @@ export class Project extends AuditableEntity {
   })
   public paymentType!: ProjectPaymentType;
 
-  @Column({ name: 'required_consultants', type: 'smallint', default: 1 })
+  @Column({ name: 'required_consultants', type: 'smallint', default: 0 })
   public requiredConsultants!: number;
 
   @Column({ name: 'published_at', type: 'timestamptz', nullable: true })

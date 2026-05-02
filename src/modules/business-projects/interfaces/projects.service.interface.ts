@@ -12,7 +12,7 @@ import { ProjectListItemResponseDto, ProjectSummaryResponseDto } from '../dto/re
 export interface IBusinessProjectsService {
   /**
    * Creates a new project owned by the calling business in DRAFT status.
-   * Server-side defaults: `requiredConsultants = 1`, no skills/tasks/questions.
+   * Server-side defaults: `requiredConsultants = 0`, no skills/tasks/questions.
    *
    * @param dto Create payload (title required, introduction optional).
    * @returns Project summary including the generated id and DRAFT status.
