@@ -60,11 +60,12 @@ export class TransactionNumberService {
     const day = DateUtil.format(DateUtil.now(tz), 'YYYYMMDD', tz);
     const table = ledger === 'PLS' ? 'business_transactions' : 'consultant_transactions';
 
-    // Acquire the day-scoped advisory lock. Two-int variant avoids 32-bit
-    // hash collisions vs the single-bigint form. Released automatically when
-    // the surrounding transaction commits or rolls back.
+    // Acquire the day-scoped advisory lock. Postgres only ships the
+    // (int4, int4) and (bigint) overloads — there is no (bigint, bigint) —
+    // so we cast both keys to int4. Released automatically when the
+    // surrounding transaction commits or rolls back.
     await this.manager.query(
-      `SELECT pg_advisory_xact_lock(hashtext($1)::int8, hashtext($2)::int8)`,
+      `SELECT pg_advisory_xact_lock(hashtext($1)::int4, hashtext($2)::int4)`,
       [ledger, day],
     );
 

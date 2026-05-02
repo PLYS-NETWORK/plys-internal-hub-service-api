@@ -12,7 +12,7 @@ export function getTypeOrmConfig(envService: EnvironmentsService): TypeOrmModule
     database: envService.dbName,
     // Schema sync is for local iteration only — deployed envs (dev + prod) rely on migrations.
     synchronize: envService.isLocal,
-    logging: !envService.isProduction,
+    logging: envService.isLocal,
     entities: [path.resolve(__dirname, 'entities', '**', '*.entity.{ts,js}')],
     migrations: [path.resolve(__dirname, 'migrations', '*.{ts,js}')],
     // Subscribers are NOT listed here — AuditSubscriber is a NestJS provider
