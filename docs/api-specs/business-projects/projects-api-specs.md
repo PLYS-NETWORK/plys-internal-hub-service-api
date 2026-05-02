@@ -46,7 +46,7 @@
   | `page` | `number` | no | default 1 |
   | `take` | `number` | no | default 20, max 100 |
   | `keywords` | `string` | no | length 2–200, trimmed |
-- **Response 200:** `PageDto<`[`IProjectListItemResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-list-item.response.interface.ts)`>` — items: `{ id, code, title, status, payment_type, created_at, published_at, required_consultants, total_tasks, total_completed_tasks, total_active_members, total_pending_applications }`. `total_tasks` excludes DRAFT/soft-deleted tasks; `total_completed_tasks` is the subset with `kanban_status = DONE`. `payment_type` is `per_task | per_month`. Meta: `{ page, take, item_count, page_count, has_previous_page, has_next_page }`.
+- **Response 200:** `PageDto<`[`IProjectListItemResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-list-item.response.interface.ts)`>` — items: `{ id, code, title, status, payment_type, created_at, published_at, required_consultants, total_tasks, total_completed_tasks, total_active_members, total_pending_applications }`. `total_tasks` counts all non-soft-deleted tasks (DRAFT included); `total_completed_tasks` is the subset with `kanban_status = DONE`. `payment_type` is `per_task | per_month`. Meta: `{ page, take, item_count, page_count, has_previous_page, has_next_page }`.
 - **Errors:** cross-cutting only.
 
 ### 3. Pre-flight publish validation

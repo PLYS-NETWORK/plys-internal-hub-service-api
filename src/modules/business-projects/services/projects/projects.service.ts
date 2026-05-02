@@ -137,7 +137,6 @@ export class BusinessProjectsService implements IBusinessProjectsService {
       .addSelect('COUNT(*)::int', 'total')
       .addSelect('COUNT(*) FILTER (WHERE t.kanban_status = :done)::int', 'completed')
       .where('t.project_id IN (:...projectIds)', { projectIds })
-      .andWhere('t.kanban_status != :draft', { draft: TaskKanbanStatus.DRAFT })
       .andWhere('t.deleted_at IS NULL')
       .setParameter('done', TaskKanbanStatus.DONE)
       .groupBy('t.project_id')
