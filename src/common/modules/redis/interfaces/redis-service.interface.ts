@@ -159,4 +159,40 @@ export interface IRedisService {
    * @throws Error if the Redis connection is unavailable.
    */
   ping(): Promise<string>;
+
+  /**
+   * Publishes a message to all subscribers listening on `channel`.
+   *
+   * Fire-and-forget — Redis pub/sub does NOT persist the message. If no
+   * subscriber is connected at the moment of publish the message is dropped.
+   * For durable delivery the caller must persist the source-of-truth in
+   * Postgres BEFORE calling publish.
+   *
+   * @param channel - Channel name to publish on.
+   * @param message - Payload string (typically JSON-serialised).
+   * @returns Number of clients that received the message.
+   */
+  publish(channel: string, message: string): Promise<number>;
+
+  /**
+   * Subscribes to a glob pattern of channels using a dedicated subscriber
+   * connection. Once a Redis connection is in subscribe mode it cannot issue
+   * regular commands, so this method lazily creates a SECOND ioredis client
+   * that is reused across all subsequent psubscribe calls in this process.
+   *
+   * @param pattern - Glob pattern matching one or more channels (e.g. `"notif:user:*"`).
+   * @param handler - Callback invoked for every received message. `channel` is the
+   *                  exact channel that matched the pattern; `message` is the payload string.
+   * @returns Resolves once the subscription is acknowledged.
+   */
+  psubscribe(pattern: string, handler: (channel: string, message: string) => void): Promise<void>;
+
+  /**
+   * Removes the subscription for `pattern` from the shared subscriber connection.
+   * No-op if no such subscription exists.
+   *
+   * @param pattern - The glob pattern previously passed to `psubscribe`.
+   * @returns Resolves when the unsubscribe is acknowledged.
+   */
+  punsubscribe(pattern: string): Promise<void>;
 }

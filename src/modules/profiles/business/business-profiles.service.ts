@@ -3,6 +3,8 @@ import { TranslatableException } from '@common/exceptions/translatable.exception
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { BusinessProfile } from '@database/entities';
+import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-type.enum';
+import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -19,6 +21,7 @@ export class BusinessProfilesService implements IBusinessProfilesService {
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
+    private readonly notificationDispatcher: NotificationDispatcherService,
   ) {
     this.logger = new AppLogger(BusinessProfilesService.name, requestContext);
   }
@@ -90,18 +93,62 @@ export class BusinessProfilesService implements IBusinessProfilesService {
       });
     }
 
-    // Only update fields that are explicitly present in the payload
-    if (dto.company_name !== undefined) profile.companyName = dto.company_name;
-    if (dto.industry !== undefined) profile.industry = dto.industry;
-    if (dto.company_size !== undefined) profile.companySize = dto.company_size;
-    if (dto.address_line !== undefined) profile.addressLine = dto.address_line;
-    if (dto.city !== undefined) profile.city = dto.city;
-    if (dto.state_province !== undefined) profile.stateProvince = dto.state_province;
-    if (dto.postal_code !== undefined) profile.postalCode = dto.postal_code;
-    if (dto.country_code !== undefined) profile.countryCode = dto.country_code;
-    if (dto.phone_number !== undefined) profile.phoneNumber = dto.phone_number;
+    // Only update fields that are explicitly present in the payload — also
+    // collected as a `updated_fields` list for the notification metadata.
+    const updatedFields: string[] = [];
+    if (dto.company_name !== undefined) {
+      profile.companyName = dto.company_name;
+      updatedFields.push('company_name');
+    }
+    if (dto.industry !== undefined) {
+      profile.industry = dto.industry;
+      updatedFields.push('industry');
+    }
+    if (dto.company_size !== undefined) {
+      profile.companySize = dto.company_size;
+      updatedFields.push('company_size');
+    }
+    if (dto.address_line !== undefined) {
+      profile.addressLine = dto.address_line;
+      updatedFields.push('address_line');
+    }
+    if (dto.city !== undefined) {
+      profile.city = dto.city;
+      updatedFields.push('city');
+    }
+    if (dto.state_province !== undefined) {
+      profile.stateProvince = dto.state_province;
+      updatedFields.push('state_province');
+    }
+    if (dto.postal_code !== undefined) {
+      profile.postalCode = dto.postal_code;
+      updatedFields.push('postal_code');
+    }
+    if (dto.country_code !== undefined) {
+      profile.countryCode = dto.country_code;
+      updatedFields.push('country_code');
+    }
+    if (dto.phone_number !== undefined) {
+      profile.phoneNumber = dto.phone_number;
+      updatedFields.push('phone_number');
+    }
 
     await this.uow.businessProfiles.save(profile);
+
+    // Fire-and-forget — never blocks the request, never throws back to the caller.
+    if (updatedFields.length > 0) {
+      void this.notificationDispatcher
+        .dispatch({
+          userId,
+          type: NOTIFICATION_TYPES.PROFILE_UPDATED,
+          metadata: { updated_fields: updatedFields },
+          actorId: userId,
+        })
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          this.logger.error(`updateProfile — notification dispatch failed | error: ${msg}`);
+        });
+    }
 
     this.logger.log(`updateProfile — complete | userId: ${userId}, profileId: ${profile.id}`);
     return this.toResponseDto(profile);

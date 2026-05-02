@@ -11,6 +11,8 @@ import {
   WebhookStatus,
 } from '@database/enums';
 import { BillingInvoiceService } from '@modules/billing/services/billing-invoice.service';
+import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-type.enum';
+import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable } from '@nestjs/common';
 
@@ -27,6 +29,7 @@ export class WebhookProcessorService {
     private readonly requestContext: RequestContextService,
     private readonly paymentService: PaymentService,
     private readonly billingInvoiceService: BillingInvoiceService,
+    private readonly notificationDispatcher: NotificationDispatcherService,
   ) {
     this.logger = new AppLogger(WebhookProcessorService.name, requestContext);
   }
@@ -264,6 +267,26 @@ export class WebhookProcessorService {
       this.logger.log(
         `handlePaymentSucceeded — balance updated | businessId: ${businessProfile.id}, oldBalance: ${currentBalance}, newBalance: ${newBalance}`,
       );
+
+      void this.notificationDispatcher
+        .dispatch({
+          userId: businessProfile.userId,
+          type: NOTIFICATION_TYPES.TOP_UP_COMPLETED,
+          metadata: {
+            transaction_id: transaction.id,
+            transaction_number: transaction.transactionNumber,
+            amount,
+            currency: 'USD',
+            new_balance: parseFloat(newBalance),
+          },
+          actorId: null,
+        })
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          this.logger.error(
+            `handlePaymentSucceeded — notification dispatch failed | error: ${msg}`,
+          );
+        });
     }
   }
 
@@ -403,6 +426,27 @@ export class WebhookProcessorService {
       this.logger.log(
         `reverseBusinessWithdrawal — balance restored | businessId: ${businessProfile.id}, amount: ${amount}, newBalance: ${newBalance}`,
       );
+
+      void this.notificationDispatcher
+        .dispatch({
+          userId: businessProfile.userId,
+          type: NOTIFICATION_TYPES.WITHDRAW_REVERSED,
+          metadata: {
+            transaction_id: transaction.id,
+            transaction_number: transaction.transactionNumber,
+            amount,
+            currency: 'USD',
+            new_balance: parseFloat(newBalance),
+            reason: 'Stripe transfer failed',
+          },
+          actorId: null,
+        })
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          this.logger.error(
+            `reverseBusinessWithdrawal — notification dispatch failed | error: ${msg}`,
+          );
+        });
     }
   }
 

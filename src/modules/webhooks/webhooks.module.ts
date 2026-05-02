@@ -1,5 +1,6 @@
 import { PaymentModule } from '@common/modules/payment/payment.module';
 import { BillingModule } from '@modules/billing/billing.module';
+import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
 import { Module } from '@nestjs/common';
 
@@ -7,7 +8,7 @@ import { WebhookProcessorService } from './webhook-processor.service';
 import { WebhooksController } from './webhooks.controller';
 
 @Module({
-  imports: [UnitOfWorkModule, PaymentModule, BillingModule],
+  imports: [UnitOfWorkModule, PaymentModule, BillingModule, NotificationsModule],
   controllers: [WebhooksController],
   providers: [WebhookProcessorService],
 })

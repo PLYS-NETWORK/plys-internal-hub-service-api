@@ -107,5 +107,9 @@
     "quota_exceeded": "Your storage quota has been exceeded.",
     "forbidden": "You do not have permission to access this file.",
     "dimensions_exceeded": "Image dimensions exceed the maximum allowed."
+  },
+  "notification": {
+    "not_found": "Notification not found.",
+    "forbidden": "You do not have access to this notification."
   }
 }

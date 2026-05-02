@@ -12,6 +12,7 @@ import {
   IInterviewAnswerRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
+  INotificationRepository,
   IProjectActivityRepository,
   IProjectApplicationRepository,
   IProjectInterviewQuestionRepository,
@@ -89,6 +90,9 @@ export interface IUnitOfWork {
 
   // Domain 9 — Files
   readonly files: IFileRepository;
+
+  // Domain 10 — Notifications
+  readonly notifications: INotificationRepository;
 
   withTransaction<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T>;
 }

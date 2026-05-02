@@ -5,6 +5,8 @@ import { EnvironmentsService } from '@common/modules/environments';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ActivePlatform, AuthTokenType } from '@database/enums';
+import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-type.enum';
+import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
@@ -44,6 +46,7 @@ export class BasicAuthService implements IBasicAuthService {
     private readonly envService: EnvironmentsService,
     private readonly requestContext: RequestContextService,
     private readonly loginAttemptTracker: LoginAttemptTracker,
+    private readonly notificationDispatcher: NotificationDispatcherService,
   ) {
     this.logger = new AppLogger(BasicAuthService.name, requestContext);
   }
@@ -367,6 +370,22 @@ export class BasicAuthService implements IBasicAuthService {
         });
       }
     });
+
+    // Fire-and-forget — security audit so other devices/tabs see the change.
+    void this.notificationDispatcher
+      .dispatch({
+        userId: user.id,
+        type: NOTIFICATION_TYPES.PASSWORD_CHANGED,
+        metadata: {
+          device_id: this.requestContext.deviceId,
+          ip_address: this.requestContext.ipAddress,
+        },
+        actorId: user.id,
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error(`changePassword — notification dispatch failed | error: ${msg}`);
+      });
 
     this.logger.log(`changePassword — complete | userId: ${user.id}`);
   }

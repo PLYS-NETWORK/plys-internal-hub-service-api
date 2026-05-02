@@ -2,6 +2,7 @@ import { EnvironmentsService } from '@common/modules/environments';
 import { VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { SwaggerModule } from '@nestjs/swagger';
 import { I18nValidationExceptionFilter, I18nValidationPipe } from 'nestjs-i18n';
 import * as path from 'path';
@@ -57,6 +58,12 @@ async function bootstrap(): Promise<void> {
     origin: envService.allowedOrigins,
     credentials: true,
   });
+
+  // Socket.IO adapter — Fastify does not include one by default. Without this,
+  // @WebSocketGateway() classes never bind to the underlying HTTP listener.
+  // Also note: WS handshake CORS is controlled inside the gateway decorator —
+  // app.enableCors() above only governs HTTP traffic.
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   // Global API prefix and URI-based versioning (/api/v1/...)
   app.setGlobalPrefix('api');

@@ -30,6 +30,7 @@ import { BusinessProjectsModule } from './modules/business-projects/business-pro
 import { ConsultantProjectsModule } from './modules/consultant-projects/consultant-projects.module';
 import { FilesModule } from './modules/files';
 import { HealthModule } from './modules/health/health.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PaymentsModule } from './modules/payments';
 import { ProfilesModule } from './modules/profiles/profiles.module';
 import { SkillsModule } from './modules/skills/skills.module';
@@ -68,6 +69,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     ConsultantProjectsModule,
     FilesModule,
     HealthModule,
+    NotificationsModule,
     PaymentsModule,
     ProfilesModule,
     SkillsModule,

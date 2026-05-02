@@ -46,5 +46,9 @@
   "payment": {
     "top_up_resumed": "Bakiye yükleme işlemine devam edildi.",
     "top_up_cancelled": "Bakiye yükleme işlemi iptal edildi."
+  },
+  "notification": {
+    "read": "Bildirim okundu olarak işaretlendi.",
+    "read_all": "Tüm bildirimler okundu olarak işaretlendi."
   }
 }
