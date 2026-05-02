@@ -20,6 +20,7 @@ export {
 } from './reorder-tasks.dto';
 export { TaskIdsDto } from './task-ids.dto';
 export { UpdateBoardCommentDto } from './update-board-comment.dto';
+export { UpdateDraftTaskDto } from './update-draft-task.dto';
 export { UpdateProjectSettingsDto } from './update-project-settings.dto';
 export {
   UpdateInterviewQuestionDto,

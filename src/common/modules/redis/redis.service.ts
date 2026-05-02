@@ -274,6 +274,20 @@ export class RedisService implements IRedisService, OnModuleInit, OnModuleDestro
     }
   }
 
+  public async setNx(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+    this.logger.log(`setNx — start | key: ${key} | ttl: ${ttlSeconds}s`);
+    try {
+      const result = await this.client.set(key, value, 'EX', ttlSeconds, 'NX');
+      const acquired = result === 'OK';
+      this.logger.log(`setNx — complete | key: ${key} | acquired: ${acquired}`);
+      return acquired;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`setNx — failed | key: ${key} | error: ${message}`);
+      throw err;
+    }
+  }
+
   public async ping(): Promise<string> {
     this.logger.log(`ping — start`);
     try {
