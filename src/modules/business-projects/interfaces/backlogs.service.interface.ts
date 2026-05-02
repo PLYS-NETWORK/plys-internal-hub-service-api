@@ -1,6 +1,11 @@
 import { PageDto } from '@common/dto/page.dto';
 
-import { CreateDraftTaskDto, ListDraftTasksDto, TaskIdsDto } from '../dto/requests';
+import {
+  CreateDraftTaskDto,
+  ListDraftTasksDto,
+  TaskIdsDto,
+  UpdateDraftTaskDto,
+} from '../dto/requests';
 import {
   AddToBoardValidationResponseDto,
   DraftTaskResponseDto,
@@ -56,4 +61,14 @@ export interface IBacklogsService {
    *   (project status changed between validation and pay).
    */
   payTasks(projectId: string, dto: TaskIdsDto): Promise<PayTasksResponseDto>;
+
+  /**
+   * Partially updates a DRAFT task's title, description, price, or difficulty.
+   * @throws TranslatableException 404 TASK_NOT_FOUND if the task is missing or not DRAFT.
+   */
+  updateDraftTask(
+    projectId: string,
+    taskId: string,
+    dto: UpdateDraftTaskDto,
+  ): Promise<DraftTaskResponseDto>;
 }
