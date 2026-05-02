@@ -97,8 +97,16 @@ export class ApplicationsService implements IApplicationsService {
 
     if (dto.status) qb.andWhere('pa.status = :status', { status: dto.status });
 
+    // Pin PENDING applications to the top regardless of the requested sort —
+    // they are the only ones the business can act on, so they always
+    // outrank reviewed (ACCEPTED/REJECTED/WITHDRAWN) applications.
     const orderColumn = dto.sort_by === 'matching_rate' ? '"matching_rate"' : 'pa.applied_at';
-    qb.orderBy(orderColumn, orderDir).addOrderBy('pa.id', 'ASC').offset(dto.skip).limit(dto.limit);
+    qb.orderBy(`CASE WHEN pa.status = :pendingStatus THEN 0 ELSE 1 END`, 'ASC')
+      .setParameter('pendingStatus', ApplicationStatus.PENDING)
+      .addOrderBy(orderColumn, orderDir)
+      .addOrderBy('pa.id', 'ASC')
+      .offset(dto.skip)
+      .limit(dto.limit);
 
     const [rows, itemCount] = await Promise.all([
       qb.getRawMany<IApplicationListRow & { id: string }>(),
