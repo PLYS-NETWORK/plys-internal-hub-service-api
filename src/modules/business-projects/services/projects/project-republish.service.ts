@@ -11,12 +11,14 @@ import {
   BusinessTransactionType,
   PaymentMethod,
   ProjectStatus,
+  TaskKanbanStatus,
   TransactionStatus,
 } from '@database/enums';
 import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-type.enum';
 import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { Not } from 'typeorm';
 
 import { IProjectRepublishService } from '../../interfaces/project-republish.service.interface';
 import { BusinessAccessService } from '../business-access.service';
@@ -58,16 +60,13 @@ export class ProjectRepublishService implements IProjectRepublishService {
       });
     }
 
-    // Wallet credit + refund txn + status flip must be atomic; the row lock on
-    // the profile prevents a concurrent task-payment from racing with the
-    // refund and corrupting the running balance.
-    const refundedAmount = await this.uow.withTransaction(async (txUow) => {
-      if (businessProfile.allowPaymentCredit) {
-        project.status = ProjectStatus.CONFIGURED;
-        await txUow.projects.save(project);
-        return null;
-      }
-
+    // Wallet credit + refund txns + task reset + status flip must be atomic;
+    // the row lock on the profile prevents a concurrent task-payment from
+    // racing with the refund and corrupting the running balance. The lock is
+    // taken unconditionally because both the publish-fee refund (PRE_PAID)
+    // and any per-task refunds (mixed: PRE_PAID writes balance, CREDIT just
+    // reverses the PENDING txn) need a consistent profile snapshot.
+    const result = await this.uow.withTransaction(async (txUow) => {
       const lockedProfile = await txUow.businessProfiles.findByIdForUpdate(businessProfile.id);
       if (!lockedProfile) {
         this.logger.warn(
@@ -80,65 +79,168 @@ export class ProjectRepublishService implements IProjectRepublishService {
         });
       }
 
-      const originalTxn = await txUow.businessTransactions.findOne({
-        where: {
-          projectId: project.id,
-          type: BusinessTransactionType.PROJECT_PUBLISHED,
-          status: TransactionStatus.COMPLETED,
-        },
-      });
-      if (!originalTxn) {
-        this.logger.warn(
-          `[${this.rid}] republish — original publish transaction not found | projectId: ${projectId}`,
-        );
-        throw new TranslatableException({
-          messageKey: 'error.project.recall_transaction_not_found',
-          errorCode: ERROR_CODES.PROJECT_RECALL_TRANSACTION_NOT_FOUND,
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
+      // 1. Refund the original publish fee (PRE_PAID flow only).
+      let publishFeeRefund: { amount: string; transactionNumber: string } | null = null;
+      if (!businessProfile.allowPaymentCredit) {
+        const originalTxn = await txUow.businessTransactions.findOne({
+          where: {
+            projectId: project.id,
+            type: BusinessTransactionType.PROJECT_PUBLISHED,
+            status: TransactionStatus.COMPLETED,
+          },
         });
+        if (!originalTxn) {
+          this.logger.warn(
+            `[${this.rid}] republish — original publish transaction not found | projectId: ${projectId}`,
+          );
+          throw new TranslatableException({
+            messageKey: 'error.project.recall_transaction_not_found',
+            errorCode: ERROR_CODES.PROJECT_RECALL_TRANSACTION_NOT_FOUND,
+            status: HttpStatus.UNPROCESSABLE_ENTITY,
+          });
+        }
+
+        const newBalance = Money.from(lockedProfile.accountBalance).add(
+          Money.from(originalTxn.amount),
+        );
+        lockedProfile.accountBalance = newBalance.toFixedString();
+
+        const refundTxnNumber = await txUow.transactionNumbers.next(
+          'PLS',
+          BusinessTransactionType.REFUND,
+        );
+        const refundTxn = txUow.businessTransactions.create({
+          transactionNumber: refundTxnNumber,
+          businessId: lockedProfile.id,
+          type: BusinessTransactionType.REFUND,
+          amount: originalTxn.amount,
+          totalAmount: originalTxn.amount,
+          status: TransactionStatus.COMPLETED,
+          projectId: project.id,
+          note: `Re-publish refund: ${project.title}`,
+        });
+        await txUow.businessTransactions.save(refundTxn);
+
+        publishFeeRefund = {
+          amount: originalTxn.amount,
+          transactionNumber: refundTxnNumber,
+        };
       }
 
-      const newBalance = Money.from(lockedProfile.accountBalance).add(
-        Money.from(originalTxn.amount),
-      );
-      lockedProfile.accountBalance = newBalance.toFixedString();
+      // 2. Refund / reverse every prior `payTasks` transaction. Status is the
+      // source of truth — businesses can flip allowPaymentCredit between calls,
+      // so we drive the refund decision per-row rather than off the current
+      // profile flag.
+      const taskTxns = await txUow.businessTransactions.find({
+        where: { projectId: project.id, type: BusinessTransactionType.TASK_ADDED },
+      });
+      let taskRefundTotal = Money.from('0');
+      let firstTaskRefundTxnNumber: string | null = null;
+      for (const txn of taskTxns) {
+        if (txn.status === TransactionStatus.COMPLETED) {
+          // PRE_PAID flow at the time of payment — money already moved; credit
+          // it back and emit a REFUND row.
+          const credited = Money.from(lockedProfile.accountBalance).add(
+            Money.from(txn.totalAmount),
+          );
+          lockedProfile.accountBalance = credited.toFixedString();
+          taskRefundTotal = taskRefundTotal.add(Money.from(txn.totalAmount));
+
+          const refundTxnNumber = await txUow.transactionNumbers.next(
+            'PLS',
+            BusinessTransactionType.REFUND,
+          );
+          const refundTxn = txUow.businessTransactions.create({
+            transactionNumber: refundTxnNumber,
+            businessId: lockedProfile.id,
+            type: BusinessTransactionType.REFUND,
+            amount: txn.amount,
+            totalAmount: txn.totalAmount,
+            status: TransactionStatus.COMPLETED,
+            projectId: project.id,
+            note: `Re-publish task refund: ${txn.transactionNumber}`,
+          });
+          await txUow.businessTransactions.save(refundTxn);
+          firstTaskRefundTxnNumber ??= refundTxnNumber;
+        } else if (txn.status === TransactionStatus.PENDING) {
+          // CREDIT flow — no money was moved; mark the pending charge reversed
+          // so it does not get billed.
+          txn.status = TransactionStatus.REVERSED;
+          await txUow.businessTransactions.save(txn);
+        }
+      }
+
       await txUow.businessProfiles.save(lockedProfile);
 
-      const refundTxnNumber = await txUow.transactionNumbers.next(
-        'PLS',
-        BusinessTransactionType.REFUND,
-      );
-      const refundTxn = txUow.businessTransactions.create({
-        transactionNumber: refundTxnNumber,
-        businessId: lockedProfile.id,
-        type: BusinessTransactionType.REFUND,
-        amount: originalTxn.amount,
-        totalAmount: originalTxn.amount,
-        status: TransactionStatus.COMPLETED,
-        projectId: project.id,
-        note: `Re-publish refund: ${project.title}`,
+      // 3. Reset every non-DRAFT task back to DRAFT and re-issue display_order
+      // contiguously after the existing drafts. By construction these tasks
+      // have no assignee — republish is gated on PUBLISHED, and assignment
+      // auto-promotes to IN_PROGRESS which blocks republish — but assert so a
+      // future regression surfaces loudly instead of silently corrupting state.
+      const tasksToReset = await txUow.tasks.find({
+        where: { projectId: project.id, kanbanStatus: Not(TaskKanbanStatus.DRAFT) },
       });
-      await txUow.businessTransactions.save(refundTxn);
+      if (tasksToReset.length > 0) {
+        const stillAssigned = tasksToReset.filter((t) => t.assignedTo !== null);
+        if (stillAssigned.length > 0) {
+          this.logger.error(
+            `[${this.rid}] republish — assigned tasks present at republish time | projectId: ${projectId}, taskIds: ${stillAssigned.map((t) => t.id).join(',')}`,
+          );
+          throw new TranslatableException({
+            messageKey: 'error.project.invalid_status_transition',
+            errorCode: ERROR_CODES.PROJECT_INVALID_STATUS_TRANSITION,
+            status: HttpStatus.UNPROCESSABLE_ENTITY,
+          });
+        }
 
-      this.logger.log(
-        `[${this.rid}] republish — refund issued | projectId: ${projectId}, amount: ${originalTxn.amount}, newBalance: ${lockedProfile.accountBalance}`,
-      );
+        const maxRow = await txUow.tasks
+          .createQueryBuilder('t')
+          .select('COALESCE(MAX(t.display_order), 0)', 'max_order')
+          .where('t.project_id = :projectId', { projectId: project.id })
+          .andWhere('t.kanban_status = :draft', { draft: TaskKanbanStatus.DRAFT })
+          .andWhere('t.deleted_at IS NULL')
+          .getRawOne<{ max_order: number }>();
+        let next = Number(maxRow?.max_order ?? 0) + 1;
+        for (const t of tasksToReset) {
+          t.kanbanStatus = TaskKanbanStatus.DRAFT;
+          t.displayOrder = next++;
+        }
+        await txUow.tasks.save(tasksToReset);
+      }
 
+      // 4. Flip the project status.
       project.status = ProjectStatus.CONFIGURED;
       await txUow.projects.save(project);
-      return { amount: originalTxn.amount, transactionNumber: refundTxnNumber };
+
+      this.logger.log(
+        `[${this.rid}] republish — refund summary | projectId: ${projectId}, publishFee: ${publishFeeRefund?.amount ?? '0'}, taskRefunds: ${taskRefundTotal.toFixedString()}, tasksReset: ${tasksToReset.length}, newBalance: ${lockedProfile.accountBalance}`,
+      );
+
+      return {
+        publishFeeRefund,
+        taskRefundTotal: taskRefundTotal.toFixedString(),
+        firstTaskRefundTxnNumber,
+        tasksReset: tasksToReset.length,
+      };
     });
 
     this.logger.log(`[${this.rid}] republish — complete | projectId: ${projectId}`);
 
-    // Email runs after the transaction commits — refund is already final, so
-    // an email failure must not roll back the wallet credit or status flip.
-    if (refundedAmount !== null) {
+    // Total wallet credit issued = publish fee refund (if any) + per-task
+    // refunds (if any). Email + notification fire post-commit so a transient
+    // delivery failure cannot roll back the refund.
+    const totalRefund = Money.from(result.publishFeeRefund?.amount ?? '0').add(
+      Money.from(result.taskRefundTotal),
+    );
+    const totalRefundString = totalRefund.toFixedString();
+    const hasRefund = parseFloat(totalRefundString) > 0;
+
+    if (hasRefund) {
       await this.sendRefundEmail(
         project,
         businessProfile,
-        refundedAmount.amount,
-        refundedAmount.transactionNumber,
+        totalRefundString,
+        result.publishFeeRefund?.transactionNumber ?? result.firstTaskRefundTxnNumber ?? '—',
       );
     }
 
@@ -152,7 +254,7 @@ export class ProjectRepublishService implements IProjectRepublishService {
           project_id: project.id,
           project_code: project.code,
           project_title: project.title,
-          ...(refundedAmount !== null ? { refund_amount: parseFloat(refundedAmount.amount) } : {}),
+          ...(hasRefund ? { refund_amount: parseFloat(totalRefundString) } : {}),
         },
         actorId: this.requestContext.userId ?? null,
       })

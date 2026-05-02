@@ -9,7 +9,6 @@ import {
   IsString,
   IsUUID,
   Length,
-  Max,
   Min,
 } from 'class-validator';
 
@@ -45,10 +44,9 @@ export class UpdateProjectSettingsDto implements IUpdateProjectSettingsRequest {
   public readonly requiredSkills?: string[];
 
   @Expose({ name: 'max_consultants' })
-  @ApiPropertyOptional({ name: 'max_consultants', minimum: 1, maximum: 10 })
+  @ApiPropertyOptional({ name: 'max_consultants', minimum: 0, maximum: 10 })
   @IsOptional()
   @IsInt()
-  @Min(1)
-  @Max(10)
+  @Min(0)
   public readonly maxConsultants?: number;
 }

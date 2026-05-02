@@ -35,7 +35,7 @@ export class ProjectListItemResponseDto implements IProjectListItemResponse {
   public readonly published_at!: Date | null;
 
   @Expose()
-  @ApiProperty({ name: 'required_consultants', example: 1 })
+  @ApiProperty({ name: 'required_consultants', example: 0 })
   public readonly required_consultants!: number;
 
   @Expose()

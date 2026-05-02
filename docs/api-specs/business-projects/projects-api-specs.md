@@ -28,8 +28,8 @@
   | `code` | `string` | yes | Human-readable identifier, unique per business profile. Pattern `^[A-Z0-9]{2,8}$` (uppercase A-Z and 0-9, 2–8 chars). Used as the prefix for task codes (e.g. `WEB-1`). |
   | `title` | `string` | yes | length 3–300 |
   | `introduction` | `Record<string, unknown> \| null` | no | rich-text JSON (TipTap/ProseMirror) |
-- **Behaviour:** Service checks `(business_id, code)` uniqueness with a pre-flight `findOne` against [BusinessProjectsService.createProject](../../../src/modules/business-projects/services/projects/projects.service.ts). The DB-level unique constraint `uq_projects_business_code` (added by [migration 20260501000002](../../../src/database/migrations/20260501000002-AddProjectAndTaskCodes.ts)) acts as a safety net for the race window between check and insert; in that case clients see the generic `DATABASE_UNIQUE_VIOLATION` (409).
-- **Response 201:** [`IProjectSummaryResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-summary.response.interface.ts) — `{ id, code, title, introduction, status, payment_type, required_consultants, published_at, created_at, updated_at }`. `payment_type` is `per_task | per_month` (defaults to `per_task`).
+- **Behaviour:** Service checks `(business_id, code)` uniqueness with a pre-flight `findOne` against [BusinessProjectsService.createProject](../../../src/modules/business-projects/services/projects/projects.service.ts). The DB-level unique constraint `uq_projects_business_code` (added by [migration 20260501000002](../../../src/database/migrations/20260501000002-AddProjectAndTaskCodes.ts)) acts as a safety net for the race window between check and insert; in that case clients see the generic `DATABASE_UNIQUE_VIOLATION` (409). Server defaults: `status = draft`, `required_consultants = 0`, `payment_type = per_task`.
+- **Response 201:** [`IProjectSummaryResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-summary.response.interface.ts) — `{ id, code, title, introduction, status, payment_type, required_consultants, published_at, created_at, updated_at }`. `payment_type` is `per_task | per_month` (defaults to `per_task`). `required_consultants` defaults to `0` for newly-created projects.
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|
@@ -72,27 +72,29 @@
   | 422 | `PROJECT_INSUFFICIENT_BALANCE` | Pre-paid balance below `total_amount`. |
   | 422 | `PROJECT_CANNOT_PUBLISH` | Validation rules in [PublishValidationService](../../../src/modules/projects) blocked publishing (no tasks, missing skills, etc.). |
 
-### 5. Re-publish project (revert PUBLISHED → CONFIGURED, refund pre-paid)
+### 5. Re-publish project (revert PUBLISHED → CONFIGURED, refund all charges, reset tasks)
 
 - **Endpoint:** `PATCH /projects/business/:id/re-publish`
 - **Method:** `PATCH`
 - **Scope:** `@Roles(USER)`, `@Platform(BUSINESS)`
 - **Path params:** `id` (UUID v4)
-- **Pre-condition:** project status **must be** `PUBLISHED`.
-- **Behaviour:**
-  - Flips status `PUBLISHED → CONFIGURED` so the business can edit settings before publishing again.
-  - **Pre-paid businesses** (`business_profile.allow_payment_credit = false`):
-    1. Locks the business profile row (`SELECT … FOR UPDATE`).
-    2. Loads the latest completed `PROJECT_PUBLISHED` transaction for the project.
-    3. Credits `account_balance` by the original transaction's `amount`.
-    4. Inserts a `BusinessTransaction` row with `type = REFUND`, `status = COMPLETED`, `amount = total_amount = original.amount`, `project_id = :id`, `note = "Re-publish refund: <project title>"`.
-    5. All four steps execute inside a single DB transaction; the lock prevents a concurrent task-payment from racing with the refund.
-  - **Credit-based businesses** (`allow_payment_credit = true`): pure status flip — no wallet write, no refund row.
-  - No member impact, no email.
+- **Pre-condition:** project status **must be** `PUBLISHED`. Once any task is assigned the project auto-transitions to `IN_PROGRESS` (see [board endpoints](./board-api-specs.md) and consultant `assign-self`), and republish is rejected from there.
+- **Behaviour (atomic — single DB transaction):**
+  1. Locks the business profile row (`SELECT … FOR UPDATE`) — taken in every path so PRE_PAID and CREDIT flows share the same locking shape and concurrent task-payments cannot race the refund.
+  2. **Publish-fee refund (PRE_PAID only — `allow_payment_credit = false`):**
+     - Loads the latest completed `PROJECT_PUBLISHED` transaction for the project.
+     - Credits `account_balance` by the original transaction's `amount`.
+     - Inserts a `BusinessTransaction` row with `type = REFUND`, `status = COMPLETED`, `amount = total_amount = original.amount`, `project_id = :id`, `note = "Re-publish refund: <project title>"`.
+  3. **Per-task refunds (every prior `task_added` transaction for this project):**
+     - For each row with `status = COMPLETED` (PRE_PAID payment) → credits `account_balance` by `total_amount` and inserts a sibling `REFUND` row (`amount` / `total_amount` mirror the original; `note` references the original transaction number).
+     - For each row with `status = PENDING` (CREDIT payment, not yet billed) → flips it to `status = REVERSED` (no money moves).
+  4. **Task reset:** every task on the project whose `kanban_status != 'draft'` is moved back to `'draft'`; `display_order` is recomputed contiguously after the existing drafts. Tasks that were already `'draft'` (e.g. added after publish) keep their slot. Defensive 422 if any task has a non-null `assigned_to` (would mean `IN_PROGRESS` slipped through — should be unreachable).
+  5. Flips `project.status` to `CONFIGURED`.
+  6. Email + push notification fire **post-commit** so a delivery failure cannot roll back the wallet credit. The email body and the `refund_amount` notification metadata field both report the **total** refunded amount (publish fee + sum of task refunds). Email is skipped only when no money moved (e.g. CREDIT business with no PENDING task transactions).
 - **Response 200:** `data: null`. Success message key `success.project.re_published`.
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|
-  | 422 | `PROJECT_INVALID_STATUS_TRANSITION` | Project is not currently `PUBLISHED`. |
-  | 422 | `PROJECT_RECALL_TRANSACTION_NOT_FOUND` | Pre-paid business: no completed `PROJECT_PUBLISHED` transaction on file for the project, so the refund amount cannot be determined. |
+  | 422 | `PROJECT_INVALID_STATUS_TRANSITION` | Project is not currently `PUBLISHED` — including the case where it has auto-progressed to `IN_PROGRESS` because a task was assigned. Also raised defensively if any task on the project still has `assigned_to != NULL` at republish time. |
+  | 422 | `PROJECT_RECALL_TRANSACTION_NOT_FOUND` | Pre-paid business: no completed `PROJECT_PUBLISHED` transaction on file for the project, so the publish-fee refund amount cannot be determined. |
   | 403 | `BUSINESS_PROFILE_NOT_FOUND` | Defensive — the locked profile vanished mid-transaction. |

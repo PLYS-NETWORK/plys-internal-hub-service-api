@@ -45,7 +45,11 @@ export class BacklogsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create a single draft task' })
+  @ApiOperation({
+    summary: 'Create a single draft task',
+    description:
+      'Side effect: adding the first draft task auto-transitions the project from `draft` to `setting_up` (or straight to `configured` if `required_skills` and `max_consultants > 0` are already set).',
+  })
   public async createDraftTask(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateDraftTaskDto,
@@ -81,7 +85,11 @@ export class BacklogsController {
 
   @Delete()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Hard-delete one or more draft tasks (atomic)' })
+  @ApiOperation({
+    summary: 'Hard-delete one or more draft tasks (atomic)',
+    description:
+      'Side effect: removing the last draft task on a setup-phase project demotes its status back toward `draft`/`setting_up`.',
+  })
   public async bulkDelete(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: TaskIdsDto,

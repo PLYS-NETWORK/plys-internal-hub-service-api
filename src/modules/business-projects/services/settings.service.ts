@@ -23,6 +23,7 @@ import {
 } from '../dto/responses';
 import { ISettingsService } from '../interfaces/settings.service.interface';
 import { BusinessAccessService } from './business-access.service';
+import { ProjectStatusService } from './projects/project-status.service';
 
 const LOCKED_STATUSES = new Set<ProjectStatus>([ProjectStatus.DONE, ProjectStatus.CANCELLED]);
 
@@ -35,6 +36,7 @@ export class SettingsService implements ISettingsService {
     private readonly requestContext: RequestContextService,
     private readonly access: BusinessAccessService,
     private readonly i18n: I18nService,
+    private readonly projectStatus: ProjectStatusService,
   ) {
     this.logger = new AppLogger(SettingsService.name, requestContext);
   }
@@ -108,6 +110,11 @@ export class SettingsService implements ISettingsService {
       if (dto.requiredSkills !== undefined) {
         await this.replaceRequiredSkills(tx, projectId, dto.requiredSkills);
       }
+
+      // Recompute setup-phase status from completeness signals (drafts +
+      // skills + consultants). Reflect the new status on the in-memory entity
+      // so the response DTO mapping below picks it up without re-reading.
+      saved.status = await this.projectStatus.recomputeAutoStatus(tx, projectId);
 
       return saved;
     });

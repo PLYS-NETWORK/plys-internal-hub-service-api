@@ -35,7 +35,7 @@ export class ProjectSummaryResponseDto implements IProjectSummaryResponse {
   public readonly payment_type!: ProjectPaymentType;
 
   @Expose()
-  @ApiProperty({ name: 'required_consultants', example: 1 })
+  @ApiProperty({ name: 'required_consultants', example: 0 })
   public readonly required_consultants!: number;
 
   @Expose()

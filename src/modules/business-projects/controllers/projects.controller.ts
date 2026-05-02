@@ -91,6 +91,9 @@ export class BusinessProjectsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Revert a PUBLISHED project to CONFIGURED so it can be re-published',
+    description:
+      'Only allowed while the project is `published` — once a task is assigned the project is `in_progress` and republish is rejected. ' +
+      'Side effects: every non-DRAFT task is reset back to `draft` (display_order recomputed); the original publish fee and every prior `task_added` charge are refunded as REFUND transactions (PRE_PAID) or REVERSED (CREDIT).',
   })
   public async republish(
     @Param('id', ParseUUIDPipe) id: string,

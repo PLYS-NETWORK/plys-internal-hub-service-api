@@ -57,6 +57,8 @@ export class SettingsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Update project metadata (title, introduction, skills, max_consultants)',
+    description:
+      'Side effect: may auto-transition the project between `draft` ↔ `setting_up` ↔ `configured` based on draft-tasks / required-skills / required_consultants completeness.',
   })
   public async updateProject(
     @Param('id', ParseUUIDPipe) id: string,

@@ -30,6 +30,10 @@
   | `price` | `string` | yes | decimal-safe string |
   | `difficulty_level` | `TaskDifficulty` | no | enum |
 - **Response 201:** [`IDraftTaskResponse`](../../../src/modules/business-projects/dto/responses/interfaces/draft-task.response.interface.ts) — `{ id, title, description, price, platform_fee_amount, consultant_payout, difficulty_level, created_at, updated_at }`
+- **Side effect — auto status transition:** after the task is inserted, [ProjectStatusService.recomputeAutoStatus](../../../src/modules/business-projects/services/projects/project-status.service.ts) runs in the same transaction and re-evaluates the project's status against the completeness signals (`drafts > 0`, `required_skills > 0`, `required_consultants > 0`). Forward chain in one pass:
+  - From `draft` with no skills / no consultants → `setting_up`.
+  - From `draft` (or `setting_up`) when skills + `required_consultants > 0` are already set → `configured`.
+  - No-op when the project is past the setup phase (`published_at IS NOT NULL`, or status is one of `published / in_progress / done / cancelled`).
 - **Errors:** cross-cutting only.
 
 ### 2. List draft tasks
@@ -74,6 +78,10 @@
   |-------|------|----------|-------|
   | `task_ids` | `string[]` (UUID v4) | yes | size 1–50 |
 - **Response 204:** empty body.
+- **Side effect — auto status transition:** after the delete, [ProjectStatusService.recomputeAutoStatus](../../../src/modules/business-projects/services/projects/project-status.service.ts) runs in the same transaction and demotes the project if completeness drops:
+  - Removing the last draft on a setup-phase project → `draft`.
+  - From `configured` if the deletes leave drafts but skills / consultants stay set → status stays `configured`; only when drafts hit zero does it drop further.
+  - No-op when the project has been published (`published_at IS NOT NULL`).
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|

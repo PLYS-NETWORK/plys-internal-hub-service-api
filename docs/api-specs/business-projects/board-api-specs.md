@@ -92,6 +92,7 @@
   |-------|------|----------|-------|
   | `consultant_id` | `string` (UUID v4) | yes | must be an active project member |
 - **Response 204:** empty body.
+- **Side effect — auto status transition:** if the project is currently `published`, the assignment auto-promotes it to `in_progress` via [ProjectStatusService.promoteToInProgressIfPublished](../../../src/modules/business-projects/services/projects/project-status.service.ts) inside the same transaction. Once `in_progress`, **republish is rejected** (the project can no longer be reverted to `configured`). No-op when the project is already `in_progress` or any other status.
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|

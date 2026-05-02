@@ -64,7 +64,7 @@ export class BusinessProjectsService implements IBusinessProjectsService {
       title: dto.title,
       introduction: dto.introduction ?? null,
       status: ProjectStatus.DRAFT,
-      requiredConsultants: 1,
+      requiredConsultants: 0,
     });
     const saved = await this.uow.projects.save(project);
 

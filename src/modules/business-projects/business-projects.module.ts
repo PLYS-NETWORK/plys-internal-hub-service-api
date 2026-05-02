@@ -20,6 +20,7 @@ import { BusinessAccessService } from './services/business-access.service';
 import { BusinessProjectOverviewService } from './services/overview.service';
 import { ProjectPublishService } from './services/projects/project-publish.service';
 import { ProjectRepublishService } from './services/projects/project-republish.service';
+import { ProjectStatusService } from './services/projects/project-status.service';
 import { BusinessProjectsService } from './services/projects/projects.service';
 import { SettingsService } from './services/settings.service';
 
@@ -38,6 +39,7 @@ import { SettingsService } from './services/settings.service';
     BusinessProjectsService,
     ProjectPublishService,
     ProjectRepublishService,
+    ProjectStatusService,
     BusinessProjectOverviewService,
     BacklogsService,
     SettingsService,
@@ -47,5 +49,6 @@ import { SettingsService } from './services/settings.service';
     BoardHistoryService,
     BoardEvidencesService,
   ],
+  exports: [ProjectStatusService],
 })
 export class BusinessProjectsModule {}
