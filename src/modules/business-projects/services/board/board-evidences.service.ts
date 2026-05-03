@@ -40,10 +40,6 @@ export class BoardEvidencesService implements IBoardEvidencesService {
     this.logger = new AppLogger(BoardEvidencesService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async list(
     projectId: string,
@@ -51,7 +47,7 @@ export class BoardEvidencesService implements IBoardEvidencesService {
     pageOptions: PageOptionsDto,
   ): Promise<PageDto<BoardEvidenceResponseDto>> {
     this.logger.log(
-      `[${this.rid}] list — start | projectId: ${projectId}, taskId: ${taskId}, page: ${pageOptions.page}, limit: ${pageOptions.limit}`,
+      `list — start | projectId: ${projectId}, taskId: ${taskId}, page: ${pageOptions.page}, limit: ${pageOptions.limit}`,
     );
     await this.access.resolveOwnedProject(projectId);
     await this.assertTaskOnBoard(projectId, taskId);
@@ -101,7 +97,7 @@ export class BoardEvidencesService implements IBoardEvidencesService {
 
     const data = rows.map((r) => this.mapRow(r, byEvidence.get(r.evidence_id) ?? []));
     this.logger.log(
-      `[${this.rid}] list — complete | taskId: ${taskId}, returned: ${data.length}, total: ${itemCount}`,
+      `list — complete | taskId: ${taskId}, returned: ${data.length}, total: ${itemCount}`,
     );
     return new PageDto(data, new PageMetaDto({ pageOptionsDto: pageOptions, itemCount }));
   }

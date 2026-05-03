@@ -20,10 +20,6 @@ import { Injectable } from '@nestjs/common';
 export class WebhookProcessorService {
   private readonly logger: AppLogger;
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
@@ -41,7 +37,7 @@ export class WebhookProcessorService {
     payload: Buffer,
     headers: Record<string, string>,
   ): Promise<void> {
-    this.logger.log(`[${this.rid}] processPolarWebhook — start`);
+    this.logger.log(`processPolarWebhook — start`);
 
     const event = this.paymentService.constructWebhookEvent(payload, headers);
 
@@ -97,7 +93,7 @@ export class WebhookProcessorService {
     payload: Buffer,
     _headers: Record<string, string>,
   ): Promise<void> {
-    this.logger.log(`[${this.rid}] processStripeWebhook — start`);
+    this.logger.log(`processStripeWebhook — start`);
 
     // Use Stripe provider to construct the event
     // Note: This would need a separate method or the PaymentService to handle Stripe specifically
@@ -241,7 +237,7 @@ export class WebhookProcessorService {
     // the account balance.
     if (transaction.status !== TransactionStatus.PENDING) {
       this.logger.warn(
-        `[${this.rid}] handlePaymentSucceeded — skipping non-pending transaction | transactionId: ${transactionId}, status: ${transaction.status}`,
+        `handlePaymentSucceeded — skipping non-pending transaction | transactionId: ${transactionId}, status: ${transaction.status}`,
       );
       return;
     }
@@ -314,7 +310,7 @@ export class WebhookProcessorService {
     // a user-cancelled (FAILED) or already-completed row must not be re-stamped.
     if (transaction.status !== TransactionStatus.PENDING) {
       this.logger.warn(
-        `[${this.rid}] handlePaymentFailed — skipping non-pending transaction | transactionId: ${transactionId}, status: ${transaction.status}`,
+        `handlePaymentFailed — skipping non-pending transaction | transactionId: ${transactionId}, status: ${transaction.status}`,
       );
       return;
     }

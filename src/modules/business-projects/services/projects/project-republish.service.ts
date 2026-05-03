@@ -38,20 +38,16 @@ export class ProjectRepublishService implements IProjectRepublishService {
     this.logger = new AppLogger(ProjectRepublishService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async republish(projectId: string): Promise<void> {
     const { project, businessProfile } = await this.access.resolveOwnedProject(projectId);
     this.logger.log(
-      `[${this.rid}] republish — start | projectId: ${projectId}, businessId: ${businessProfile.id}`,
+      `republish — start | projectId: ${projectId}, businessId: ${businessProfile.id}`,
     );
 
     if (project.status !== ProjectStatus.PUBLISHED) {
       this.logger.warn(
-        `[${this.rid}] republish — wrong status | projectId: ${projectId}, status: ${project.status}`,
+        `republish — wrong status | projectId: ${projectId}, status: ${project.status}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.invalid_status_transition',
@@ -70,7 +66,7 @@ export class ProjectRepublishService implements IProjectRepublishService {
       const lockedProfile = await txUow.businessProfiles.findByIdForUpdate(businessProfile.id);
       if (!lockedProfile) {
         this.logger.warn(
-          `[${this.rid}] republish — profile vanished mid-transaction | businessId: ${businessProfile.id}`,
+          `republish — profile vanished mid-transaction | businessId: ${businessProfile.id}`,
         );
         throw new TranslatableException({
           messageKey: 'error.business_profile.not_found',
@@ -91,7 +87,7 @@ export class ProjectRepublishService implements IProjectRepublishService {
         });
         if (!originalTxn) {
           this.logger.warn(
-            `[${this.rid}] republish — original publish transaction not found | projectId: ${projectId}`,
+            `republish — original publish transaction not found | projectId: ${projectId}`,
           );
           throw new TranslatableException({
             messageKey: 'error.project.recall_transaction_not_found',
@@ -184,7 +180,7 @@ export class ProjectRepublishService implements IProjectRepublishService {
         const stillAssigned = tasksToReset.filter((t) => t.assignedTo !== null);
         if (stillAssigned.length > 0) {
           this.logger.error(
-            `[${this.rid}] republish — assigned tasks present at republish time | projectId: ${projectId}, taskIds: ${stillAssigned.map((t) => t.id).join(',')}`,
+            `republish — assigned tasks present at republish time | projectId: ${projectId}, taskIds: ${stillAssigned.map((t) => t.id).join(',')}`,
           );
           throw new TranslatableException({
             messageKey: 'error.project.invalid_status_transition',
@@ -213,7 +209,7 @@ export class ProjectRepublishService implements IProjectRepublishService {
       await txUow.projects.save(project);
 
       this.logger.log(
-        `[${this.rid}] republish — refund summary | projectId: ${projectId}, publishFee: ${publishFeeRefund?.amount ?? '0'}, taskRefunds: ${taskRefundTotal.toFixedString()}, tasksReset: ${tasksToReset.length}, newBalance: ${lockedProfile.accountBalance}`,
+        `republish — refund summary | projectId: ${projectId}, publishFee: ${publishFeeRefund?.amount ?? '0'}, taskRefunds: ${taskRefundTotal.toFixedString()}, tasksReset: ${tasksToReset.length}, newBalance: ${lockedProfile.accountBalance}`,
       );
 
       return {
@@ -224,7 +220,7 @@ export class ProjectRepublishService implements IProjectRepublishService {
       };
     });
 
-    this.logger.log(`[${this.rid}] republish — complete | projectId: ${projectId}`);
+    this.logger.log(`republish — complete | projectId: ${projectId}`);
 
     // Total wallet credit issued = publish fee refund (if any) + per-task
     // refunds (if any). Email + notification fire post-commit so a transient
@@ -260,7 +256,7 @@ export class ProjectRepublishService implements IProjectRepublishService {
       })
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
-        this.logger.error(`[${this.rid}] republish — notification dispatch failed | error: ${msg}`);
+        this.logger.error(`republish — notification dispatch failed | error: ${msg}`);
       });
   }
 
@@ -291,11 +287,11 @@ export class ProjectRepublishService implements IProjectRepublishService {
       });
 
       this.logger.log(
-        `[${this.rid}] sendRefundEmail — sent | projectId: ${project.id}, email: ${user.email}, amount: ${refundAmount}, txn: ${transactionNumber}`,
+        `sendRefundEmail — sent | projectId: ${project.id}, email: ${user.email}, amount: ${refundAmount}, txn: ${transactionNumber}`,
       );
     } catch (err) {
       this.logger.error(
-        `[${this.rid}] sendRefundEmail — failed | projectId: ${project.id}, error: ${err instanceof Error ? err.message : String(err)}`,
+        `sendRefundEmail — failed | projectId: ${project.id}, error: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   }

@@ -67,13 +67,9 @@ export class ConsultantBoardService implements IConsultantBoardService {
     this.logger = new AppLogger(ConsultantBoardService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async listTasks(projectId: string): Promise<ConsultantBoardTaskResponseDto[]> {
-    this.logger.log(`[${this.rid}] listTasks — start | projectId: ${projectId}`);
+    this.logger.log(`listTasks — start | projectId: ${projectId}`);
     await this.access.resolveProjectMembership(projectId);
 
     const rows = await this.uow.tasks
@@ -127,17 +123,13 @@ export class ConsultantBoardService implements IConsultantBoardService {
       ),
     );
 
-    this.logger.log(
-      `[${this.rid}] listTasks — complete | projectId: ${projectId}, count: ${data.length}`,
-    );
+    this.logger.log(`listTasks — complete | projectId: ${projectId}, count: ${data.length}`);
     return data;
   }
 
   /** @inheritdoc */
   public async assignSelf(projectId: string, taskId: string): Promise<void> {
-    this.logger.log(
-      `[${this.rid}] assignSelf — start | projectId: ${projectId}, taskId: ${taskId}`,
-    );
+    this.logger.log(`assignSelf — start | projectId: ${projectId}, taskId: ${taskId}`);
     const { consultantProfile } = await this.access.resolveProjectMembership(projectId);
     const consultantId = consultantProfile.id;
 
@@ -156,7 +148,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
         .getOne();
 
       if (!task) {
-        this.logger.warn(`[${this.rid}] assignSelf — task not found | taskId: ${taskId}`);
+        this.logger.warn(`assignSelf — task not found | taskId: ${taskId}`);
         throw new TranslatableException({
           messageKey: 'error.task.not_found',
           errorCode: ERROR_CODES.TASK_NOT_FOUND,
@@ -169,7 +161,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
       // FE so it can refresh the board and toast the user.
       if (task.assignedTo !== null) {
         this.logger.warn(
-          `[${this.rid}] assignSelf — already assigned | taskId: ${taskId}, assignedTo: ${task.assignedTo}`,
+          `assignSelf — already assigned | taskId: ${taskId}, assignedTo: ${task.assignedTo}`,
         );
         throw new TranslatableException({
           messageKey: 'error.task.already_assigned',
@@ -180,7 +172,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
 
       if (task.kanbanStatus !== TaskKanbanStatus.TO_DO) {
         this.logger.warn(
-          `[${this.rid}] assignSelf — not claimable | taskId: ${taskId}, status: ${task.kanbanStatus}`,
+          `assignSelf — not claimable | taskId: ${taskId}, status: ${task.kanbanStatus}`,
         );
         throw this.invalidStatusTransition();
       }
@@ -192,14 +184,12 @@ export class ConsultantBoardService implements IConsultantBoardService {
       await this.projectStatus.promoteToInProgressIfPublished(tx, projectId);
     });
 
-    this.logger.log(`[${this.rid}] assignSelf — complete | taskId: ${taskId}`);
+    this.logger.log(`assignSelf — complete | taskId: ${taskId}`);
   }
 
   /** @inheritdoc */
   public async unassignSelf(projectId: string, taskId: string): Promise<void> {
-    this.logger.log(
-      `[${this.rid}] unassignSelf — start | projectId: ${projectId}, taskId: ${taskId}`,
-    );
+    this.logger.log(`unassignSelf — start | projectId: ${projectId}, taskId: ${taskId}`);
     const { consultantProfile } = await this.access.resolveProjectMembership(projectId);
     const consultantId = consultantProfile.id;
 
@@ -221,7 +211,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
       }
       if (task.assignedTo !== consultantId || task.kanbanStatus !== TaskKanbanStatus.ASSIGNED) {
         this.logger.warn(
-          `[${this.rid}] unassignSelf — not eligible | taskId: ${taskId}, status: ${task.kanbanStatus}, assignedTo: ${task.assignedTo}`,
+          `unassignSelf — not eligible | taskId: ${taskId}, status: ${task.kanbanStatus}, assignedTo: ${task.assignedTo}`,
         );
         throw this.invalidStatusTransition();
       }
@@ -232,7 +222,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
       await tx.tasks.save(task);
     });
 
-    this.logger.log(`[${this.rid}] unassignSelf — complete | taskId: ${taskId}`);
+    this.logger.log(`unassignSelf — complete | taskId: ${taskId}`);
   }
 
   /** @inheritdoc */
@@ -242,7 +232,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
     dto: ChangeTaskStatusDto,
   ): Promise<void> {
     this.logger.log(
-      `[${this.rid}] changeStatus — start | projectId: ${projectId}, taskId: ${taskId}, target: ${dto.kanbanStatus}`,
+      `changeStatus — start | projectId: ${projectId}, taskId: ${taskId}, target: ${dto.kanbanStatus}`,
     );
     const { consultantProfile } = await this.access.resolveProjectMembership(projectId);
     const consultantId = consultantProfile.id;
@@ -265,7 +255,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
       }
       if (task.assignedTo !== consultantId) {
         this.logger.warn(
-          `[${this.rid}] changeStatus — not assignee | taskId: ${taskId}, assignedTo: ${task.assignedTo}`,
+          `changeStatus — not assignee | taskId: ${taskId}, assignedTo: ${task.assignedTo}`,
         );
         throw this.invalidStatusTransition();
       }
@@ -273,7 +263,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
       const allowed = CONSULTANT_TRANSITIONS.get(task.kanbanStatus);
       if (!allowed || !allowed.has(dto.kanbanStatus)) {
         this.logger.warn(
-          `[${this.rid}] changeStatus — not allowed | taskId: ${taskId}, from: ${task.kanbanStatus}, to: ${dto.kanbanStatus}`,
+          `changeStatus — not allowed | taskId: ${taskId}, from: ${task.kanbanStatus}, to: ${dto.kanbanStatus}`,
         );
         throw this.invalidStatusTransition();
       }
@@ -286,9 +276,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
       if (dto.kanbanStatus === TaskKanbanStatus.IN_PROGRESS) {
         const blocked = await tx.tasks.existsInProgressByAssignee(consultantId, taskId);
         if (blocked) {
-          this.logger.warn(
-            `[${this.rid}] changeStatus — already in progress | consultantId: ${consultantId}`,
-          );
+          this.logger.warn(`changeStatus — already in progress | consultantId: ${consultantId}`);
           throw new TranslatableException({
             messageKey: 'error.task.consultant_already_in_progress',
             errorCode: ERROR_CODES.TASK_CONSULTANT_ALREADY_IN_PROGRESS,
@@ -301,7 +289,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
       await tx.tasks.save(task);
     });
 
-    this.logger.log(`[${this.rid}] changeStatus — complete | taskId: ${taskId}`);
+    this.logger.log(`changeStatus — complete | taskId: ${taskId}`);
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────

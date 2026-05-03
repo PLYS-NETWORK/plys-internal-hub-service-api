@@ -1,9 +1,11 @@
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { Logger } from '@nestjs/common';
+
+import { appWinstonLogger } from './winston.config';
 
 /**
- * Thin wrapper around NestJS `Logger` that automatically prepends
- * `[ContextName][requestId]` to every log line.
+ * Structured logger for @Injectable services. Emits JSON payloads via the
+ * shared Winston instance (defined in winston.config.ts) so Loki can index
+ * `context`, `request_id`, `user_id`, and any extra `meta` keys as fields.
  *
  * Usage (in any @Injectable service):
  *   private readonly logger: AppLogger;
@@ -11,35 +13,35 @@ import { Logger } from '@nestjs/common';
  *     this.logger = new AppLogger(MyService.name, requestContext);
  *   }
  *
- * When called outside a request context (e.g. cron jobs, bootstrap),
- * the requestId segment is omitted gracefully.
+ * Existing callers keep using `logger.log(message)` — backward compatible.
+ * New call sites can pass structured meta:
+ *   logger.log('user created', { user_id, business_id })
  */
 export class AppLogger {
-  private readonly nestLogger: Logger;
-  private readonly contextName: string;
-
   constructor(
-    contextName: string,
+    private readonly contextName: string,
     private readonly requestContext: RequestContextService,
-  ) {
-    this.contextName = contextName;
-    this.nestLogger = new Logger(contextName);
+  ) {}
+
+  public log(message: string, meta?: Record<string, unknown>): void {
+    appWinstonLogger.info(this.payload(message, meta));
   }
 
-  private get prefix(): string {
-    const rid = this.requestContext.requestId;
-    return rid ? `[${rid}] ` : '';
+  public warn(message: string, meta?: Record<string, unknown>): void {
+    appWinstonLogger.warn(this.payload(message, meta));
   }
 
-  public log(message: string): void {
-    this.nestLogger.log(`${this.prefix}${message}`, this.contextName);
+  public error(message: string, stack?: string, meta?: Record<string, unknown>): void {
+    appWinstonLogger.error({ ...this.payload(message, meta), stack });
   }
 
-  public warn(message: string): void {
-    this.nestLogger.warn(`${this.prefix}${message}`, this.contextName);
-  }
-
-  public error(message: string, stack?: string): void {
-    this.nestLogger.error(`${this.prefix}${message}`, stack, this.contextName);
+  private payload(message: string, meta?: Record<string, unknown>): Record<string, unknown> {
+    return {
+      context: this.contextName,
+      request_id: this.requestContext.requestId || undefined,
+      user_id: this.requestContext.userId ?? undefined,
+      message,
+      ...meta,
+    };
   }
 }

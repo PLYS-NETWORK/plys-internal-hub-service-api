@@ -43,17 +43,13 @@ export class ApplicationsService implements IApplicationsService {
     this.logger = new AppLogger(ApplicationsService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async list(
     projectId: string,
     dto: ListApplicationsDto,
   ): Promise<PageDto<ApplicationListItemResponseDto>> {
     this.logger.log(
-      `[${this.rid}] list — start | projectId: ${projectId}, status: ${dto.status ?? 'any'}, page: ${dto.page}`,
+      `list — start | projectId: ${projectId}, status: ${dto.status ?? 'any'}, page: ${dto.page}`,
     );
     await this.access.resolveOwnedProject(projectId);
 
@@ -137,7 +133,7 @@ export class ApplicationsService implements IApplicationsService {
 
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
     this.logger.log(
-      `[${this.rid}] list — complete | projectId: ${projectId}, returned: ${data.length}, total: ${itemCount}`,
+      `list — complete | projectId: ${projectId}, returned: ${data.length}, total: ${itemCount}`,
     );
     return new PageDto(data, meta);
   }
@@ -147,9 +143,7 @@ export class ApplicationsService implements IApplicationsService {
     projectId: string,
     applicationId: string,
   ): Promise<ApplicationDetailResponseDto> {
-    this.logger.log(
-      `[${this.rid}] getDetail — start | projectId: ${projectId}, applicationId: ${applicationId}`,
-    );
+    this.logger.log(`getDetail — start | projectId: ${projectId}, applicationId: ${applicationId}`);
     await this.access.resolveOwnedProject(projectId);
 
     const application = await this.uow.projectApplications.findOne({
@@ -157,7 +151,7 @@ export class ApplicationsService implements IApplicationsService {
       relations: { consultant: true },
     });
     if (!application) {
-      this.logger.warn(`[${this.rid}] getDetail — not found | applicationId: ${applicationId}`);
+      this.logger.warn(`getDetail — not found | applicationId: ${applicationId}`);
       throw new TranslatableException({
         messageKey: 'error.application.not_found',
         errorCode: ERROR_CODES.APPLICATION_NOT_FOUND,
@@ -189,7 +183,7 @@ export class ApplicationsService implements IApplicationsService {
     };
 
     this.logger.log(
-      `[${this.rid}] getDetail — complete | applicationId: ${applicationId}, answers: ${answers.length}`,
+      `getDetail — complete | applicationId: ${applicationId}, answers: ${answers.length}`,
     );
 
     return plainToInstance(ApplicationDetailResponseDto, detail, {
@@ -199,9 +193,7 @@ export class ApplicationsService implements IApplicationsService {
 
   /** @inheritdoc */
   public async approve(projectId: string, applicationId: string): Promise<void> {
-    this.logger.log(
-      `[${this.rid}] approve — start | projectId: ${projectId}, applicationId: ${applicationId}`,
-    );
+    this.logger.log(`approve — start | projectId: ${projectId}, applicationId: ${applicationId}`);
     await this.access.resolveOwnedProject(projectId);
     const userId = this.requestContext.userId!;
 
@@ -241,7 +233,7 @@ export class ApplicationsService implements IApplicationsService {
     });
 
     this.logger.log(
-      `[${this.rid}] approve — complete | applicationId: ${applicationId}, status: ${application.status}`,
+      `approve — complete | applicationId: ${applicationId}, status: ${application.status}`,
     );
     void this.sendStatusEmail(application.id, 'approve');
   }
@@ -252,9 +244,7 @@ export class ApplicationsService implements IApplicationsService {
     applicationId: string,
     dto: RejectApplicationDto,
   ): Promise<void> {
-    this.logger.log(
-      `[${this.rid}] reject — start | projectId: ${projectId}, applicationId: ${applicationId}`,
-    );
+    this.logger.log(`reject — start | projectId: ${projectId}, applicationId: ${applicationId}`);
     await this.access.resolveOwnedProject(projectId);
     const userId = this.requestContext.userId!;
 
@@ -283,7 +273,7 @@ export class ApplicationsService implements IApplicationsService {
     });
 
     this.logger.log(
-      `[${this.rid}] reject — complete | applicationId: ${applicationId}, status: ${application.status}`,
+      `reject — complete | applicationId: ${applicationId}, status: ${application.status}`,
     );
     void this.sendStatusEmail(application.id, 'reject', dto.rejectionReason);
   }
@@ -376,9 +366,7 @@ export class ApplicationsService implements IApplicationsService {
         : ERROR_CODES.APPLICATION_CANNOT_REJECT;
     const messageKey =
       action === 'approve' ? 'error.application.cannot_approve' : 'error.application.cannot_reject';
-    this.logger.warn(
-      `[${this.rid}] assertPending — wrong status | status: ${status}, action: ${action}`,
-    );
+    this.logger.warn(`assertPending — wrong status | status: ${status}, action: ${action}`);
     throw new TranslatableException({
       messageKey,
       errorCode,
@@ -414,7 +402,7 @@ export class ApplicationsService implements IApplicationsService {
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      this.logger.error(`[${this.rid}] sendStatusEmail — failed | error: ${msg}`);
+      this.logger.error(`sendStatusEmail — failed | error: ${msg}`);
     }
   }
 }

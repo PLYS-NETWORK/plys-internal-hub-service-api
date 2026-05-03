@@ -38,17 +38,13 @@ export class BoardCommentsService implements IBoardCommentsService {
     this.logger = new AppLogger(BoardCommentsService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async create(
     projectId: string,
     taskId: string,
     dto: CreateBoardCommentDto,
   ): Promise<BoardCommentResponseDto> {
-    this.logger.log(`[${this.rid}] create — start | projectId: ${projectId}, taskId: ${taskId}`);
+    this.logger.log(`create — start | projectId: ${projectId}, taskId: ${taskId}`);
     const { businessProfile } = await this.access.resolveOwnedProject(projectId);
     await this.assertTaskOnBoard(projectId, taskId);
 
@@ -80,7 +76,7 @@ export class BoardCommentsService implements IBoardCommentsService {
     });
 
     this.logger.log(
-      `[${this.rid}] create — complete | commentId: ${saved.id}, attachments: ${attachments.length}`,
+      `create — complete | commentId: ${saved.id}, attachments: ${attachments.length}`,
     );
     return this.toResponseDto(saved, attachments, businessProfile);
   }
@@ -93,7 +89,7 @@ export class BoardCommentsService implements IBoardCommentsService {
     dto: UpdateBoardCommentDto,
   ): Promise<BoardCommentResponseDto> {
     this.logger.log(
-      `[${this.rid}] update — start | projectId: ${projectId}, taskId: ${taskId}, commentId: ${commentId}`,
+      `update — start | projectId: ${projectId}, taskId: ${taskId}, commentId: ${commentId}`,
     );
     const { businessProfile } = await this.access.resolveOwnedProject(projectId);
     await this.assertTaskOnBoard(projectId, taskId);
@@ -113,9 +109,7 @@ export class BoardCommentsService implements IBoardCommentsService {
 
     const userId = this.requestContext.userId!;
     if (existing.authorId !== userId) {
-      this.logger.warn(
-        `[${this.rid}] update — non-author | commentId: ${commentId}, userId: ${userId}`,
-      );
+      this.logger.warn(`update — non-author | commentId: ${commentId}, userId: ${userId}`);
       throw this.commentForbidden();
     }
 
@@ -169,7 +163,7 @@ export class BoardCommentsService implements IBoardCommentsService {
     });
 
     this.logger.log(
-      `[${this.rid}] update — complete | commentId: ${saved.id}, attachments: ${attachments.length}, detached: ${detachedFileIds.length}`,
+      `update — complete | commentId: ${saved.id}, attachments: ${attachments.length}, detached: ${detachedFileIds.length}`,
     );
     return this.toResponseDto(saved, attachments, businessProfile);
   }
@@ -177,7 +171,7 @@ export class BoardCommentsService implements IBoardCommentsService {
   /** @inheritdoc */
   public async delete(projectId: string, taskId: string, commentId: string): Promise<void> {
     this.logger.log(
-      `[${this.rid}] delete — start | projectId: ${projectId}, taskId: ${taskId}, commentId: ${commentId}`,
+      `delete — start | projectId: ${projectId}, taskId: ${taskId}, commentId: ${commentId}`,
     );
     await this.access.resolveOwnedProject(projectId);
     await this.assertTaskOnBoard(projectId, taskId);
@@ -189,9 +183,7 @@ export class BoardCommentsService implements IBoardCommentsService {
 
     const userId = this.requestContext.userId!;
     if (existing.authorId !== userId) {
-      this.logger.warn(
-        `[${this.rid}] delete — non-author | commentId: ${commentId}, userId: ${userId}`,
-      );
+      this.logger.warn(`delete — non-author | commentId: ${commentId}, userId: ${userId}`);
       throw this.commentForbidden();
     }
 
@@ -214,9 +206,7 @@ export class BoardCommentsService implements IBoardCommentsService {
       }
     });
 
-    this.logger.log(
-      `[${this.rid}] delete — complete | commentId: ${commentId}, files: ${fileIds.length}`,
-    );
+    this.logger.log(`delete — complete | commentId: ${commentId}, files: ${fileIds.length}`);
   }
 
   // ─── Private helpers ───────────────────────────────────────────────────────
@@ -250,7 +240,7 @@ export class BoardCommentsService implements IBoardCommentsService {
       const file = byId.get(id);
       if (!file || file.ownerUserId !== userId) {
         this.logger.warn(
-          `[${this.rid}] resolveAttachmentSeeds — file not owned | userId: ${userId}, fileId: ${id}`,
+          `resolveAttachmentSeeds — file not owned | userId: ${userId}, fileId: ${id}`,
         );
         throw new TranslatableException({
           messageKey: 'error.task.comment_file_not_owned',
@@ -335,7 +325,7 @@ export class BoardCommentsService implements IBoardCommentsService {
   }
 
   private commentNotFound(commentId: string): TranslatableException {
-    this.logger.warn(`[${this.rid}] comment operation — not found | commentId: ${commentId}`);
+    this.logger.warn(`comment operation — not found | commentId: ${commentId}`);
     return new TranslatableException({
       messageKey: 'error.task.comment_not_found',
       errorCode: ERROR_CODES.TASK_COMMENT_NOT_FOUND,

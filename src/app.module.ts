@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { WinstonModule } from 'nest-winston';
 
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -15,7 +16,9 @@ import { CopyleaksModule } from './common/modules/copyleaks';
 import { EmailModule } from './common/modules/email';
 import { EnvironmentsModule, EnvironmentsService } from './common/modules/environments';
 import { FileStorageModule } from './common/modules/file-storage';
+import { HttpLoggerMiddleware } from './common/modules/http-logger';
 import { I18nModule } from './common/modules/i18n';
+import { appWinstonOptions } from './common/modules/logger';
 import { PaymentModule } from './common/modules/payment';
 import { RedisModule } from './common/modules/redis';
 import { RequestContextMiddleware, RequestContextModule } from './common/modules/request-context';
@@ -46,6 +49,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
       envFilePath: resolveEnvFilePath(),
       load: [configuration],
     }),
+    WinstonModule.forRoot(appWinstonOptions),
     EnvironmentsModule,
     TypeOrmModule.forRootAsync({
       imports: [EnvironmentsModule],
@@ -92,6 +96,8 @@ export class AppModule implements NestModule {
     consumer
       .apply(RequestContextMiddleware)
       .forRoutes({ path: '*path', method: RequestMethod.ALL });
+
+    consumer.apply(HttpLoggerMiddleware).forRoutes({ path: '*path', method: RequestMethod.ALL });
 
     // JwtContextMiddleware runs after RequestContextMiddleware so the AsyncLocalStorage
     // context is already established when the JWT payload is written into it.

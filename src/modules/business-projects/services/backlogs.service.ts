@@ -62,18 +62,12 @@ export class BacklogsService implements IBacklogsService {
     this.logger = new AppLogger(BacklogsService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async createDraftTask(
     projectId: string,
     dto: CreateDraftTaskDto,
   ): Promise<DraftTaskResponseDto> {
-    this.logger.log(
-      `[${this.rid}] createDraftTask — start | projectId: ${projectId}, title: ${dto.title}`,
-    );
+    this.logger.log(`createDraftTask — start | projectId: ${projectId}, title: ${dto.title}`);
     const { project } = await this.access.resolveOwnedProject(projectId);
 
     // Run inside a transaction so the advisory lock from `taskCodes.next` and
@@ -115,9 +109,7 @@ export class BacklogsService implements IBacklogsService {
       throw new Error(`createDraftTask: failed to reload task ${savedId}`);
     }
 
-    this.logger.log(
-      `[${this.rid}] createDraftTask — complete | taskId: ${reloaded.id}, code: ${reloaded.code}`,
-    );
+    this.logger.log(`createDraftTask — complete | taskId: ${reloaded.id}, code: ${reloaded.code}`);
     return this.toDraftTaskResponse(reloaded);
   }
 
@@ -127,9 +119,7 @@ export class BacklogsService implements IBacklogsService {
     taskId: string,
     dto: UpdateDraftTaskDto,
   ): Promise<DraftTaskResponseDto> {
-    this.logger.log(
-      `[${this.rid}] updateDraftTask — start | projectId: ${projectId}, taskId: ${taskId}`,
-    );
+    this.logger.log(`updateDraftTask — start | projectId: ${projectId}, taskId: ${taskId}`);
     await this.access.resolveOwnedProject(projectId);
 
     const task = await this.uow.tasks.findOne({
@@ -150,7 +140,7 @@ export class BacklogsService implements IBacklogsService {
 
     const saved = await this.uow.tasks.save(task);
 
-    this.logger.log(`[${this.rid}] updateDraftTask — complete | taskId: ${saved.id}`);
+    this.logger.log(`updateDraftTask — complete | taskId: ${saved.id}`);
     return this.toDraftTaskResponse(saved);
   }
 
@@ -160,7 +150,7 @@ export class BacklogsService implements IBacklogsService {
     dto: ListDraftTasksDto,
   ): Promise<PageDto<DraftTaskResponseDto>> {
     this.logger.log(
-      `[${this.rid}] listDraftTasks — start | projectId: ${projectId}, page: ${dto.page}, keywords: ${dto.keywords ?? '<none>'}`,
+      `listDraftTasks — start | projectId: ${projectId}, page: ${dto.page}, keywords: ${dto.keywords ?? '<none>'}`,
     );
     await this.access.resolveOwnedProject(projectId);
 
@@ -181,16 +171,14 @@ export class BacklogsService implements IBacklogsService {
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
 
     this.logger.log(
-      `[${this.rid}] listDraftTasks — complete | projectId: ${projectId}, returned: ${data.length}, total: ${itemCount}`,
+      `listDraftTasks — complete | projectId: ${projectId}, returned: ${data.length}, total: ${itemCount}`,
     );
     return new PageDto(data, meta);
   }
 
   /** @inheritdoc */
   public async bulkDelete(projectId: string, dto: TaskIdsDto): Promise<void> {
-    this.logger.log(
-      `[${this.rid}] bulkDelete — start | projectId: ${projectId}, count: ${dto.taskIds.length}`,
-    );
+    this.logger.log(`bulkDelete — start | projectId: ${projectId}, count: ${dto.taskIds.length}`);
     await this.access.resolveOwnedProject(projectId);
 
     await this.uow.withTransaction(async (tx) => {
@@ -203,7 +191,7 @@ export class BacklogsService implements IBacklogsService {
     });
 
     this.logger.log(
-      `[${this.rid}] bulkDelete — complete | projectId: ${projectId}, deleted: ${dto.taskIds.length}`,
+      `bulkDelete — complete | projectId: ${projectId}, deleted: ${dto.taskIds.length}`,
     );
   }
 
@@ -213,7 +201,7 @@ export class BacklogsService implements IBacklogsService {
     dto: TaskIdsDto,
   ): Promise<AddToBoardValidationResponseDto> {
     this.logger.log(
-      `[${this.rid}] addToBoardValidation — start | projectId: ${projectId}, count: ${dto.taskIds.length}`,
+      `addToBoardValidation — start | projectId: ${projectId}, count: ${dto.taskIds.length}`,
     );
     const { project, businessProfile } = await this.access.resolveOwnedProject(projectId);
     this.assertProjectAcceptsAddToBoard(project);
@@ -230,7 +218,7 @@ export class BacklogsService implements IBacklogsService {
       pricing.paymentType === PaymentType.CREDIT || accountBalance.gte(pricing.totalAmount);
 
     this.logger.log(
-      `[${this.rid}] addToBoardValidation — complete | projectId: ${projectId}, total: ${pricing.totalAmount.toFixedString()}, balance: ${accountBalance.toFixedString()}, valid: ${isValid}`,
+      `addToBoardValidation — complete | projectId: ${projectId}, total: ${pricing.totalAmount.toFixedString()}, balance: ${accountBalance.toFixedString()}, valid: ${isValid}`,
     );
 
     return plainToInstance(
@@ -252,9 +240,7 @@ export class BacklogsService implements IBacklogsService {
 
   /** @inheritdoc */
   public async payTasks(projectId: string, dto: TaskIdsDto): Promise<PayTasksResponseDto> {
-    this.logger.log(
-      `[${this.rid}] payTasks — start | projectId: ${projectId}, count: ${dto.taskIds.length}`,
-    );
+    this.logger.log(`payTasks — start | projectId: ${projectId}, count: ${dto.taskIds.length}`);
     const { project } = await this.access.resolveOwnedProject(projectId);
     this.assertProjectAcceptsAddToBoard(project);
 
@@ -341,7 +327,7 @@ export class BacklogsService implements IBacklogsService {
     });
 
     this.logger.log(
-      `[${this.rid}] payTasks — complete | projectId: ${projectId}, txn: ${result.txnId}, paymentType: ${result.pricing.paymentType}`,
+      `payTasks — complete | projectId: ${projectId}, txn: ${result.txnId}, paymentType: ${result.pricing.paymentType}`,
     );
 
     return plainToInstance(
@@ -364,7 +350,7 @@ export class BacklogsService implements IBacklogsService {
   private assertProjectAcceptsAddToBoard(project: Project): void {
     if (!ALLOWED_ADD_TO_BOARD_STATUSES.has(project.status)) {
       this.logger.warn(
-        `[${this.rid}] assertProjectAcceptsAddToBoard — wrong status | projectId: ${project.id}, status: ${project.status}`,
+        `assertProjectAcceptsAddToBoard — wrong status | projectId: ${project.id}, status: ${project.status}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.invalid_status_transition',
@@ -377,7 +363,7 @@ export class BacklogsService implements IBacklogsService {
   private assertAllTasksAreDraft(supplied: string[], loaded: Task[]): void {
     if (loaded.length !== supplied.length) {
       this.logger.warn(
-        `[${this.rid}] assertAllTasksAreDraft — count mismatch | supplied: ${supplied.length}, found: ${loaded.length}`,
+        `assertAllTasksAreDraft — count mismatch | supplied: ${supplied.length}, found: ${loaded.length}`,
       );
       throw new TranslatableException({
         messageKey: 'error.task.invalid_status_transition',
@@ -388,7 +374,7 @@ export class BacklogsService implements IBacklogsService {
     const nonDraft = loaded.filter((t) => t.kanbanStatus !== TaskKanbanStatus.DRAFT);
     if (nonDraft.length > 0) {
       this.logger.warn(
-        `[${this.rid}] assertAllTasksAreDraft — non-draft tasks | ids: ${nonDraft.map((t) => t.id).join(',')}`,
+        `assertAllTasksAreDraft — non-draft tasks | ids: ${nonDraft.map((t) => t.id).join(',')}`,
       );
       throw new TranslatableException({
         messageKey: 'error.task.invalid_status_transition',

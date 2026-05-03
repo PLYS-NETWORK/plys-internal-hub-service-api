@@ -22,10 +22,6 @@ export class BusinessAccessService {
     private readonly requestContext: RequestContextService,
   ) {}
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /**
    * Resolves and verifies the BusinessProfile for the calling user.
    * @returns The verified profile.
@@ -36,7 +32,7 @@ export class BusinessAccessService {
     const businessId = this.requestContext.businessId;
     if (!userId || !businessId) {
       this.logger.warn(
-        `[${this.rid}] resolveBusinessProfile — missing context | userId: ${userId}, businessId: ${businessId}`,
+        `resolveBusinessProfile — missing context | userId: ${userId}, businessId: ${businessId}`,
       );
       throw new TranslatableException({
         messageKey: 'error.business_profile.not_found',
@@ -47,7 +43,7 @@ export class BusinessAccessService {
     const profile = await this.uow.businessProfiles.findOneByUserAndId(userId, businessId);
     if (!profile) {
       this.logger.warn(
-        `[${this.rid}] resolveBusinessProfile — profile mismatch | userId: ${userId}, businessId: ${businessId}`,
+        `resolveBusinessProfile — profile mismatch | userId: ${userId}, businessId: ${businessId}`,
       );
       throw new TranslatableException({
         messageKey: 'error.business_profile.not_found',
@@ -71,7 +67,7 @@ export class BusinessAccessService {
     const project = await this.uow.projects.findByIdAndBusinessId(projectId, businessProfile.id);
     if (!project) {
       this.logger.warn(
-        `[${this.rid}] resolveOwnedProject — not found | projectId: ${projectId}, businessId: ${businessProfile.id}`,
+        `resolveOwnedProject — not found | projectId: ${projectId}, businessId: ${businessProfile.id}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.not_found',

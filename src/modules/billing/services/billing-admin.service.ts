@@ -24,10 +24,6 @@ import { BillingSettlementService } from './billing-settlement.service';
 export class BillingAdminService implements IBillingAdminService {
   private readonly logger: AppLogger;
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly billingSettlement: BillingSettlementService,
@@ -38,7 +34,7 @@ export class BillingAdminService implements IBillingAdminService {
 
   /** @inheritdoc */
   public async listBills(dto: ListBillsDto): Promise<PageDto<BillListResponseDto>> {
-    this.logger.log(`[${this.rid}] listBills — start | page: ${dto.page}, limit: ${dto.limit}`);
+    this.logger.log(`listBills — start | page: ${dto.page}, limit: ${dto.limit}`);
 
     const [periods, itemCount] = await this.uow.billingPeriods.findWithInvoice(
       dto.skip,
@@ -81,7 +77,7 @@ export class BillingAdminService implements IBillingAdminService {
 
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
 
-    this.logger.log(`[${this.rid}] listBills — complete | itemCount: ${itemCount}`);
+    this.logger.log(`listBills — complete | itemCount: ${itemCount}`);
 
     return new PageDto(data, meta);
   }
@@ -89,18 +85,18 @@ export class BillingAdminService implements IBillingAdminService {
   /** @inheritdoc */
   public async triggerSettlement(dto: TriggerSettlementDto): Promise<void> {
     this.logger.log(
-      `[${this.rid}] triggerSettlement — start | year: ${dto.year}, month: ${dto.month}${dto.businessId ? `, businessId: ${dto.businessId}` : ''}`,
+      `triggerSettlement — start | year: ${dto.year}, month: ${dto.month}${dto.businessId ? `, businessId: ${dto.businessId}` : ''}`,
     );
 
     // month from API is 1-indexed; runSettlement expects 0-indexed
     await this.billingSettlement.runSettlement(dto.year, dto.month - 1, dto.businessId);
 
-    this.logger.log(`[${this.rid}] triggerSettlement — complete`);
+    this.logger.log(`triggerSettlement — complete`);
   }
 
   /** @inheritdoc */
   public async getBillDetail(invoiceId: string): Promise<BillDetailResponseDto> {
-    this.logger.log(`[${this.rid}] getBillDetail — start | invoiceId: ${invoiceId}`);
+    this.logger.log(`getBillDetail — start | invoiceId: ${invoiceId}`);
 
     const invoice = await this.uow.invoices.findOne({
       where: { id: invoiceId },
@@ -153,7 +149,7 @@ export class BillingAdminService implements IBillingAdminService {
 
     const period = invoice.billingPeriod;
 
-    this.logger.log(`[${this.rid}] getBillDetail — complete | invoiceId: ${invoiceId}`);
+    this.logger.log(`getBillDetail — complete | invoiceId: ${invoiceId}`);
 
     return plainToInstance(
       BillDetailResponseDto,
@@ -173,7 +169,7 @@ export class BillingAdminService implements IBillingAdminService {
 
   /** @inheritdoc */
   public async sendBillEmail(invoiceId: string): Promise<SendBillResponseDto> {
-    this.logger.log(`[${this.rid}] sendBillEmail — start | invoiceId: ${invoiceId}`);
+    this.logger.log(`sendBillEmail — start | invoiceId: ${invoiceId}`);
 
     const invoice = await this.uow.invoices.findOne({ where: { id: invoiceId } });
 
@@ -187,7 +183,7 @@ export class BillingAdminService implements IBillingAdminService {
 
     if (invoice.notifiedAt) {
       this.logger.warn(
-        `[${this.rid}] sendBillEmail — re-sending previously notified invoice | invoiceId: ${invoiceId}, previousNotifiedAt: ${invoice.notifiedAt.toISOString()}`,
+        `sendBillEmail — re-sending previously notified invoice | invoiceId: ${invoiceId}, previousNotifiedAt: ${invoice.notifiedAt.toISOString()}`,
       );
     }
 
@@ -197,7 +193,7 @@ export class BillingAdminService implements IBillingAdminService {
     const updated = await this.uow.invoices.findOne({ where: { id: invoiceId } });
     const notifiedAt = updated?.notifiedAt ?? DateUtil.nowDate();
 
-    this.logger.log(`[${this.rid}] sendBillEmail — complete | invoiceId: ${invoiceId}`);
+    this.logger.log(`sendBillEmail — complete | invoiceId: ${invoiceId}`);
 
     return plainToInstance(
       SendBillResponseDto,

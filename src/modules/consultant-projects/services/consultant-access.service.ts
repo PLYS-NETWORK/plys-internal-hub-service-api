@@ -36,22 +36,16 @@ export class ConsultantAccessService implements IConsultantAccessService {
     this.logger = new AppLogger(ConsultantAccessService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async resolveConsultantProfile(): Promise<ConsultantProfile> {
     const userId = this.requestContext.userId;
     if (!userId) {
-      this.logger.warn(`[${this.rid}] resolveConsultantProfile — missing userId`);
+      this.logger.warn(`resolveConsultantProfile — missing userId`);
       throw this.consultantProfileNotFound();
     }
     const profile = await this.uow.consultantProfiles.findByUserId(userId);
     if (!profile) {
-      this.logger.warn(
-        `[${this.rid}] resolveConsultantProfile — profile not found | userId: ${userId}`,
-      );
+      this.logger.warn(`resolveConsultantProfile — profile not found | userId: ${userId}`);
       throw this.consultantProfileNotFound();
     }
     return profile;
@@ -67,7 +61,7 @@ export class ConsultantAccessService implements IConsultantAccessService {
     );
     if (!project) {
       this.logger.warn(
-        `[${this.rid}] resolveAccessibleProject — not found | projectId: ${projectId}, consultantId: ${consultantProfile.id}`,
+        `resolveAccessibleProject — not found | projectId: ${projectId}, consultantId: ${consultantProfile.id}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.not_found',
@@ -83,9 +77,7 @@ export class ConsultantAccessService implements IConsultantAccessService {
     const consultantProfile = await this.resolveConsultantProfile();
     const project = await this.uow.projects.findOne({ where: { id: projectId } });
     if (!project) {
-      this.logger.warn(
-        `[${this.rid}] resolveProjectMembership — project not found | projectId: ${projectId}`,
-      );
+      this.logger.warn(`resolveProjectMembership — project not found | projectId: ${projectId}`);
       throw new TranslatableException({
         messageKey: 'error.project.not_found',
         errorCode: ERROR_CODES.PROJECT_NOT_FOUND,
@@ -102,7 +94,7 @@ export class ConsultantAccessService implements IConsultantAccessService {
     });
     if (!member) {
       this.logger.warn(
-        `[${this.rid}] resolveProjectMembership — not a member | projectId: ${projectId}, consultantId: ${consultantProfile.id}`,
+        `resolveProjectMembership — not a member | projectId: ${projectId}, consultantId: ${consultantProfile.id}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.forbidden',

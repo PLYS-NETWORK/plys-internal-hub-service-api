@@ -58,6 +58,7 @@
     "google-auth-library": "^10.6.2",
     "ioredis": "^5.10.1",
     "lodash": "^4.17.21",
+    "nest-winston": "^1.10.2",
     "nestjs-i18n": "^10.6.5",
     "p-limit": "^6.1.0",
     "passport": "^0.7.0",
@@ -70,7 +71,8 @@
     "socket.io": "^4.8.1",
     "standardwebhooks": "^1.0.0",
     "stripe": "^22.0.2",
-    "typeorm": "^0.3.17"
+    "typeorm": "^0.3.17",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
@@ -90,9 +92,9 @@
     "eslint-plugin-prettier": "^5.0.0",
     "eslint-plugin-simple-import-sort": "^10.0.0",
     "husky": "^9.0.0",
+    "jest": "^30.0.0",
     "lint-staged": "^16.4.0",
     "prettier": "^3.0.0",
-    "jest": "^30.0.0",
     "source-map-support": "^0.5.21",
     "ts-jest": "^29.0.0",
     "ts-node": "^10.9.0",
