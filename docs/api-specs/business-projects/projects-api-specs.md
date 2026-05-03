@@ -58,19 +58,27 @@
 - **Response 200:** [`IPublishValidationResponse`](../../../src/modules/business-projects/dto/responses/interfaces/publish-validation.response.interface.ts) — `{ can_publish, reason_code, account_balance, project_title, project_amount, commission_rate, commission_amount, total_amount, payment_type }`. Read-only — never throws on a publishable problem; it surfaces `can_publish=false` with a `reason_code`.
 - **Errors:** cross-cutting only.
 
-### 4. Publish project (atomic, charges payment)
+### 4. Publish project (atomic, charges payment, promotes drafts)
 
 - **Endpoint:** `PATCH /projects/business/:id/publish`
 - **Method:** `PATCH`
 - **Scope:** `@Roles(USER)`, `@Platform(BUSINESS)`
 - **Path params:** `id` (UUID v4)
-- **Response 204:** empty body
+- **Pre-condition:** project status **must be** `configured` (publishability is computed from completeness signals upstream — see settings/backlogs auto-transitions).
+- **Behaviour (atomic — single DB transaction):**
+  1. Locks the business profile row (`SELECT … FOR UPDATE`).
+  2. Re-evaluates eligibility (balance, status) against the locked snapshot. Bails with the corresponding error if it can no longer publish.
+  3. **Pre-paid businesses** (`allow_payment_credit = false`): debits `account_balance` by `total_amount` (sum of task prices + commission) and inserts a `BusinessTransaction` row with `type = PROJECT_PUBLISHED, status = COMPLETED`. **Credit-based businesses** (`allow_payment_credit = true`): no wallet write — the project is billed on the monthly cycle.
+  4. Locks `payment_type` on the project (`PER_TASK` for PRE_PAID, `PER_MONTH` for CREDIT) and stamps `published_at = now()`.
+  5. Flips `project.status` to `published`.
+  6. **Promotes every existing DRAFT task on the project to `to_do`**, ordered by their existing `display_order ASC`, so the board surfaces them immediately when the consultant side queries it. The publish fee already covers these tasks (their prices are part of `total_amount`), so no separate `task_added` transaction is created. Drafts added _after_ publish keep the existing flow — explicit `pay-tasks` charges and promotes them.
+- **Response 204:** empty body. Email + push notification fire post-commit.
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|
   | 422 | `PROJECT_INVALID_STATUS_TRANSITION` | Project not in a publishable state (e.g., already PUBLISHED, CANCELLED). |
   | 422 | `PROJECT_INSUFFICIENT_BALANCE` | Pre-paid balance below `total_amount`. |
-  | 422 | `PROJECT_CANNOT_PUBLISH` | Validation rules in [PublishValidationService](../../../src/modules/projects) blocked publishing (no tasks, missing skills, etc.). |
+  | 422 | `PROJECT_CANNOT_PUBLISH` | Validation rules in [ProjectPublishService.evaluatePublishEligibility](../../../src/modules/business-projects/services/projects/project-publish.service.ts) blocked publishing (status not `configured`, no tasks, missing skills, etc.). |
 
 ### 5. Re-publish project (revert PUBLISHED → CONFIGURED, refund all charges, reset tasks)
 
