@@ -20,7 +20,8 @@
     "updated": "Project updated successfully.",
     "status_updated": "Project status updated successfully.",
     "published": "Project published successfully.",
-    "re_published": "Project reverted to configured for re-publish."
+    "re_published": "Project reverted to configured for re-publish.",
+    "deleted": "Project deleted successfully."
   },
   "task": {
     "created": "Task created successfully.",

@@ -1,10 +1,18 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
+import { PageDto } from '@common/dto/page.dto';
+import { PageMetaDto } from '@common/dto/page-meta.dto';
+import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { IStorageProvider, STORAGE_PROVIDER } from '@common/modules/file-storage';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { DateUtil } from '@common/utils/date';
-import { BusinessProfile, FileEntity, TaskComment } from '@database/entities';
+import {
+  BusinessProfile,
+  FileEntity,
+  TaskComment,
+  TaskCommentAttachment,
+} from '@database/entities';
 import { FilePurpose, TaskKanbanStatus } from '@database/enums';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
@@ -16,6 +24,20 @@ import { CreateBoardCommentDto, UpdateBoardCommentDto } from '../../dto/requests
 import { BoardCommentResponseDto } from '../../dto/responses';
 import { IBoardCommentsService } from '../../interfaces/board-comments.service.interface';
 import { BusinessAccessService } from '../business-access.service';
+
+interface ICommentRow {
+  comment_id: string;
+  task_id: string;
+  author_id: string;
+  comment: Record<string, unknown>;
+  is_edited: boolean;
+  edited_at: Date | null;
+  created_at: Date;
+  consultant_name: string | null;
+  consultant_avatar: string | null;
+  business_name: string | null;
+  business_logo: string | null;
+}
 
 interface IAttachmentSeed {
   fileId: string;
@@ -36,6 +58,71 @@ export class BoardCommentsService implements IBoardCommentsService {
     @Inject(STORAGE_PROVIDER) private readonly storage: IStorageProvider,
   ) {
     this.logger = new AppLogger(BoardCommentsService.name, requestContext);
+  }
+
+  /** @inheritdoc */
+  public async list(
+    projectId: string,
+    taskId: string,
+    pageOptions: PageOptionsDto,
+  ): Promise<PageDto<BoardCommentResponseDto>> {
+    this.logger.log(
+      `list — start | projectId: ${projectId}, taskId: ${taskId}, page: ${pageOptions.page}, limit: ${pageOptions.limit}`,
+    );
+    await this.access.resolveOwnedProject(projectId);
+    await this.assertTaskOnBoard(projectId, taskId);
+
+    const baseQb = this.uow.taskComments
+      .createQueryBuilder('tc')
+      .where('tc.task_id = :taskId', { taskId })
+      .andWhere('tc.is_deleted = false');
+
+    const itemCount = await baseQb.clone().getCount();
+
+    // Single SQL with both profile joins so consultant- and business-authored
+    // comments resolve in one round-trip.
+    const rows = await baseQb
+      .leftJoin('consultant_profiles', 'cp', 'cp.user_id = tc.author_id')
+      .leftJoin('business_profiles', 'bp', 'bp.user_id = tc.author_id')
+      .select('tc.id', 'comment_id')
+      .addSelect('tc.task_id', 'task_id')
+      .addSelect('tc.author_id', 'author_id')
+      .addSelect('tc.comment', 'comment')
+      .addSelect('tc.is_edited', 'is_edited')
+      .addSelect('tc.edited_at', 'edited_at')
+      .addSelect('tc.created_at', 'created_at')
+      .addSelect('cp.full_name', 'consultant_name')
+      .addSelect('cp.avatar_url', 'consultant_avatar')
+      .addSelect('bp.company_name', 'business_name')
+      .addSelect('bp.logo_url', 'business_logo')
+      .orderBy('tc.created_at', 'DESC')
+      .addOrderBy('tc.id', 'DESC')
+      .skip(pageOptions.skip)
+      .take(pageOptions.limit)
+      .getRawMany<ICommentRow>();
+
+    if (rows.length === 0) {
+      return new PageDto([], new PageMetaDto({ pageOptionsDto: pageOptions, itemCount }));
+    }
+
+    const commentIds = rows.map((r) => r.comment_id);
+    const attachments = await this.uow.taskCommentAttachments.find({
+      where: { commentId: In(commentIds) },
+      order: { uploadedAt: 'ASC' },
+    });
+
+    const byComment = new Map<string, TaskCommentAttachment[]>();
+    for (const a of attachments) {
+      const list = byComment.get(a.commentId) ?? [];
+      list.push(a);
+      byComment.set(a.commentId, list);
+    }
+
+    const data = rows.map((r) => this.mapRow(r, byComment.get(r.comment_id) ?? []));
+    this.logger.log(
+      `list — complete | taskId: ${taskId}, returned: ${data.length}, total: ${itemCount}`,
+    );
+    return new PageDto(data, new PageMetaDto({ pageOptionsDto: pageOptions, itemCount }));
   }
 
   /** @inheritdoc */
@@ -281,6 +368,40 @@ export class BoardCommentsService implements IBoardCommentsService {
       }),
     );
     await tx.taskCommentAttachments.save(rows);
+  }
+
+  private mapRow(r: ICommentRow, attachments: TaskCommentAttachment[]): BoardCommentResponseDto {
+    // Consultant identity wins when both profiles match — a user holding both
+    // a consultant and business profile is acting as a consultant on the
+    // assignee/comment side of the board.
+    const name = r.consultant_name ?? r.business_name ?? '';
+    const avatar = r.consultant_avatar ?? r.business_logo ?? null;
+    return plainToInstance(
+      BoardCommentResponseDto,
+      {
+        id: r.comment_id,
+        task_id: r.task_id,
+        author: {
+          user_id: r.author_id,
+          name,
+          avatar_url: avatar,
+        },
+        comment: r.comment,
+        is_edited: r.is_edited,
+        edited_at: r.edited_at,
+        created_at: r.created_at,
+        attachments: attachments.map((a) => ({
+          id: a.id,
+          file_id: a.fileId,
+          file_name: a.fileName,
+          file_url: a.fileUrl,
+          mime_type: a.mimeType,
+          file_size_bytes: a.fileSizeBytes === null ? null : Number(a.fileSizeBytes),
+          uploaded_at: a.uploadedAt,
+        })),
+      },
+      { excludeExtraneousValues: true },
+    );
   }
 
   private toResponseDto(

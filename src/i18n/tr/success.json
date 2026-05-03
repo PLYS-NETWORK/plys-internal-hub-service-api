@@ -20,7 +20,8 @@
     "updated": "Proje başarıyla güncellendi.",
     "status_updated": "Proje durumu başarıyla güncellendi.",
     "published": "Proje başarıyla yayınlandı.",
-    "re_published": "Proje yeniden yayınlanmak üzere yapılandırıldı durumuna alındı."
+    "re_published": "Proje yeniden yayınlanmak üzere yapılandırıldı durumuna alındı.",
+    "deleted": "Proje başarıyla silindi."
   },
   "task": {
     "created": "Görev başarıyla oluşturuldu.",

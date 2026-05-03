@@ -1,3 +1,6 @@
+import { PageDto } from '@common/dto/page.dto';
+import { PageOptionsDto } from '@common/dto/page-options.dto';
+
 import { CreateBoardCommentDto, UpdateBoardCommentDto } from '../dto/requests';
 import { BoardCommentResponseDto } from '../dto/responses';
 
@@ -7,6 +10,30 @@ import { BoardCommentResponseDto } from '../dto/responses';
  * before touching any data.
  */
 export interface IBoardCommentsService {
+  /**
+   * Returns paginated, non-deleted comments for a non-DRAFT task in the
+   * caller's project, ordered `created_at DESC`. Each entry resolves the
+   * author's display fields by joining `consultant_profiles` and
+   * `business_profiles` on the author's user id — the response uses whichever
+   * profile is present (consultants take precedence) so both consultant- and
+   * business-authored comments render with a consistent shape. Snapshotted
+   * attachments are loaded in a single follow-up query.
+   *
+   * @param projectId   UUID of the project. Caller must own it.
+   * @param taskId      UUID of the task. Must belong to the project and not
+   *                    be in DRAFT.
+   * @param pageOptions Standard pagination (`page`, `limit`).
+   * @returns Page of comments ordered `created_at DESC`.
+   * @throws TranslatableException 403 BUSINESS_PROFILE_NOT_FOUND.
+   * @throws TranslatableException 404 PROJECT_NOT_FOUND.
+   * @throws TranslatableException 404 TASK_NOT_FOUND.
+   */
+  list(
+    projectId: string,
+    taskId: string,
+    pageOptions: PageOptionsDto,
+  ): Promise<PageDto<BoardCommentResponseDto>>;
+
   /**
    * Creates a comment on a non-DRAFT task and optionally attaches up to 10
    * caller-owned files. Files are referenced by id and snapshotted into

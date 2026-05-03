@@ -80,7 +80,21 @@
   | 422 | `PROJECT_INSUFFICIENT_BALANCE` | Pre-paid balance below `total_amount`. |
   | 422 | `PROJECT_CANNOT_PUBLISH` | Validation rules in [ProjectPublishService.evaluatePublishEligibility](../../../src/modules/business-projects/services/projects/project-publish.service.ts) blocked publishing (status not `configured`, no tasks, missing skills, etc.). |
 
-### 5. Re-publish project (revert PUBLISHED → CONFIGURED, refund all charges, reset tasks)
+### 5. Soft-delete project (DRAFT / SETTING_UP / CONFIGURED only)
+
+- **Endpoint:** `DELETE /projects/business/:id`
+- **Method:** `DELETE`
+- **Scope:** `@Roles(USER)`, `@Platform(BUSINESS)`
+- **Path params:** `id` (UUID v4)
+- **Pre-condition:** project status **must be** one of `DRAFT`, `SETTING_UP`, or `CONFIGURED`. Anything from `PUBLISHED` onwards carries financial / member commitments and must go through the cancellation flow instead.
+- **Behaviour:** [BusinessProjectsService.deleteProject](../../../src/modules/business-projects/services/projects/projects.service.ts) resolves ownership via [BusinessAccessService.resolveOwnedProject](../../../src/modules/business-projects/services/business-access.service.ts), asserts the status is in the deletable set, then calls `softDelete` on the project repository. `deleted_at` and `deleted_by` are stamped via `AuditSubscriber`. Child rows (tasks, interview questions, required skills) are **left in place** — their FKs declare `ON DELETE CASCADE` only at the row-delete layer, so a soft delete does not cascade. Existing read paths already filter out soft-deleted projects via `project.deleted_at IS NULL`, so the children become unreachable through the project surface.
+- **Response 204:** empty body.
+- **Errors:**
+  | HTTP | error_code | When |
+  |------|------------|------|
+  | 422 | `PROJECT_CANNOT_BE_DELETED` | Project status is past `CONFIGURED` (`PUBLISHED`, `IN_PROGRESS`, `DONE`, or `CANCELLED`). i18n: `error.project.cannot_be_deleted`. |
+
+### 6. Re-publish project (revert PUBLISHED → CONFIGURED, refund all charges, reset tasks)
 
 - **Endpoint:** `PATCH /projects/business/:id/re-publish`
 - **Method:** `PATCH`

@@ -98,7 +98,47 @@
 
 ---
 
-### 5. Comments — Create
+### 5. Comments — List
+
+- **Endpoint:** `GET /projects/consultant/:id/board/:taskId/comments`
+- **Method:** `GET`
+- **Path params:** `id`, `taskId` (UUID v4)
+- **Query params:** [`PageOptionsDto`](../../../src/common/dto/page-options.dto.ts)
+  | Field | Type | Required | Notes |
+  |-------|------|----------|-------|
+  | `page` | `number` | no | default 1, ≥ 1 |
+  | `limit` | `number` | no | default 20, max 100 |
+- **Behaviour:**
+  - Returns non-deleted comments for the task (`is_deleted = false`), ordered `created_at DESC` with `id DESC` as the deterministic tiebreaker.
+  - Author display is resolved in a single SQL via two left joins on `author_id` against `consultant_profiles` and `business_profiles` so business-authored comments render alongside consultant-authored ones.
+  - `author.consultant_id` is **`null`** when the comment was authored by a business owner; populated when the author has a consultant profile.
+  - Attachments are batch-loaded for the page slice in one follow-up query (no N+1).
+- **Response 200:** `PageDto<`[`IConsultantBoardCommentResponse`](../../../src/modules/consultant-projects/dto/responses/interfaces/consultant-board-comment.response.interface.ts)`>`
+
+  ```ts
+  {
+    id, task_id,
+    author: {
+      user_id,
+      consultant_id: string | null,   // null when authored by a business owner
+      full_name,                      // consultant.full_name ?? business.company_name ?? ""
+      avatar_url                      // consultant.avatar_url ?? business.logo_url ?? null
+    },
+    comment: Record<string, unknown>,
+    is_edited: boolean,
+    edited_at: Date | null,
+    created_at: Date,
+    attachments: [
+      { id, file_id, file_name, file_url, mime_type, file_size_bytes, uploaded_at }
+    ]
+  }
+  ```
+
+- **Errors:** cross-cutting only.
+
+---
+
+### 6. Comments — Create
 
 - **Endpoint:** `POST /projects/consultant/:id/board/:taskId/comments`
 - **Method:** `POST`
@@ -135,7 +175,7 @@
 
 ---
 
-### 6. Comments — Update
+### 7. Comments — Update
 
 - **Endpoint:** `PATCH /projects/consultant/:id/board/:taskId/comments/:commentId`
 - **Method:** `PATCH`
@@ -157,7 +197,7 @@
 
 ---
 
-### 7. Comments — Delete
+### 8. Comments — Delete
 
 - **Endpoint:** `DELETE /projects/consultant/:id/board/:taskId/comments/:commentId`
 - **Method:** `DELETE`
@@ -172,7 +212,7 @@
 
 ---
 
-### 8. Evidences — Create
+### 9. Evidences — Create
 
 - **Endpoint:** `POST /projects/consultant/:id/board/:taskId/evidences`
 - **Method:** `POST`
@@ -208,7 +248,7 @@
 
 ---
 
-### 9. Evidences — Update
+### 10. Evidences — Update
 
 - **Endpoint:** `PATCH /projects/consultant/:id/board/:taskId/evidences/:evidenceId`
 - **Method:** `PATCH`
@@ -227,7 +267,7 @@
 
 ---
 
-### 10. Evidences — Delete
+### 11. Evidences — Delete
 
 - **Endpoint:** `DELETE /projects/consultant/:id/board/:taskId/evidences/:evidenceId`
 - **Method:** `DELETE`

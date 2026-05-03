@@ -21,6 +21,16 @@ import { ProjectListItemResponseDto, ProjectSummaryResponseDto } from '../../dto
 import { IBusinessProjectsService } from '../../interfaces/projects.service.interface';
 import { BusinessAccessService } from '../business-access.service';
 
+// Pre-publish statuses where a project still has no financial / member
+// commitments and can be safely soft-deleted. Anything past `CONFIGURED`
+// (i.e. `PUBLISHED`, `IN_PROGRESS`, `DONE`, `CANCELLED`) must be cancelled
+// through the dedicated lifecycle flow instead.
+const DELETABLE_STATUSES = new Set<ProjectStatus>([
+  ProjectStatus.DRAFT,
+  ProjectStatus.SETTING_UP,
+  ProjectStatus.CONFIGURED,
+]);
+
 @Injectable()
 export class BusinessProjectsService implements IBusinessProjectsService {
   private readonly logger: AppLogger;
@@ -117,6 +127,31 @@ export class BusinessProjectsService implements IBusinessProjectsService {
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
     this.logger.log(`listMyProjects — complete | returned: ${data.length}, total: ${itemCount}`);
     return new PageDto(data, meta);
+  }
+
+  /** @inheritdoc */
+  public async deleteProject(projectId: string): Promise<void> {
+    this.logger.log(`deleteProject — start | projectId: ${projectId}`);
+    const { project } = await this.access.resolveOwnedProject(projectId);
+
+    if (!DELETABLE_STATUSES.has(project.status)) {
+      this.logger.warn(
+        `deleteProject — status not deletable | projectId: ${projectId}, status: ${project.status}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.project.cannot_be_deleted',
+        errorCode: ERROR_CODES.PROJECT_CANNOT_BE_DELETED,
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+      });
+    }
+
+    // Soft delete via AuditableEntity columns. AuditSubscriber stamps
+    // deleted_by / deleted_at automatically. Child rows (tasks, interview
+    // questions, required skills) stay in place — their CASCADE FKs only
+    // fire on a hard delete, and existing read paths already filter
+    // soft-deleted projects out via `deleted_at IS NULL`.
+    await this.uow.projects.softDelete({ id: project.id });
+    this.logger.log(`deleteProject — complete | projectId: ${project.id}`);
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────

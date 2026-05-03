@@ -1,7 +1,27 @@
+import { PageDto } from '@common/dto/page.dto';
+import { PageOptionsDto } from '@common/dto/page-options.dto';
+
 import { CreateBoardCommentDto, UpdateBoardCommentDto } from '../dto/requests';
 import { ConsultantBoardCommentResponseDto } from '../dto/responses';
 
 export interface IConsultantBoardCommentsService {
+  /**
+   * Returns paginated, non-deleted comments for a non-DRAFT task in a project
+   * the calling consultant is an ACTIVE member of, ordered `created_at DESC`.
+   * Author display fields resolve through `consultant_profiles` and
+   * `business_profiles` so both consultant- and business-authored comments
+   * render with a consistent shape; `consultant_id` is `null` when the
+   * comment was authored by a business owner.
+   *
+   * @throws TranslatableException 403 PROJECT_FORBIDDEN — caller is not an active member.
+   * @throws TranslatableException 404 TASK_NOT_FOUND.
+   */
+  list(
+    projectId: string,
+    taskId: string,
+    pageOptions: PageOptionsDto,
+  ): Promise<PageDto<ConsultantBoardCommentResponseDto>>;
+
   /**
    * Creates a comment authored by the calling consultant on a task in a
    * project they are an ACTIVE member of. Up to 10 file attachments may be
