@@ -96,11 +96,23 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // mishaps (expired token, validation, missing resource) that would create
     // alert noise if treated as errors. We drop the stack for 4xx and downgrade
     // to WARN so dashboards stay clean.
-    const detail = this.formatLogDetail(exception, errorCode, status, request);
+    const meta: Record<string, unknown> = {
+      method: request.method,
+      path: request.url,
+      status,
+      error_code: errorCode,
+      ...(exception instanceof TranslatableException ? { error_key: exception.messageKey } : {}),
+      ...(exception instanceof Error ? { error_message: exception.message } : {}),
+    };
+
     if (status >= 500) {
-      this.logger.error(detail, exception instanceof Error ? exception.stack : String(exception));
+      this.logger.error(
+        'request failed',
+        exception instanceof Error ? exception.stack : undefined,
+        meta,
+      );
     } else {
-      this.logger.warn(detail);
+      this.logger.warn('request failed', meta);
     }
 
     const requestId = this.requestContext.requestId;
@@ -115,25 +127,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       deviceId,
     );
     httpAdapter.reply(ctx.getResponse(), body, status);
-  }
-
-  // Builds a single, diagnostic log line. Avoids the useless default
-  // "Translatable Exception" string from HttpException's superclass by
-  // pulling `messageKey` out of the typed exception.
-  private formatLogDetail(
-    exception: unknown,
-    errorCode: ErrorCode,
-    status: number,
-    request: FastifyRequest,
-  ): string {
-    const base = `[${request.method}] ${request.url} → ${status} | code: ${errorCode}`;
-    if (exception instanceof TranslatableException) {
-      return `${base}, key: ${exception.messageKey}`;
-    }
-    if (exception instanceof Error) {
-      return `${base}, error: ${exception.message}`;
-    }
-    return base;
   }
 
   private mapHttpStatusToErrorCode(status: number): ErrorCode {

@@ -1,7 +1,6 @@
+import { appWinstonLogger } from '@common/modules/logger/winston.config';
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { IncomingMessage, ServerResponse } from 'http';
-
-import { httpAccessLogger } from './http-logger.config';
 
 @Injectable()
 export class HttpLoggerMiddleware implements NestMiddleware {
@@ -30,14 +29,14 @@ export class HttpLoggerMiddleware implements NestMiddleware {
 
     const start = process.hrtime.bigint();
 
-    httpAccessLogger.info({ phase: 'start', method, url });
+    appWinstonLogger.info({ phase: 'start', method, url });
 
     let alreadyLogged = false;
     const onEnd = (): void => {
       if (alreadyLogged) return;
       alreadyLogged = true;
       const durationMs = Number((process.hrtime.bigint() - start) / 1_000_000n);
-      httpAccessLogger.info({
+      appWinstonLogger.info({
         phase: 'end',
         method,
         url,
