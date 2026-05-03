@@ -29,19 +29,28 @@ export class HttpLoggerMiddleware implements NestMiddleware {
 
     const start = process.hrtime.bigint();
 
-    appWinstonLogger.info({ event: 'request_start', method, url });
+    appWinstonLogger.info({
+      context: HttpLoggerMiddleware.name,
+      event: 'request_start',
+      method,
+      url,
+      message: `${method} ${url}`,
+    });
 
     let alreadyLogged = false;
     const onEnd = (): void => {
       if (alreadyLogged) return;
       alreadyLogged = true;
       const duration = Number((process.hrtime.bigint() - start) / 1_000_000n);
+      const statusCode = res.statusCode;
       appWinstonLogger.info({
+        context: HttpLoggerMiddleware.name,
         event: 'request_end',
         method,
         url,
-        statusCode: res.statusCode,
+        statusCode,
         duration,
+        message: `${method} ${url} ${statusCode} (${duration}ms)`,
       });
     };
 
