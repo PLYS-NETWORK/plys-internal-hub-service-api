@@ -35,17 +35,13 @@ export class ConsultantOverviewService implements IConsultantOverviewService {
     this.logger = new AppLogger(ConsultantOverviewService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async getOverview(projectId: string): Promise<ConsultantOverviewResponseDto> {
     const { project, consultantProfile, member } =
       await this.access.resolveProjectMembership(projectId);
     const consultantId = consultantProfile.id;
     this.logger.log(
-      `[${this.rid}] getOverview — start | projectId: ${projectId}, consultantId: ${consultantId}, paymentType: ${project.paymentType}`,
+      `getOverview — start | projectId: ${projectId}, consultantId: ${consultantId}, paymentType: ${project.paymentType}`,
     );
 
     const isPerMonth = project.paymentType === ProjectPaymentType.PER_MONTH;
@@ -98,7 +94,7 @@ export class ConsultantOverviewService implements IConsultantOverviewService {
     }
 
     this.logger.log(
-      `[${this.rid}] getOverview — complete | projectId: ${projectId}, totalAssigned: ${totalAssigned}, totalEarned: ${earnings.totalEarned}`,
+      `getOverview — complete | projectId: ${projectId}, totalAssigned: ${totalAssigned}, totalEarned: ${earnings.totalEarned}`,
     );
 
     return plainToInstance(

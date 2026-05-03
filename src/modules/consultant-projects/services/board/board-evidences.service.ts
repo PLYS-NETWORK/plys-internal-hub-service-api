@@ -38,10 +38,6 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
     this.logger = new AppLogger(ConsultantBoardEvidencesService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async create(
     projectId: string,
@@ -49,7 +45,7 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
     dto: CreateBoardEvidenceDto,
   ): Promise<ConsultantBoardEvidenceResponseDto> {
     this.logger.log(
-      `[${this.rid}] create — start | projectId: ${projectId}, taskId: ${taskId}, files: ${dto.fileIds?.length ?? 0}`,
+      `create — start | projectId: ${projectId}, taskId: ${taskId}, files: ${dto.fileIds?.length ?? 0}`,
     );
     const { consultantProfile } = await this.access.resolveProjectMembership(projectId);
     await this.assertAssigneeOnBoard(projectId, taskId, consultantProfile.id);
@@ -80,7 +76,7 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
     });
 
     this.logger.log(
-      `[${this.rid}] create — complete | evidenceId: ${saved.id}, attachments: ${attachments.length}`,
+      `create — complete | evidenceId: ${saved.id}, attachments: ${attachments.length}`,
     );
     return this.toResponseDto(saved, attachments, consultantProfile, userId);
   }
@@ -93,7 +89,7 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
     dto: UpdateBoardEvidenceDto,
   ): Promise<ConsultantBoardEvidenceResponseDto> {
     this.logger.log(
-      `[${this.rid}] update — start | projectId: ${projectId}, taskId: ${taskId}, evidenceId: ${evidenceId}`,
+      `update — start | projectId: ${projectId}, taskId: ${taskId}, evidenceId: ${evidenceId}`,
     );
     const { consultantProfile } = await this.access.resolveProjectMembership(projectId);
     await this.assertAssigneeOnBoard(projectId, taskId, consultantProfile.id);
@@ -113,9 +109,7 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
 
     const userId = this.requestContext.userId!;
     if (existing.authorId !== userId) {
-      this.logger.warn(
-        `[${this.rid}] update — non-author | evidenceId: ${evidenceId}, userId: ${userId}`,
-      );
+      this.logger.warn(`update — non-author | evidenceId: ${evidenceId}, userId: ${userId}`);
       throw this.evidenceForbidden();
     }
 
@@ -165,7 +159,7 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
     });
 
     this.logger.log(
-      `[${this.rid}] update — complete | evidenceId: ${saved.id}, attachments: ${attachments.length}, detached: ${detachedFileIds.length}`,
+      `update — complete | evidenceId: ${saved.id}, attachments: ${attachments.length}, detached: ${detachedFileIds.length}`,
     );
     return this.toResponseDto(saved, attachments, consultantProfile, userId);
   }
@@ -173,7 +167,7 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
   /** @inheritdoc */
   public async delete(projectId: string, taskId: string, evidenceId: string): Promise<void> {
     this.logger.log(
-      `[${this.rid}] delete — start | projectId: ${projectId}, taskId: ${taskId}, evidenceId: ${evidenceId}`,
+      `delete — start | projectId: ${projectId}, taskId: ${taskId}, evidenceId: ${evidenceId}`,
     );
     const { consultantProfile } = await this.access.resolveProjectMembership(projectId);
     await this.assertAssigneeOnBoard(projectId, taskId, consultantProfile.id);
@@ -185,9 +179,7 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
 
     const userId = this.requestContext.userId!;
     if (existing.authorId !== userId) {
-      this.logger.warn(
-        `[${this.rid}] delete — non-author | evidenceId: ${evidenceId}, userId: ${userId}`,
-      );
+      this.logger.warn(`delete — non-author | evidenceId: ${evidenceId}, userId: ${userId}`);
       throw this.evidenceForbidden();
     }
 
@@ -206,9 +198,7 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
       }
     });
 
-    this.logger.log(
-      `[${this.rid}] delete — complete | evidenceId: ${evidenceId}, files: ${fileIds.length}`,
-    );
+    this.logger.log(`delete — complete | evidenceId: ${evidenceId}, files: ${fileIds.length}`);
   }
 
   // ─── Private helpers ───────────────────────────────────────────────────────
@@ -251,7 +241,7 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
       const file = byId.get(id);
       if (!file || file.ownerUserId !== userId) {
         this.logger.warn(
-          `[${this.rid}] resolveAttachmentSeeds — file not owned | userId: ${userId}, fileId: ${id}`,
+          `resolveAttachmentSeeds — file not owned | userId: ${userId}, fileId: ${id}`,
         );
         throw new TranslatableException({
           messageKey: 'error.task.evidence_file_not_owned',
@@ -337,7 +327,7 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
   }
 
   private evidenceNotFound(evidenceId: string): TranslatableException {
-    this.logger.warn(`[${this.rid}] evidence operation — not found | evidenceId: ${evidenceId}`);
+    this.logger.warn(`evidence operation — not found | evidenceId: ${evidenceId}`);
     return new TranslatableException({
       messageKey: 'error.task.evidence_not_found',
       errorCode: ERROR_CODES.TASK_EVIDENCE_NOT_FOUND,

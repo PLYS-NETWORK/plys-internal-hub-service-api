@@ -62,10 +62,6 @@ interface ISettlementResult {
 export class BillingSettlementService {
   private readonly logger: AppLogger;
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly dataSource: DataSource,
@@ -99,7 +95,7 @@ export class BillingSettlementService {
    */
   public async runSettlement(year: number, month: number, businessId?: string): Promise<void> {
     this.logger.log(
-      `[${this.rid}] runSettlement — start | year: ${year}, month: ${month + 1}${businessId ? `, businessId: ${businessId}` : ''}`,
+      `runSettlement — start | year: ${year}, month: ${month + 1}${businessId ? `, businessId: ${businessId}` : ''}`,
     );
 
     const pendingTxns = await this.uow.consultantTransactions.find({
@@ -129,7 +125,7 @@ export class BillingSettlementService {
     }
 
     this.logger.log(
-      `[${this.rid}] runSettlement — found ${pendingTxns.length} pending transactions across ${byBusiness.size} businesses`,
+      `runSettlement — found ${pendingTxns.length} pending transactions across ${byBusiness.size} businesses`,
     );
 
     for (const [bid, txns] of byBusiness) {
@@ -141,9 +137,7 @@ export class BillingSettlementService {
         relations: { billingPeriod: true },
       });
       if (existing) {
-        this.logger.warn(
-          `[${this.rid}] runSettlement — invoice already exists, skipping | businessId: ${bid}`,
-        );
+        this.logger.warn(`runSettlement — invoice already exists, skipping | businessId: ${bid}`);
         continue;
       }
 
@@ -151,13 +145,11 @@ export class BillingSettlementService {
         await this.settleBusinessCredits(bid, txns, year, month);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        this.logger.error(
-          `[${this.rid}] runSettlement — failed for business ${bid} | error: ${message}`,
-        );
+        this.logger.error(`runSettlement — failed for business ${bid} | error: ${message}`);
       }
     }
 
-    this.logger.log(`[${this.rid}] runSettlement — complete`);
+    this.logger.log(`runSettlement — complete`);
   }
 
   /**
@@ -172,9 +164,7 @@ export class BillingSettlementService {
     });
 
     if (!invoiceWithRelations?.billingPeriod) {
-      this.logger.warn(
-        `[${this.rid}] sendInvoiceEmail — billingPeriod not found | invoiceId: ${invoice.id}`,
-      );
+      this.logger.warn(`sendInvoiceEmail — billingPeriod not found | invoiceId: ${invoice.id}`);
       return;
     }
 
@@ -185,7 +175,7 @@ export class BillingSettlementService {
 
     if (!businessProfile?.user?.email) {
       this.logger.warn(
-        `[${this.rid}] sendInvoiceEmail — no email for business | businessId: ${invoiceWithRelations.businessId}`,
+        `sendInvoiceEmail — no email for business | businessId: ${invoiceWithRelations.businessId}`,
       );
       return;
     }
@@ -221,7 +211,7 @@ export class BillingSettlementService {
     });
     if (!settlementTxn) {
       this.logger.warn(
-        `[${this.rid}] sendInvoiceEmail — no MONTHLY_BILLING txn found | invoiceId: ${invoiceWithRelations.id}`,
+        `sendInvoiceEmail — no MONTHLY_BILLING txn found | invoiceId: ${invoiceWithRelations.id}`,
       );
       return;
     }
@@ -245,13 +235,11 @@ export class BillingSettlementService {
       // Stamp notifiedAt so this invoice is skipped in future dispatch runs
       await this.uow.invoices.update(invoiceWithRelations.id, { notifiedAt: DateUtil.nowDate() });
 
-      this.logger.log(
-        `[${this.rid}] sendInvoiceEmail — complete | invoiceId: ${invoiceWithRelations.id}`,
-      );
+      this.logger.log(`sendInvoiceEmail — complete | invoiceId: ${invoiceWithRelations.id}`);
     } catch (emailError) {
       const message = emailError instanceof Error ? emailError.message : String(emailError);
       this.logger.error(
-        `[${this.rid}] sendInvoiceEmail — failed | invoiceId: ${invoiceWithRelations.id}, error: ${message}`,
+        `sendInvoiceEmail — failed | invoiceId: ${invoiceWithRelations.id}, error: ${message}`,
       );
     }
   }
@@ -265,7 +253,7 @@ export class BillingSettlementService {
     const sqlMonth = month + 1;
     const periodStart = `${year}-${String(sqlMonth).padStart(2, '0')}-01`;
 
-    this.logger.log(`[${this.rid}] dispatchPendingInvoiceEmails — start | period: ${periodStart}`);
+    this.logger.log(`dispatchPendingInvoiceEmails — start | period: ${periodStart}`);
 
     const unnotifiedInvoices = await this.uow.invoices.find({
       where: {
@@ -277,7 +265,7 @@ export class BillingSettlementService {
     });
 
     this.logger.log(
-      `[${this.rid}] dispatchPendingInvoiceEmails — found ${unnotifiedInvoices.length} unnotified invoices`,
+      `dispatchPendingInvoiceEmails — found ${unnotifiedInvoices.length} unnotified invoices`,
     );
 
     let sent = 0;
@@ -292,9 +280,7 @@ export class BillingSettlementService {
       }
     }
 
-    this.logger.log(
-      `[${this.rid}] dispatchPendingInvoiceEmails — complete | sent: ${sent}, failed: ${failed}`,
-    );
+    this.logger.log(`dispatchPendingInvoiceEmails — complete | sent: ${sent}, failed: ${failed}`);
   }
 
   private async settleBusinessCredits(
@@ -304,7 +290,7 @@ export class BillingSettlementService {
     month: number,
   ): Promise<void> {
     this.logger.log(
-      `[${this.rid}] settleBusinessCredits — start | businessId: ${businessId}, transactions: ${pendingTxns.length}`,
+      `settleBusinessCredits — start | businessId: ${businessId}, transactions: ${pendingTxns.length}`,
     );
 
     await this.uow.withTransaction(async (txUow) => {
@@ -416,6 +402,6 @@ export class BillingSettlementService {
       } satisfies ISettlementResult;
     });
 
-    this.logger.log(`[${this.rid}] settleBusinessCredits — complete | businessId: ${businessId}`);
+    this.logger.log(`settleBusinessCredits — complete | businessId: ${businessId}`);
   }
 }

@@ -38,10 +38,6 @@ export class ConsultantProjectsService implements IConsultantProjectsService {
     this.logger = new AppLogger(ConsultantProjectsService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async list(
     pageOptions: PageOptionsDto,
@@ -49,16 +45,14 @@ export class ConsultantProjectsService implements IConsultantProjectsService {
     const consultantProfile = await this.access.resolveConsultantProfile();
     const consultantId = consultantProfile.id;
     this.logger.log(
-      `[${this.rid}] list — start | consultantId: ${consultantId}, page: ${pageOptions.page}, limit: ${pageOptions.limit}`,
+      `list — start | consultantId: ${consultantId}, page: ${pageOptions.page}, limit: ${pageOptions.limit}`,
     );
 
     const consultantSkills = await this.uow.consultantSkills.findByConsultantId(consultantId);
     const skillIds = consultantSkills.map((cs) => cs.skillId);
 
     if (skillIds.length === 0) {
-      this.logger.warn(
-        `[${this.rid}] list — consultant has no skills | consultantId: ${consultantId}`,
-      );
+      this.logger.warn(`list — consultant has no skills | consultantId: ${consultantId}`);
       return new PageDto([], new PageMetaDto({ pageOptionsDto: pageOptions, itemCount: 0 }));
     }
 
@@ -112,7 +106,7 @@ export class ConsultantProjectsService implements IConsultantProjectsService {
     );
 
     this.logger.log(
-      `[${this.rid}] list — complete | consultantId: ${consultantId}, returned: ${data.length}, total: ${itemCount}`,
+      `list — complete | consultantId: ${consultantId}, returned: ${data.length}, total: ${itemCount}`,
     );
     return new PageDto(data, new PageMetaDto({ pageOptionsDto: pageOptions, itemCount }));
   }
@@ -121,9 +115,7 @@ export class ConsultantProjectsService implements IConsultantProjectsService {
   public async getDetail(projectId: string): Promise<ConsultantProjectDetailResponseDto> {
     const { project, consultantProfile } = await this.access.resolveAccessibleProject(projectId);
     const consultantId = consultantProfile.id;
-    this.logger.log(
-      `[${this.rid}] getDetail — start | projectId: ${projectId}, consultantId: ${consultantId}`,
-    );
+    this.logger.log(`getDetail — start | projectId: ${projectId}, consultantId: ${consultantId}`);
 
     const [
       businessProfile,
@@ -169,7 +161,7 @@ export class ConsultantProjectsService implements IConsultantProjectsService {
     );
 
     this.logger.log(
-      `[${this.rid}] getDetail — complete | projectId: ${projectId}, matchRate: ${matchRate}, isApplied: ${isApplied}`,
+      `getDetail — complete | projectId: ${projectId}, matchRate: ${matchRate}, isApplied: ${isApplied}`,
     );
 
     return plainToInstance(

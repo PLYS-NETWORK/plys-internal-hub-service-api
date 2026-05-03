@@ -48,13 +48,9 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
     this.logger = new AppLogger(BusinessProjectOverviewService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async getOverview(projectId: string): Promise<OverviewResponseDto> {
-    this.logger.log(`[${this.rid}] getOverview — start | projectId: ${projectId}`);
+    this.logger.log(`getOverview — start | projectId: ${projectId}`);
 
     const { project, businessProfile } = await this.access.resolveOwnedProject(projectId);
 
@@ -146,7 +142,7 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
     const recentActivity: IOverviewActivityEvent[] = rows.map((row) => this.toActivityEvent(row));
 
     this.logger.log(
-      `[${this.rid}] getOverview — complete | projectId: ${projectId}, members: ${teamMemberDtos.length}, events: ${recentActivity.length}`,
+      `getOverview — complete | projectId: ${projectId}, members: ${teamMemberDtos.length}, events: ${recentActivity.length}`,
     );
 
     return plainToInstance(

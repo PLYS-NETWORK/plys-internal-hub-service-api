@@ -56,21 +56,17 @@ export class ProjectPublishService implements IProjectPublishService {
     this.logger = new AppLogger(ProjectPublishService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async validatePublish(projectId: string): Promise<PublishValidationResponseDto> {
     const { project, businessProfile } = await this.access.resolveOwnedProject(projectId);
     this.logger.log(
-      `[${this.rid}] validatePublish — start | projectId: ${projectId}, businessId: ${businessProfile.id}`,
+      `validatePublish — start | projectId: ${projectId}, businessId: ${businessProfile.id}`,
     );
 
     const result = await this.evaluatePublishEligibility(project, businessProfile);
 
     this.logger.log(
-      `[${this.rid}] validatePublish — complete | projectId: ${projectId}, canPublish: ${result.canPublish}, paymentType: ${result.paymentType}`,
+      `validatePublish — complete | projectId: ${projectId}, canPublish: ${result.canPublish}, paymentType: ${result.paymentType}`,
     );
 
     return plainToInstance(
@@ -94,7 +90,7 @@ export class ProjectPublishService implements IProjectPublishService {
   public async confirmPublish(projectId: string): Promise<void> {
     const { project, businessProfile } = await this.access.resolveOwnedProject(projectId);
     this.logger.log(
-      `[${this.rid}] confirmPublish — start | projectId: ${projectId}, businessId: ${businessProfile.id}`,
+      `confirmPublish — start | projectId: ${projectId}, businessId: ${businessProfile.id}`,
     );
 
     // First-pass eligibility outside the transaction — quick reject for
@@ -103,7 +99,7 @@ export class ProjectPublishService implements IProjectPublishService {
     if (!preview.canPublish) {
       if (preview.reasonCode === 'INSUFFICIENT_BALANCE') {
         this.logger.warn(
-          `[${this.rid}] confirmPublish — insufficient balance | projectId: ${projectId}, balance: ${preview.accountBalance.toFixedString()}, required: ${preview.totalAmount.toFixedString()}`,
+          `confirmPublish — insufficient balance | projectId: ${projectId}, balance: ${preview.accountBalance.toFixedString()}, required: ${preview.totalAmount.toFixedString()}`,
         );
         throw new TranslatableException({
           messageKey: 'error.project.insufficient_balance',
@@ -112,7 +108,7 @@ export class ProjectPublishService implements IProjectPublishService {
         });
       }
       this.logger.warn(
-        `[${this.rid}] confirmPublish — cannot publish | projectId: ${projectId}, reasonCode: ${preview.reasonCode}`,
+        `confirmPublish — cannot publish | projectId: ${projectId}, reasonCode: ${preview.reasonCode}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.cannot_publish',
@@ -130,7 +126,7 @@ export class ProjectPublishService implements IProjectPublishService {
         const lockedProfile = await txUow.businessProfiles.findByIdForUpdate(businessProfile.id);
         if (!lockedProfile) {
           this.logger.warn(
-            `[${this.rid}] confirmPublish — profile vanished mid-transaction | businessId: ${businessProfile.id}`,
+            `confirmPublish — profile vanished mid-transaction | businessId: ${businessProfile.id}`,
           );
           throw new TranslatableException({
             messageKey: 'error.business_profile.not_found',
@@ -143,7 +139,7 @@ export class ProjectPublishService implements IProjectPublishService {
         if (!lockedEligibility.canPublish) {
           if (lockedEligibility.reasonCode === 'INSUFFICIENT_BALANCE') {
             this.logger.warn(
-              `[${this.rid}] confirmPublish — insufficient balance after lock | projectId: ${projectId}, balance: ${lockedEligibility.accountBalance.toFixedString()}`,
+              `confirmPublish — insufficient balance after lock | projectId: ${projectId}, balance: ${lockedEligibility.accountBalance.toFixedString()}`,
             );
             throw new TranslatableException({
               messageKey: 'error.project.insufficient_balance',
@@ -243,7 +239,7 @@ export class ProjectPublishService implements IProjectPublishService {
     );
 
     this.logger.log(
-      `[${this.rid}] confirmPublish — complete | projectId: ${projectId}, paymentType: ${eligibility.paymentType}, promotedTasks: ${promotedTaskCount}`,
+      `confirmPublish — complete | projectId: ${projectId}, paymentType: ${eligibility.paymentType}, promotedTasks: ${promotedTaskCount}`,
     );
 
     await this.sendPublishEmail(project, businessProfile, eligibility, transactionNumber);
@@ -262,9 +258,7 @@ export class ProjectPublishService implements IProjectPublishService {
       })
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);
-        this.logger.error(
-          `[${this.rid}] confirmPublish — notification dispatch failed | error: ${msg}`,
-        );
+        this.logger.error(`confirmPublish — notification dispatch failed | error: ${msg}`);
       });
   }
 
@@ -344,7 +338,7 @@ export class ProjectPublishService implements IProjectPublishService {
           // upstream commit silently dropped it. Log + abort the email rather
           // than send a receipt with a fabricated id.
           this.logger.error(
-            `[${this.rid}] sendPublishEmail — missing transactionNumber on PRE_PAID | projectId: ${project.id}`,
+            `sendPublishEmail — missing transactionNumber on PRE_PAID | projectId: ${project.id}`,
           );
           return;
         }
@@ -367,7 +361,7 @@ export class ProjectPublishService implements IProjectPublishService {
           projectDashboardUrl: projectUrl,
         });
         this.logger.log(
-          `[${this.rid}] sendPublishEmail — receipt sent | projectId: ${project.id}, email: ${user.email}`,
+          `sendPublishEmail — receipt sent | projectId: ${project.id}, email: ${user.email}`,
         );
       } else {
         await this.emailService.sendProjectPublishedSuccessEmail(user.email, {
@@ -376,12 +370,12 @@ export class ProjectPublishService implements IProjectPublishService {
           projectHubUrl: projectUrl,
         });
         this.logger.log(
-          `[${this.rid}] sendPublishEmail — success sent | projectId: ${project.id}, email: ${user.email}`,
+          `sendPublishEmail — success sent | projectId: ${project.id}, email: ${user.email}`,
         );
       }
     } catch (err) {
       this.logger.error(
-        `[${this.rid}] sendPublishEmail — failed | projectId: ${project.id}, paymentType: ${eligibility.paymentType}, error: ${err instanceof Error ? err.message : String(err)}`,
+        `sendPublishEmail — failed | projectId: ${project.id}, paymentType: ${eligibility.paymentType}, error: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   }

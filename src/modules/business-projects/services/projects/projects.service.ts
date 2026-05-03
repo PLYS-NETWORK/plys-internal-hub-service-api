@@ -33,15 +33,11 @@ export class BusinessProjectsService implements IBusinessProjectsService {
     this.logger = new AppLogger(BusinessProjectsService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async createProject(dto: CreateProjectDto): Promise<ProjectSummaryResponseDto> {
     const { id: businessId } = await this.access.resolveBusinessProfile();
     this.logger.log(
-      `[${this.rid}] createProject — start | businessId: ${businessId}, code: ${dto.code}, title: ${dto.title}`,
+      `createProject — start | businessId: ${businessId}, code: ${dto.code}, title: ${dto.title}`,
     );
 
     const existing = await this.uow.projects.findOne({
@@ -49,7 +45,7 @@ export class BusinessProjectsService implements IBusinessProjectsService {
     });
     if (existing) {
       this.logger.warn(
-        `[${this.rid}] createProject — code already exists | businessId: ${businessId}, code: ${dto.code}`,
+        `createProject — code already exists | businessId: ${businessId}, code: ${dto.code}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.code_already_exists',
@@ -68,7 +64,7 @@ export class BusinessProjectsService implements IBusinessProjectsService {
     });
     const saved = await this.uow.projects.save(project);
 
-    this.logger.log(`[${this.rid}] createProject — complete | projectId: ${saved.id}`);
+    this.logger.log(`createProject — complete | projectId: ${saved.id}`);
     return this.toSummaryResponseDto(saved);
   }
 
@@ -76,7 +72,7 @@ export class BusinessProjectsService implements IBusinessProjectsService {
   public async listMyProjects(dto: ListProjectsDto): Promise<PageDto<ProjectListItemResponseDto>> {
     const { id: businessId } = await this.access.resolveBusinessProfile();
     this.logger.log(
-      `[${this.rid}] listMyProjects — start | businessId: ${businessId}, page: ${dto.page}, limit: ${dto.limit}, keywords: ${dto.keywords ?? '<none>'}`,
+      `listMyProjects — start | businessId: ${businessId}, page: ${dto.page}, limit: ${dto.limit}, keywords: ${dto.keywords ?? '<none>'}`,
     );
 
     const where: Record<string, unknown> = { businessId };
@@ -119,9 +115,7 @@ export class BusinessProjectsService implements IBusinessProjectsService {
     });
 
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
-    this.logger.log(
-      `[${this.rid}] listMyProjects — complete | returned: ${data.length}, total: ${itemCount}`,
-    );
+    this.logger.log(`listMyProjects — complete | returned: ${data.length}, total: ${itemCount}`);
     return new PageDto(data, meta);
   }
 

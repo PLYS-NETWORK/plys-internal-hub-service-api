@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { SwaggerModule } from '@nestjs/swagger';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { I18nValidationExceptionFilter, I18nValidationPipe } from 'nestjs-i18n';
 import * as path from 'path';
 
@@ -23,8 +24,11 @@ async function bootstrap(): Promise<void> {
     // rawBody: true tells NestJS to capture the raw request body as a Buffer
     // alongside the parsed body. Required for webhook HMAC signature
     // verification (Polar / Stripe). Accessible via req.rawBody.
-    { rawBody: true },
+    // bufferLogs: true holds startup logs until useLogger() swaps in Winston.
+    { rawBody: true, bufferLogs: true },
   );
+
+  app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   // Security & compression plugins
   await app.register(import('@fastify/helmet') as never);

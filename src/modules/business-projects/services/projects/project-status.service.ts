@@ -23,17 +23,11 @@ export class ProjectStatusService implements IProjectStatusService {
     this.logger = new AppLogger(ProjectStatusService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async recomputeAutoStatus(tx: IUnitOfWork, projectId: string): Promise<ProjectStatus> {
     const project = await tx.projects.findOne({ where: { id: projectId } });
     if (!project) {
-      this.logger.warn(
-        `[${this.rid}] recomputeAutoStatus — project not found | projectId: ${projectId}`,
-      );
+      this.logger.warn(`recomputeAutoStatus — project not found | projectId: ${projectId}`);
       return ProjectStatus.DRAFT;
     }
 
@@ -62,7 +56,7 @@ export class ProjectStatusService implements IProjectStatusService {
     await tx.projects.save(project);
 
     this.logger.log(
-      `[${this.rid}] recomputeAutoStatus — change | projectId: ${projectId}, from: ${previous}, to: ${desired}, drafts: ${draftCount}, skills: ${skillCount}, consultants: ${project.requiredConsultants}`,
+      `recomputeAutoStatus — change | projectId: ${projectId}, from: ${previous}, to: ${desired}, drafts: ${draftCount}, skills: ${skillCount}, consultants: ${project.requiredConsultants}`,
     );
 
     return desired;
@@ -76,7 +70,7 @@ export class ProjectStatusService implements IProjectStatusService {
     const project = await tx.projects.findOne({ where: { id: projectId } });
     if (!project) {
       this.logger.warn(
-        `[${this.rid}] promoteToInProgressIfPublished — project not found | projectId: ${projectId}`,
+        `promoteToInProgressIfPublished — project not found | projectId: ${projectId}`,
       );
       return ProjectStatus.DRAFT;
     }
@@ -89,7 +83,7 @@ export class ProjectStatusService implements IProjectStatusService {
     await tx.projects.save(project);
 
     this.logger.log(
-      `[${this.rid}] promoteToInProgressIfPublished — change | projectId: ${projectId}, from: published, to: in_progress`,
+      `promoteToInProgressIfPublished — change | projectId: ${projectId}, from: published, to: in_progress`,
     );
 
     return ProjectStatus.IN_PROGRESS;

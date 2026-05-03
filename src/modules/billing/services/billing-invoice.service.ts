@@ -27,10 +27,6 @@ import { Injectable } from '@nestjs/common';
 export class BillingInvoiceService {
   private readonly logger: AppLogger;
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
@@ -54,22 +50,20 @@ export class BillingInvoiceService {
     processorInvoiceId: string,
   ): Promise<void> {
     this.logger.log(
-      `[${this.rid}] completeInvoicePayment — start | invoiceId: ${invoiceId}, transactionId: ${transactionId}`,
+      `completeInvoicePayment — start | invoiceId: ${invoiceId}, transactionId: ${transactionId}`,
     );
 
     await this.uow.withTransaction(async (txUow) => {
       // 1. Find and validate invoice
       const invoice = await txUow.invoices.findOne({ where: { id: invoiceId } });
       if (!invoice) {
-        this.logger.warn(
-          `[${this.rid}] completeInvoicePayment — invoice not found | invoiceId: ${invoiceId}`,
-        );
+        this.logger.warn(`completeInvoicePayment — invoice not found | invoiceId: ${invoiceId}`);
         return;
       }
 
       if (invoice.status === InvoiceStatus.PAID) {
         this.logger.log(
-          `[${this.rid}] completeInvoicePayment — already paid, skipping | invoiceId: ${invoiceId}`,
+          `completeInvoicePayment — already paid, skipping | invoiceId: ${invoiceId}`,
         );
         return;
       }
@@ -79,7 +73,7 @@ export class BillingInvoiceService {
       // invoiceId in metadata — this check ties the processor checkout to this invoice.
       if (invoice.processorInvoiceId !== processorInvoiceId) {
         this.logger.error(
-          `[${this.rid}] completeInvoicePayment — processorInvoiceId mismatch, aborting | invoiceId: ${invoiceId}, expected: ${invoice.processorInvoiceId}, received: ${processorInvoiceId}`,
+          `completeInvoicePayment — processorInvoiceId mismatch, aborting | invoiceId: ${invoiceId}, expected: ${invoice.processorInvoiceId}, received: ${processorInvoiceId}`,
         );
         return;
       }
@@ -152,14 +146,14 @@ export class BillingInvoiceService {
           });
 
           this.logger.log(
-            `[${this.rid}] completeInvoicePayment — consultant credited | consultantId: ${consultantId}, amount: ${totalCredit.toFixed(2)}, newBalance: ${newBalance}`,
+            `completeInvoicePayment — consultant credited | consultantId: ${consultantId}, amount: ${totalCredit.toFixed(2)}, newBalance: ${newBalance}`,
           );
         }
       }
     });
 
     this.logger.log(
-      `[${this.rid}] completeInvoicePayment — complete | invoiceId: ${invoiceId}, transactionId: ${transactionId}`,
+      `completeInvoicePayment — complete | invoiceId: ${invoiceId}, transactionId: ${transactionId}`,
     );
   }
 }

@@ -41,13 +41,9 @@ export class SettingsService implements ISettingsService {
     this.logger = new AppLogger(SettingsService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async getSettings(projectId: string): Promise<ProjectSettingsResponseDto> {
-    this.logger.log(`[${this.rid}] getSettings — start | projectId: ${projectId}`);
+    this.logger.log(`getSettings — start | projectId: ${projectId}`);
     const { project } = await this.access.resolveOwnedProject(projectId);
 
     const [skillRows, questions] = await Promise.all([
@@ -76,7 +72,7 @@ export class SettingsService implements ISettingsService {
     }));
 
     this.logger.log(
-      `[${this.rid}] getSettings — complete | projectId: ${projectId}, skills: ${required_skills.length}, questions: ${interview_questions.length}`,
+      `getSettings — complete | projectId: ${projectId}, skills: ${required_skills.length}, questions: ${interview_questions.length}`,
     );
 
     return plainToInstance(
@@ -97,7 +93,7 @@ export class SettingsService implements ISettingsService {
     projectId: string,
     dto: UpdateProjectSettingsDto,
   ): Promise<ProjectSummaryResponseDto> {
-    this.logger.log(`[${this.rid}] updateProject — start | projectId: ${projectId}`);
+    this.logger.log(`updateProject — start | projectId: ${projectId}`);
     const { project } = await this.access.resolveOwnedProject(projectId);
     this.assertProjectEditable(project.status, projectId);
 
@@ -119,7 +115,7 @@ export class SettingsService implements ISettingsService {
       return saved;
     });
 
-    this.logger.log(`[${this.rid}] updateProject — complete | projectId: ${projectId}`);
+    this.logger.log(`updateProject — complete | projectId: ${projectId}`);
     return plainToInstance(
       ProjectSummaryResponseDto,
       {
@@ -141,7 +137,7 @@ export class SettingsService implements ISettingsService {
     projectId: string,
     dto: UpsertInterviewQuestionDto,
   ): Promise<InterviewQuestionResponseDto> {
-    this.logger.log(`[${this.rid}] createQuestion — start | projectId: ${projectId}`);
+    this.logger.log(`createQuestion — start | projectId: ${projectId}`);
     await this.access.resolveOwnedProject(projectId);
 
     const displayOrder = dto.displayOrder ?? (await this.nextQuestionOrder(projectId));
@@ -153,7 +149,7 @@ export class SettingsService implements ISettingsService {
     });
     const saved = await this.uow.projectInterviewQuestions.save(question);
 
-    this.logger.log(`[${this.rid}] createQuestion — complete | questionId: ${saved.id}`);
+    this.logger.log(`createQuestion — complete | questionId: ${saved.id}`);
     return this.toQuestionResponse(saved);
   }
 
@@ -163,9 +159,7 @@ export class SettingsService implements ISettingsService {
     questionId: string,
     dto: UpdateInterviewQuestionDto,
   ): Promise<InterviewQuestionResponseDto> {
-    this.logger.log(
-      `[${this.rid}] updateQuestion — start | projectId: ${projectId}, questionId: ${questionId}`,
-    );
+    this.logger.log(`updateQuestion — start | projectId: ${projectId}, questionId: ${questionId}`);
     await this.access.resolveOwnedProject(projectId);
 
     const question = await this.findActiveQuestion(projectId, questionId);
@@ -174,22 +168,20 @@ export class SettingsService implements ISettingsService {
     if (dto.isRequired !== undefined) question.isRequired = dto.isRequired;
     const saved = await this.uow.projectInterviewQuestions.save(question);
 
-    this.logger.log(`[${this.rid}] updateQuestion — complete | questionId: ${saved.id}`);
+    this.logger.log(`updateQuestion — complete | questionId: ${saved.id}`);
     return this.toQuestionResponse(saved);
   }
 
   /** @inheritdoc */
   public async deleteQuestion(projectId: string, questionId: string): Promise<void> {
-    this.logger.log(
-      `[${this.rid}] deleteQuestion — start | projectId: ${projectId}, questionId: ${questionId}`,
-    );
+    this.logger.log(`deleteQuestion — start | projectId: ${projectId}, questionId: ${questionId}`);
     await this.access.resolveOwnedProject(projectId);
     const question = await this.findActiveQuestion(projectId, questionId);
 
     // Soft delete via AuditableEntity columns. The auth user id stamps
     // deleted_by; AuditSubscriber populates timestamps automatically.
     await this.uow.projectInterviewQuestions.softDelete({ id: question.id });
-    this.logger.log(`[${this.rid}] deleteQuestion — complete | questionId: ${question.id}`);
+    this.logger.log(`deleteQuestion — complete | questionId: ${question.id}`);
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -197,7 +189,7 @@ export class SettingsService implements ISettingsService {
   private assertProjectEditable(status: ProjectStatus, projectId: string): void {
     if (LOCKED_STATUSES.has(status)) {
       this.logger.warn(
-        `[${this.rid}] assertProjectEditable — locked | projectId: ${projectId}, status: ${status}`,
+        `assertProjectEditable — locked | projectId: ${projectId}, status: ${status}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.cannot_be_edited',
@@ -254,7 +246,7 @@ export class SettingsService implements ISettingsService {
     });
     if (!question) {
       this.logger.warn(
-        `[${this.rid}] findActiveQuestion — not found | projectId: ${projectId}, questionId: ${questionId}`,
+        `findActiveQuestion — not found | projectId: ${projectId}, questionId: ${questionId}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.interview_question_not_found',

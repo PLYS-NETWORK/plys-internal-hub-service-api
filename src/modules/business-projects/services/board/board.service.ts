@@ -76,13 +76,9 @@ export class BoardService implements IBoardService {
     this.logger = new AppLogger(BoardService.name, requestContext);
   }
 
-  private get rid(): string {
-    return this.requestContext.requestId;
-  }
-
   /** @inheritdoc */
   public async listTasks(projectId: string): Promise<BoardTaskResponseDto[]> {
-    this.logger.log(`[${this.rid}] listTasks — start | projectId: ${projectId}`);
+    this.logger.log(`listTasks — start | projectId: ${projectId}`);
     await this.access.resolveOwnedProject(projectId);
 
     const rows = await this.uow.tasks
@@ -138,16 +134,14 @@ export class BoardService implements IBoardService {
       ),
     );
 
-    this.logger.log(
-      `[${this.rid}] listTasks — complete | projectId: ${projectId}, count: ${data.length}`,
-    );
+    this.logger.log(`listTasks — complete | projectId: ${projectId}, count: ${data.length}`);
     return data;
   }
 
   /** @inheritdoc */
   public async reorderTasks(projectId: string, dto: ReorderTasksDto): Promise<void> {
     this.logger.log(
-      `[${this.rid}] reorderTasks — start | projectId: ${projectId}, status: ${dto.currentStatus}, count: ${dto.tasks.length}`,
+      `reorderTasks — start | projectId: ${projectId}, status: ${dto.currentStatus}, count: ${dto.tasks.length}`,
     );
     await this.access.resolveOwnedProject(projectId);
 
@@ -205,14 +199,14 @@ export class BoardService implements IBoardService {
     });
 
     this.logger.log(
-      `[${this.rid}] reorderTasks — complete | projectId: ${projectId}, updated: ${dto.tasks.length}`,
+      `reorderTasks — complete | projectId: ${projectId}, updated: ${dto.tasks.length}`,
     );
   }
 
   /** @inheritdoc */
   public async changeTaskStatuses(projectId: string, dto: ChangeTaskStatusesDto): Promise<void> {
     this.logger.log(
-      `[${this.rid}] changeTaskStatuses — start | projectId: ${projectId}, count: ${dto.tasks.length}`,
+      `changeTaskStatuses — start | projectId: ${projectId}, count: ${dto.tasks.length}`,
     );
     await this.access.resolveOwnedProject(projectId);
 
@@ -272,7 +266,7 @@ export class BoardService implements IBoardService {
     });
 
     this.logger.log(
-      `[${this.rid}] changeTaskStatuses — complete | projectId: ${projectId}, moved: ${dto.tasks.length}`,
+      `changeTaskStatuses — complete | projectId: ${projectId}, moved: ${dto.tasks.length}`,
     );
   }
 
@@ -281,9 +275,7 @@ export class BoardService implements IBoardService {
     projectId: string,
     taskId: string,
   ): Promise<BoardTaskDetailResponseDto> {
-    this.logger.log(
-      `[${this.rid}] getTaskDetail — start | projectId: ${projectId}, taskId: ${taskId}`,
-    );
+    this.logger.log(`getTaskDetail — start | projectId: ${projectId}, taskId: ${taskId}`);
     await this.access.resolveOwnedProject(projectId);
 
     const task = await this.uow.tasks.findOne({
@@ -291,7 +283,7 @@ export class BoardService implements IBoardService {
       relations: { assignee: true },
     });
     if (!task || task.kanbanStatus === TaskKanbanStatus.DRAFT) {
-      this.logger.warn(`[${this.rid}] getTaskDetail — not found or draft | taskId: ${taskId}`);
+      this.logger.warn(`getTaskDetail — not found or draft | taskId: ${taskId}`);
       throw new TranslatableException({
         messageKey: 'error.task.not_found',
         errorCode: ERROR_CODES.TASK_NOT_FOUND,
@@ -312,7 +304,7 @@ export class BoardService implements IBoardService {
         .getCount(),
     ]);
 
-    this.logger.log(`[${this.rid}] getTaskDetail — complete | taskId: ${taskId}`);
+    this.logger.log(`getTaskDetail — complete | taskId: ${taskId}`);
     return plainToInstance(
       BoardTaskDetailResponseDto,
       {
@@ -349,7 +341,7 @@ export class BoardService implements IBoardService {
   /** @inheritdoc */
   public async assign(projectId: string, taskId: string, dto: AssignTaskDto): Promise<void> {
     this.logger.log(
-      `[${this.rid}] assign — start | projectId: ${projectId}, taskId: ${taskId}, consultantId: ${dto.consultantId}`,
+      `assign — start | projectId: ${projectId}, taskId: ${taskId}, consultantId: ${dto.consultantId}`,
     );
     await this.access.resolveOwnedProject(projectId);
 
@@ -380,12 +372,12 @@ export class BoardService implements IBoardService {
       await this.projectStatus.promoteToInProgressIfPublished(tx, projectId);
     });
 
-    this.logger.log(`[${this.rid}] assign — complete | taskId: ${taskId}`);
+    this.logger.log(`assign — complete | taskId: ${taskId}`);
   }
 
   /** @inheritdoc */
   public async unassign(projectId: string, taskId: string): Promise<void> {
-    this.logger.log(`[${this.rid}] unassign — start | projectId: ${projectId}, taskId: ${taskId}`);
+    this.logger.log(`unassign — start | projectId: ${projectId}, taskId: ${taskId}`);
     await this.access.resolveOwnedProject(projectId);
 
     await this.uow.withTransaction(async (tx) => {
@@ -412,7 +404,7 @@ export class BoardService implements IBoardService {
       await tx.tasks.save(task);
     });
 
-    this.logger.log(`[${this.rid}] unassign — complete | taskId: ${taskId}`);
+    this.logger.log(`unassign — complete | taskId: ${taskId}`);
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -515,7 +507,7 @@ export class BoardService implements IBoardService {
   }
 
   private invalidStatusTransition(method: string, detail: string): never {
-    this.logger.warn(`[${this.rid}] ${method} — invalid transition | ${detail}`);
+    this.logger.warn(`${method} — invalid transition | ${detail}`);
     throw new TranslatableException({
       messageKey: 'error.task.invalid_status_transition',
       errorCode: ERROR_CODES.TASK_INVALID_STATUS_TRANSITION,
