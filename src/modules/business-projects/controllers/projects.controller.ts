@@ -8,6 +8,7 @@ import { ActivePlatform, UserRole } from '@database/enums';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -100,5 +101,18 @@ export class BusinessProjectsController {
   ): Promise<ITranslatedPayload<null>> {
     await this.republishService.republish(id);
     return { messageKey: 'success.project.re_published', data: null };
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Soft-delete a project (only DRAFT, SETTING_UP, or CONFIGURED)',
+    description:
+      'Soft-deletes a project owned by the calling business. ' +
+      'Returns 422 `PROJECT_CANNOT_BE_DELETED` when the project is past `CONFIGURED` ' +
+      '(i.e. `PUBLISHED`, `IN_PROGRESS`, `DONE`, or `CANCELLED`) — those carry financial / member state and must go through the cancellation flow instead.',
+  })
+  public async deleteProject(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    await this.projectsService.deleteProject(id);
   }
 }
