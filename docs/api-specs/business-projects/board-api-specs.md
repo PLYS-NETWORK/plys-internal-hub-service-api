@@ -120,7 +120,27 @@
 > **Storage cleanup model:** detached / deleted attachments soft-delete the underlying `files` row. The actual storage object is reclaimed by the daily 03:00 UTC purge cron after `FILES_PURGE_AFTER_DAYS` — the `file_url` may still resolve briefly after the API returns 204.
 > Common path: `:taskId` must belong to the project and must NOT be in DRAFT (drafts have no board surface).
 
-### 7. Create a task comment
+### 7. List task comments
+
+- **Endpoint:** `GET /projects/business/:id/board/:taskId/comments`
+- **Method:** `GET`
+- **Path params:** `id` (UUID v4), `taskId` (UUID v4)
+- **Query params:** [`PageOptionsDto`](../../../src/common/dto/page-options.dto.ts)
+  | Field | Type | Required | Notes |
+  |-------|------|----------|-------|
+  | `page` | `number` | no | default 1, ≥ 1 |
+  | `limit` | `number` | no | default 20, max 100 |
+- **Behaviour:**
+  - Returns non-deleted comments for the task (`is_deleted = false`), ordered `created_at DESC` with `id DESC` as the deterministic tiebreaker.
+  - Author display is resolved in a single SQL via two left joins on `author_id` against `consultant_profiles` and `business_profiles`. Consultant identity wins when both profiles match the same user (i.e. a hybrid account is treated as a consultant on the board surface).
+  - Attachments are batch-loaded for the page slice in one follow-up query (no N+1).
+- **Response 200:** `PageDto<`[`IBoardCommentResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-comment.response.interface.ts)`>` — items: `{ id, task_id, author: { user_id, name, avatar_url }, comment, is_edited, edited_at, created_at, attachments: [{ id, file_id, file_name, file_url, mime_type, file_size_bytes, uploaded_at }] }`. `author.name` resolution: `consultant_profiles.full_name` → `business_profiles.company_name` → `""`. Avatar prefers `consultant_profiles.avatar_url`, falls back to `business_profiles.logo_url`.
+- **Errors:**
+  | HTTP | error_code | When |
+  |------|------------|------|
+  | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT. |
+
+### 8. Create a task comment
 
 - **Endpoint:** `POST /projects/business/:id/board/:taskId/comments`
 - **Method:** `POST`
@@ -137,7 +157,7 @@
   | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT. |
   | 400 | `TASK_COMMENT_FILE_NOT_OWNED` | Any supplied `file_id` is missing, soft-deleted, or owned by a different user. |
 
-### 8. Update own task comment
+### 9. Update own task comment
 
 - **Endpoint:** `PATCH /projects/business/:id/board/:taskId/comments/:commentId`
 - **Method:** `PATCH`
@@ -157,7 +177,7 @@
   | 400 | `TASK_COMMENT_EMPTY_UPDATE` | Neither `comment` nor `file_ids` was supplied. |
   | 400 | `TASK_COMMENT_FILE_NOT_OWNED` | Any supplied `file_id` is missing, soft-deleted, or owned by another user. |
 
-### 9. Delete own task comment
+### 10. Delete own task comment
 
 - **Endpoint:** `DELETE /projects/business/:id/board/:taskId/comments/:commentId`
 - **Method:** `DELETE`
@@ -177,7 +197,7 @@
 > **Service:** [BoardHistoryService](../../../src/modules/business-projects/services/board/board-history.service.ts)
 > Rows are append-only, populated by DB trigger `trg_log_task_change`. Filters to `change_type IN (STATUS_CHANGE, ASSIGNMENT, UNASSIGNMENT)`.
 
-### 10. List task history
+### 11. List task history
 
 - **Endpoint:** `GET /projects/business/:id/board/:taskId/history`
 - **Method:** `GET`
@@ -200,7 +220,7 @@
 > **Service:** [BoardEvidencesService](../../../src/modules/business-projects/services/board/board-evidences.service.ts)
 > Read-only on the BUSINESS surface. Mutations live on the consultant routes via the existing `TaskEvidencesService`.
 
-### 11. List task evidences
+### 12. List task evidences
 
 - **Endpoint:** `GET /projects/business/:id/board/:taskId/evidences`
 - **Method:** `GET`

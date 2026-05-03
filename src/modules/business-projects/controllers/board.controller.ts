@@ -149,6 +149,25 @@ export class BoardController {
 
   // ─── Comments ──────────────────────────────────────────────────────────────
 
+  @Get(':taskId/comments')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'List comments for a task (paginated)',
+    description:
+      'Returns non-deleted comments in `created_at DESC` order. Author display fields ' +
+      'are resolved by joining `consultant_profiles` and `business_profiles` so both ' +
+      'consultant- and business-authored comments render with a consistent shape. ' +
+      'Snapshotted attachments are returned alongside each comment.',
+  })
+  public async listComments(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Query() pageOptions: PageOptionsDto,
+  ): Promise<ITranslatedPayload<PageDto<BoardCommentResponseDto>>> {
+    const data = await this.commentsService.list(id, taskId, pageOptions);
+    return { messageKey: 'success.ok', data };
+  }
+
   @Post(':taskId/comments')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a comment on a task with optional file attachments' })

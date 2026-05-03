@@ -10,7 +10,11 @@ import {
 @Exclude()
 export class ConsultantBoardCommentAuthorDto implements IConsultantBoardCommentAuthor {
   @Expose() @ApiProperty({ name: 'user_id' }) public readonly user_id!: string;
-  @Expose() @ApiProperty({ name: 'consultant_id' }) public readonly consultant_id!: string;
+
+  @Expose()
+  @ApiProperty({ name: 'consultant_id', nullable: true })
+  public readonly consultant_id!: string | null;
+
   @Expose() @ApiProperty({ name: 'full_name' }) public readonly full_name!: string;
 
   @Expose()

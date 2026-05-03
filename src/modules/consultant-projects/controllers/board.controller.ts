@@ -1,5 +1,7 @@
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
+import { PageDto } from '@common/dto/page.dto';
+import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { PlatformGuard } from '@common/guards/platform.guard';
 import { RolesGuard } from '@common/guards/roles.guard';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
@@ -15,6 +17,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -113,6 +116,24 @@ export class ConsultantBoardController {
   }
 
   // ─── Comments ──────────────────────────────────────────────────────────────
+
+  @Get(':taskId/comments')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'List comments for a task (paginated)',
+    description:
+      'Returns non-deleted comments in `created_at DESC` order. The author shape ' +
+      'accommodates both consultant- and business-authored comments — `consultant_id` ' +
+      'is `null` when the author is a business owner.',
+  })
+  public async listComments(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Query() pageOptions: PageOptionsDto,
+  ): Promise<ITranslatedPayload<PageDto<ConsultantBoardCommentResponseDto>>> {
+    const data = await this.commentsService.list(id, taskId, pageOptions);
+    return { messageKey: 'success.ok', data };
+  }
 
   @Post(':taskId/comments')
   @HttpCode(HttpStatus.CREATED)
