@@ -5,7 +5,6 @@ import { TranslatableException } from '@common/exceptions/translatable.exception
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import {
-  ApplicationStatus,
   ProjectMemberStatus,
   ProjectPaymentType,
   ProjectStatus,
@@ -96,10 +95,9 @@ export class BusinessProjectsService implements IBusinessProjectsService {
     });
 
     const projectIds = projects.map((p) => p.id);
-    const [taskCounts, memberCounts, applicationCounts] = await Promise.all([
+    const [taskCounts, memberCounts] = await Promise.all([
       this.countTasksPerProject(projectIds),
       this.countActiveMembersPerProject(projectIds),
-      this.countPendingApplicationsPerProject(projectIds),
     ]);
 
     const data = projects.map((p) => {
@@ -118,7 +116,6 @@ export class BusinessProjectsService implements IBusinessProjectsService {
           total_tasks: tasks?.total ?? 0,
           total_completed_tasks: tasks?.completed ?? 0,
           total_active_members: memberCounts.get(p.id) ?? 0,
-          total_pending_applications: applicationCounts.get(p.id) ?? 0,
         },
         { excludeExtraneousValues: true },
       );
@@ -184,21 +181,6 @@ export class BusinessProjectsService implements IBusinessProjectsService {
       .where('pm.project_id IN (:...projectIds)', { projectIds })
       .andWhere('pm.status = :active', { active: ProjectMemberStatus.ACTIVE })
       .groupBy('pm.project_id')
-      .getRawMany<{ project_id: string; count: number }>();
-    return new Map(rows.map((r) => [r.project_id, Number(r.count)]));
-  }
-
-  private async countPendingApplicationsPerProject(
-    projectIds: string[],
-  ): Promise<Map<string, number>> {
-    if (projectIds.length === 0) return new Map();
-    const rows = await this.uow.projectApplications
-      .createQueryBuilder('pa')
-      .select('pa.project_id', 'project_id')
-      .addSelect('COUNT(*)::int', 'count')
-      .where('pa.project_id IN (:...projectIds)', { projectIds })
-      .andWhere('pa.status = :pending', { pending: ApplicationStatus.PENDING })
-      .groupBy('pa.project_id')
       .getRawMany<{ project_id: string; count: number }>();
     return new Map(rows.map((r) => [r.project_id, Number(r.count)]));
   }

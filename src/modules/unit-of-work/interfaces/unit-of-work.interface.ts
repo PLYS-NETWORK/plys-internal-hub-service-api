@@ -9,21 +9,16 @@ import {
   IConsultantSkillRepository,
   IConsultantTransactionRepository,
   IFileRepository,
-  IInterviewAnswerRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
   INotificationRepository,
   IProjectActivityRepository,
-  IProjectApplicationRepository,
-  IProjectInterviewQuestionRepository,
   IProjectMemberRepository,
   IProjectRepository,
   IProjectRequiredSkillRepository,
   IProjectStatusHistoryRepository,
   ISkillRepository,
   ITaskCodeService,
-  ITaskCommentAttachmentRepository,
-  ITaskCommentRepository,
   ITaskDisputeRepository,
   ITaskEvidenceAttachmentRepository,
   ITaskEvidenceRepository,
@@ -55,18 +50,16 @@ export interface IUnitOfWork {
 
   // Domain 3 — Projects
   readonly projects: IProjectRepository;
-  readonly projectInterviewQuestions: IProjectInterviewQuestionRepository;
   readonly projectRequiredSkills: IProjectRequiredSkillRepository;
   readonly projectActivity: IProjectActivityRepository;
   readonly projectStatusHistory: IProjectStatusHistoryRepository;
   readonly taskCodes: ITaskCodeService;
+  readonly projectMembers: IProjectMemberRepository;
 
   // Domain 4 — Tasks
   readonly tasks: ITaskRepository;
   readonly taskDisputes: ITaskDisputeRepository;
   readonly taskHistory: ITaskHistoryRepository;
-  readonly taskComments: ITaskCommentRepository;
-  readonly taskCommentAttachments: ITaskCommentAttachmentRepository;
   readonly taskEvidences: ITaskEvidenceRepository;
   readonly taskEvidenceAttachments: ITaskEvidenceAttachmentRepository;
 
@@ -74,12 +67,7 @@ export interface IUnitOfWork {
   readonly aiTaskSessions: IAiTaskSessionRepository;
   readonly aiSessionMessages: IAiSessionMessageRepository;
 
-  // Domain 6 — Applications
-  readonly projectApplications: IProjectApplicationRepository;
-  readonly interviewAnswers: IInterviewAnswerRepository;
-  readonly projectMembers: IProjectMemberRepository;
-
-  // Domain 8 — Finance
+  // Domain 6 — Finance
   readonly billingPeriods: IBillingPeriodRepository;
   readonly invoices: IInvoiceRepository;
   readonly invoiceLineItems: IInvoiceLineItemRepository;
@@ -88,10 +76,10 @@ export interface IUnitOfWork {
   readonly transactionNumbers: TransactionNumberService;
   readonly webhookEvents: IWebhookEventRepository;
 
-  // Domain 9 — Files
+  // Domain 7 — Files
   readonly files: IFileRepository;
 
-  // Domain 10 — Notifications
+  // Domain 8 — Notifications
   readonly notifications: INotificationRepository;
 
   withTransaction<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T>;

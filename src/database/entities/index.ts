@@ -1,5 +1,4 @@
 export * from './ai';
-export * from './applications';
 export * from './auth';
 export * from './base';
 export * from './files';

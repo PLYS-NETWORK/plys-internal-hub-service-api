@@ -9,7 +9,6 @@ import { Exclude, Expose, Type } from 'class-transformer';
 
 import {
   IOverviewActivityEvent,
-  IOverviewApplicationBreakdown,
   IOverviewResponse,
   IOverviewStatistics,
   IOverviewSummary,
@@ -77,22 +76,6 @@ export class OverviewStatisticsDto implements IOverviewStatistics {
   @Expose()
   @ApiProperty({ name: 'total_project_members', example: 4 })
   public readonly total_project_members!: number;
-
-  @Expose()
-  @ApiProperty({ name: 'total_pending_applications', example: 7 })
-  public readonly total_pending_applications!: number;
-
-  @Expose()
-  @ApiProperty({ name: 'total_applications', example: 20 })
-  public readonly total_applications!: number;
-
-  @Expose()
-  @ApiProperty({ name: 'total_approved', example: 4 })
-  public readonly total_approved!: number;
-
-  @Expose()
-  @ApiProperty({ name: 'total_rejected', example: 8 })
-  public readonly total_rejected!: number;
 }
 
 @Exclude()
@@ -129,23 +112,6 @@ export class OverviewTeamMemberDto implements IOverviewTeamMember {
   @Expose()
   @ApiProperty({ name: 'active_status', enum: ProjectMemberActiveStatus })
   public readonly active_status!: ProjectMemberActiveStatus;
-}
-
-@Exclude()
-export class OverviewApplicationBreakdownDto implements IOverviewApplicationBreakdown {
-  @Expose() @ApiProperty({ example: 5 }) public readonly pending!: number;
-  @Expose() @ApiProperty({ example: 3 }) public readonly accepted!: number;
-  @Expose() @ApiProperty({ example: 2 }) public readonly rejected!: number;
-  @Expose() @ApiProperty({ example: 1 }) public readonly withdrawn!: number;
-
-  @Expose()
-  @ApiProperty({
-    name: 'approval_rate',
-    example: 60,
-    nullable: true,
-    description: 'accepted / (accepted + rejected) × 100, rounded. null when denominator is 0.',
-  })
-  public readonly approval_rate!: number | null;
 }
 
 @Exclude()
@@ -194,11 +160,6 @@ export class OverviewResponseDto implements IOverviewResponse {
   @Type(() => OverviewTeamMemberDto)
   @ApiProperty({ name: 'team_members', type: () => OverviewTeamMemberDto, isArray: true })
   public readonly team_members!: OverviewTeamMemberDto[];
-
-  @Expose()
-  @Type(() => OverviewApplicationBreakdownDto)
-  @ApiProperty({ name: 'application_breakdown', type: () => OverviewApplicationBreakdownDto })
-  public readonly application_breakdown!: OverviewApplicationBreakdownDto;
 
   @Expose()
   @Type(() => OverviewActivityEventDto)

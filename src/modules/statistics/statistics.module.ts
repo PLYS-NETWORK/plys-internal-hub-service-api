@@ -3,7 +3,6 @@ import { Module } from '@nestjs/common';
 
 import { BusinessStatisticsController } from './business/business-statistics.controller';
 import { BusinessStatisticsScope } from './business/scopes/business-statistics.scope';
-import { BusinessApplicationStatisticsService } from './business/services/business-application-statistics.service';
 import { BusinessBillingStatisticsService } from './business/services/business-billing-statistics.service';
 import { BusinessDashboardSummaryService } from './business/services/business-dashboard-summary.service';
 import { BusinessProjectStatisticsService } from './business/services/business-project-statistics.service';
@@ -21,7 +20,6 @@ import { BusinessTaskStatisticsService } from './business/services/business-task
     BusinessStatisticsScope,
     BusinessProjectStatisticsService,
     BusinessTaskStatisticsService,
-    BusinessApplicationStatisticsService,
     BusinessBillingStatisticsService,
     BusinessDashboardSummaryService,
   ],

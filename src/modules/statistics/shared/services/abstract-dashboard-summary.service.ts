@@ -38,11 +38,10 @@ export abstract class AbstractDashboardSummaryService implements IDashboardSumma
     const businessId = await this.scope.getBusinessId();
     const projectIds = await this.scope.getOwnedProjectIds();
 
-    const [byStatus, openTasks, overdueTasks, pendingApps, spendSummary] = await Promise.all([
+    const [byStatus, openTasks, overdueTasks, spendSummary] = await Promise.all([
       this.uow.projects.countByBusinessIdGroupedByStatus(businessId),
       this.uow.tasks.countOpenByProjectIds(projectIds),
       this.uow.tasks.countOverdueByProjectIds(projectIds),
-      this.uow.projectApplications.countPendingByProjectIds(projectIds),
       this.uow.businessTransactions.getPublishingSpendSummaryByBusinessId(businessId),
     ]);
 
@@ -50,16 +49,13 @@ export abstract class AbstractDashboardSummaryService implements IDashboardSumma
     const published = PUBLISHED_LIFECYCLE.reduce((acc, s) => acc + byStatus[s], 0);
     const draft = byStatus[ProjectStatus.DRAFT];
 
-    this.logger.log(
-      `get — complete | projects: ${total}, open_tasks: ${openTasks}, pending_apps: ${pendingApps}`,
-    );
+    this.logger.log(`get — complete | projects: ${total}, open_tasks: ${openTasks}`);
 
     return plainToInstance(
       DashboardSummaryResponseDto,
       {
         projects: { total, published, draft },
         tasks: { total_open: openTasks, overdue_count: overdueTasks },
-        applications: { pending_count: pendingApps },
         billing: {
           total_spend: Money.from(spendSummary.total_spend).toFixedString(),
           currency: Currency.USD,

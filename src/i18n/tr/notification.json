@@ -15,10 +15,6 @@
     "title": "Proje yayından kaldırıldı",
     "body": "\"{title}\" ({code}) projeniz tekrar yapılandırma moduna alındı."
   },
-  "new_application": {
-    "title": "Yeni başvuru alındı",
-    "body": "{consultant}, \"{title}\" projenize başvurdu."
-  },
   "top_up_completed": {
     "title": "Yükleme başarılı",
     "body": "{amount} {currency} tutarındaki yüklemeniz hesabınıza eklendi."

@@ -11,5 +11,4 @@ export interface IConsultantProjectListItemResponse {
   /** Null for PER_MONTH projects (the field is task-priced). */
   avg_price_per_task: number | null;
   payment_type: ProjectPaymentType;
-  is_applied: boolean;
 }

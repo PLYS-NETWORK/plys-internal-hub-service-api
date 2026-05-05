@@ -1,9 +1,5 @@
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
-import { PageDto } from '@common/dto/page.dto';
-import { PageOptionsDto } from '@common/dto/page-options.dto';
-import { PlatformGuard } from '@common/guards/platform.guard';
-import { RolesGuard } from '@common/guards/roles.guard';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { ActivePlatform, UserRole } from '@database/enums';
 import {
@@ -17,25 +13,22 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+import { PlatformGuard } from '../../../common/guards/platform.guard';
+import { RolesGuard } from '../../../common/guards/roles.guard';
 import {
   ChangeTaskStatusDto,
-  CreateBoardCommentDto,
   CreateBoardEvidenceDto,
-  UpdateBoardCommentDto,
   UpdateBoardEvidenceDto,
 } from '../dto/requests';
 import {
-  ConsultantBoardCommentResponseDto,
   ConsultantBoardEvidenceResponseDto,
   ConsultantBoardTaskResponseDto,
 } from '../dto/responses';
 import { ConsultantBoardService } from '../services/board/board.service';
-import { ConsultantBoardCommentsService } from '../services/board/board-comments.service';
 import { ConsultantBoardEvidencesService } from '../services/board/board-evidences.service';
 
 @ApiTags('Consultant Projects — Board')
@@ -47,7 +40,6 @@ import { ConsultantBoardEvidencesService } from '../services/board/board-evidenc
 export class ConsultantBoardController {
   constructor(
     private readonly boardService: ConsultantBoardService,
-    private readonly commentsService: ConsultantBoardCommentsService,
     private readonly evidencesService: ConsultantBoardEvidencesService,
   ) {}
 
@@ -57,7 +49,7 @@ export class ConsultantBoardController {
     summary: 'List the kanban board for an active project member',
     description:
       'Returns every non-DRAFT task in the project, ordered by `display_order` ASC. Each row ' +
-      'carries the assignee snapshot plus live `comment_count` / `evidences_count`.',
+      'carries the assignee snapshot plus live `evidences_count`.',
   })
   public async listTasks(
     @Param('id', ParseUUIDPipe) id: string,
@@ -113,62 +105,6 @@ export class ConsultantBoardController {
     @Body() dto: ChangeTaskStatusDto,
   ): Promise<void> {
     await this.boardService.changeStatus(id, taskId, dto);
-  }
-
-  // ─── Comments ──────────────────────────────────────────────────────────────
-
-  @Get(':taskId/comments')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'List comments for a task (paginated)',
-    description:
-      'Returns non-deleted comments in `created_at DESC` order. The author shape ' +
-      'accommodates both consultant- and business-authored comments — `consultant_id` ' +
-      'is `null` when the author is a business owner.',
-  })
-  public async listComments(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('taskId', ParseUUIDPipe) taskId: string,
-    @Query() pageOptions: PageOptionsDto,
-  ): Promise<ITranslatedPayload<PageDto<ConsultantBoardCommentResponseDto>>> {
-    const data = await this.commentsService.list(id, taskId, pageOptions);
-    return { messageKey: 'success.ok', data };
-  }
-
-  @Post(':taskId/comments')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create a comment with optional file attachments' })
-  public async createComment(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('taskId', ParseUUIDPipe) taskId: string,
-    @Body() dto: CreateBoardCommentDto,
-  ): Promise<ITranslatedPayload<ConsultantBoardCommentResponseDto>> {
-    const data = await this.commentsService.create(id, taskId, dto);
-    return { messageKey: 'success.created', data };
-  }
-
-  @Patch(':taskId/comments/:commentId')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update own comment; flips is_edited and replaces attachments' })
-  public async updateComment(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('taskId', ParseUUIDPipe) taskId: string,
-    @Param('commentId', ParseUUIDPipe) commentId: string,
-    @Body() dto: UpdateBoardCommentDto,
-  ): Promise<ITranslatedPayload<ConsultantBoardCommentResponseDto>> {
-    const data = await this.commentsService.update(id, taskId, commentId, dto);
-    return { messageKey: 'success.ok', data };
-  }
-
-  @Delete(':taskId/comments/:commentId')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Soft-delete own comment and detach its attachments' })
-  public async deleteComment(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('taskId', ParseUUIDPipe) taskId: string,
-    @Param('commentId', ParseUUIDPipe) commentId: string,
-  ): Promise<void> {
-    await this.commentsService.delete(id, taskId, commentId);
   }
 
   // ─── Evidences ─────────────────────────────────────────────────────────────

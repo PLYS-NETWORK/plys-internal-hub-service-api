@@ -14,6 +14,5 @@ export interface IConsultantBoardTaskResponse {
   display_order: number;
   difficulty_level: TaskDifficulty;
   assignee: IConsultantBoardTaskAssignee | null;
-  comment_count: number;
   evidences_count: number;
 }

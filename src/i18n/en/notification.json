@@ -15,10 +15,6 @@
     "title": "Project unpublished",
     "body": "Your project \"{title}\" ({code}) is back in configuration mode."
   },
-  "new_application": {
-    "title": "New application received",
-    "body": "{consultant} just applied to your project \"{title}\"."
-  },
   "top_up_completed": {
     "title": "Top-up successful",
     "body": "Your top-up of {amount} {currency} was credited to your account."

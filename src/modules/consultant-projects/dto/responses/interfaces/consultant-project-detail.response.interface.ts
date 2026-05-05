@@ -8,5 +8,4 @@ export interface IConsultantProjectDetailResponse {
   is_available_to_apply: boolean;
   match_rate: number;
   payment_type: ProjectPaymentType;
-  is_need_interview: boolean;
 }

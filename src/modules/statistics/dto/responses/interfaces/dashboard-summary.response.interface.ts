@@ -9,10 +9,6 @@ export interface IDashboardSummaryTasks {
   overdue_count: number;
 }
 
-export interface IDashboardSummaryApplications {
-  pending_count: number;
-}
-
 export interface IDashboardSummaryBilling {
   total_spend: string;
   currency: string;
@@ -21,7 +17,6 @@ export interface IDashboardSummaryBilling {
 export interface IDashboardSummaryResponse {
   projects: IDashboardSummaryProjects;
   tasks: IDashboardSummaryTasks;
-  applications: IDashboardSummaryApplications;
   billing: IDashboardSummaryBilling;
   /** Server-side timestamp when the summary was computed. */
   generated_at: Date;

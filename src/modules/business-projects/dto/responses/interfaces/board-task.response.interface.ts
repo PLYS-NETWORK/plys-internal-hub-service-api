@@ -15,7 +15,6 @@ export interface IBoardTaskResponse {
   kanban_status: TaskKanbanStatus;
   display_order: number;
   assignee: IBoardTaskAssignee | null;
-  comments_count: number;
   evidences_count: number;
 }
 

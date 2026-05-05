@@ -8,7 +8,6 @@ export const NOTIFICATION_TYPES = {
   PASSWORD_CHANGED: 'password_changed',
   PROJECT_PUBLISHED: 'project_published',
   PROJECT_UNPUBLISHED: 'project_unpublished',
-  NEW_APPLICATION: 'new_application',
   TOP_UP_COMPLETED: 'top_up_completed',
   WITHDRAW_COMPLETED: 'withdraw_completed',
   WITHDRAW_REVERSED: 'withdraw_reversed',
@@ -21,7 +20,6 @@ export type NotificationType = (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICA
 export const NOTIFICATION_ENTITY_TYPES = {
   USER: 'user',
   PROJECT: 'project',
-  APPLICATION: 'application',
   TRANSACTION: 'transaction',
 } as const;
 

@@ -1,9 +1,5 @@
 // Business (Ployos) templates
 export {
-  buildBusinessApplicationNotificationEmail,
-  type IBusinessApplicationNotificationTemplateOptions,
-} from './business/application-notification.template';
-export {
   buildBusinessForgotPasswordOtpEmail,
   type IBusinessForgotPasswordOtpTemplateOptions,
 } from './business/forgot-password-otp.template';
@@ -33,18 +29,6 @@ export {
 } from './business/welcome.template';
 
 // Consultant (Lona) templates
-export {
-  buildConsultantAiDetectedEmail,
-  type IConsultantAiDetectedTemplateOptions,
-} from './consultant/ai-detected.template';
-export {
-  buildConsultantApplicationNotificationEmail,
-  type IConsultantApplicationNotificationTemplateOptions,
-} from './consultant/application-notification.template';
-export {
-  buildConsultantApplicationStatusEmail,
-  type IConsultantApplicationStatusTemplateOptions,
-} from './consultant/application-status.template';
 export {
   buildConsultantForgotPasswordOtpEmail,
   type IConsultantForgotPasswordOtpTemplateOptions,

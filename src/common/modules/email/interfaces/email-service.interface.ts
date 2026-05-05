@@ -1,10 +1,6 @@
 import { ActivePlatform } from '@database/enums';
 
 import {
-  IAiDetectedEmailOptions,
-  IApplicationStatusEmailOptions,
-  IBusinessApplicationNotificationEmailOptions,
-  IConsultantApplicationNotificationEmailOptions,
   IForgotPasswordOtpEmailOptions,
   IMonthlyInvoiceEmailOptions,
   IVerifyRegistrationEmailOptions,
@@ -62,60 +58,6 @@ export interface IEmailService {
     options: IWelcomeEmailOptions,
     platform: ActivePlatform,
   ): Promise<void>;
-
-  /**
-   * Notifies a business user that a consultant has applied to one of their projects.
-   *
-   * Always sent from the Ployos sender address.
-   *
-   * @param to      - Business user's email address.
-   * @param options - Template variables (e.g. project title, consultant name).
-   * @returns Resolves when the email has been handed off to the delivery provider.
-   * @throws InternalServerErrorException — if the delivery provider returns an error.
-   */
-  sendApplicationNotificationToBusinessEmail(
-    to: string,
-    options: IBusinessApplicationNotificationEmailOptions,
-  ): Promise<void>;
-
-  /**
-   * Confirms to a consultant that their application has been received.
-   *
-   * Always sent from the Lona sender address.
-   *
-   * @param to      - Consultant's email address.
-   * @param options - Template variables (e.g. project title, application reference).
-   * @returns Resolves when the email has been handed off to the delivery provider.
-   * @throws InternalServerErrorException — if the delivery provider returns an error.
-   */
-  sendApplicationNotificationToConsultantEmail(
-    to: string,
-    options: IConsultantApplicationNotificationEmailOptions,
-  ): Promise<void>;
-
-  /**
-   * Notifies a consultant that their application was flagged by the AI plagiarism detector.
-   *
-   * Always sent from the Lona sender address.
-   *
-   * @param to      - Consultant's email address.
-   * @param options - Template variables (e.g. project title, flagged content summary).
-   * @returns Resolves when the email has been handed off to the delivery provider.
-   * @throws InternalServerErrorException — if the delivery provider returns an error.
-   */
-  sendAiDetectedEmail(to: string, options: IAiDetectedEmailOptions): Promise<void>;
-
-  /**
-   * Notifies a consultant about a change in the status of their application (approved / rejected).
-   *
-   * Always sent from the Lona sender address.
-   *
-   * @param to      - Consultant's email address.
-   * @param options - Template variables (e.g. project title, new status, optional reason).
-   * @returns Resolves when the email has been handed off to the delivery provider.
-   * @throws InternalServerErrorException — if the delivery provider returns an error.
-   */
-  sendApplicationStatusEmail(to: string, options: IApplicationStatusEmailOptions): Promise<void>;
 
   /**
    * Sends a monthly invoice summary email to a business user.

@@ -7,10 +7,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { EMAIL_PROVIDER_TOKEN } from './constants';
 import { IEmailProvider } from './interfaces/email-provider.interface';
 import {
-  IAiDetectedEmailOptions,
-  IApplicationStatusEmailOptions,
-  IBusinessApplicationNotificationEmailOptions,
-  IConsultantApplicationNotificationEmailOptions,
   IForgotPasswordOtpEmailOptions,
   IMonthlyInvoiceEmailOptions,
   IVerifyRegistrationEmailOptions,
@@ -18,7 +14,6 @@ import {
 } from './interfaces/email-send-options.interface';
 import { IEmailService } from './interfaces/email-service.interface';
 import {
-  buildBusinessApplicationNotificationEmail,
   buildBusinessForgotPasswordOtpEmail,
   buildBusinessMonthlyInvoiceEmail,
   buildBusinessProjectPublishedReceiptEmail,
@@ -26,9 +21,6 @@ import {
   buildBusinessProjectRepublishRefundEmail,
   buildBusinessVerifyRegistrationEmail,
   buildBusinessWelcomeEmail,
-  buildConsultantAiDetectedEmail,
-  buildConsultantApplicationNotificationEmail,
-  buildConsultantApplicationStatusEmail,
   buildConsultantForgotPasswordOtpEmail,
   buildConsultantVerifyRegistrationEmail,
   buildConsultantWelcomeEmail,
@@ -140,95 +132,6 @@ export class EmailService implements IEmailService {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`sendWelcomeEmail — failed | to: ${to} | error: ${message}`);
-      throw err;
-    }
-  }
-
-  /** @inheritdoc */
-  public async sendApplicationNotificationToBusinessEmail(
-    to: string,
-    options: IBusinessApplicationNotificationEmailOptions,
-  ): Promise<void> {
-    this.logger.log(`sendApplicationNotificationToBusinessEmail — start | to: ${to}`);
-    try {
-      await this.emailProvider.send({
-        from: this.env.resendPloyosEmail,
-        to,
-        subject: `New Application: ${options.projectTitle}`,
-        html: await buildBusinessApplicationNotificationEmail(options),
-      });
-      this.logger.log(`sendApplicationNotificationToBusinessEmail — sent | to: ${to}`);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(
-        `sendApplicationNotificationToBusinessEmail — failed | to: ${to} | error: ${message}`,
-      );
-      throw err;
-    }
-  }
-
-  /** @inheritdoc */
-  public async sendApplicationNotificationToConsultantEmail(
-    to: string,
-    options: IConsultantApplicationNotificationEmailOptions,
-  ): Promise<void> {
-    this.logger.log(`sendApplicationNotificationToConsultantEmail — start | to: ${to}`);
-    try {
-      await this.emailProvider.send({
-        from: this.env.resendLonaEmail,
-        to,
-        subject: `Application Submitted: ${options.projectTitle}`,
-        html: await buildConsultantApplicationNotificationEmail(options),
-      });
-      this.logger.log(`sendApplicationNotificationToConsultantEmail — sent | to: ${to}`);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(
-        `sendApplicationNotificationToConsultantEmail — failed | to: ${to} | error: ${message}`,
-      );
-      throw err;
-    }
-  }
-
-  /** @inheritdoc */
-  public async sendAiDetectedEmail(to: string, options: IAiDetectedEmailOptions): Promise<void> {
-    this.logger.log(`sendAiDetectedEmail — start | to: ${to}`);
-    try {
-      await this.emailProvider.send({
-        from: this.env.resendLonaEmail,
-        to,
-        subject: `Application Review Notice: ${options.projectTitle}`,
-        html: await buildConsultantAiDetectedEmail(options),
-      });
-      this.logger.log(`sendAiDetectedEmail — sent | to: ${to}`);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendAiDetectedEmail — failed | to: ${to} | error: ${message}`);
-      throw err;
-    }
-  }
-
-  /** @inheritdoc */
-  public async sendApplicationStatusEmail(
-    to: string,
-    options: IApplicationStatusEmailOptions,
-  ): Promise<void> {
-    this.logger.log(`sendApplicationStatusEmail — start | to: ${to}`);
-    const subject =
-      options.status === 'approved'
-        ? `Application Approved: ${options.projectTitle}`
-        : `Application Update: ${options.projectTitle}`;
-    try {
-      await this.emailProvider.send({
-        from: this.env.resendLonaEmail,
-        to,
-        subject,
-        html: await buildConsultantApplicationStatusEmail(options),
-      });
-      this.logger.log(`sendApplicationStatusEmail — sent | to: ${to}`);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendApplicationStatusEmail — failed | to: ${to} | error: ${message}`);
       throw err;
     }
   }

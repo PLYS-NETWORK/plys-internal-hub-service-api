@@ -15,8 +15,8 @@ import { Task } from './task.entity';
 // Structured proof-of-work record authored by the assigned consultant.
 // `remarks` is a rich-text JSON document produced by the client editor — the
 // server treats it as opaque JSONB and never parses or validates inner shape.
-// Soft-delete via `is_deleted` flag (mirrors TaskComment); body preserved for
-// audit. Optimistic lock via @VersionColumn since evidences are editable.
+// Soft-delete via `is_deleted` flag; body preserved for audit. Optimistic
+// lock via @VersionColumn since evidences are editable.
 @Auditable()
 @Entity('task_evidences')
 @Index('idx_task_evidences_task_id', ['taskId'])

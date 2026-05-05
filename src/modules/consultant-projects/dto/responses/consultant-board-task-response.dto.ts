@@ -37,6 +37,5 @@ export class ConsultantBoardTaskResponseDto implements IConsultantBoardTaskRespo
   @ApiProperty({ type: () => ConsultantBoardTaskAssigneeDto, nullable: true })
   public readonly assignee!: ConsultantBoardTaskAssigneeDto | null;
 
-  @Expose() @ApiProperty({ name: 'comment_count' }) public readonly comment_count!: number;
   @Expose() @ApiProperty({ name: 'evidences_count' }) public readonly evidences_count!: number;
 }

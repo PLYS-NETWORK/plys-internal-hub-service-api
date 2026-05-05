@@ -39,9 +39,6 @@ export class BoardTaskResponseDto implements IBoardTaskResponse {
   public readonly assignee!: BoardTaskAssigneeDto | null;
 
   @Expose()
-  @ApiProperty({ name: 'comments_count', example: 0 })
-  public readonly comments_count!: number;
-  @Expose()
   @ApiProperty({ name: 'evidences_count', example: 0 })
   public readonly evidences_count!: number;
 }

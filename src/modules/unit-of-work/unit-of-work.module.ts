@@ -11,21 +11,16 @@ import {
   ConsultantSkillRepository,
   ConsultantTransactionRepository,
   FileRepository,
-  InterviewAnswerRepository,
   InvoiceLineItemRepository,
   InvoiceRepository,
   NotificationRepository,
   ProjectActivityRepository,
-  ProjectApplicationRepository,
-  ProjectInterviewQuestionRepository,
   ProjectMemberRepository,
   ProjectRepository,
   ProjectRequiredSkillRepository,
   ProjectStatusHistoryRepository,
   SkillRepository,
   TaskCodeService,
-  TaskCommentAttachmentRepository,
-  TaskCommentRepository,
   TaskDisputeRepository,
   TaskEvidenceAttachmentRepository,
   TaskEvidenceRepository,
@@ -55,32 +50,26 @@ const repositories = [
   ProjectRequiredSkillRepository,
   ProjectActivityRepository,
   ProjectStatusHistoryRepository,
+  ProjectMemberRepository,
   // Domain 4 — Tasks
   TaskRepository,
   TaskDisputeRepository,
   TaskHistoryRepository,
-  TaskCommentRepository,
-  TaskCommentAttachmentRepository,
   TaskEvidenceRepository,
   TaskEvidenceAttachmentRepository,
   // Domain 5 — AI
   AiTaskSessionRepository,
   AiSessionMessageRepository,
-  // Domain 6 — Applications
-  ProjectApplicationRepository,
-  InterviewAnswerRepository,
-  ProjectMemberRepository,
-  // Domain 8 — Finance
+  // Domain 6 — Finance
   BillingPeriodRepository,
   InvoiceRepository,
   InvoiceLineItemRepository,
   ConsultantTransactionRepository,
   BusinessTransactionRepository,
   WebhookEventRepository,
-  ProjectInterviewQuestionRepository,
-  // Domain 9 — Files
+  // Domain 7 — Files
   FileRepository,
-  // Domain 10 — Notifications
+  // Domain 8 — Notifications
   NotificationRepository,
 ];
 

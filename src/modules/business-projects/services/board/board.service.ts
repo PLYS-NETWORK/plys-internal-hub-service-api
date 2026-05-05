@@ -2,25 +2,16 @@ import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { DateUtil } from '@common/utils/date';
-import { Task } from '@database/entities';
-import { ProjectMemberStatus, TaskKanbanStatus } from '@database/enums';
+import { TaskKanbanStatus } from '@database/enums';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
-import {
-  AssignTaskDto,
-  ChangeTaskStatusesDto,
-  ReorderTasksDto,
-  TaskOrderItemDto,
-  TaskStatusItemDto,
-} from '../../dto/requests';
+import { ReorderTasksDto, TaskOrderItemDto } from '../../dto/requests';
 import { BoardTaskDetailResponseDto, BoardTaskResponseDto } from '../../dto/responses';
 import { IBoardService } from '../../interfaces/board.service.interface';
 import { BusinessAccessService } from '../business-access.service';
-import { ProjectStatusService } from '../projects/project-status.service';
 
 const NON_DRAFT_STATUSES: TaskKanbanStatus[] = [
   TaskKanbanStatus.TO_DO,
@@ -34,9 +25,8 @@ const NON_DRAFT_STATUSES: TaskKanbanStatus[] = [
 ];
 
 // DRAFT/DONE/CANCELLED are owned by other flows: DRAFT by `createDraftTask`,
-// DONE by approval, CANCELLED by project cancellation. Reorder/move never
-// crosses these boundaries — the business cannot drag-and-drop a task back
-// from terminal state, and cannot manually push a task into one.
+// DONE by approval, CANCELLED by project cancellation. Reorder never crosses
+// these boundaries.
 const TERMINAL_OR_DRAFT: ReadonlySet<TaskKanbanStatus> = new Set([
   TaskKanbanStatus.DRAFT,
   TaskKanbanStatus.DONE,
@@ -59,7 +49,6 @@ interface IBoardTaskRow {
   consultant_id: string | null;
   consultant_full_name: string | null;
   consultant_avatar_url: string | null;
-  comments_count: number;
   evidences_count: number;
 }
 
@@ -71,7 +60,6 @@ export class BoardService implements IBoardService {
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly access: BusinessAccessService,
-    private readonly projectStatus: ProjectStatusService,
   ) {
     this.logger = new AppLogger(BoardService.name, requestContext);
   }
@@ -94,10 +82,6 @@ export class BoardService implements IBoardService {
       .addSelect('cp.id', 'consultant_id')
       .addSelect('cp.full_name', 'consultant_full_name')
       .addSelect('cp.avatar_url', 'consultant_avatar_url')
-      .addSelect(
-        '(SELECT COUNT(*)::int FROM task_comments tc WHERE tc.task_id = t.id AND tc.is_deleted = false)',
-        'comments_count',
-      )
       .addSelect(
         '(SELECT COUNT(*)::int FROM task_evidences te WHERE te.task_id = t.id AND te.is_deleted = false)',
         'evidences_count',
@@ -127,7 +111,6 @@ export class BoardService implements IBoardService {
                 avatar_url: r.consultant_avatar_url,
               }
             : null,
-          comments_count: Number(r.comments_count ?? 0),
           evidences_count: Number(r.evidences_count ?? 0),
         },
         { excludeExtraneousValues: true },
@@ -204,73 +187,6 @@ export class BoardService implements IBoardService {
   }
 
   /** @inheritdoc */
-  public async changeTaskStatuses(projectId: string, dto: ChangeTaskStatusesDto): Promise<void> {
-    this.logger.log(
-      `changeTaskStatuses — start | projectId: ${projectId}, count: ${dto.tasks.length}`,
-    );
-    await this.access.resolveOwnedProject(projectId);
-
-    for (const t of dto.tasks) {
-      if (TERMINAL_OR_DRAFT.has(t.kanbanStatus)) {
-        this.invalidStatusTransition('changeTaskStatuses', `id=${t.id} target=${t.kanbanStatus}`);
-      }
-    }
-
-    await this.uow.withTransaction(async (tx) => {
-      await this.lockProjectRow(tx, projectId);
-
-      const ids = dto.tasks.map((t) => t.id);
-      const existing = await tx.tasks
-        .createQueryBuilder('t')
-        .where('t.id IN (:...ids)', { ids })
-        .andWhere('t.project_id = :projectId', { projectId })
-        .andWhere('t.deleted_at IS NULL')
-        .setLock('pessimistic_write')
-        .getMany();
-
-      if (existing.length !== ids.length) {
-        this.invalidStatusTransition(
-          'changeTaskStatuses',
-          `count mismatch: requested=${ids.length}, found=${existing.length}`,
-        );
-      }
-
-      const targetById = new Map(dto.tasks.map((t) => [t.id, t.kanbanStatus]));
-      for (const task of existing) {
-        if (TERMINAL_OR_DRAFT.has(task.kanbanStatus)) {
-          this.invalidStatusTransition(
-            'changeTaskStatuses',
-            `id=${task.id} source=${task.kanbanStatus}`,
-          );
-        }
-        if (task.kanbanStatus === targetById.get(task.id)) {
-          // No-op moves complicate end-of-column placement (we'd have to
-          // distinguish "stay in place" from "move to tail of same column")
-          // and there's no UI affordance that produces them. Reject so the
-          // contract stays unambiguous.
-          this.invalidStatusTransition(
-            'changeTaskStatuses',
-            `taskId=${task.id} already in ${task.kanbanStatus}`,
-          );
-        }
-      }
-
-      // Each batch's `maxes` CTE re-reads MAX(display_order) per status, so
-      // batch N+1 sees batch N's writes within the same transaction (Postgres
-      // MVCC: prior statement effects are visible to later statements in the
-      // same xact). 200 tasks → 4 statements, no order collisions across
-      // batches even when several batches target the same destination column.
-      for (const batch of chunk(dto.tasks, BATCH_SIZE)) {
-        await this.applyStatusBatch(tx, projectId, batch);
-      }
-    });
-
-    this.logger.log(
-      `changeTaskStatuses — complete | projectId: ${projectId}, moved: ${dto.tasks.length}`,
-    );
-  }
-
-  /** @inheritdoc */
   public async getTaskDetail(
     projectId: string,
     taskId: string,
@@ -291,18 +207,11 @@ export class BoardService implements IBoardService {
       });
     }
 
-    const [commentsCount, evidencesCount] = await Promise.all([
-      this.uow.taskComments
-        .createQueryBuilder('tc')
-        .where('tc.task_id = :taskId', { taskId })
-        .andWhere('tc.is_deleted = false')
-        .getCount(),
-      this.uow.taskEvidences
-        .createQueryBuilder('te')
-        .where('te.task_id = :taskId', { taskId })
-        .andWhere('te.is_deleted = false')
-        .getCount(),
-    ]);
+    const evidencesCount = await this.uow.taskEvidences
+      .createQueryBuilder('te')
+      .where('te.task_id = :taskId', { taskId })
+      .andWhere('te.is_deleted = false')
+      .getCount();
 
     this.logger.log(`getTaskDetail — complete | taskId: ${taskId}`);
     return plainToInstance(
@@ -325,7 +234,6 @@ export class BoardService implements IBoardService {
               avatar_url: task.assignee.avatarUrl ?? null,
             }
           : null,
-        comments_count: commentsCount,
         evidences_count: evidencesCount,
         approved_by: task.approvedBy,
         approved_at: task.approvedAt,
@@ -338,81 +246,12 @@ export class BoardService implements IBoardService {
     );
   }
 
-  /** @inheritdoc */
-  public async assign(projectId: string, taskId: string, dto: AssignTaskDto): Promise<void> {
-    this.logger.log(
-      `assign — start | projectId: ${projectId}, taskId: ${taskId}, consultantId: ${dto.consultantId}`,
-    );
-    await this.access.resolveOwnedProject(projectId);
-
-    await this.uow.withTransaction(async (tx) => {
-      const task = await this.loadAssignableTask(tx, projectId, taskId);
-
-      const member = await tx.projectMembers.findOne({
-        where: {
-          projectId,
-          consultantId: dto.consultantId,
-          status: ProjectMemberStatus.ACTIVE,
-        },
-      });
-      if (!member) {
-        throw new TranslatableException({
-          messageKey: 'error.task.consultant_not_project_member',
-          errorCode: ERROR_CODES.TASK_CONSULTANT_NOT_PROJECT_MEMBER,
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-        });
-      }
-
-      task.assignedTo = dto.consultantId;
-      task.assignedAt = DateUtil.nowDate();
-      if (task.kanbanStatus === TaskKanbanStatus.TO_DO) {
-        task.kanbanStatus = TaskKanbanStatus.ASSIGNED;
-      }
-      await tx.tasks.save(task);
-      await this.projectStatus.promoteToInProgressIfPublished(tx, projectId);
-    });
-
-    this.logger.log(`assign — complete | taskId: ${taskId}`);
-  }
-
-  /** @inheritdoc */
-  public async unassign(projectId: string, taskId: string): Promise<void> {
-    this.logger.log(`unassign — start | projectId: ${projectId}, taskId: ${taskId}`);
-    await this.access.resolveOwnedProject(projectId);
-
-    await this.uow.withTransaction(async (tx) => {
-      const task = await this.loadAssignableTask(tx, projectId, taskId);
-
-      // Only safe to unassign while still in early stages — silently dropping
-      // a consultant past IN_PROGRESS would lose work.
-      if (
-        task.kanbanStatus !== TaskKanbanStatus.ASSIGNED &&
-        task.kanbanStatus !== TaskKanbanStatus.TO_DO
-      ) {
-        throw new TranslatableException({
-          messageKey: 'error.task.invalid_status_transition',
-          errorCode: ERROR_CODES.TASK_INVALID_STATUS_TRANSITION,
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-        });
-      }
-
-      task.assignedTo = null;
-      task.assignedAt = null;
-      if (task.kanbanStatus === TaskKanbanStatus.ASSIGNED) {
-        task.kanbanStatus = TaskKanbanStatus.TO_DO;
-      }
-      await tx.tasks.save(task);
-    });
-
-    this.logger.log(`unassign — complete | taskId: ${taskId}`);
-  }
-
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
   private async lockProjectRow(tx: IUnitOfWork, projectId: string): Promise<void> {
     // Serializes all board write paths on the same project (mirrors the
     // pattern in BacklogsService.payTasks which locks the business profile).
-    // Without this, two concurrent reorder/status calls would each take
+    // Without this, two concurrent reorder calls would each take
     // pessimistic_write on overlapping task subsets and we'd have to rely on
     // OptimisticLockVersionMismatchError to surface conflicts.
     await tx.projects
@@ -454,58 +293,6 @@ export class BoardService implements IBoardService {
     );
   }
 
-  private async applyStatusBatch(
-    tx: IUnitOfWork,
-    projectId: string,
-    batch: TaskStatusItemDto[],
-  ): Promise<void> {
-    const params: unknown[] = [];
-    const valueRows = batch
-      .map((t, idx) => {
-        params.push(t.id, t.kanbanStatus, idx + 1);
-        const base = params.length;
-        return `($${base - 2}::uuid, $${base - 1}::varchar, $${base}::int)`;
-      })
-      .join(', ');
-
-    params.push(projectId);
-    const projectIdx = params.length;
-
-    // The CTE pattern: `targets` ranks the payload per destination status,
-    // `maxes` reads the current tail per status (visible: prior batches' writes
-    // in this xact), and the UPDATE places each task at `max + rn`.
-    await tx.tasks.query(
-      `
-      WITH targets AS (
-        SELECT v.task_id::uuid       AS id,
-               v.kanban_status::varchar AS target_status,
-               ROW_NUMBER() OVER (
-                 PARTITION BY v.kanban_status ORDER BY v.idx
-               ) AS rn
-          FROM (VALUES ${valueRows}) AS v(task_id, kanban_status, idx)
-      ),
-      maxes AS (
-        SELECT kanban_status, COALESCE(MAX(display_order), 0) AS max_order
-          FROM tasks
-         WHERE project_id = $${projectIdx}
-           AND deleted_at IS NULL
-         GROUP BY kanban_status
-      )
-      UPDATE tasks AS t
-         SET kanban_status = targets.target_status,
-             display_order = COALESCE(maxes.max_order, 0) + targets.rn,
-             version       = t.version + 1,
-             updated_at    = NOW()
-        FROM targets
-        LEFT JOIN maxes ON maxes.kanban_status = targets.target_status
-       WHERE t.id = targets.id
-         AND t.project_id = $${projectIdx}
-         AND t.deleted_at IS NULL
-      `,
-      params,
-    );
-  }
-
   private invalidStatusTransition(method: string, detail: string): never {
     this.logger.warn(`${method} — invalid transition | ${detail}`);
     throw new TranslatableException({
@@ -513,33 +300,6 @@ export class BoardService implements IBoardService {
       errorCode: ERROR_CODES.TASK_INVALID_STATUS_TRANSITION,
       status: HttpStatus.UNPROCESSABLE_ENTITY,
     });
-  }
-
-  private async loadAssignableTask(
-    tx: IUnitOfWork,
-    projectId: string,
-    taskId: string,
-  ): Promise<Task> {
-    const task = await tx.tasks.findOne({ where: { id: taskId, projectId } });
-    if (!task) {
-      throw new TranslatableException({
-        messageKey: 'error.task.not_found',
-        errorCode: ERROR_CODES.TASK_NOT_FOUND,
-        status: HttpStatus.NOT_FOUND,
-      });
-    }
-    if (
-      task.kanbanStatus === TaskKanbanStatus.DRAFT ||
-      task.kanbanStatus === TaskKanbanStatus.CANCELLED ||
-      task.kanbanStatus === TaskKanbanStatus.DONE
-    ) {
-      throw new TranslatableException({
-        messageKey: 'error.task.invalid_status_transition',
-        errorCode: ERROR_CODES.TASK_INVALID_STATUS_TRANSITION,
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-      });
-    }
-    return task;
   }
 }
 

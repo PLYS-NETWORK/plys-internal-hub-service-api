@@ -12,11 +12,9 @@ import {
   Unique,
 } from 'typeorm';
 
-import { ProjectApplication } from './project-application.entity';
-
 // Authoritative roster of consultants on a project. Insertion is rate-limited
-// per consultant by trg_enforce_consultant_project_limit (§C5 race-fix uses
-// FOR UPDATE on consultant_profiles row).
+// per consultant by trg_enforce_consultant_project_limit (FOR UPDATE on
+// consultant_profiles row).
 @Auditable()
 @Entity('project_members')
 @Unique('uq_project_members_project_consultant', ['projectId', 'consultantId'])
@@ -45,16 +43,6 @@ export class ProjectMember extends AuditableEntity {
     foreignKeyConstraintName: 'fk_project_members_to_consultant_profiles',
   })
   public consultant!: ConsultantProfile;
-
-  @Column({ name: 'application_id', type: 'uuid' })
-  public applicationId!: string;
-
-  @ManyToOne(() => ProjectApplication, { onDelete: 'RESTRICT' })
-  @JoinColumn({
-    name: 'application_id',
-    foreignKeyConstraintName: 'fk_project_members_to_project_applications',
-  })
-  public application!: ProjectApplication;
 
   @Column({ type: 'varchar', length: 20, default: ProjectMemberStatus.ACTIVE })
   public status!: ProjectMemberStatus;

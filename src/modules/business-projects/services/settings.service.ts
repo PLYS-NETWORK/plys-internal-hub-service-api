@@ -2,7 +2,7 @@ import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { ProjectInterviewQuestion, ProjectRequiredSkill } from '@database/entities';
+import { ProjectRequiredSkill } from '@database/entities';
 import { ProjectStatus } from '@database/enums';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
@@ -11,16 +11,8 @@ import { plainToInstance } from 'class-transformer';
 import { I18nService } from 'nestjs-i18n';
 import { In } from 'typeorm';
 
-import {
-  UpdateInterviewQuestionDto,
-  UpdateProjectSettingsDto,
-  UpsertInterviewQuestionDto,
-} from '../dto/requests';
-import {
-  InterviewQuestionResponseDto,
-  ProjectSettingsResponseDto,
-  ProjectSummaryResponseDto,
-} from '../dto/responses';
+import { UpdateProjectSettingsDto } from '../dto/requests';
+import { ProjectSettingsResponseDto, ProjectSummaryResponseDto } from '../dto/responses';
 import { ISettingsService } from '../interfaces/settings.service.interface';
 import { BusinessAccessService } from './business-access.service';
 import { ProjectStatusService } from './projects/project-status.service';
@@ -46,33 +38,19 @@ export class SettingsService implements ISettingsService {
     this.logger.log(`getSettings — start | projectId: ${projectId}`);
     const { project } = await this.access.resolveOwnedProject(projectId);
 
-    const [skillRows, questions] = await Promise.all([
-      this.uow.projectRequiredSkills.find({
-        where: { projectId },
-        relations: { skill: true },
-      }),
-      // Default `find` excludes soft-deleted rows because the entity uses
-      // `@DeleteDateColumn` — no need to filter manually.
-      this.uow.projectInterviewQuestions.find({
-        where: { projectId },
-        order: { displayOrder: 'ASC' },
-      }),
-    ]);
+    const skillRows = await this.uow.projectRequiredSkills.find({
+      where: { projectId },
+      relations: { skill: true },
+    });
 
     const lang = this.requestContext.lang;
     const required_skills = skillRows.map((s) => ({
       id: s.skillId,
       name: this.translateSkillKey(s.skill.name, lang),
     }));
-    const interview_questions = questions.map((q) => ({
-      id: q.id,
-      question_text: q.questionText,
-      display_order: q.displayOrder,
-      is_required: q.isRequired,
-    }));
 
     this.logger.log(
-      `getSettings — complete | projectId: ${projectId}, skills: ${required_skills.length}, questions: ${interview_questions.length}`,
+      `getSettings — complete | projectId: ${projectId}, skills: ${required_skills.length}`,
     );
 
     return plainToInstance(
@@ -82,7 +60,6 @@ export class SettingsService implements ISettingsService {
         introduction: project.introduction,
         required_skills,
         max_consultants: project.requiredConsultants,
-        interview_questions,
       },
       { excludeExtraneousValues: true },
     );
@@ -132,58 +109,6 @@ export class SettingsService implements ISettingsService {
     );
   }
 
-  /** @inheritdoc */
-  public async createQuestion(
-    projectId: string,
-    dto: UpsertInterviewQuestionDto,
-  ): Promise<InterviewQuestionResponseDto> {
-    this.logger.log(`createQuestion — start | projectId: ${projectId}`);
-    await this.access.resolveOwnedProject(projectId);
-
-    const displayOrder = dto.displayOrder ?? (await this.nextQuestionOrder(projectId));
-    const question = this.uow.projectInterviewQuestions.create({
-      projectId,
-      questionText: dto.questionText!,
-      displayOrder,
-      isRequired: dto.isRequired ?? true,
-    });
-    const saved = await this.uow.projectInterviewQuestions.save(question);
-
-    this.logger.log(`createQuestion — complete | questionId: ${saved.id}`);
-    return this.toQuestionResponse(saved);
-  }
-
-  /** @inheritdoc */
-  public async updateQuestion(
-    projectId: string,
-    questionId: string,
-    dto: UpdateInterviewQuestionDto,
-  ): Promise<InterviewQuestionResponseDto> {
-    this.logger.log(`updateQuestion — start | projectId: ${projectId}, questionId: ${questionId}`);
-    await this.access.resolveOwnedProject(projectId);
-
-    const question = await this.findActiveQuestion(projectId, questionId);
-    if (dto.questionText !== undefined) question.questionText = dto.questionText;
-    if (dto.displayOrder !== undefined) question.displayOrder = dto.displayOrder;
-    if (dto.isRequired !== undefined) question.isRequired = dto.isRequired;
-    const saved = await this.uow.projectInterviewQuestions.save(question);
-
-    this.logger.log(`updateQuestion — complete | questionId: ${saved.id}`);
-    return this.toQuestionResponse(saved);
-  }
-
-  /** @inheritdoc */
-  public async deleteQuestion(projectId: string, questionId: string): Promise<void> {
-    this.logger.log(`deleteQuestion — start | projectId: ${projectId}, questionId: ${questionId}`);
-    await this.access.resolveOwnedProject(projectId);
-    const question = await this.findActiveQuestion(projectId, questionId);
-
-    // Soft delete via AuditableEntity columns. The auth user id stamps
-    // deleted_by; AuditSubscriber populates timestamps automatically.
-    await this.uow.projectInterviewQuestions.softDelete({ id: question.id });
-    this.logger.log(`deleteQuestion — complete | questionId: ${question.id}`);
-  }
-
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
   private assertProjectEditable(status: ProjectStatus, projectId: string): void {
@@ -223,52 +148,6 @@ export class SettingsService implements ISettingsService {
       skillId,
     }));
     await tx.projectRequiredSkills.save(rows);
-  }
-
-  private async nextQuestionOrder(projectId: string): Promise<number> {
-    const row = await this.uow.projectInterviewQuestions
-      .createQueryBuilder('q')
-      .select('COALESCE(MAX(q.display_order), 0)', 'max_order')
-      .where('q.project_id = :projectId', { projectId })
-      .andWhere('q.deleted_at IS NULL')
-      .getRawOne<{ max_order: number }>();
-    return Number(row?.max_order ?? 0) + 1;
-  }
-
-  private async findActiveQuestion(
-    projectId: string,
-    questionId: string,
-  ): Promise<ProjectInterviewQuestion> {
-    // Default `find` excludes rows with `deleted_at IS NOT NULL` because the
-    // entity uses `@DeleteDateColumn` — no need to filter manually here.
-    const question = await this.uow.projectInterviewQuestions.findOne({
-      where: { id: questionId, projectId },
-    });
-    if (!question) {
-      this.logger.warn(
-        `findActiveQuestion — not found | projectId: ${projectId}, questionId: ${questionId}`,
-      );
-      throw new TranslatableException({
-        messageKey: 'error.project.interview_question_not_found',
-        errorCode: ERROR_CODES.PROJECT_NOT_FOUND,
-        status: HttpStatus.NOT_FOUND,
-      });
-    }
-    return question;
-  }
-
-  private toQuestionResponse(q: ProjectInterviewQuestion): InterviewQuestionResponseDto {
-    return plainToInstance(
-      InterviewQuestionResponseDto,
-      {
-        id: q.id,
-        question_text: q.questionText,
-        display_order: q.displayOrder,
-        is_required: q.isRequired,
-        created_at: q.createdAt,
-      },
-      { excludeExtraneousValues: true },
-    );
   }
 
   // Skill names are i18n keys (e.g. `skill_react`); fall back to the raw key

@@ -1,6 +1,5 @@
 import { ProjectsTrendDto } from '../../dto/requests/projects-trend.dto';
 import { StatsDateRangeDto } from '../../dto/requests/stats-date-range.dto';
-import { ProjectInterviewStatsResponseDto } from '../../dto/responses/project-interview-stats-response.dto';
 import { ProjectStatsResponseDto } from '../../dto/responses/project-stats-response.dto';
 import { ProjectTrendResponseDto } from '../../dto/responses/project-trend-response.dto';
 
@@ -22,12 +21,4 @@ export interface IProjectStatisticsService {
    * @returns Time-series data points covering the selected range.
    */
   getTrend(query: ProjectsTrendDto): Promise<ProjectTrendResponseDto>;
-
-  /**
-   * Returns interview-question adoption metrics — how many of the caller's
-   * projects ship with at least one interview question.
-   *
-   * @returns Adoption counts and rate.
-   */
-  getInterviewStats(): Promise<ProjectInterviewStatsResponseDto>;
 }

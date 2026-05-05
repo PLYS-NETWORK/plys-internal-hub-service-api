@@ -50,7 +50,6 @@ interface IBoardTaskRow {
   consultant_id: string | null;
   consultant_full_name: string | null;
   consultant_avatar_url: string | null;
-  comment_count: number;
   evidences_count: number;
 }
 
@@ -85,10 +84,6 @@ export class ConsultantBoardService implements IConsultantBoardService {
       .addSelect('cp.full_name', 'consultant_full_name')
       .addSelect('cp.avatar_url', 'consultant_avatar_url')
       .addSelect(
-        '(SELECT COUNT(*)::int FROM task_comments tc WHERE tc.task_id = t.id AND tc.is_deleted = false)',
-        'comment_count',
-      )
-      .addSelect(
         '(SELECT COUNT(*)::int FROM task_evidences te WHERE te.task_id = t.id AND te.is_deleted = false)',
         'evidences_count',
       )
@@ -116,7 +111,6 @@ export class ConsultantBoardService implements IConsultantBoardService {
                 avatar_url: r.consultant_avatar_url,
               }
             : null,
-          comment_count: Number(r.comment_count ?? 0),
           evidences_count: Number(r.evidences_count ?? 0),
         },
         { excludeExtraneousValues: true },
