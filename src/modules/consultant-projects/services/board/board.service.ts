@@ -3,7 +3,7 @@ import { TranslatableException } from '@common/exceptions/translatable.exception
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { DateUtil } from '@common/utils/date';
-import { TaskDifficulty, TaskKanbanStatus } from '@database/enums';
+import { TaskKanbanStatus } from '@database/enums';
 import { ProjectStatusService } from '@modules/business-projects/services/projects/project-status.service';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
@@ -44,7 +44,6 @@ interface IBoardTaskRow {
   task_id: string;
   task_code: string;
   task_title: string;
-  task_difficulty: TaskDifficulty;
   task_kanban_status: TaskKanbanStatus;
   task_display_order: number;
   consultant_id: string | null;
@@ -77,7 +76,6 @@ export class ConsultantBoardService implements IConsultantBoardService {
       .select('t.id', 'task_id')
       .addSelect('t.code', 'task_code')
       .addSelect('t.title', 'task_title')
-      .addSelect('t.difficulty_level', 'task_difficulty')
       .addSelect('t.kanban_status', 'task_kanban_status')
       .addSelect('t.display_order', 'task_display_order')
       .addSelect('cp.id', 'consultant_id')
@@ -103,7 +101,6 @@ export class ConsultantBoardService implements IConsultantBoardService {
           title: r.task_title,
           kanban_status: r.task_kanban_status,
           display_order: Number(r.task_display_order),
-          difficulty_level: r.task_difficulty,
           assignee: r.consultant_id
             ? {
                 consultant_id: r.consultant_id,

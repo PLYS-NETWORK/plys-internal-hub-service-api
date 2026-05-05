@@ -1,4 +1,4 @@
-import { TaskDifficulty } from '@database/enums';
+import { TaskCreationMode } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 
@@ -35,8 +35,8 @@ export class DraftTaskResponseDto implements IDraftTaskResponse {
   public readonly consultant_payout!: string;
 
   @Expose()
-  @ApiProperty({ name: 'difficulty_level', enum: TaskDifficulty })
-  public readonly difficulty_level!: TaskDifficulty;
+  @ApiProperty({ name: 'creation_mode', enum: TaskCreationMode })
+  public readonly creation_mode!: TaskCreationMode;
 
   @Expose()
   @ApiProperty({ name: 'created_at' })

@@ -1,7 +1,6 @@
-import { TaskDifficulty } from '@database/enums';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { IsEnum, IsNumberString, IsObject, IsOptional, IsString, Length } from 'class-validator';
+import { IsNumberString, IsObject, IsOptional, IsString, Length } from 'class-validator';
 
 import { IUpdateDraftTaskRequest } from './interfaces/update-draft-task.request.interface';
 
@@ -29,14 +28,4 @@ export class UpdateDraftTaskDto implements IUpdateDraftTaskRequest {
   @IsOptional()
   @IsNumberString({ no_symbols: false })
   public readonly price?: string;
-
-  @Expose({ name: 'difficulty_level' })
-  @ApiPropertyOptional({
-    name: 'difficulty_level',
-    enum: TaskDifficulty,
-    example: TaskDifficulty.MEDIUM,
-  })
-  @IsOptional()
-  @IsEnum(TaskDifficulty)
-  public readonly difficultyLevel?: TaskDifficulty;
 }

@@ -91,7 +91,6 @@ export class BacklogsService implements IBacklogsService {
         title: dto.title,
         description: dto.description ?? null,
         price: Number(dto.price),
-        difficultyLevel: dto.difficultyLevel,
         kanbanStatus: TaskKanbanStatus.DRAFT,
         creationMode: TaskCreationMode.MANUAL,
         displayOrder: Number(maxOrder?.max_order ?? 0) + 1,
@@ -136,7 +135,6 @@ export class BacklogsService implements IBacklogsService {
     if (dto.title !== undefined) task.title = dto.title;
     if (dto.description !== undefined) task.description = dto.description ?? null;
     if (dto.price !== undefined) task.price = Number(dto.price);
-    if (dto.difficultyLevel !== undefined) task.difficultyLevel = dto.difficultyLevel;
 
     const saved = await this.uow.tasks.save(task);
 
@@ -409,7 +407,7 @@ export class BacklogsService implements IBacklogsService {
         price: Number(task.price).toFixed(2),
         platform_fee_amount: Number(task.platformFeeAmount ?? 0).toFixed(2),
         consultant_payout: Number(task.consultantPayout ?? 0).toFixed(2),
-        difficulty_level: task.difficultyLevel,
+        creation_mode: task.creationMode,
         created_at: task.createdAt,
         updated_at: task.updatedAt,
       },

@@ -2,7 +2,7 @@ import { User } from '@database/entities/auth/user.entity';
 import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
 import { Project } from '@database/entities/projects/project.entity';
-import { TaskCreationMode, TaskDifficulty, TaskKanbanStatus } from '@database/enums';
+import { TaskCreationMode, TaskKanbanStatus } from '@database/enums';
 import {
   Column,
   Entity,
@@ -111,14 +111,6 @@ export class Task extends AuditableEntity {
     update: false,
   })
   public readonly consultantPayout!: number;
-
-  @Column({
-    name: 'difficulty_level',
-    type: 'varchar',
-    length: 20,
-    default: TaskDifficulty.MEDIUM,
-  })
-  public difficultyLevel!: TaskDifficulty;
 
   @Column({
     name: 'creation_mode',

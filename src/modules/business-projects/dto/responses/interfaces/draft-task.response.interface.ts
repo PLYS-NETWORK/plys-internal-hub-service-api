@@ -1,4 +1,4 @@
-import { TaskDifficulty } from '@database/enums';
+import { TaskCreationMode } from '@database/enums';
 
 export interface IDraftTaskResponse {
   id: string;
@@ -8,7 +8,7 @@ export interface IDraftTaskResponse {
   price: string;
   platform_fee_amount: string;
   consultant_payout: string;
-  difficulty_level: TaskDifficulty;
+  creation_mode: TaskCreationMode;
   created_at: Date;
   updated_at: Date;
 }

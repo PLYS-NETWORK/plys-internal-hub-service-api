@@ -1,4 +1,4 @@
-import { TaskDifficulty, TaskKanbanStatus } from '@database/enums';
+import { TaskCreationMode, TaskKanbanStatus } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 
@@ -24,8 +24,8 @@ export class BoardTaskResponseDto implements IBoardTaskResponse {
   @Expose() @ApiProperty() public readonly title!: string;
   @Expose() @ApiProperty({ example: '500.00' }) public readonly price!: string;
   @Expose()
-  @ApiProperty({ name: 'difficulty_level', enum: TaskDifficulty })
-  public readonly difficulty_level!: TaskDifficulty;
+  @ApiProperty({ name: 'creation_mode', enum: TaskCreationMode })
+  public readonly creation_mode!: TaskCreationMode;
   @Expose()
   @ApiProperty({ name: 'kanban_status', enum: TaskKanbanStatus })
   public readonly kanban_status!: TaskKanbanStatus;

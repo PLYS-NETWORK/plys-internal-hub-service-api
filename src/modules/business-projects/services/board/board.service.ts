@@ -2,7 +2,7 @@ import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { TaskKanbanStatus } from '@database/enums';
+import { TaskCreationMode, TaskKanbanStatus } from '@database/enums';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
@@ -43,7 +43,7 @@ interface IBoardTaskRow {
   task_code: string;
   task_title: string;
   task_price: string;
-  task_difficulty: string;
+  task_creation_mode: TaskCreationMode;
   task_kanban_status: TaskKanbanStatus;
   task_display_order: number;
   consultant_id: string | null;
@@ -76,7 +76,7 @@ export class BoardService implements IBoardService {
       .addSelect('t.code', 'task_code')
       .addSelect('t.title', 'task_title')
       .addSelect('t.price', 'task_price')
-      .addSelect('t.difficulty_level', 'task_difficulty')
+      .addSelect('t.creation_mode', 'task_creation_mode')
       .addSelect('t.kanban_status', 'task_kanban_status')
       .addSelect('t.display_order', 'task_display_order')
       .addSelect('cp.id', 'consultant_id')
@@ -101,7 +101,7 @@ export class BoardService implements IBoardService {
           code: r.task_code,
           title: r.task_title,
           price: Number(r.task_price).toFixed(2),
-          difficulty_level: r.task_difficulty,
+          creation_mode: r.task_creation_mode,
           kanban_status: r.task_kanban_status,
           display_order: Number(r.task_display_order),
           assignee: r.consultant_id
@@ -224,7 +224,7 @@ export class BoardService implements IBoardService {
         price: Number(task.price).toFixed(2),
         platform_fee_amount: Number(task.platformFeeAmount).toFixed(2),
         consultant_payout: Number(task.consultantPayout).toFixed(2),
-        difficulty_level: task.difficultyLevel,
+        creation_mode: task.creationMode,
         kanban_status: task.kanbanStatus,
         display_order: task.displayOrder,
         assignee: task.assignee

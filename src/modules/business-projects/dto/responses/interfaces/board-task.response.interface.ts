@@ -1,4 +1,4 @@
-import { TaskDifficulty, TaskKanbanStatus } from '@database/enums';
+import { TaskCreationMode, TaskKanbanStatus } from '@database/enums';
 
 export interface IBoardTaskAssignee {
   consultant_id: string;
@@ -11,7 +11,7 @@ export interface IBoardTaskResponse {
   code: string;
   title: string;
   price: string;
-  difficulty_level: TaskDifficulty;
+  creation_mode: TaskCreationMode;
   kanban_status: TaskKanbanStatus;
   display_order: number;
   assignee: IBoardTaskAssignee | null;

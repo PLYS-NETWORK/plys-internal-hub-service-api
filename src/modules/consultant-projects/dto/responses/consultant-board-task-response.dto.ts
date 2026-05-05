@@ -1,4 +1,4 @@
-import { TaskDifficulty, TaskKanbanStatus } from '@database/enums';
+import { TaskKanbanStatus } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 
@@ -27,10 +27,6 @@ export class ConsultantBoardTaskResponseDto implements IConsultantBoardTaskRespo
   public readonly kanban_status!: TaskKanbanStatus;
 
   @Expose() @ApiProperty({ name: 'display_order' }) public readonly display_order!: number;
-
-  @Expose()
-  @ApiProperty({ name: 'difficulty_level', enum: TaskDifficulty })
-  public readonly difficulty_level!: TaskDifficulty;
 
   @Expose()
   @Type(() => ConsultantBoardTaskAssigneeDto)

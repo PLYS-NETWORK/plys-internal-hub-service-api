@@ -72,7 +72,7 @@ export class BacklogsController {
   @Patch(':taskId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Partially update a draft task (title, description, price, difficulty)',
+    summary: 'Partially update a draft task (title, description, price)',
   })
   public async updateDraftTask(
     @Param('id', ParseUUIDPipe) id: string,
