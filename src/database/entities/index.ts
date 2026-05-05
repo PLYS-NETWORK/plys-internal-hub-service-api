@@ -3,6 +3,7 @@ export * from './auth';
 export * from './base';
 export * from './files';
 export * from './finance';
+export * from './infra';
 export * from './notifications';
 export * from './profiles';
 export * from './projects';

@@ -1,6 +1,9 @@
+export { ChatMessageRepository } from './chat-message.repository';
 export * from './interfaces';
 export { ProjectRepository } from './project.repository';
 export { ProjectActivityRepository } from './project-activity.repository';
+export { ProjectAiContextRepository } from './project-ai-context.repository';
+export { ProjectChatSessionRepository } from './project-chat-session.repository';
 export { ProjectMemberRepository } from './project-member.repository';
 export { ProjectRequiredSkillRepository } from './project-required-skill.repository';
 export { ProjectStatusHistoryRepository } from './project-status-history.repository';

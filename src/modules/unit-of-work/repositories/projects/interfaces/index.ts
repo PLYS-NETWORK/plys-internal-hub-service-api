@@ -1,3 +1,4 @@
+export { IChatMessageRepository } from './chat-message.repository.interface';
 export {
   IProjectRepository,
   IProjectTrendPoint,
@@ -9,6 +10,8 @@ export {
   IActivityEventRow,
   IProjectActivityRepository,
 } from './project-activity.repository.interface';
+export { IProjectAiContextRepository } from './project-ai-context.repository.interface';
+export { IProjectChatSessionRepository } from './project-chat-session.repository.interface';
 export { IProjectMemberRepository } from './project-member.repository.interface';
 export { IProjectRequiredSkillRepository } from './project-required-skill.repository.interface';
 export { IProjectStatusHistoryRepository } from './project-status-history.repository.interface';

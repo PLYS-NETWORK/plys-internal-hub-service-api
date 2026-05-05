@@ -4,32 +4,40 @@ import { DataSource } from 'typeorm';
 
 import { IUnitOfWork } from './interfaces/unit-of-work.interface';
 import {
+  AiProviderApiKeyRepository,
   AiSessionMessageRepository,
   AiTaskSessionRepository,
   AuthTokenRepository,
   BillingPeriodRepository,
   BusinessProfileRepository,
   BusinessTransactionRepository,
+  ChatMessageRepository,
   ConsultantProfileRepository,
   ConsultantSkillRepository,
   ConsultantTransactionRepository,
   FileRepository,
+  IAiProviderApiKeyRepository,
   IAiSessionMessageRepository,
   IAiTaskSessionRepository,
   IAuthTokenRepository,
   IBillingPeriodRepository,
   IBusinessProfileRepository,
   IBusinessTransactionRepository,
+  IChatMessageRepository,
   IConsultantProfileRepository,
   IConsultantSkillRepository,
   IConsultantTransactionRepository,
+  IdempotencyKeyRepository,
   IFileRepository,
+  IIdempotencyKeyRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
   INotificationRepository,
   InvoiceLineItemRepository,
   InvoiceRepository,
   IProjectActivityRepository,
+  IProjectAiContextRepository,
+  IProjectChatSessionRepository,
   IProjectMemberRepository,
   IProjectRepository,
   IProjectRequiredSkillRepository,
@@ -47,6 +55,8 @@ import {
   IWebhookEventRepository,
   NotificationRepository,
   ProjectActivityRepository,
+  ProjectAiContextRepository,
+  ProjectChatSessionRepository,
   ProjectMemberRepository,
   ProjectRepository,
   ProjectRequiredSkillRepository,
@@ -90,6 +100,9 @@ class TransactionalUnitOfWork implements IUnitOfWork {
     public readonly aiTaskSessions: IAiTaskSessionRepository,
     public readonly aiSessionMessages: IAiSessionMessageRepository,
     public readonly projectMembers: IProjectMemberRepository,
+    public readonly projectChatSessions: IProjectChatSessionRepository,
+    public readonly chatMessages: IChatMessageRepository,
+    public readonly projectAiContexts: IProjectAiContextRepository,
     public readonly billingPeriods: IBillingPeriodRepository,
     public readonly invoices: IInvoiceRepository,
     public readonly invoiceLineItems: IInvoiceLineItemRepository,
@@ -99,6 +112,8 @@ class TransactionalUnitOfWork implements IUnitOfWork {
     public readonly webhookEvents: IWebhookEventRepository,
     public readonly files: IFileRepository,
     public readonly notifications: INotificationRepository,
+    public readonly idempotencyKeys: IIdempotencyKeyRepository,
+    public readonly aiProviderApiKeys: IAiProviderApiKeyRepository,
   ) {}
 
   // Already inside a transaction — pass-through to avoid nested QueryRunners.
@@ -128,6 +143,9 @@ export class UnitOfWorkService implements IUnitOfWork {
     public readonly projectStatusHistory: ProjectStatusHistoryRepository,
     public readonly taskCodes: TaskCodeService,
     public readonly projectMembers: ProjectMemberRepository,
+    public readonly projectChatSessions: ProjectChatSessionRepository,
+    public readonly chatMessages: ChatMessageRepository,
+    public readonly projectAiContexts: ProjectAiContextRepository,
     // Domain 4 — Tasks
     public readonly tasks: TaskRepository,
     public readonly taskDisputes: TaskDisputeRepository,
@@ -149,6 +167,9 @@ export class UnitOfWorkService implements IUnitOfWork {
     public readonly files: FileRepository,
     // Domain 8 — Notifications
     public readonly notifications: NotificationRepository,
+    // Domain 9 — Infra (cross-cutting)
+    public readonly idempotencyKeys: IdempotencyKeyRepository,
+    public readonly aiProviderApiKeys: AiProviderApiKeyRepository,
   ) {}
 
   public async withTransaction<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T> {
@@ -181,6 +202,9 @@ export class UnitOfWorkService implements IUnitOfWork {
         this.aiTaskSessions.withManager(manager),
         this.aiSessionMessages.withManager(manager),
         this.projectMembers.withManager(manager),
+        this.projectChatSessions.withManager(manager),
+        this.chatMessages.withManager(manager),
+        this.projectAiContexts.withManager(manager),
         this.billingPeriods.withManager(manager),
         this.invoices.withManager(manager),
         this.invoiceLineItems.withManager(manager),
@@ -190,6 +214,8 @@ export class UnitOfWorkService implements IUnitOfWork {
         this.webhookEvents.withManager(manager),
         this.files.withManager(manager),
         this.notifications.withManager(manager),
+        this.idempotencyKeys.withManager(manager),
+        this.aiProviderApiKeys.withManager(manager),
       );
 
       const result = await work(txUow);

@@ -1,18 +1,23 @@
 import {
+  IAiProviderApiKeyRepository,
   IAiSessionMessageRepository,
   IAiTaskSessionRepository,
   IAuthTokenRepository,
   IBillingPeriodRepository,
   IBusinessProfileRepository,
   IBusinessTransactionRepository,
+  IChatMessageRepository,
   IConsultantProfileRepository,
   IConsultantSkillRepository,
   IConsultantTransactionRepository,
   IFileRepository,
+  IIdempotencyKeyRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
   INotificationRepository,
   IProjectActivityRepository,
+  IProjectAiContextRepository,
+  IProjectChatSessionRepository,
   IProjectMemberRepository,
   IProjectRepository,
   IProjectRequiredSkillRepository,
@@ -55,6 +60,9 @@ export interface IUnitOfWork {
   readonly projectStatusHistory: IProjectStatusHistoryRepository;
   readonly taskCodes: ITaskCodeService;
   readonly projectMembers: IProjectMemberRepository;
+  readonly projectChatSessions: IProjectChatSessionRepository;
+  readonly chatMessages: IChatMessageRepository;
+  readonly projectAiContexts: IProjectAiContextRepository;
 
   // Domain 4 — Tasks
   readonly tasks: ITaskRepository;
@@ -81,6 +89,10 @@ export interface IUnitOfWork {
 
   // Domain 8 — Notifications
   readonly notifications: INotificationRepository;
+
+  // Domain 9 — Infra (cross-cutting)
+  readonly idempotencyKeys: IIdempotencyKeyRepository;
+  readonly aiProviderApiKeys: IAiProviderApiKeyRepository;
 
   withTransaction<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T>;
 }

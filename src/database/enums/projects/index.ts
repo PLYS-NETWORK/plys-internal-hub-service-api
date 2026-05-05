@@ -1,3 +1,6 @@
+export { CHAT_MESSAGE_ROLES, ChatMessageRole } from './chat-message-role.enum';
+export { CHAT_SESSION_MODES, ChatSessionMode } from './chat-session-mode.enum';
+export { CHAT_SESSION_STATUSES, ChatSessionStatus } from './chat-session-status.enum';
 export {
   PROJECT_ACTIVITY_EVENT_TYPES,
   ProjectActivityEventType,

@@ -1,20 +1,25 @@
 import { Module } from '@nestjs/common';
 
 import {
+  AiProviderApiKeyRepository,
   AiSessionMessageRepository,
   AiTaskSessionRepository,
   AuthTokenRepository,
   BillingPeriodRepository,
   BusinessProfileRepository,
   BusinessTransactionRepository,
+  ChatMessageRepository,
   ConsultantProfileRepository,
   ConsultantSkillRepository,
   ConsultantTransactionRepository,
   FileRepository,
+  IdempotencyKeyRepository,
   InvoiceLineItemRepository,
   InvoiceRepository,
   NotificationRepository,
   ProjectActivityRepository,
+  ProjectAiContextRepository,
+  ProjectChatSessionRepository,
   ProjectMemberRepository,
   ProjectRepository,
   ProjectRequiredSkillRepository,
@@ -51,6 +56,9 @@ const repositories = [
   ProjectActivityRepository,
   ProjectStatusHistoryRepository,
   ProjectMemberRepository,
+  ProjectChatSessionRepository,
+  ChatMessageRepository,
+  ProjectAiContextRepository,
   // Domain 4 — Tasks
   TaskRepository,
   TaskDisputeRepository,
@@ -71,6 +79,9 @@ const repositories = [
   FileRepository,
   // Domain 8 — Notifications
   NotificationRepository,
+  // Domain 9 — Infra (cross-cutting)
+  IdempotencyKeyRepository,
+  AiProviderApiKeyRepository,
 ];
 
 @Module({
