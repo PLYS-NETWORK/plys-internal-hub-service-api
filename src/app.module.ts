@@ -26,6 +26,7 @@ import configuration from './config/configuration';
 import { resolveEnvFilePath } from './config/env-file.config';
 import { AuditSubscriber } from './database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from './database/typeorm.config';
+import { AiBootstrapModule } from './modules/ai-bootstrap/ai-bootstrap.module';
 import { AiProviderKeyModule } from './modules/ai-provider-key/ai-provider-key.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
@@ -36,6 +37,7 @@ import { HealthModule } from './modules/health/health.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PaymentsModule } from './modules/payments';
 import { ProfilesModule } from './modules/profiles/profiles.module';
+import { ProjectChatSessionModule } from './modules/project-chat-session/project-chat-session.module';
 import { SkillsModule } from './modules/skills/skills.module';
 import { StatisticsModule } from './modules/statistics/statistics.module';
 import { UnitOfWorkModule } from './modules/unit-of-work/unit-of-work.module';
@@ -66,6 +68,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     UnitOfWorkModule,
     AwsS3Module,
     FileStorageModule,
+    AiBootstrapModule,
     AiProviderKeyModule,
     AuthModule,
     BillingModule,
@@ -76,6 +79,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     NotificationsModule,
     PaymentsModule,
     ProfilesModule,
+    ProjectChatSessionModule,
     SkillsModule,
     StatisticsModule,
     UsersModule,

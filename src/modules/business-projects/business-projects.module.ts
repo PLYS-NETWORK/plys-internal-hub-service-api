@@ -43,6 +43,6 @@ import { SettingsService } from './services/settings.service';
     BoardHistoryService,
     BoardEvidencesService,
   ],
-  exports: [ProjectStatusService],
+  exports: [BusinessAccessService, ProjectStatusService],
 })
 export class BusinessProjectsModule {}

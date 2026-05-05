@@ -6,6 +6,7 @@ import {
   FindManyOptions,
   FindOneOptions,
   FindOptionsWhere,
+  InsertResult,
   ObjectLiteral,
   QueryDeepPartialEntity,
   RemoveOptions,
@@ -123,6 +124,17 @@ export abstract class AbstractRepository<T extends ObjectLiteral> {
       return this.repository.save(entityOrEntities, options);
     }
     return this.repository.save(entityOrEntities, options);
+  }
+
+  /**
+   * Single multi-row INSERT. Use for append-only tables (e.g. chat_message)
+   * where rows are always new — `save([…])` would issue one statement per
+   * row because it has to disambiguate UPDATE vs INSERT per element.
+   */
+  public insert(
+    entity: QueryDeepPartialEntity<T> | QueryDeepPartialEntity<T>[],
+  ): Promise<InsertResult> {
+    return this.repository.insert(entity);
   }
 
   public update(

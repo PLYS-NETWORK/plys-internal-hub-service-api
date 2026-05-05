@@ -100,5 +100,11 @@
     "not_found": "AI provider key not found.",
     "active_requires_replacement": "Cannot revoke the only active key for this provider. Activate a replacement first.",
     "cipher_failed": "Failed to encrypt or decrypt an AI provider key."
+  },
+  "chat_session": {
+    "not_found": "Chat session not found.",
+    "not_active": "Cannot modify a chat session that is not active.",
+    "mode_not_allowed": "Selected chat mode is not allowed for the project's current status.",
+    "message_limit_exceeded": "Chat session has reached its message cap; start a new session to continue."
   }
 }
