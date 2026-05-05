@@ -1,6 +1,7 @@
 import { PageDto } from '@common/dto/page.dto';
 
 import { CreateProjectDto, ListProjectsDto } from '../dto/requests';
+import { TransitionProjectStatusDto } from '../dto/requests/transition-project-status.dto';
 import { ProjectListItemResponseDto, ProjectSummaryResponseDto } from '../dto/responses';
 
 /**
@@ -52,4 +53,26 @@ export interface IBusinessProjectsService {
    *   project status is past `CONFIGURED`.
    */
   deleteProject(projectId: string): Promise<void>;
+
+  /**
+   * Explicit `draft → configured` transition with a price-gate validation.
+   * The auto-recompute already moves a fully-signalled project to
+   * `configured`; this endpoint is the AI runner's "stamp it" step that
+   * also asserts no draft task has `price = 0` (since publishing turns
+   * tasks into financial commitments).
+   *
+   * @param projectId UUID of the project to transition.
+   * @param dto Target status (currently only `configured`).
+   * @returns Project summary with the new status.
+   * @throws TranslatableException 403 BUSINESS_PROFILE_NOT_FOUND.
+   * @throws TranslatableException 404 PROJECT_NOT_FOUND.
+   * @throws TranslatableException 409 PROJECT_INVALID_STATUS_TRANSITION when
+   *   the project is not currently `draft`.
+   * @throws TranslatableException 409 PROJECT_PRICE_GATE_FAILED — `details`
+   *   carries `{ offending_task_ids: string[] }` for the FE to highlight.
+   */
+  transitionStatus(
+    projectId: string,
+    dto: TransitionProjectStatusDto,
+  ): Promise<ProjectSummaryResponseDto>;
 }

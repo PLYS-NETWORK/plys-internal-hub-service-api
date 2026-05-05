@@ -1,3 +1,4 @@
+import { IdempotencyKey } from '@common/decorators/idempotency-key.decorator';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PlatformGuard } from '@common/guards/platform.guard';
@@ -35,6 +36,7 @@ export class ProjectAiContextController {
   constructor(private readonly service: ProjectAiContextService) {}
 
   @Post('decisions')
+  @IdempotencyKey()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Append an audit decision to project_ai_context.decisions',

@@ -27,10 +27,20 @@ import {
   UpdateDraftTaskDto,
 } from '../dto/requests';
 import {
+  AiSyncTaskAction,
+  AiSyncTaskRowDto,
+  AiSyncTasksDto,
+} from '../dto/requests/ai-sync-tasks.dto';
+import {
   AddToBoardValidationResponseDto,
   DraftTaskResponseDto,
   PayTasksResponseDto,
 } from '../dto/responses';
+import {
+  AiSyncTaskOutcome,
+  AiSyncTaskResultDto,
+  AiSyncTasksResponseDto,
+} from '../dto/responses/ai-sync-tasks-response.dto';
 import { IBacklogsService } from '../interfaces/backlogs.service.interface';
 import { BusinessAccessService } from './business-access.service';
 import { ProjectStatusService } from './projects/project-status.service';
@@ -41,6 +51,19 @@ const ALLOWED_ADD_TO_BOARD_STATUSES = new Set<ProjectStatus>([
   ProjectStatus.PUBLISHED,
   ProjectStatus.IN_PROGRESS,
 ]);
+
+// Per-mode action whitelist for AI-sync. Drives the all-or-nothing batch
+// validation in `aiSyncTasks` — any row referencing an action outside its
+// project's whitelist fails the entire batch (the FE surfaces
+// `offending_client_temp_ids` from the error response details).
+const AI_SYNC_ALLOWED_ACTIONS_BY_STATUS: Record<ProjectStatus, ReadonlySet<AiSyncTaskAction>> = {
+  [ProjectStatus.DRAFT]: new Set<AiSyncTaskAction>(['create', 'update', 'delete']),
+  [ProjectStatus.CONFIGURED]: new Set<AiSyncTaskAction>(['create', 'update', 'delete']),
+  [ProjectStatus.PUBLISHED]: new Set<AiSyncTaskAction>(['create']),
+  [ProjectStatus.IN_PROGRESS]: new Set<AiSyncTaskAction>(['create']),
+  [ProjectStatus.DONE]: new Set<AiSyncTaskAction>(),
+  [ProjectStatus.CANCELLED]: new Set<AiSyncTaskAction>(),
+};
 
 interface PricingBreakdown {
   projectAmount: Money;
@@ -208,6 +231,191 @@ export class BacklogsService implements IBacklogsService {
     );
   }
 
+  /**
+   * AI-sync batch task mutation. Up to 50 rows of `create` / `update` /
+   * `delete` applied in a single transaction. Per-mode action whitelist
+   * enforced before any write — a single offending row fails the whole
+   * batch with 422 + `details: { offending_client_temp_ids }` so the FE
+   * can highlight the rows it needs to fix.
+   *
+   * Per-row contract:
+   *   - `create`: must NOT carry `task_id`; `title` and `price` required.
+   *     Allocates a fresh code + display_order; `creation_mode = AI_ASSISTED`.
+   *   - `update`: `task_id` required; only DRAFT-status tasks may be touched.
+   *   - `delete`: `task_id` required; only DRAFT-status tasks may be removed.
+   *
+   * @returns Per-row outcomes (status + `task_id`) plus the final
+   *   auto-recomputed project status.
+   * @throws TranslatableException 409 PROJECT_INVALID_STATUS_TRANSITION when
+   *   the project is in a terminal status.
+   * @throws TranslatableException 422 AI_SYNC_TASK_REJECTED when any row
+   *   violates the per-mode action whitelist or the per-row field rules.
+   */
+  public async aiSyncTasks(
+    projectId: string,
+    dto: AiSyncTasksDto,
+  ): Promise<AiSyncTasksResponseDto> {
+    this.logger.log(`aiSyncTasks — start | projectId: ${projectId}, count: ${dto.tasks.length}`);
+    const { project } = await this.access.resolveOwnedProject(projectId);
+    const allowedActions = AI_SYNC_ALLOWED_ACTIONS_BY_STATUS[project.status];
+
+    // Validate every row up-front so we don't half-write the batch.
+    const offendingTempIds: string[] = [];
+    for (const row of dto.tasks) {
+      const tempId = row.clientTempId ?? row.taskId ?? '<row>';
+      if (!allowedActions.has(row.action)) {
+        offendingTempIds.push(tempId);
+        continue;
+      }
+      const fieldsValid = this.validateAiSyncRowFields(row);
+      if (!fieldsValid) offendingTempIds.push(tempId);
+    }
+    if (offendingTempIds.length > 0) {
+      this.logger.warn(
+        `aiSyncTasks — rejected | projectId: ${projectId}, status: ${project.status}, ` +
+          `offenders: ${offendingTempIds.length}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.ai_sync.task_rejected',
+        errorCode: ERROR_CODES.AI_SYNC_TASK_REJECTED,
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        args: { count: offendingTempIds.length },
+        details: { offending_client_temp_ids: offendingTempIds },
+      });
+    }
+
+    const result = await this.uow.withTransaction(async (tx) => {
+      const results: AiSyncTaskResultDto[] = [];
+
+      // Apply deletes first — they free up display_order slots and let
+      // creates use a contiguous range starting from the new max.
+      const deleteIds = dto.tasks
+        .filter((r) => r.action === 'delete')
+        .map((r) => r.taskId as string);
+      if (deleteIds.length > 0) {
+        const existing = await tx.tasks.find({
+          where: { id: In(deleteIds), projectId },
+        });
+        this.assertAllTasksAreDraft(deleteIds, existing);
+        await tx.tasks.delete({ id: In(deleteIds) });
+        await this.aiContext.removeManyFromIndex(tx, projectId, deleteIds);
+        for (const id of deleteIds) {
+          const row = dto.tasks.find((r) => r.action === 'delete' && r.taskId === id);
+          results.push(
+            plainToInstance(
+              AiSyncTaskResultDto,
+              {
+                client_temp_id: row?.clientTempId ?? null,
+                status: 'deleted' satisfies AiSyncTaskOutcome,
+                task_id: id,
+              },
+              { excludeExtraneousValues: true },
+            ),
+          );
+        }
+      }
+
+      // Updates next.
+      for (const row of dto.tasks) {
+        if (row.action !== 'update') continue;
+        const task = await tx.tasks.findOne({
+          where: {
+            id: row.taskId,
+            projectId,
+            kanbanStatus: TaskKanbanStatus.DRAFT,
+          },
+        });
+        if (!task) {
+          // Already validated as draft via mode rules; missing here means a
+          // concurrent delete or a non-draft slipped through. Treat as a
+          // batch failure to avoid partial application.
+          throw new TranslatableException({
+            messageKey: 'error.task.not_found',
+            errorCode: ERROR_CODES.TASK_NOT_FOUND,
+            status: HttpStatus.NOT_FOUND,
+            args: { task_id: row.taskId ?? '' },
+          });
+        }
+        if (row.title !== undefined) task.title = row.title;
+        if (row.description !== undefined) task.description = row.description ?? null;
+        if (row.price !== undefined) task.price = Number(row.price);
+        const saved = await tx.tasks.save(task);
+        await this.aiContext.patchTaskInIndex(tx, projectId, saved);
+        results.push(
+          plainToInstance(
+            AiSyncTaskResultDto,
+            {
+              client_temp_id: row.clientTempId ?? null,
+              status: 'updated' satisfies AiSyncTaskOutcome,
+              task_id: saved.id,
+            },
+            { excludeExtraneousValues: true },
+          ),
+        );
+      }
+
+      // Creates last. Allocate display_order from the post-delete max so
+      // the batch lands contiguously at the bottom of the backlog.
+      const creates = dto.tasks.filter((r) => r.action === 'create');
+      if (creates.length > 0) {
+        const maxOrder = await tx.tasks
+          .createQueryBuilder('t')
+          .select('COALESCE(MAX(t.display_order), 0)', 'max_order')
+          .where('t.project_id = :projectId', { projectId })
+          .andWhere('t.kanban_status = :draft', { draft: TaskKanbanStatus.DRAFT })
+          .andWhere('t.deleted_at IS NULL')
+          .getRawOne<{ max_order: number }>();
+        let nextOrder = Number(maxOrder?.max_order ?? 0);
+        for (const row of creates) {
+          const { codeSeq, code } = await tx.taskCodes.next(projectId, project.code);
+          nextOrder += 1;
+          const created = await tx.tasks.save(
+            tx.tasks.create({
+              projectId,
+              code,
+              codeSeq,
+              title: row.title!,
+              description: row.description ?? null,
+              price: Number(row.price ?? 0),
+              kanbanStatus: TaskKanbanStatus.DRAFT,
+              creationMode: TaskCreationMode.AI_ASSISTED,
+              displayOrder: nextOrder,
+            }),
+          );
+          await this.aiContext.patchTaskInIndex(tx, projectId, created);
+          results.push(
+            plainToInstance(
+              AiSyncTaskResultDto,
+              {
+                client_temp_id: row.clientTempId ?? null,
+                status: 'created' satisfies AiSyncTaskOutcome,
+                task_id: created.id,
+              },
+              { excludeExtraneousValues: true },
+            ),
+          );
+        }
+      }
+
+      const finalStatus = await this.projectStatus.recomputeAutoStatus(tx, projectId);
+      return { results, status: finalStatus };
+    });
+
+    this.logger.log(
+      `aiSyncTasks — complete | projectId: ${projectId}, ` +
+        `applied: ${result.results.length}, status: ${result.status}`,
+    );
+
+    return plainToInstance(
+      AiSyncTasksResponseDto,
+      {
+        results: result.results,
+        project_status: result.status,
+      },
+      { excludeExtraneousValues: true },
+    );
+  }
+
   /** @inheritdoc */
   public async addToBoardValidation(
     projectId: string,
@@ -359,6 +567,23 @@ export class BacklogsService implements IBacklogsService {
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
+
+  private validateAiSyncRowFields(row: AiSyncTaskRowDto): boolean {
+    switch (row.action) {
+      case 'create':
+        // create rows must NOT carry task_id; title is required (price is
+        // optional — defaults to 0, which the price-gate endpoint rejects
+        // before publish so a 0-priced placeholder is fine for now).
+        if (row.taskId !== undefined) return false;
+        if (!row.title || row.title.trim().length < 3) return false;
+        return true;
+      case 'update':
+      case 'delete':
+        return typeof row.taskId === 'string' && row.taskId.length > 0;
+      default:
+        return false;
+    }
+  }
 
   private assertProjectAcceptsAddToBoard(project: Project): void {
     if (!ALLOWED_ADD_TO_BOARD_STATUSES.has(project.status)) {

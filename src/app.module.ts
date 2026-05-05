@@ -10,6 +10,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PlatformGuard } from './common/guards/platform.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { IdempotencyInterceptor } from './common/interceptors/idempotency.interceptor';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
 import { JwtContextMiddleware } from './common/middleware/jwt-context.middleware';
 import { AwsS3Module } from './common/modules/aws-s3';
@@ -112,6 +113,12 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
   ],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
+    // Order matters: IdempotencyInterceptor must run BEFORE TransformResponse
+    // so it captures (and replays) the raw controller payload, not the
+    // already-wrapped StandardizedResponse envelope. Nest applies global
+    // interceptors in registration order on the way in, reverse on the way
+    // out — first listed wraps last.
+    { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
     { provide: APP_INTERCEPTOR, useClass: TransformResponseInterceptor },
     // JwtAuthGuard is global — use @Public() on routes that don't require authentication
     { provide: APP_GUARD, useClass: JwtAuthGuard },

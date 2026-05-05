@@ -1,3 +1,4 @@
+import { IdempotencyKey } from '@common/decorators/idempotency-key.decorator';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PlatformGuard } from '@common/guards/platform.guard';
@@ -43,6 +44,7 @@ export class SettingsController {
   }
 
   @Patch()
+  @IdempotencyKey()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Update project metadata (title, introduction, skills, max_consultants)',

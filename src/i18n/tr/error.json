@@ -106,5 +106,15 @@
   "ai_context": {
     "not_found": "Bu proje için AI bağlamı henüz oluşturulmadı.",
     "derived_html_forbidden": "AI bağlamından türetilen alanlar düz metin olmalıdır — HTML işaretleri kabul edilmez."
+  },
+  "idempotency": {
+    "body_mismatch": "Idempotency-Key farklı bir istek gövdesiyle yeniden kullanıldı."
+  },
+  "ai_sync": {
+    "task_rejected": "Toplu işlemdeki bir veya daha fazla görev, projenin mevcut durumunda uygulanamaz.",
+    "skill_not_found": "Bir veya daha fazla yetenek kimliği bulunamadı."
+  },
+  "project_status": {
+    "price_gate_failed": "Yapılandırıldı durumuna geçilemez: bir veya daha fazla görevin fiyatı = 0."
   }
 }

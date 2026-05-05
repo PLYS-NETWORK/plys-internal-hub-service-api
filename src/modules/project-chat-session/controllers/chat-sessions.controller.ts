@@ -17,6 +17,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { ListMessagesQueryDto, PatchSessionDto, UpdateSessionStatusDto } from '../dto/requests';
 import {
@@ -52,13 +53,18 @@ export class ChatSessionsController {
   }
 
   @Patch()
+  // FE patches once per chat turn — typical AI exchange produces 1–3 messages,
+  // so 30 patches/min per (user, IP) is generous for normal use and shuts
+  // down a runaway in-tab loop or scripted abuse.
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Append messages and/or update the session draft / stage',
     description:
       'Single transaction: locks the session row, allocates `seq` ordinals for ' +
       'every appended message, inserts them, and replaces draft/stage as ' +
-      'provided. Refuses with 413 once `message_count` would exceed 200.',
+      'provided. Refuses with 413 once `message_count` would exceed 200. ' +
+      'Rate limited at 30 req/min per caller.',
   })
   public async patch(
     @Param('sessionId', ParseUUIDPipe) sessionId: string,

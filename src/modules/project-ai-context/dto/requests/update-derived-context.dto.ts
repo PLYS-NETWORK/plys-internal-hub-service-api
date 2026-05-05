@@ -1,4 +1,5 @@
 import { SanitizeText } from '@common/transformers/sanitize-text.transformer';
+import { MaxJsonSize } from '@common/validators/max-json-size.validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import {
@@ -101,10 +102,11 @@ export class UpdateDerivedContextDto implements IUpdateDerivedContextRequest {
   @Expose({ name: 'skill_clusters' })
   @ApiPropertyOptional({
     name: 'skill_clusters',
-    description: 'FE-managed clusters keyed by skill UUID.',
+    description: 'FE-managed clusters keyed by skill UUID. Capped at 16 KB.',
   })
   @IsOptional()
   @IsObject()
+  @MaxJsonSize(16 * 1024)
   public readonly skillClusters?: Record<string, unknown>;
 
   @Expose({ name: 'task_summaries' })

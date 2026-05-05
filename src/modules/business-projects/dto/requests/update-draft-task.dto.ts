@@ -1,8 +1,11 @@
+import { MaxJsonSize } from '@common/validators/max-json-size.validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { IsNumberString, IsObject, IsOptional, IsString, Length } from 'class-validator';
 
 import { IUpdateDraftTaskRequest } from './interfaces/update-draft-task.request.interface';
+
+const DESCRIPTION_MAX_BYTES = 50 * 1024;
 
 export class UpdateDraftTaskDto implements IUpdateDraftTaskRequest {
   @Expose({ name: 'title' })
@@ -18,9 +21,11 @@ export class UpdateDraftTaskDto implements IUpdateDraftTaskRequest {
     type: 'object',
     additionalProperties: true,
     nullable: true,
+    description: 'Tiptap doc, opaque to the BE. Capped at 50 KB.',
   })
   @IsOptional()
   @IsObject()
+  @MaxJsonSize(DESCRIPTION_MAX_BYTES)
   public readonly description?: Record<string, unknown> | null;
 
   @Expose({ name: 'price' })

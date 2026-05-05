@@ -16,6 +16,7 @@ import { plainToInstance } from 'class-transformer';
 import { ILike } from 'typeorm';
 
 import { CreateProjectDto, ListProjectsDto } from '../../dto/requests';
+import { TransitionProjectStatusDto } from '../../dto/requests/transition-project-status.dto';
 import { ProjectListItemResponseDto, ProjectSummaryResponseDto } from '../../dto/responses';
 import { IBusinessProjectsService } from '../../interfaces/projects.service.interface';
 import { BusinessAccessService } from '../business-access.service';
@@ -145,6 +146,63 @@ export class BusinessProjectsService implements IBusinessProjectsService {
     // soft-deleted projects out via `deleted_at IS NULL`.
     await this.uow.projects.softDelete({ id: project.id });
     this.logger.log(`deleteProject — complete | projectId: ${project.id}`);
+  }
+
+  /** @inheritdoc */
+  public async transitionStatus(
+    projectId: string,
+    dto: TransitionProjectStatusDto,
+  ): Promise<ProjectSummaryResponseDto> {
+    this.logger.log(`transitionStatus — start | projectId: ${projectId}, target: ${dto.status}`);
+    const { project } = await this.access.resolveOwnedProject(projectId);
+
+    // Guard: only `draft → configured` accepted via this endpoint. Anything
+    // else (publish, start, cancel) is a different lifecycle flow.
+    if (project.status !== ProjectStatus.DRAFT) {
+      this.logger.warn(
+        `transitionStatus — refused | projectId: ${projectId}, current: ${project.status}, target: ${dto.status}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.project.invalid_status_transition',
+        errorCode: ERROR_CODES.PROJECT_INVALID_STATUS_TRANSITION,
+        status: HttpStatus.CONFLICT,
+      });
+    }
+
+    // Price gate. Drafts with `price = 0` are placeholders the AI / user
+    // hasn't sized yet; publishing them would charge nothing and break the
+    // payout invariant. Surface the offending IDs so the FE can scroll to
+    // them in the backlog UI.
+    const offending = await this.uow.tasks
+      .createQueryBuilder('t')
+      .select('t.id', 'id')
+      .where('t.project_id = :projectId', { projectId })
+      .andWhere('t.kanban_status = :draft', { draft: TaskKanbanStatus.DRAFT })
+      .andWhere('t.price = 0')
+      .andWhere('t.deleted_at IS NULL')
+      .getRawMany<{ id: string }>();
+
+    if (offending.length > 0) {
+      const offendingIds = offending.map((row) => row.id);
+      this.logger.warn(
+        `transitionStatus — price gate failed | projectId: ${projectId}, count: ${offendingIds.length}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.project_status.price_gate_failed',
+        errorCode: ERROR_CODES.PROJECT_PRICE_GATE_FAILED,
+        status: HttpStatus.CONFLICT,
+        args: { count: offendingIds.length },
+        details: { offending_task_ids: offendingIds },
+      });
+    }
+
+    project.status = ProjectStatus.CONFIGURED;
+    const saved = await this.uow.projects.save(project);
+
+    this.logger.log(
+      `transitionStatus — complete | projectId: ${projectId}, status: ${saved.status}`,
+    );
+    return this.toSummaryResponseDto(saved);
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────

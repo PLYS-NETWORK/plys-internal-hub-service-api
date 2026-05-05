@@ -5,6 +5,7 @@ import { ProjectAiContextModule } from '@modules/project-ai-context/project-ai-c
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
 import { forwardRef, Module } from '@nestjs/common';
 
+import { AiSyncController } from './controllers/ai-sync.controller';
 import { BacklogsController } from './controllers/backlogs.controller';
 import { BoardController } from './controllers/board.controller';
 import { BusinessProjectOverviewController } from './controllers/overview.controller';
@@ -38,6 +39,7 @@ import { SettingsService } from './services/settings.service';
     BacklogsController,
     SettingsController,
     BoardController,
+    AiSyncController,
   ],
   providers: [
     BusinessAccessService,

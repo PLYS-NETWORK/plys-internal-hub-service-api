@@ -1,3 +1,4 @@
+import { IdempotencyKey } from '@common/decorators/idempotency-key.decorator';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
@@ -22,6 +23,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { CreateProjectDto, ListProjectsDto } from '../dto/requests';
+import { TransitionProjectStatusDto } from '../dto/requests/transition-project-status.dto';
 import {
   ProjectListItemResponseDto,
   ProjectSummaryResponseDto,
@@ -114,5 +116,24 @@ export class BusinessProjectsController {
   })
   public async deleteProject(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.projectsService.deleteProject(id);
+  }
+
+  @Patch(':id/status')
+  @IdempotencyKey()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Explicit `draft → configured` transition with a price-gate check',
+    description:
+      'Used by the AI implementation runner to "stamp" a planning session as ' +
+      'configured before the user proceeds to publish. Rejects with 409 + ' +
+      '`details: { offending_task_ids }` if any draft task has `price = 0`. ' +
+      'Idempotent — pass `Idempotency-Key` to make retries safe.',
+  })
+  public async transitionStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: TransitionProjectStatusDto,
+  ): Promise<ITranslatedPayload<ProjectSummaryResponseDto>> {
+    const data = await this.projectsService.transitionStatus(id, dto);
+    return { messageKey: 'success.ok', data };
   }
 }

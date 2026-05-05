@@ -4,6 +4,7 @@ import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ProjectRequiredSkill } from '@database/entities';
 import { ProjectStatus } from '@database/enums';
+import { ProjectAiContextService } from '@modules/project-ai-context/project-ai-context.service';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
@@ -12,6 +13,8 @@ import { I18nService } from 'nestjs-i18n';
 import { In } from 'typeorm';
 
 import { UpdateProjectSettingsDto } from '../dto/requests';
+import { AiSyncSettingsDto } from '../dto/requests/ai-sync-settings.dto';
+import { AiSyncSkillsDto } from '../dto/requests/ai-sync-skills.dto';
 import { ProjectSettingsResponseDto, ProjectSummaryResponseDto } from '../dto/responses';
 import { ISettingsService } from '../interfaces/settings.service.interface';
 import { BusinessAccessService } from './business-access.service';
@@ -29,6 +32,7 @@ export class SettingsService implements ISettingsService {
     private readonly access: BusinessAccessService,
     private readonly i18n: I18nService,
     private readonly projectStatus: ProjectStatusService,
+    private readonly aiContext: ProjectAiContextService,
   ) {
     this.logger = new AppLogger(SettingsService.name, requestContext);
   }
@@ -104,6 +108,101 @@ export class SettingsService implements ISettingsService {
         published_at: updated.publishedAt,
         created_at: updated.createdAt,
         updated_at: updated.updatedAt,
+      },
+      { excludeExtraneousValues: true },
+    );
+  }
+
+  /**
+   * AI-sync variant of `updateProject` scoped to title / introduction /
+   * max_consultants. Single transaction; recomputes auto-status afterwards.
+   * Idempotent at the controller level via `@IdempotencyKey()`.
+   */
+  public async aiSyncSettings(
+    projectId: string,
+    dto: AiSyncSettingsDto,
+  ): Promise<ProjectSummaryResponseDto> {
+    this.logger.log(
+      `aiSyncSettings — start | projectId: ${projectId}, ` +
+        `title: ${dto.title !== undefined ? 'set' : 'unchanged'}, ` +
+        `introduction: ${dto.introduction !== undefined ? 'set' : 'unchanged'}, ` +
+        `max_consultants: ${dto.maxConsultants !== undefined ? dto.maxConsultants : 'unchanged'}`,
+    );
+    const { project } = await this.access.resolveOwnedProject(projectId);
+    this.assertProjectEditable(project.status, projectId);
+
+    const updated = await this.uow.withTransaction(async (tx) => {
+      if (dto.title !== undefined) project.title = dto.title;
+      if (dto.introduction !== undefined) project.introduction = dto.introduction ?? null;
+      if (dto.maxConsultants !== undefined) project.requiredConsultants = dto.maxConsultants;
+      const saved = await tx.projects.save(project);
+      saved.status = await this.projectStatus.recomputeAutoStatus(tx, projectId);
+      return saved;
+    });
+
+    this.logger.log(
+      `aiSyncSettings — complete | projectId: ${projectId}, status: ${updated.status}`,
+    );
+    return this.toSummaryDto(updated);
+  }
+
+  /**
+   * AI-sync replace-set skills. Validates every skill UUID exists, swaps the
+   * project_required_skill rows in one transaction, recomputes auto-status,
+   * and flips `needs_reindex=true` so the FE knows the skill clusters need
+   * to be re-derived.
+   */
+  public async aiSyncSkills(
+    projectId: string,
+    dto: AiSyncSkillsDto,
+  ): Promise<ProjectSummaryResponseDto> {
+    this.logger.log(
+      `aiSyncSkills — start | projectId: ${projectId}, count: ${dto.skillIds.length}`,
+    );
+    const { project } = await this.access.resolveOwnedProject(projectId);
+    this.assertProjectEditable(project.status, projectId);
+
+    const updated = await this.uow.withTransaction(async (tx) => {
+      await this.replaceRequiredSkills(tx, projectId, dto.skillIds);
+      // Skill set change → existing FE-derived skill_clusters are stale.
+      // The lazy ensure inside the service handles missing rows.
+      await this.aiContext.ensureExists(tx, projectId);
+      const ctx = await tx.projectAiContexts.findOne({ where: { projectId } });
+      if (ctx) {
+        ctx.needsReindex = true;
+        await tx.projectAiContexts.save(ctx);
+      }
+      project.status = await this.projectStatus.recomputeAutoStatus(tx, projectId);
+      return tx.projects.save(project);
+    });
+
+    this.logger.log(`aiSyncSkills — complete | projectId: ${projectId}, status: ${updated.status}`);
+    return this.toSummaryDto(updated);
+  }
+
+  private toSummaryDto(project: {
+    id: string;
+    code: string;
+    title: string;
+    introduction: Record<string, unknown> | null;
+    status: ProjectStatus;
+    requiredConsultants: number;
+    publishedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }): ProjectSummaryResponseDto {
+    return plainToInstance(
+      ProjectSummaryResponseDto,
+      {
+        id: project.id,
+        code: project.code,
+        title: project.title,
+        introduction: project.introduction,
+        status: project.status,
+        required_consultants: project.requiredConsultants,
+        published_at: project.publishedAt,
+        created_at: project.createdAt,
+        updated_at: project.updatedAt,
       },
       { excludeExtraneousValues: true },
     );

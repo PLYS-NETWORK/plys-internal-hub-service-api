@@ -110,5 +110,15 @@
   "ai_context": {
     "not_found": "AI context not initialised for this project.",
     "derived_html_forbidden": "Derived AI context fields must be plain text — HTML markers are not accepted."
+  },
+  "idempotency": {
+    "body_mismatch": "Idempotency-Key reused with a different request body."
+  },
+  "ai_sync": {
+    "task_rejected": "One or more tasks in the batch could not be applied for the project's current status.",
+    "skill_not_found": "One or more skill IDs do not exist."
+  },
+  "project_status": {
+    "price_gate_failed": "Cannot transition to configured: one or more tasks have price = 0."
   }
 }

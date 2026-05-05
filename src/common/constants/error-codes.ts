@@ -123,6 +123,12 @@ export const ERROR_CODES = {
   // ─── AI context (project_ai_context) ──────────────────────────────────────
   AI_CONTEXT_NOT_FOUND: 'AI_CONTEXT_NOT_FOUND',
   AI_CONTEXT_DERIVED_HTML_FORBIDDEN: 'AI_CONTEXT_DERIVED_HTML_FORBIDDEN',
+
+  // ─── Idempotency / orchestration ──────────────────────────────────────────
+  IDEMPOTENCY_KEY_BODY_MISMATCH: 'IDEMPOTENCY_KEY_BODY_MISMATCH',
+  AI_SYNC_TASK_REJECTED: 'AI_SYNC_TASK_REJECTED',
+  AI_SYNC_SKILL_NOT_FOUND: 'AI_SYNC_SKILL_NOT_FOUND',
+  PROJECT_PRICE_GATE_FAILED: 'PROJECT_PRICE_GATE_FAILED',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
