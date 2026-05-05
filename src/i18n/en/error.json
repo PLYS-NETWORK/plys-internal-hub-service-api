@@ -94,5 +94,11 @@
   "notification": {
     "not_found": "Notification not found.",
     "forbidden": "You do not have access to this notification."
+  },
+  "ai_provider_key": {
+    "not_configured": "No active AI provider key is configured. Please contact an administrator.",
+    "not_found": "AI provider key not found.",
+    "active_requires_replacement": "Cannot revoke the only active key for this provider. Activate a replacement first.",
+    "cipher_failed": "Failed to encrypt or decrypt an AI provider key."
   }
 }

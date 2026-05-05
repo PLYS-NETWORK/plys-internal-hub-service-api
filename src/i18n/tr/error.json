@@ -90,5 +90,11 @@
   "notification": {
     "not_found": "Bildirim bulunamadı.",
     "forbidden": "Bu bildirime erişim yetkiniz yok."
+  },
+  "ai_provider_key": {
+    "not_configured": "Aktif bir AI sağlayıcı anahtarı yapılandırılmamış. Lütfen bir yönetici ile iletişime geçin.",
+    "not_found": "AI sağlayıcı anahtarı bulunamadı.",
+    "active_requires_replacement": "Bu sağlayıcı için aktif olan tek anahtar iptal edilemez. Önce bir yedek aktif edin.",
+    "cipher_failed": "AI sağlayıcı anahtarı şifrelenemedi veya çözülemedi."
   }
 }

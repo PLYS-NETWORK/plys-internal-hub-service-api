@@ -26,6 +26,7 @@ import configuration from './config/configuration';
 import { resolveEnvFilePath } from './config/env-file.config';
 import { AuditSubscriber } from './database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from './database/typeorm.config';
+import { AiProviderKeyModule } from './modules/ai-provider-key/ai-provider-key.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { BusinessProjectsModule } from './modules/business-projects/business-projects.module';
@@ -65,6 +66,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     UnitOfWorkModule,
     AwsS3Module,
     FileStorageModule,
+    AiProviderKeyModule,
     AuthModule,
     BillingModule,
     BusinessProjectsModule,

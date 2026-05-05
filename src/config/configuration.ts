@@ -1,5 +1,24 @@
 import { registerAs } from '@nestjs/config';
 
+// Walks process.env for `<prefix>_v<N>` entries and builds a `{ N → value }` map.
+// Used by both AES-256-GCM ciphers in the AI provider key vault: multiple
+// versions can co-exist during rotation, only the `currentVersion` is used to
+// encrypt new payloads, and any present version can decrypt rows / envelopes
+// that reference it.
+function collectVersionedKeys(prefix: string): Record<number, string> {
+  const out: Record<number, string> = {};
+  const pattern = new RegExp(`^${prefix}_v(\\d+)$`);
+  for (const name of Object.keys(process.env)) {
+    const match = pattern.exec(name);
+    if (!match) continue;
+    const value = process.env[name];
+    if (typeof value === 'string' && value.length > 0) {
+      out[parseInt(match[1], 10)] = value;
+    }
+  }
+  return out;
+}
+
 export default registerAs('app', () => ({
   port: parseInt(process.env.PORT ?? '3000', 10),
   nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -108,6 +127,23 @@ export default registerAs('app', () => ({
     local: {
       path: process.env.FILES_LOCAL_PATH ?? './uploads',
       publicBaseUrl: process.env.FILES_LOCAL_PUBLIC_BASE_URL ?? 'http://localhost:3000/uploads',
+    },
+  },
+  aiKeys: {
+    // AES-256-GCM master keys for the ai_provider_api_key.key_ciphertext column.
+    // Provide as `AI_KEYS_MASTER_KEY_v1`, `AI_KEYS_MASTER_KEY_v2`, … each a
+    // 32-byte value encoded as 64 hex chars. `AI_KEYS_CURRENT_MASTER_VERSION`
+    // selects the version used for new encryptions; existing rows decrypt with
+    // whichever version they reference.
+    master: {
+      currentVersion: parseInt(process.env.AI_KEYS_CURRENT_MASTER_VERSION ?? '0', 10),
+      versions: collectVersionedKeys('AI_KEYS_MASTER_KEY'),
+    },
+    // AES-256-GCM secrets shared with the FE BFF, used to wrap the response
+    // body of GET /ai-provider-keys/active. Same versioning scheme.
+    bff: {
+      currentVersion: parseInt(process.env.FE_BFF_CURRENT_VERSION ?? '0', 10),
+      versions: collectVersionedKeys('FE_BFF_SECRET'),
     },
   },
 }));

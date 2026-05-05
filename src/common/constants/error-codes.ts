@@ -107,6 +107,12 @@ export const ERROR_CODES = {
   // ─── Notifications ────────────────────────────────────────────────────────
   NOTIFICATION_NOT_FOUND: 'NOTIFICATION_NOT_FOUND',
   NOTIFICATION_FORBIDDEN: 'NOTIFICATION_FORBIDDEN',
+
+  // ─── AI provider key vault ────────────────────────────────────────────────
+  AI_PROVIDER_KEY_NOT_CONFIGURED: 'AI_PROVIDER_KEY_NOT_CONFIGURED',
+  AI_PROVIDER_KEY_NOT_FOUND: 'AI_PROVIDER_KEY_NOT_FOUND',
+  AI_PROVIDER_KEY_ACTIVE_REQUIRES_REPLACEMENT: 'AI_PROVIDER_KEY_ACTIVE_REQUIRES_REPLACEMENT',
+  AI_PROVIDER_KEY_CIPHER_FAILED: 'AI_PROVIDER_KEY_CIPHER_FAILED',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
