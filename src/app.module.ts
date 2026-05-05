@@ -1,3 +1,4 @@
+import { BullModule } from '@nestjs/bull';
 import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -34,6 +35,7 @@ import { BusinessProjectsModule } from './modules/business-projects/business-pro
 import { ConsultantProjectsModule } from './modules/consultant-projects/consultant-projects.module';
 import { FilesModule } from './modules/files';
 import { HealthModule } from './modules/health/health.module';
+import { HousekeepingModule } from './modules/housekeeping/housekeeping.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PaymentsModule } from './modules/payments';
 import { ProfilesModule } from './modules/profiles/profiles.module';
@@ -61,6 +63,26 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     }),
     I18nModule,
     ScheduleModule.forRoot(),
+    // Bull (housekeeping queue) shares Redis with the rest of the app via the
+    // existing connection settings; Bull manages its own keyspace under the
+    // `bull:<queue>:` prefix so it doesn't collide with `RedisService` keys.
+    BullModule.forRootAsync({
+      imports: [EnvironmentsModule],
+      inject: [EnvironmentsService],
+      useFactory: (env: EnvironmentsService) => ({
+        redis: {
+          host: env.redisHost,
+          port: env.redisPort,
+          password: env.redisPassword,
+          db: env.redisDb,
+          tls: env.redisTlsEnabled ? {} : undefined,
+          // Bull's BLPOP-based wait loop needs `maxRetriesPerRequest: null`
+          // when the connection should hold a long-lived blocking call.
+          maxRetriesPerRequest: null,
+          enableReadyCheck: false,
+        },
+      }),
+    }),
     RequestContextModule,
     EmailModule,
     CopyleaksModule,
@@ -77,6 +99,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     ConsultantProjectsModule,
     FilesModule,
     HealthModule,
+    HousekeepingModule,
     NotificationsModule,
     PaymentsModule,
     ProfilesModule,
