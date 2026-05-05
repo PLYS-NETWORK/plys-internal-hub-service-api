@@ -5,6 +5,7 @@ import { RequestContextService } from '@common/modules/request-context/request-c
 import { ChatMessage, ProjectChatSession } from '@database/entities';
 import { ChatSessionMode, ChatSessionStatus, ProjectStatus } from '@database/enums';
 import { BusinessAccessService } from '@modules/business-projects/services/business-access.service';
+import { ProjectAiContextService } from '@modules/project-ai-context/project-ai-context.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -64,6 +65,7 @@ export class ProjectChatSessionService implements IProjectChatSessionService {
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly access: BusinessAccessService,
+    private readonly aiContext: ProjectAiContextService,
   ) {
     this.logger = new AppLogger(ProjectChatSessionService.name, requestContext);
   }
@@ -102,17 +104,23 @@ export class ProjectChatSessionService implements IProjectChatSessionService {
 
     this.assertModeAllowed(project.status, dto.mode);
 
-    const saved = await this.uow.projectChatSessions.save(
-      this.uow.projectChatSessions.create({
-        projectId,
-        userId,
-        mode: dto.mode,
-        title: dto.title,
-        status: ChatSessionStatus.ACTIVE,
-        draft: {},
-        messageCount: 0,
-      }),
-    );
+    // Lazy-create the project_ai_context row so the next bootstrap returns
+    // a populated `context` block instead of `null`. Done in the same tx as
+    // the session insert so a session never exists without its context.
+    const saved = await this.uow.withTransaction(async (tx) => {
+      await this.aiContext.ensureExists(tx, projectId);
+      return tx.projectChatSessions.save(
+        tx.projectChatSessions.create({
+          projectId,
+          userId,
+          mode: dto.mode,
+          title: dto.title,
+          status: ChatSessionStatus.ACTIVE,
+          draft: {},
+          messageCount: 0,
+        }),
+      );
+    });
 
     this.logger.log(
       `[${this.rid}] createSession — complete | sessionId: ${saved.id}, mode: ${saved.mode}`,

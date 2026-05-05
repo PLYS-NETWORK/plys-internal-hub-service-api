@@ -37,6 +37,7 @@ import { HealthModule } from './modules/health/health.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PaymentsModule } from './modules/payments';
 import { ProfilesModule } from './modules/profiles/profiles.module';
+import { ProjectAiContextModule } from './modules/project-ai-context/project-ai-context.module';
 import { ProjectChatSessionModule } from './modules/project-chat-session/project-chat-session.module';
 import { SkillsModule } from './modules/skills/skills.module';
 import { StatisticsModule } from './modules/statistics/statistics.module';
@@ -79,6 +80,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     NotificationsModule,
     PaymentsModule,
     ProfilesModule,
+    ProjectAiContextModule,
     ProjectChatSessionModule,
     SkillsModule,
     StatisticsModule,

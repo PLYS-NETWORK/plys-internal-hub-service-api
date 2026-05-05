@@ -102,5 +102,9 @@
     "not_active": "Aktif olmayan bir sohbet oturumu güncellenemez.",
     "mode_not_allowed": "Seçilen sohbet modu projenin mevcut durumunda kullanılamaz.",
     "message_limit_exceeded": "Sohbet oturumu mesaj sınırına ulaştı; devam etmek için yeni bir oturum başlatın."
+  },
+  "ai_context": {
+    "not_found": "Bu proje için AI bağlamı henüz oluşturulmadı.",
+    "derived_html_forbidden": "AI bağlamından türetilen alanlar düz metin olmalıdır — HTML işaretleri kabul edilmez."
   }
 }

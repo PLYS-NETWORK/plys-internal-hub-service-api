@@ -106,5 +106,9 @@
     "not_active": "Cannot modify a chat session that is not active.",
     "mode_not_allowed": "Selected chat mode is not allowed for the project's current status.",
     "message_limit_exceeded": "Chat session has reached its message cap; start a new session to continue."
+  },
+  "ai_context": {
+    "not_found": "AI context not initialised for this project.",
+    "derived_html_forbidden": "Derived AI context fields must be plain text — HTML markers are not accepted."
   }
 }

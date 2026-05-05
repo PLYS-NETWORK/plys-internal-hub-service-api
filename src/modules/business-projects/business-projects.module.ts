@@ -1,8 +1,9 @@
 import { EmailModule } from '@common/modules/email';
 import { EnvironmentsModule } from '@common/modules/environments';
 import { NotificationsModule } from '@modules/notifications/notifications.module';
+import { ProjectAiContextModule } from '@modules/project-ai-context/project-ai-context.module';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 
 import { BacklogsController } from './controllers/backlogs.controller';
 import { BoardController } from './controllers/board.controller';
@@ -22,7 +23,15 @@ import { BusinessProjectsService } from './services/projects/projects.service';
 import { SettingsService } from './services/settings.service';
 
 @Module({
-  imports: [UnitOfWorkModule, EmailModule, EnvironmentsModule, NotificationsModule],
+  imports: [
+    UnitOfWorkModule,
+    EmailModule,
+    EnvironmentsModule,
+    NotificationsModule,
+    // forwardRef breaks the cycle: ProjectAiContextModule imports
+    // BusinessProjectsModule for BusinessAccessService.
+    forwardRef(() => ProjectAiContextModule),
+  ],
   controllers: [
     BusinessProjectsController,
     BusinessProjectOverviewController,

@@ -14,6 +14,7 @@ import {
   TaskKanbanStatus,
   TransactionStatus,
 } from '@database/enums';
+import { ProjectAiContextService } from '@modules/project-ai-context/project-ai-context.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -58,6 +59,7 @@ export class BacklogsService implements IBacklogsService {
     private readonly requestContext: RequestContextService,
     private readonly access: BusinessAccessService,
     private readonly projectStatus: ProjectStatusService,
+    private readonly aiContext: ProjectAiContextService,
   ) {
     this.logger = new AppLogger(BacklogsService.name, requestContext);
   }
@@ -97,6 +99,9 @@ export class BacklogsService implements IBacklogsService {
       });
       const saved = await tx.tasks.save(task);
       await this.projectStatus.recomputeAutoStatus(tx, projectId);
+      // Light AI-context update inside the same tx — flips `needs_reindex`
+      // when the task is new so the FE re-derives `domain` / summaries.
+      await this.aiContext.patchTaskInIndex(tx, projectId, saved);
       return saved.id;
     });
 
@@ -136,7 +141,14 @@ export class BacklogsService implements IBacklogsService {
     if (dto.description !== undefined) task.description = dto.description ?? null;
     if (dto.price !== undefined) task.price = Number(dto.price);
 
-    const saved = await this.uow.tasks.save(task);
+    // Wrap the save + AI-context patch in a single tx so the index never
+    // points at stale title/price for an existing task. `patchTaskInIndex`
+    // preserves the FE-supplied `summary` on update.
+    const saved = await this.uow.withTransaction(async (tx) => {
+      const persisted = await tx.tasks.save(task);
+      await this.aiContext.patchTaskInIndex(tx, projectId, persisted);
+      return persisted;
+    });
 
     this.logger.log(`updateDraftTask — complete | taskId: ${saved.id}`);
     return this.toDraftTaskResponse(saved);
@@ -186,6 +198,9 @@ export class BacklogsService implements IBacklogsService {
       this.assertAllTasksAreDraft(dto.taskIds, tasks);
       await tx.tasks.delete({ id: In(dto.taskIds) });
       await this.projectStatus.recomputeAutoStatus(tx, projectId);
+      // Drop the deleted tasks from `task_index` in the same tx; flips
+      // `needs_reindex` so the FE re-derives skill clusters / summaries.
+      await this.aiContext.removeManyFromIndex(tx, projectId, dto.taskIds);
     });
 
     this.logger.log(
