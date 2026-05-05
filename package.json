@@ -6,6 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "prebuild": "rm -rf dist",
     "build": "nest build",
     "start": "nest start",
     "start:local": "NODE_ENV=local nest start --watch",
