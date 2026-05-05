@@ -21,20 +21,22 @@
 
 - **Endpoint:** `POST /projects/business/:id/backlogs`
 - **Method:** `POST`
+- **Idempotency:** opt-in via `Idempotency-Key` request header (see [shared idempotency note](../shared/idempotency.md)).
 - **Path params:** `id` (UUID v4)
 - **Request body:** [`ICreateDraftTaskRequest`](../../../src/modules/business-projects/dto/requests/interfaces/create-draft-task.request.interface.ts)
   | Field | Type | Required | Notes |
   |-------|------|----------|-------|
-  | `title` | `string` | yes | |
-  | `description` | `Record<string, unknown> \| null` | no | rich-text JSON |
+  | `title` | `string` | yes | length 3–300 |
+  | `description` | `Record<string, unknown> \| null` | no | TipTap doc. JSON-encoded payload capped at 50 KB. |
   | `price` | `string` | yes | decimal-safe string |
-  | `difficulty_level` | `TaskDifficulty` | no | enum |
-- **Response 201:** [`IDraftTaskResponse`](../../../src/modules/business-projects/dto/responses/interfaces/draft-task.response.interface.ts) — `{ id, title, description, price, platform_fee_amount, consultant_payout, difficulty_level, created_at, updated_at }`
-- **Side effect — auto status transition:** after the task is inserted, [ProjectStatusService.recomputeAutoStatus](../../../src/modules/business-projects/services/projects/project-status.service.ts) runs in the same transaction and re-evaluates the project's status against the completeness signals (`drafts > 0`, `required_skills > 0`, `required_consultants > 0`). Forward chain in one pass:
-  - From `draft` with no skills / no consultants → `setting_up`.
-  - From `draft` (or `setting_up`) when skills + `required_consultants > 0` are already set → `configured`.
-  - No-op when the project is past the setup phase (`published_at IS NOT NULL`, or status is one of `published / in_progress / done / cancelled`).
-- **Errors:** cross-cutting only.
+- **Response 201:** [`IDraftTaskResponse`](../../../src/modules/business-projects/dto/responses/interfaces/draft-task.response.interface.ts) — `{ id, code, title, description, price, platform_fee_amount, consultant_payout, creation_mode, created_at, updated_at }`. `creation_mode` is always `'manual'` for tasks created via this endpoint (the AI-sync batch endpoint stamps `'ai_assisted'`).
+- **Side effects:**
+  - **Auto status transition:** [ProjectStatusService.recomputeAutoStatus](../../../src/modules/business-projects/services/projects/project-status.service.ts) runs in the same transaction. Rule (single pass): `drafts === 0 ∨ consultants === 0 ∨ skills === 0 → draft`; else → `configured`. The intermediate `setting_up` state has been removed — projects flip directly between `draft` and `configured` based on completeness.
+  - **AI context patch:** the new task is inserted into `project_ai_context.task_index` synchronously and `needs_reindex` flips to `true` so the FE re-derives summaries.
+- **Errors:**
+  | HTTP | error_code | When |
+  |------|------------|------|
+  | 409 | `IDEMPOTENCY_KEY_BODY_MISMATCH` | `Idempotency-Key` reused with a different body. |
 
 ### 2. List draft tasks
 
@@ -47,45 +49,48 @@
   | `page` | `number` | no | default 1 |
   | `take` | `number` | no | default 20, max 100 |
   | `keywords` | `string` | no | length 2–200, trimmed; matches title |
-- **Response 200:** `PageDto<`[`IDraftTaskResponse`](../../../src/modules/business-projects/dto/responses/interfaces/draft-task.response.interface.ts)`>` (items + standard pagination meta).
+- **Response 200:** `PageDto<`[`IDraftTaskResponse`](../../../src/modules/business-projects/dto/responses/interfaces/draft-task.response.interface.ts)`>` (items + standard pagination meta). Each item carries `creation_mode` (`'manual'` or `'ai_assisted'`) so the FE can highlight AI-authored entries.
 - **Errors:** cross-cutting only.
 
 ### 3. Update a draft task
 
 - **Endpoint:** `PATCH /projects/business/:id/backlogs/:taskId`
 - **Method:** `PATCH`
+- **Idempotency:** opt-in via `Idempotency-Key` request header.
 - **Path params:** `id` (UUID v4), `taskId` (UUID v4)
 - **Request body:** [`IUpdateDraftTaskRequest`](../../../src/modules/business-projects/dto/requests/interfaces/update-draft-task.request.interface.ts) — all fields optional
   | Field | Type | Required | Notes |
   |-------|------|----------|-------|
   | `title` | `string` | no | length 3–300 |
-  | `description` | `Record<string, unknown> \| null` | no | rich-text JSON; `null` clears it |
+  | `description` | `Record<string, unknown> \| null` | no | TipTap doc. JSON-encoded payload capped at 50 KB; `null` clears it. |
   | `price` | `string` | no | decimal-safe string |
-  | `difficulty_level` | `TaskDifficulty` | no | enum |
-- **Response 200:** [`IDraftTaskResponse`](../../../src/modules/business-projects/dto/responses/interfaces/draft-task.response.interface.ts)
+- **Side effect — AI context patch:** the updated task is patched into `project_ai_context.task_index` in the same transaction. The existing FE-supplied `summary` is preserved; only structural fields (title, price, kanban_status) are refreshed.
+- **Response 200:** [`IDraftTaskResponse`](../../../src/modules/business-projects/dto/responses/interfaces/draft-task.response.interface.ts) — includes `creation_mode`.
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|
   | 404 | `TASK_NOT_FOUND` | Task does not exist, belongs to a different project, or is not DRAFT. |
+  | 409 | `IDEMPOTENCY_KEY_BODY_MISMATCH` | `Idempotency-Key` reused with a different body. |
 
 ### 5. Bulk-delete drafts (atomic)
 
 - **Endpoint:** `DELETE /projects/business/:id/backlogs`
 - **Method:** `DELETE`
+- **Idempotency:** opt-in via `Idempotency-Key` request header.
 - **Path params:** `id` (UUID v4)
 - **Request body:** [`TaskIdsDto`](../../../src/modules/business-projects/dto/requests/task-ids.dto.ts)
   | Field | Type | Required | Notes |
   |-------|------|----------|-------|
   | `task_ids` | `string[]` (UUID v4) | yes | size 1–50 |
 - **Response 204:** empty body.
-- **Side effect — auto status transition:** after the delete, [ProjectStatusService.recomputeAutoStatus](../../../src/modules/business-projects/services/projects/project-status.service.ts) runs in the same transaction and demotes the project if completeness drops:
-  - Removing the last draft on a setup-phase project → `draft`.
-  - From `configured` if the deletes leave drafts but skills / consultants stay set → status stays `configured`; only when drafts hit zero does it drop further.
-  - No-op when the project has been published (`published_at IS NOT NULL`).
+- **Side effects:**
+  - **Auto status transition:** [ProjectStatusService.recomputeAutoStatus](../../../src/modules/business-projects/services/projects/project-status.service.ts) runs in the same transaction. Removing the last draft demotes the project to `draft`; otherwise stays `configured`. No-op when the project has been published.
+  - **AI context patch:** the deleted tasks are removed from `task_index` and `needs_reindex` flips to `true` so the FE re-derives skill clusters / summaries.
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|
   | 422 | `TASK_INVALID_STATUS_TRANSITION` | Any supplied task is not DRAFT, or count mismatch (some IDs not in this project). Thrown by [BacklogsService](../../../src/modules/business-projects/services/backlogs.service.ts). |
+  | 409 | `IDEMPOTENCY_KEY_BODY_MISMATCH` | `Idempotency-Key` reused with a different body. |
 
 ### 6. Validate move drafts → board (no charge, no state change)
 

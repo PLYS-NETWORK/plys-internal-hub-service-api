@@ -29,25 +29,28 @@
 
 - **Endpoint:** `PATCH /projects/business/:id/settings`
 - **Method:** `PATCH`
+- **Idempotency:** opt-in via `Idempotency-Key` request header (see [shared idempotency note](../shared/idempotency.md)).
 - **Path params:** `id` (UUID v4)
 - **Request body:** [`IUpdateProjectSettingsRequest`](../../../src/modules/business-projects/dto/requests/interfaces/update-project-settings.request.interface.ts)
   | Field | Type | Required | Notes |
   |-------|------|----------|-------|
   | `title` | `string` | no | length 3–300 |
-  | `introduction` | `Record<string, unknown> \| null` | no | rich-text JSON |
+  | `introduction` | `Record<string, unknown> \| null` | no | TipTap doc. JSON-encoded payload capped at 50 KB. |
   | `required_skills` | `string[]` | no | full replacement of skill IDs (array, max 50) |
   | `max_consultants` | `number` | no | integer, **min `0`**, max `10`. `0` is a legitimate value for a freshly-created project that hasn't yet decided how many consultants to hire. |
 - **Response 200:** [`IProjectSummaryResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-summary.response.interface.ts) — the returned `status` reflects the post-recompute value (see side effect below).
 - **Side effect — auto status transition (bidirectional):** after the writes (title / introduction / `required_consultants` / skills) commit, [ProjectStatusService.recomputeAutoStatus](../../../src/modules/business-projects/services/projects/project-status.service.ts) re-derives the status from the three completeness signals (`drafts > 0`, `required_skills > 0`, `required_consultants > 0`):
   - All three set → `configured`.
-  - At least one draft task but skills or consultants still missing → `setting_up`.
-  - No draft tasks → `draft`.
+  - Any signal at zero → `draft`. (The intermediate `setting_up` state has been removed.)
   - No-op when the project has been published (`published_at IS NOT NULL`) or is in `done / cancelled`. The DTO response carries the new status, so the FE never needs a separate refetch.
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|
   | 422 | `PROJECT_CANNOT_BE_EDITED` | Project status is DONE or CANCELLED — thrown by [SettingsService.assertProjectEditable](../../../src/modules/business-projects/services/settings.service.ts). |
   | 422 | `PROJECT_SKILL_NOT_FOUND` | One or more skill IDs in `required_skills` do not exist. |
+  | 409 | `IDEMPOTENCY_KEY_BODY_MISMATCH` | `Idempotency-Key` reused with a different body. |
+
+> **AI-sync alternatives:** the AI implementation runner uses [`POST /ai-sync/settings`](./ai-sync-api-specs.md) and [`POST /ai-sync/skills`](./ai-sync-api-specs.md) instead — same underlying transaction shape, different ergonomics (split per-concern endpoints, mandatory idempotency key, atomic-batch semantics). The per-resource `PATCH /settings` documented here remains the right call for granular UI edits.
 
 ### 3. Create interview question
 
