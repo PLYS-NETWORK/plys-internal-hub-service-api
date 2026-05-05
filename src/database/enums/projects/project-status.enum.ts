@@ -1,6 +1,5 @@
 export enum ProjectStatus {
   DRAFT = 'draft',
-  SETTING_UP = 'setting_up',
   CONFIGURED = 'configured',
   PUBLISHED = 'published',
   IN_PROGRESS = 'in_progress',
@@ -10,7 +9,6 @@ export enum ProjectStatus {
 
 export const PROJECT_STATUSES: readonly ProjectStatus[] = [
   ProjectStatus.DRAFT,
-  ProjectStatus.SETTING_UP,
   ProjectStatus.CONFIGURED,
   ProjectStatus.PUBLISHED,
   ProjectStatus.IN_PROGRESS,

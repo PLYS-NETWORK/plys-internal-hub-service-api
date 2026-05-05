@@ -24,11 +24,7 @@ import { BusinessAccessService } from '../business-access.service';
 // commitments and can be safely soft-deleted. Anything past `CONFIGURED`
 // (i.e. `PUBLISHED`, `IN_PROGRESS`, `DONE`, `CANCELLED`) must be cancelled
 // through the dedicated lifecycle flow instead.
-const DELETABLE_STATUSES = new Set<ProjectStatus>([
-  ProjectStatus.DRAFT,
-  ProjectStatus.SETTING_UP,
-  ProjectStatus.CONFIGURED,
-]);
+const DELETABLE_STATUSES = new Set<ProjectStatus>([ProjectStatus.DRAFT, ProjectStatus.CONFIGURED]);
 
 @Injectable()
 export class BusinessProjectsService implements IBusinessProjectsService {

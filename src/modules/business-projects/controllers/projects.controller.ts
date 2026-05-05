@@ -106,7 +106,7 @@ export class BusinessProjectsController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Soft-delete a project (only DRAFT, SETTING_UP, or CONFIGURED)',
+    summary: 'Soft-delete a project (only DRAFT or CONFIGURED)',
     description:
       'Soft-deletes a project owned by the calling business. ' +
       'Returns 422 `PROJECT_CANNOT_BE_DELETED` when the project is past `CONFIGURED` ' +

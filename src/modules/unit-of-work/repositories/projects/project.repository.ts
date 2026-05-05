@@ -129,7 +129,7 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
         'period_label',
       )
       .addSelect(
-        `COUNT(*) FILTER (WHERE project.status IN ('draft', 'setting_up', 'configured'))`,
+        `COUNT(*) FILTER (WHERE project.status IN ('draft', 'configured'))`,
         'created_count',
       )
       .addSelect(

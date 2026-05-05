@@ -34,9 +34,9 @@ export interface IBusinessProjectsService {
 
   /**
    * Soft-deletes a project owned by the calling business. Only allowed while
-   * the project is still in the pre-publish lifecycle: `DRAFT`, `SETTING_UP`,
-   * or `CONFIGURED`. Once published or beyond, the project carries financial
-   * and member state that must be preserved — callers should cancel instead.
+   * the project is still in the pre-publish lifecycle: `DRAFT` or `CONFIGURED`.
+   * Once published or beyond, the project carries financial and member state
+   * that must be preserved — callers should cancel instead.
    *
    * Soft delete sets `deleted_at` (and `deleted_by` via AuditSubscriber);
    * child rows (tasks, interview questions, required skills) are left in

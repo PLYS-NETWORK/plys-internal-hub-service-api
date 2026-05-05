@@ -16,9 +16,8 @@ export class ProjectStatsResponseDto implements IProjectStatsResponse {
     description: 'Counts keyed by every value of ProjectStatus.',
     example: {
       draft: 8,
-      setting_up: 0,
       configured: 1,
-      public: 12,
+      published: 12,
       in_progress: 0,
       done: 3,
       cancelled: 0,
