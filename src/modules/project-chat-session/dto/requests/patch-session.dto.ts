@@ -2,6 +2,7 @@ import { ChatMessageRole } from '@database/enums';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 import {
+  Allow,
   ArrayMaxSize,
   IsArray,
   IsEnum,
@@ -33,6 +34,9 @@ export class AppendMessageDto implements IAppendMessageRequest {
     name: 'parts',
     description: 'Vercel AI SDK UIMessage `parts` payload (array of typed segments).',
   })
+  // @Allow() whitelists this property without imposing a type constraint — the AI SDK
+  // UIMessage `parts` shape is a discriminated union the BE persists opaquely.
+  @Allow()
   public readonly parts!: unknown;
 
   @Expose({ name: 'metadata' })
