@@ -1,18 +1,18 @@
 import { IBoardAttachmentResponse } from './board-attachment.response.interface';
 
-export interface IBoardEvidenceAuthor {
+export interface IBoardResultAuthor {
   consultant_id: string;
   full_name: string;
   avatar_url: string | null;
 }
 
-export interface IBoardEvidenceResponse {
+export interface IBoardResultResponse {
   id: string;
   task_id: string;
-  author: IBoardEvidenceAuthor;
+  author: IBoardResultAuthor;
   remarks: Record<string, unknown>;
   is_edited: boolean;
-  edited_at: Date | null;
-  created_at: Date;
+  edited_at: string | null;
+  created_at: string;
   attachments: IBoardAttachmentResponse[];
 }

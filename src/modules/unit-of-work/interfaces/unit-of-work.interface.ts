@@ -23,12 +23,13 @@ import {
   IProjectRequiredSkillRepository,
   IProjectStatusHistoryRepository,
   ISkillRepository,
+  ITaskAttachmentRepository,
   ITaskCodeService,
   ITaskDisputeRepository,
-  ITaskEvidenceAttachmentRepository,
-  ITaskEvidenceRepository,
   ITaskHistoryRepository,
   ITaskRepository,
+  ITaskResultAttachmentRepository,
+  ITaskResultRepository,
   IUserRepository,
   IUserSessionRepository,
   IUserSsoProviderRepository,
@@ -66,10 +67,11 @@ export interface IUnitOfWork {
 
   // Domain 4 — Tasks
   readonly tasks: ITaskRepository;
+  readonly taskAttachments: ITaskAttachmentRepository;
   readonly taskDisputes: ITaskDisputeRepository;
   readonly taskHistory: ITaskHistoryRepository;
-  readonly taskEvidences: ITaskEvidenceRepository;
-  readonly taskEvidenceAttachments: ITaskEvidenceAttachmentRepository;
+  readonly taskResults: ITaskResultRepository;
+  readonly taskResultAttachments: ITaskResultAttachmentRepository;
 
   // Domain 5 — AI
   readonly aiTaskSessions: IAiTaskSessionRepository;

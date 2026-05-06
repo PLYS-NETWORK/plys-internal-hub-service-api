@@ -5,6 +5,7 @@
 > **Scope (applies to every endpoint):** Bearer auth (`@ApiBearerAuth`), `@Roles(UserRole.USER)`, `@Platform(ActivePlatform.BUSINESS)`.
 > **Response envelope:** `TransformResponseInterceptor` wraps every body in `{ status_code, message, error_code, data, timestamp, path }`.
 > **Field-name convention:** request/response columns use **snake_case** (the JSON contract).
+> **Caller timezone:** any `Date` field in a response is formatted via `@TimezoneDate` using the IANA zone supplied in the `x-timezone` request header (e.g. `Asia/Ho_Chi_Minh`). Falls back to `UTC` when the header is missing or unrecognised.
 
 ## Cross-cutting errors
 
@@ -17,187 +18,87 @@
 
 ## Endpoints
 
-### 1. List board tasks (Kanban)
+### 1. List board tasks (filtered, sorted, cached)
 
 - **Endpoint:** `GET /projects/business/:id/board`
 - **Method:** `GET`
 - **Path params:** `id` (UUID v4)
-- **Response 200:** [`IBoardTaskResponse[]`](../../../src/modules/business-projects/dto/responses/interfaces/board-task.response.interface.ts) — array of `{ id, code, title, price, difficulty_level, kanban_status, display_order, assignee: { consultant_id, full_name, avatar_url } | null, comments_count, evidences_count }`. Excludes DRAFT tasks. Ordered by `display_order ASC` within each `kanban_status`. `code` is the human form `<project_code>-<n>` (e.g. `WEB-1`).
+- **Query params:** [`ListBoardTasksDto`](../../../src/modules/business-projects/dto/requests/list-board-tasks.dto.ts)
+  | Field | Type | Required | Notes |
+  |-------|------|----------|-------|
+  | `status` | `TaskKanbanStatus` | no | Optional kanban-status filter. `DRAFT` is server-rejected (drafts are board-invisible). |
+  | `assignee_id` | `string` (UUID v4) or `"unassigned"` | no | Filter by `consultant_profiles.id`. The literal string `unassigned` returns only tasks with no assignee. |
+  | `sort_by` | `"total_worked_hours" \| "created_at" \| "updated_at"` | no | Default `updated_at`. |
+  | `order_by` | `"ASC" \| "DESC"` | no | Default `DESC`. |
+  | `is_remove_cache` | `boolean` | no | When `true`, bypass the cached payload and refresh it. |
+- **Behaviour:**
+  - Returns every non-`DRAFT` task in the project (`DONE` and `CANCELLED` are included; use `status` to narrow).
+  - The `total_worked_hours` sort key is computed in SQL as `EXTRACT(EPOCH FROM (COALESCE(completed_at, NOW()) - started_at))`. NULLs sort last on `ASC`, first on `DESC`. A stable secondary sort on `id ASC` deduplicates ties.
+  - `attachments_count` is a correlated subquery on the new `task_attachments` table (no N+1).
+  - **Caching:** the response is cached in Redis for ~60s, keyed per `(project, user, timezone, filter-set)` via [BoardCacheService.buildKey](../../../src/modules/business-projects/services/board/board-cache.service.ts). `is_remove_cache=true` deletes the matching key and computes fresh. Any task / attachment / status mutation calls `BoardCacheService.invalidateProject(projectId)` and wipes every variant for the project.
+- **Response 200:** [`IBoardTaskResponse[]`](../../../src/modules/business-projects/dto/responses/interfaces/board-task.response.interface.ts)
+
+  Item shape:
+
+  ```ts
+  {
+    id: string,                                  // UUID
+    code: string,                                // e.g. "WEB-1"
+    title: string,
+    description: Record<string, unknown> | null, // rich-text JSONB; opaque to server
+    kanban_status: TaskKanbanStatus,
+    price: string,                               // "500.00"
+    assignee: { consultant_id, full_name, avatar_url } | null,
+    total_time_worked: {
+      days?: number,         // present only when total >= 24h
+      hours: number,         // 0–23 when days set, else floor(total_seconds / 3600)
+      total_seconds: number  // always present (sortable / recomputable)
+    },
+    attachments_count: number,
+    last_update: string,                         // formatted from updated_at, "YYYY-MM-DD HH:mm" in caller tz
+    created_day: string                          // formatted from created_at, "YYYY-MM-DD" in caller tz
+  }
+  ```
+
 - **Errors:** cross-cutting only.
 
-### 2. Reorder tasks within a single column
-
-- **Endpoint:** `PATCH /projects/business/:id/board/orders`
-- **Method:** `PATCH`
-- **Path params:** `id` (UUID v4)
-- **Request body:** [`ReorderTasksDto`](../../../src/modules/business-projects/dto/requests/reorder-tasks.dto.ts)
-  | Field | Type | Required | Notes |
-  |-------|------|----------|-------|
-  | `current_status` | `TaskKanbanStatus` | yes | The column the tasks currently live in. Cannot be `DRAFT`, `DONE`, or `CANCELLED`. |
-  | `tasks` | `TaskOrderItemDto[]` | yes | size 1–200 |
-  | `tasks[].id` | `string` (UUID v4) | yes | task primary key |
-  | `tasks[].display_order` | `number` | yes | integer ≥ 1; must be unique within the payload |
-- **Behaviour:**
-  - Updates `display_order` only — never moves tasks between columns.
-  - Service runs inside `withTransaction`, takes a `pessimistic_write` lock on the project row (mirrors [BacklogsService.payTasks](../../../src/modules/business-projects/services/backlogs.service.ts) locking the business profile) so concurrent reorders on the same project serialise.
-  - Affected task rows are then `pessimistic_write`-locked and validated to all currently sit in `current_status`.
-  - Updates are issued via batched bulk SQL (`UPDATE … FROM (VALUES …)` in chunks of `BATCH_SIZE = 50`); `version` is bumped manually so the optimistic-lock invariant survives the bulk path. A 200-task payload becomes 4 UPDATE statements + 1 locked SELECT.
-  - The DB partial unique index `uq_tasks_project_status_order` (on `(project_id, kanban_status, display_order) WHERE deleted_at IS NULL`, added by [migration 20260501000002](../../../src/database/migrations/20260501000002-AddProjectAndTaskCodes.ts)) enforces the per-column uniqueness invariant.
-- **Response 204:** empty body. Atomic — single transaction.
-- **Errors:**
-  | HTTP | error_code | When |
-  |------|------------|------|
-  | 422 | `TASK_INVALID_STATUS_TRANSITION` | `current_status` is `DRAFT`/`DONE`/`CANCELLED`; payload has duplicate `display_order` values; a referenced `id` does not belong to this project (or is soft-deleted); any task is not currently in `current_status`. Thrown by [BoardService.reorderTasks](../../../src/modules/business-projects/services/board/board.service.ts). |
-
-### 3. Move tasks between columns
-
-- **Endpoint:** `PATCH /projects/business/:id/board/statuses`
-- **Method:** `PATCH`
-- **Path params:** `id` (UUID v4)
-- **Request body:** [`ChangeTaskStatusesDto`](../../../src/modules/business-projects/dto/requests/change-task-statuses.dto.ts)
-  | Field | Type | Required | Notes |
-  |-------|------|----------|-------|
-  | `tasks` | `TaskStatusItemDto[]` | yes | size 1–200 |
-  | `tasks[].id` | `string` (UUID v4) | yes | task primary key |
-  | `tasks[].kanban_status` | `TaskKanbanStatus` | yes | Target column. Cannot be `DRAFT`, `DONE`, or `CANCELLED` — those transitions are owned by other flows (backlog payment, approval, cancellation). |
-- **Behaviour:**
-  - Each moved task is **appended to the END** of its destination column. When multiple tasks target the same destination in one request, payload order determines tail order.
-  - Service runs inside `withTransaction` with a project-row `pessimistic_write` lock; affected task rows are `pessimistic_write`-locked too.
-  - A no-op move (`task.kanban_status === payload.kanban_status`) is rejected so the contract stays unambiguous around end-of-column placement.
-  - Updates use batched bulk SQL (`BATCH_SIZE = 50`). Each batch's CTE re-reads `MAX(display_order)` per destination, so batch _N+1_ observes batch _N_'s writes within the same transaction (Postgres MVCC) — no order collisions across batches.
-- **Response 204:** empty body. Atomic — single transaction.
-- **Errors:**
-  | HTTP | error_code | When |
-  |------|------------|------|
-  | 422 | `TASK_INVALID_STATUS_TRANSITION` | Any target `kanban_status` is `DRAFT`/`DONE`/`CANCELLED`; any current task status is `DRAFT`/`DONE`/`CANCELLED`; a referenced `id` does not belong to this project; a task is already in its requested target status (no-op move). Thrown by [BoardService.changeTaskStatuses](../../../src/modules/business-projects/services/board/board.service.ts). |
-
-### 4. Task detail
+### 2. Task detail (with attachments and time tracking)
 
 - **Endpoint:** `GET /projects/business/:id/board/:taskId`
 - **Method:** `GET`
 - **Path params:** `id` (UUID v4), `taskId` (UUID v4)
-- **Response 200:** [`IBoardTaskDetailResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-task.response.interface.ts) — extends `IBoardTaskResponse` (so includes `code`) with `{ description, platform_fee_amount, consultant_payout, approved_by, approved_at, due_date, version, created_at, updated_at }`.
+- **Behaviour:** Fetches the task with assignee + attachments (ordered `uploaded_at ASC`). DRAFT tasks are surfaced as 404. Not cached — detail views are rarely repeated.
+- **Response 200:** [`IBoardTaskDetailResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-task.response.interface.ts) — extends `IBoardTaskResponse` with:
+
+  ```ts
+  {
+    platform_fee_amount: string,                  // "50.00"
+    consultant_payout: string,                    // "450.00"
+    approved_by: string | null,                   // user UUID
+    approved_at: string | null,                   // formatted in caller tz
+    due_date: string | null,                      // formatted in caller tz
+    started_at: string | null,                    // formatted in caller tz
+    completed_at: string | null,                  // formatted in caller tz
+    version: number,
+    attachments: [
+      { id, file_id, file_name, file_url, mime_type, file_size_bytes, uploaded_at }
+    ]
+  }
+  ```
+
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|
   | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT status (drafts are board-invisible). |
-
-### 5. Assign task to a project member
-
-- **Endpoint:** `POST /projects/business/:id/board/:taskId/assign`
-- **Method:** `POST`
-- **Path params:** `id` (UUID v4), `taskId` (UUID v4)
-- **Request body:** [`AssignTaskDto`](../../../src/modules/business-projects/dto/requests/assign-task.dto.ts)
-  | Field | Type | Required | Notes |
-  |-------|------|----------|-------|
-  | `consultant_id` | `string` (UUID v4) | yes | must be an active project member |
-- **Response 204:** empty body.
-- **Side effect — auto status transition:** if the project is currently `published`, the assignment auto-promotes it to `in_progress` via [ProjectStatusService.promoteToInProgressIfPublished](../../../src/modules/business-projects/services/projects/project-status.service.ts) inside the same transaction. Once `in_progress`, **republish is rejected** (the project can no longer be reverted to `configured`). No-op when the project is already `in_progress` or any other status.
-- **Errors:**
-  | HTTP | error_code | When |
-  |------|------------|------|
-  | 404 | `TASK_NOT_FOUND` | Task not in this project. |
-  | 422 | `TASK_INVALID_STATUS_TRANSITION` | Task is DRAFT, CANCELLED, or DONE (not assignable). |
-  | 422 | `TASK_CONSULTANT_NOT_PROJECT_MEMBER` | Consultant is not an active member of the project. |
-
-### 6. Unassign task
-
-- **Endpoint:** `POST /projects/business/:id/board/:taskId/unassign`
-- **Method:** `POST`
-- **Path params:** `id` (UUID v4), `taskId` (UUID v4)
-- **Response 204:** empty body. Only allowed while task is in TO_DO or ASSIGNED.
-- **Errors:**
-  | HTTP | error_code | When |
-  |------|------------|------|
-  | 404 | `TASK_NOT_FOUND` | Task not in this project. |
-  | 422 | `TASK_INVALID_STATUS_TRANSITION` | Task status is not TO_DO or ASSIGNED. |
-
----
-
-## Comments
-
-> **Service:** [BoardCommentsService](../../../src/modules/business-projects/services/board/board-comments.service.ts)
-> **Storage cleanup model:** detached / deleted attachments soft-delete the underlying `files` row. The actual storage object is reclaimed by the daily 03:00 UTC purge cron after `FILES_PURGE_AFTER_DAYS` — the `file_url` may still resolve briefly after the API returns 204.
-> Common path: `:taskId` must belong to the project and must NOT be in DRAFT (drafts have no board surface).
-
-### 7. List task comments
-
-- **Endpoint:** `GET /projects/business/:id/board/:taskId/comments`
-- **Method:** `GET`
-- **Path params:** `id` (UUID v4), `taskId` (UUID v4)
-- **Query params:** [`PageOptionsDto`](../../../src/common/dto/page-options.dto.ts)
-  | Field | Type | Required | Notes |
-  |-------|------|----------|-------|
-  | `page` | `number` | no | default 1, ≥ 1 |
-  | `limit` | `number` | no | default 20, max 100 |
-- **Behaviour:**
-  - Returns non-deleted comments for the task (`is_deleted = false`), ordered `created_at DESC` with `id DESC` as the deterministic tiebreaker.
-  - Author display is resolved in a single SQL via two left joins on `author_id` against `consultant_profiles` and `business_profiles`. Consultant identity wins when both profiles match the same user (i.e. a hybrid account is treated as a consultant on the board surface).
-  - Attachments are batch-loaded for the page slice in one follow-up query (no N+1).
-- **Response 200:** `PageDto<`[`IBoardCommentResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-comment.response.interface.ts)`>` — items: `{ id, task_id, author: { user_id, name, avatar_url }, comment, is_edited, edited_at, created_at, attachments: [{ id, file_id, file_name, file_url, mime_type, file_size_bytes, uploaded_at }] }`. `author.name` resolution: `consultant_profiles.full_name` → `business_profiles.company_name` → `""`. Avatar prefers `consultant_profiles.avatar_url`, falls back to `business_profiles.logo_url`.
-- **Errors:**
-  | HTTP | error_code | When |
-  |------|------------|------|
-  | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT. |
-
-### 8. Create a task comment
-
-- **Endpoint:** `POST /projects/business/:id/board/:taskId/comments`
-- **Method:** `POST`
-- **Path params:** `id` (UUID v4), `taskId` (UUID v4)
-- **Request body:** [`CreateBoardCommentDto`](../../../src/modules/business-projects/dto/requests/create-board-comment.dto.ts)
-  | Field | Type | Required | Notes |
-  |-------|------|----------|-------|
-  | `comment` | `Record<string, unknown>` | yes | rich-text JSON document (TipTap/ProseMirror); must not be empty |
-  | `file_ids` | `string[]` (UUID v4) | no | 0–10 caller-owned file ids; persisted as snapshotted attachments |
-- **Response 201:** [`IBoardCommentResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-comment.response.interface.ts) — `{ id, task_id, author: { user_id, name, avatar_url }, comment, is_edited, edited_at, created_at, attachments: [{ id, file_id, file_name, file_url, mime_type, file_size_bytes, uploaded_at }] }`. `author` resolves from the caller's `business_profiles` row (`company_name` + `logo_url`). `attachments` is `[]` when none.
-- **Errors:**
-  | HTTP | error_code | When |
-  |------|------------|------|
-  | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT. |
-  | 400 | `TASK_COMMENT_FILE_NOT_OWNED` | Any supplied `file_id` is missing, soft-deleted, or owned by a different user. |
-
-### 9. Update own task comment
-
-- **Endpoint:** `PATCH /projects/business/:id/board/:taskId/comments/:commentId`
-- **Method:** `PATCH`
-- **Path params:** `id` (UUID v4), `taskId` (UUID v4), `commentId` (UUID v4)
-- **Request body:** [`UpdateBoardCommentDto`](../../../src/modules/business-projects/dto/requests/update-board-comment.dto.ts) — at least one field required
-  | Field | Type | Required | Notes |
-  |-------|------|----------|-------|
-  | `comment` | `Record<string, unknown>` | no | when present, flips `is_edited=true` and stamps `edited_at=now()` |
-  | `file_ids` | `string[]` (UUID v4) | no | full replacement; `[]` detaches all; omitted leaves attachments untouched. Detached files are soft-deleted (storage purged on next cron) |
-- **Response 200:** [`IBoardCommentResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-comment.response.interface.ts) — same shape as create.
-- **Errors:**
-  | HTTP | error_code | When |
-  |------|------------|------|
-  | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT. |
-  | 404 | `TASK_COMMENT_NOT_FOUND` | Comment missing, soft-deleted, or doesn't belong to this task. |
-  | 403 | `TASK_COMMENT_FORBIDDEN` | Caller is not the comment's author. |
-  | 400 | `TASK_COMMENT_EMPTY_UPDATE` | Neither `comment` nor `file_ids` was supplied. |
-  | 400 | `TASK_COMMENT_FILE_NOT_OWNED` | Any supplied `file_id` is missing, soft-deleted, or owned by another user. |
-
-### 10. Delete own task comment
-
-- **Endpoint:** `DELETE /projects/business/:id/board/:taskId/comments/:commentId`
-- **Method:** `DELETE`
-- **Path params:** `id` (UUID v4), `taskId` (UUID v4), `commentId` (UUID v4)
-- **Response 204:** empty body. Soft-deletes the comment (`is_deleted=true`), hard-deletes its `task_comment_attachments` rows, and soft-deletes the underlying `files` rows so the daily purge cron reclaims storage.
-- **Errors:**
-  | HTTP | error_code | When |
-  |------|------------|------|
-  | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT. |
-  | 404 | `TASK_COMMENT_NOT_FOUND` | Comment missing or already soft-deleted. |
-  | 403 | `TASK_COMMENT_FORBIDDEN` | Caller is not the comment's author. |
 
 ---
 
 ## Task History
 
 > **Service:** [BoardHistoryService](../../../src/modules/business-projects/services/board/board-history.service.ts)
-> Rows are append-only, populated by DB trigger `trg_log_task_change`. Filters to `change_type IN (STATUS_CHANGE, ASSIGNMENT, UNASSIGNMENT)`.
+> Rows are append-only. Filters to `change_type IN (STATUS_CHANGE, ASSIGNMENT, UNASSIGNMENT)`.
 
-### 11. List task history
+### 3. List task history
 
 - **Endpoint:** `GET /projects/business/:id/board/:taskId/history`
 - **Method:** `GET`
@@ -207,7 +108,26 @@
   |-------|------|----------|-------|
   | `page` | `number` | no | default 1, ≥ 1 |
   | `limit` | `number` | no | default 20, max 100 |
-- **Response 200:** `PageDto<`[`IBoardTaskHistoryResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-task-history.response.interface.ts)`>` — items: `{ id, task_id, change_type, previous_kanban_status, new_kanban_status, previous_assignee: { consultant_id, full_name, avatar_url } | null, new_assignee: { consultant_id, full_name, avatar_url } | null, author: { user_id, name, avatar_url }, note, changed_at }`. `author.name` resolution order: `consultant_profiles.full_name` → `business_profiles.company_name` → `users.email` → `"System"` (when `changed_by IS NULL`). Avatar prefers `consultant_profiles.avatar_url`, falls back to `business_profiles.logo_url`. Ordered `changed_at DESC`.
+- **Response 200:** `PageDto<`[`IBoardTaskHistoryResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-task-history.response.interface.ts)`>`
+
+  Item shape:
+
+  ```ts
+  {
+    id, task_id,
+    change_type,                                  // TaskHistoryChangeType
+    previous_kanban_status: TaskKanbanStatus | null,
+    new_kanban_status: TaskKanbanStatus | null,
+    previous_assignee: { consultant_id, full_name, avatar_url } | null,
+    new_assignee: { consultant_id, full_name, avatar_url } | null,
+    author: { user_id, name, avatar_url },        // name fallback chain below
+    note: string | null,
+    changed_at: string                            // formatted in caller tz
+  }
+  ```
+
+  `author.name` resolution: `consultant_profiles.full_name` → `business_profiles.company_name` → `users.email` → `"System"` (when `changed_by IS NULL`). Avatar prefers `consultant_profiles.avatar_url`, falls back to `business_profiles.logo_url`. Ordered `changed_at DESC, id DESC`.
+
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|
@@ -215,14 +135,14 @@
 
 ---
 
-## Evidences
+## Results (read-only on the BUSINESS surface)
 
-> **Service:** [BoardEvidencesService](../../../src/modules/business-projects/services/board/board-evidences.service.ts)
-> Read-only on the BUSINESS surface. Mutations live on the consultant routes via the existing `TaskEvidencesService`.
+> **Service:** [BoardResultsService](../../../src/modules/business-projects/services/board/board-results.service.ts)
+> Mutations live on the consultant routes ([ConsultantBoardResultsService](../../../src/modules/consultant-projects/services/board/board-results.service.ts)).
 
-### 12. List task evidences
+### 4. List task results
 
-- **Endpoint:** `GET /projects/business/:id/board/:taskId/evidences`
+- **Endpoint:** `GET /projects/business/:id/board/:taskId/results`
 - **Method:** `GET`
 - **Path params:** `id` (UUID v4), `taskId` (UUID v4)
 - **Query params:** [`PageOptionsDto`](../../../src/common/dto/page-options.dto.ts)
@@ -230,7 +150,25 @@
   |-------|------|----------|-------|
   | `page` | `number` | no | default 1, ≥ 1 |
   | `limit` | `number` | no | default 20, max 100 |
-- **Response 200:** `PageDto<`[`IBoardEvidenceResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-evidence.response.interface.ts)`>` — items: `{ id, task_id, author: { consultant_id, full_name, avatar_url }, remarks, is_edited, edited_at, created_at, attachments: [{ id, file_id, file_name, file_url, mime_type, file_size_bytes, uploaded_at }] }`. Excludes soft-deleted evidences. Ordered `created_at DESC`.
+- **Behaviour:** Returns non-soft-deleted results for the task, ordered `created_at DESC, id DESC`. Each row's `attachments` are batch-loaded for the page slice in one follow-up query (no N+1).
+- **Response 200:** `PageDto<`[`IBoardResultResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-result.response.interface.ts)`>`
+
+  Item shape:
+
+  ```ts
+  {
+    id, task_id,
+    author: { consultant_id, full_name, avatar_url },
+    remarks: Record<string, unknown>,             // opaque rich-text JSONB
+    is_edited: boolean,
+    edited_at: string | null,                     // formatted in caller tz
+    created_at: string,                           // formatted in caller tz
+    attachments: [
+      { id, file_id, file_name, file_url, mime_type, file_size_bytes, uploaded_at }
+    ]
+  }
+  ```
+
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|
@@ -238,6 +176,83 @@
 
 ---
 
+## Attachments (task-level, owned by the business)
+
+> **Service:** [BoardAttachmentsService](../../../src/modules/business-projects/services/board/board-attachments.service.ts)
+> Distinct from result attachments — these are briefs / reference files attached to the task itself.
+> **Two-step upload flow:** the client first uploads files via `POST /files/upload` (out of scope here), then submits the returned `file_id`s via the endpoints below. The service snapshots metadata into `task_attachments` and flips the file's `purpose` to `task_attachment` so the orphan-cleanup cron does not reclaim it.
+
+### 5. Attach previously-uploaded files
+
+- **Endpoint:** `POST /projects/business/:id/board/:taskId/attachments`
+- **Method:** `POST`
+- **Path params:** `id` (UUID v4), `taskId` (UUID v4)
+- **Headers:** `Idempotency-Key` (recommended) — see [shared/idempotency.md](../shared/idempotency.md). Annotated by `@IdempotencyKey()`.
+- **Request body:** [`AttachFilesDto`](../../../src/modules/business-projects/dto/requests/attach-files.dto.ts)
+  | Field | Type | Required | Notes |
+  |-------|------|----------|-------|
+  | `file_ids` | `string[]` (UUID v4) | yes | size 1–20; unique; every entry must be owned by the caller |
+- **Behaviour:**
+  - Verifies the task exists and is not DRAFT.
+  - Verifies every `file_id` is present, not soft-deleted, and `owner_user_id === caller.user_id` — otherwise rejects with `TASK_ATTACHMENT_FILE_NOT_OWNED`.
+  - Inside one transaction: snapshots `{ file_name, file_url, mime_type, file_size_bytes }` into `task_attachments`, then calls `files.markAsAttached(fileIds, FilePurpose.TASK_ATTACHMENT)`.
+  - Storage URLs are resolved **outside** the transaction to keep storage-provider failures off long-lived locks.
+  - On success, the project's board cache is wiped via `BoardCacheService.invalidateProject` so the next list call recomputes `attachments_count`.
+- **Response 201:** [`IBoardTaskAttachmentResponse[]`](../../../src/modules/business-projects/dto/responses/interfaces/board-task-attachment.response.interface.ts)
+
+  Item shape:
+
+  ```ts
+  {
+    id: string,
+    file_id: string | null,    // canonical files.id, kept for audit; null when source row is later removed
+    file_name: string,
+    file_url: string,
+    mime_type: string | null,
+    file_size_bytes: number | null,
+    uploaded_at: string         // formatted in caller tz
+  }
+  ```
+
+- **Errors:**
+  | HTTP | error_code | When |
+  |------|------------|------|
+  | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT. |
+  | 400 | `TASK_ATTACHMENT_FILE_NOT_OWNED` | Any supplied `file_id` is missing, soft-deleted, or owned by another user. |
+
+### 6. Rename an existing attachment
+
+- **Endpoint:** `PATCH /projects/business/:id/board/:taskId/attachments/:attachmentId`
+- **Method:** `PATCH`
+- **Path params:** `id` (UUID v4), `taskId` (UUID v4), `attachmentId` (UUID v4)
+- **Headers:** `Idempotency-Key` (recommended).
+- **Request body:** [`UpdateTaskAttachmentDto`](../../../src/modules/business-projects/dto/requests/update-task-attachment.dto.ts)
+  | Field | Type | Required | Notes |
+  |-------|------|----------|-------|
+  | `file_name` | `string` | yes | trimmed, 1–255 chars; display name only — the canonical storage key never changes |
+- **Behaviour:** Only the display `file_name` is mutable. The `files` row, the storage object, and `file_url` / `mime_type` / `file_size_bytes` are immutable through this endpoint. Wipes the project's board cache.
+- **Response 200:** [`IBoardTaskAttachmentResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-task-attachment.response.interface.ts) — same shape as create.
+- **Errors:**
+  | HTTP | error_code | When |
+  |------|------------|------|
+  | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT. |
+  | 404 | `TASK_ATTACHMENT_NOT_FOUND` | Attachment missing or doesn't belong to this task. |
+
+### 7. Delete an attachment
+
+- **Endpoint:** `DELETE /projects/business/:id/board/:taskId/attachments/:attachmentId`
+- **Method:** `DELETE`
+- **Path params:** `id` (UUID v4), `taskId` (UUID v4), `attachmentId` (UUID v4)
+- **Behaviour:** Soft-deletes the snapshot row (`task_attachments.deleted_at`) and calls `files.markAsOrphaned([file_id])` so the weekly orphan-cleanup cron can reclaim storage after `FILES_ORPHAN_GRACE_HOURS`. Wipes the project's board cache. Atomic — single transaction.
+- **Response 204:** empty body.
+- **Errors:**
+  | HTTP | error_code | When |
+  |------|------------|------|
+  | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT. |
+  | 404 | `TASK_ATTACHMENT_NOT_FOUND` | Attachment missing or doesn't belong to this task. |
+
+---
+
 ## Background: orphan-file cleanup
 
-Not an endpoint — a daily 03:00 UTC sweep ([FilesCleanupService.purgeOrphanedUploads](../../../src/modules/files/files-cleanup.service.ts)) soft-deletes any `files` row that is `purpose IS NULL`, has no row in `task_comment_attachments` / `task_evidence_attachments`, and is older than `FILES_ORPHAN_GRACE_HOURS` (default 24h). The byte object is then reclaimed by the existing `purgeExpiredSoftDeletes` pass after `FILES_PURGE_AFTER_DAYS`. FE/integration impact: an upload via `POST /files` that's never attached will eventually disappear; clients should reuse `file_id`s within ~24h of upload.
+Not an endpoint — a weekly Mon 03:00 UTC sweep ([FilesCleanupService.purgeOrphanedUploads](../../../src/modules/files/files-cleanup.service.ts)) soft-deletes any `files` row that is `purpose IS NULL`, has no surviving row in `task_result_attachments` or `task_attachments`, and is older than `FILES_ORPHAN_GRACE_HOURS` (default 24h). The byte object is then reclaimed by the daily 03:00 UTC `purgeExpiredSoftDeletes` pass after `FILES_PURGE_AFTER_DAYS`. FE/integration impact: an upload via `POST /files/upload` that's never attached will eventually disappear; clients should attach `file_id`s within ~24h of upload.

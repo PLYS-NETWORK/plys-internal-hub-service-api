@@ -1,3 +1,3 @@
 export { ChangeTaskStatusDto } from './change-task-status.dto';
-export { CreateBoardEvidenceDto } from './create-board-evidence.dto';
-export { UpdateBoardEvidenceDto } from './update-board-evidence.dto';
+export { CreateBoardResultDto } from './create-board-result.dto';
+export { UpdateBoardResultDto } from './update-board-result.dto';

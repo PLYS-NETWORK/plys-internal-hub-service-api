@@ -9,29 +9,29 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-import { TaskEvidence } from './task-evidence.entity';
+import { TaskResult } from './task-result.entity';
 
 // Metadata only — actual files live in object storage (S3/local). The file
 // metadata (name/url/mime/size) is snapshotted at creation time so the
-// evidence stays durable even if the source `files` row is later removed.
+// result stays durable even if the source `files` row is later removed.
 // `file_id` keeps the audit chain to the canonical file row when available.
-@Entity('task_evidence_attachments')
-@Index('idx_task_evidence_attachments_evidence_id', ['evidenceId'])
-export class TaskEvidenceAttachment {
+@Entity('task_result_attachments')
+@Index('idx_task_result_attachments_result_id', ['resultId'])
+export class TaskResultAttachment {
   @PrimaryGeneratedColumn('uuid', {
-    primaryKeyConstraintName: 'pk_task_evidence_attachments',
+    primaryKeyConstraintName: 'pk_task_result_attachments',
   })
   public readonly id!: string;
 
-  @Column({ name: 'evidence_id', type: 'uuid' })
-  public evidenceId!: string;
+  @Column({ name: 'result_id', type: 'uuid' })
+  public resultId!: string;
 
-  @ManyToOne(() => TaskEvidence, { onDelete: 'CASCADE' })
+  @ManyToOne(() => TaskResult, { onDelete: 'CASCADE' })
   @JoinColumn({
-    name: 'evidence_id',
-    foreignKeyConstraintName: 'fk_task_evidence_attachments_to_task_evidences',
+    name: 'result_id',
+    foreignKeyConstraintName: 'fk_task_result_attachments_to_task_results',
   })
-  public evidence!: TaskEvidence;
+  public result!: TaskResult;
 
   @Column({ name: 'file_id', type: 'uuid', nullable: true })
   public fileId!: string | null;
@@ -39,7 +39,7 @@ export class TaskEvidenceAttachment {
   @ManyToOne(() => FileEntity, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({
     name: 'file_id',
-    foreignKeyConstraintName: 'fk_task_evidence_attachments_to_files',
+    foreignKeyConstraintName: 'fk_task_result_attachments_to_files',
   })
   public file!: FileEntity | null;
 

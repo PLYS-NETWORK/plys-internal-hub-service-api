@@ -13,5 +13,5 @@ export interface IConsultantBoardTaskResponse {
   kanban_status: TaskKanbanStatus;
   display_order: number;
   assignee: IConsultantBoardTaskAssignee | null;
-  evidences_count: number;
+  results_count: number;
 }

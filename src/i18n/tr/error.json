@@ -48,12 +48,16 @@
     "invalid_status_transition": "Geçersiz görev durumu geçişi.",
     "already_assigned": "Bu görev zaten bir danışmana atanmış.",
     "project_not_in_progress": "Görevler yalnızca devam eden projeler için yönetilebilir.",
-    "evidence_not_found": "Görev kanıtı bulunamadı.",
-    "evidence_forbidden": "Bu kanıt üzerinde işlem yapma yetkiniz yok.",
-    "evidence_not_assignee": "Bu göreve atanan danışman dışında kimse görev kanıtlarını yönetemez.",
-    "evidence_file_not_owned": "Eklenen dosyalardan biri veya birkaçı size ait değil ya da mevcut değil.",
-    "evidence_empty_update": "Güncellemek için remarks veya file_ids alanlarından en az birini gönderin.",
-    "consultant_already_in_progress": "Devam eden bir göreviniz zaten var. Yeni bir göreve başlamadan önce onu tamamlayın veya durdurun."
+    "result_not_found": "Görev sonucu bulunamadı.",
+    "result_forbidden": "Bu sonuç üzerinde işlem yapma yetkiniz yok.",
+    "result_not_assignee": "Bu göreve atanan danışman dışında kimse görev sonuçlarını yönetemez.",
+    "result_file_not_owned": "Eklenen dosyalardan biri veya birkaçı size ait değil ya da mevcut değil.",
+    "result_empty_update": "Güncellemek için remarks veya file_ids alanlarından en az birini gönderin.",
+    "consultant_already_in_progress": "Devam eden bir göreviniz zaten var. Yeni bir göreve başlamadan önce onu tamamlayın veya durdurun.",
+    "attachment_not_found": "Görev eki bulunamadı.",
+    "attachment_forbidden": "Bu görevin eklerini yönetme yetkiniz yok.",
+    "attachment_file_not_owned": "Eklenen dosyalardan biri veya birkaçı size ait değil ya da mevcut değil.",
+    "attachment_invalid_status": "Bu durumdaki görevlerin ekleri değiştirilemez."
   },
   "payment": {
     "insufficient_balance": "Yetersiz hesap bakiyesi.",

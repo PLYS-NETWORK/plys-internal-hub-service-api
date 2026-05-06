@@ -1,5 +1,6 @@
 export { Task } from './task.entity';
+export { TaskAttachment } from './task-attachment.entity';
 export { TaskDispute } from './task-dispute.entity';
-export { TaskEvidence } from './task-evidence.entity';
-export { TaskEvidenceAttachment } from './task-evidence-attachment.entity';
 export { TaskHistory } from './task-history.entity';
+export { TaskResult } from './task-result.entity';
+export { TaskResultAttachment } from './task-result-attachment.entity';

@@ -1,14 +1,15 @@
+import { TimezoneDate } from '@common/decorators/timezone-date.decorator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 
 import { BoardAttachmentResponseDto } from './board-attachment-response.dto';
 import {
-  IBoardEvidenceAuthor,
-  IBoardEvidenceResponse,
-} from './interfaces/board-evidence.response.interface';
+  IBoardResultAuthor,
+  IBoardResultResponse,
+} from './interfaces/board-result.response.interface';
 
 @Exclude()
-export class BoardEvidenceAuthorDto implements IBoardEvidenceAuthor {
+export class BoardResultAuthorDto implements IBoardResultAuthor {
   @Expose() @ApiProperty({ name: 'consultant_id' }) public readonly consultant_id!: string;
   @Expose() @ApiProperty({ name: 'full_name' }) public readonly full_name!: string;
   @Expose()
@@ -17,24 +18,30 @@ export class BoardEvidenceAuthorDto implements IBoardEvidenceAuthor {
 }
 
 @Exclude()
-export class BoardEvidenceResponseDto implements IBoardEvidenceResponse {
+export class BoardResultResponseDto implements IBoardResultResponse {
   @Expose() @ApiProperty() public readonly id!: string;
   @Expose() @ApiProperty({ name: 'task_id' }) public readonly task_id!: string;
 
   @Expose()
-  @Type(() => BoardEvidenceAuthorDto)
-  @ApiProperty({ type: () => BoardEvidenceAuthorDto })
-  public readonly author!: BoardEvidenceAuthorDto;
+  @Type(() => BoardResultAuthorDto)
+  @ApiProperty({ type: () => BoardResultAuthorDto })
+  public readonly author!: BoardResultAuthorDto;
 
   @Expose()
   @ApiProperty({ type: 'object', additionalProperties: true })
   public readonly remarks!: Record<string, unknown>;
 
   @Expose() @ApiProperty({ name: 'is_edited' }) public readonly is_edited!: boolean;
+
   @Expose()
+  @TimezoneDate()
   @ApiProperty({ name: 'edited_at', nullable: true })
-  public readonly edited_at!: Date | null;
-  @Expose() @ApiProperty({ name: 'created_at' }) public readonly created_at!: Date;
+  public readonly edited_at!: string | null;
+
+  @Expose()
+  @TimezoneDate()
+  @ApiProperty({ name: 'created_at' })
+  public readonly created_at!: string;
 
   @Expose()
   @Type(() => BoardAttachmentResponseDto)

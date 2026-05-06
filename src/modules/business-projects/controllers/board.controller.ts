@@ -1,3 +1,4 @@
+import { IdempotencyKey } from '@common/decorators/idempotency-key.decorator';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
@@ -9,27 +10,31 @@ import { ActivePlatform, UserRole } from '@database/enums';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { ReorderTasksDto } from '../dto/requests';
+import { AttachFilesDto, ListBoardTasksDto, UpdateTaskAttachmentDto } from '../dto/requests';
 import {
-  BoardEvidenceResponseDto,
+  BoardResultResponseDto,
+  BoardTaskAttachmentResponseDto,
   BoardTaskDetailResponseDto,
   BoardTaskHistoryResponseDto,
   BoardTaskResponseDto,
 } from '../dto/responses';
 import { BoardService } from '../services/board/board.service';
-import { BoardEvidencesService } from '../services/board/board-evidences.service';
+import { BoardAttachmentsService } from '../services/board/board-attachments.service';
 import { BoardHistoryService } from '../services/board/board-history.service';
+import { BoardResultsService } from '../services/board/board-results.service';
 
 @ApiTags('Business Projects — Board')
 @ApiBearerAuth()
@@ -41,47 +46,33 @@ export class BoardController {
   constructor(
     private readonly boardService: BoardService,
     private readonly historyService: BoardHistoryService,
-    private readonly evidencesService: BoardEvidencesService,
+    private readonly resultsService: BoardResultsService,
+    private readonly attachmentsService: BoardAttachmentsService,
   ) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'List non-draft tasks (kanban board) with assignee + counts',
+    summary: 'List non-draft tasks with optional filters/sort and short-TTL cache',
     description:
-      'Returns every task in the project except DRAFT, ordered by `display_order` ASC ' +
-      'within each `kanban_status`. Each task carries its human code (`<project_code>-<n>`) ' +
-      'plus the assigned consultant (when present) and live `evidences_count`.',
+      'Returns every non-DRAFT task in the project. Optional `status` and `assignee_id` ' +
+      'filters narrow the set; `sort_by` accepts `total_worked_hours`, `created_at`, or ' +
+      '`updated_at` (default), `order_by` accepts `ASC`/`DESC` (default DESC). The response ' +
+      'is cached per (project, user, timezone, filter-set) for ~60s; pass `is_remove_cache=true` ' +
+      'to bypass and refresh. Date fields (`last_update`, `created_day`) are formatted using ' +
+      'the timezone supplied via the `x-timezone` header (default UTC).',
   })
   public async listTasks(
     @Param('id', ParseUUIDPipe) id: string,
+    @Query() filters: ListBoardTasksDto,
   ): Promise<ITranslatedPayload<BoardTaskResponseDto[]>> {
-    const data = await this.boardService.listTasks(id);
+    const data = await this.boardService.listTasks(id, filters);
     return { messageKey: 'success.ok', data };
-  }
-
-  @Patch('orders')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({
-    summary: 'Reorder tasks within a single kanban column',
-    description:
-      'Updates `display_order` for tasks that already live in `current_status`. ' +
-      'Up to 200 tasks per request; the service applies the changes in batches of 50 inside ' +
-      'a single transaction with a project-level pessimistic lock so concurrent reorders ' +
-      'serialise. Returns 422 `TASK_INVALID_STATUS_TRANSITION` when `current_status` is ' +
-      'DRAFT/DONE/CANCELLED, when the payload contains duplicate `display_order` values, ' +
-      'when a referenced task is missing, or when any task is not currently in `current_status`.',
-  })
-  public async reorderTasks(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: ReorderTasksDto,
-  ): Promise<void> {
-    await this.boardService.reorderTasks(id, dto);
   }
 
   @Get(':taskId')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Task detail with evidences_count' })
+  @ApiOperation({ summary: 'Task detail with attachments and time tracking' })
   public async getTaskDetail(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('taskId', ParseUUIDPipe) taskId: string,
@@ -104,17 +95,65 @@ export class BoardController {
     return { messageKey: 'success.ok', data };
   }
 
-  // ─── Evidences ─────────────────────────────────────────────────────────────
+  // ─── Results ───────────────────────────────────────────────────────────────
 
-  @Get(':taskId/evidences')
+  @Get(':taskId/results')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'List consultant-submitted evidences for the task (paginated)' })
-  public async listEvidences(
+  @ApiOperation({ summary: 'List consultant-submitted results for the task (paginated)' })
+  public async listResults(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('taskId', ParseUUIDPipe) taskId: string,
     @Query() pageOptions: PageOptionsDto,
-  ): Promise<ITranslatedPayload<PageDto<BoardEvidenceResponseDto>>> {
-    const data = await this.evidencesService.list(id, taskId, pageOptions);
+  ): Promise<ITranslatedPayload<PageDto<BoardResultResponseDto>>> {
+    const data = await this.resultsService.list(id, taskId, pageOptions);
     return { messageKey: 'success.ok', data };
+  }
+
+  // ─── Attachments ───────────────────────────────────────────────────────────
+
+  @Post(':taskId/attachments')
+  @IdempotencyKey()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Attach previously-uploaded files to the task',
+    description:
+      'Two-step flow: upload via `/files/upload` first, then submit the returned `file_id`s ' +
+      'here. The service snapshots metadata into `task_attachments` and flips the file purpose ' +
+      'to `task_attachment`.',
+  })
+  public async attachFiles(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Body() dto: AttachFilesDto,
+  ): Promise<ITranslatedPayload<BoardTaskAttachmentResponseDto[]>> {
+    const data = await this.attachmentsService.attach(id, taskId, dto);
+    return { messageKey: 'success.task.attachment_created', data };
+  }
+
+  @Patch(':taskId/attachments/:attachmentId')
+  @IdempotencyKey()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Rename an existing task attachment (display name only)' })
+  public async updateAttachment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Param('attachmentId', ParseUUIDPipe) attachmentId: string,
+    @Body() dto: UpdateTaskAttachmentDto,
+  ): Promise<ITranslatedPayload<BoardTaskAttachmentResponseDto>> {
+    const data = await this.attachmentsService.update(id, taskId, attachmentId, dto);
+    return { messageKey: 'success.task.attachment_updated', data };
+  }
+
+  @Delete(':taskId/attachments/:attachmentId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Soft-delete a task attachment and orphan the underlying file for cleanup',
+  })
+  public async deleteAttachment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Param('attachmentId', ParseUUIDPipe) attachmentId: string,
+  ): Promise<void> {
+    await this.attachmentsService.remove(id, taskId, attachmentId);
   }
 }

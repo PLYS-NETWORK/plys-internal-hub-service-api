@@ -1,8 +1,8 @@
 export { ConsultantBoardAttachmentResponseDto } from './consultant-board-attachment-response.dto';
 export {
-  ConsultantBoardEvidenceAuthorDto,
-  ConsultantBoardEvidenceResponseDto,
-} from './consultant-board-evidence-response.dto';
+  ConsultantBoardResultAuthorDto,
+  ConsultantBoardResultResponseDto,
+} from './consultant-board-result-response.dto';
 export {
   ConsultantBoardTaskAssigneeDto,
   ConsultantBoardTaskResponseDto,

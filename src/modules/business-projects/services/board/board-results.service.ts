@@ -5,19 +5,19 @@ import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { TaskEvidenceAttachment } from '@database/entities';
+import { TaskResultAttachment } from '@database/entities';
 import { TaskKanbanStatus } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { In } from 'typeorm';
 
-import { BoardEvidenceResponseDto } from '../../dto/responses';
-import { IBoardEvidencesService } from '../../interfaces/board-evidences.service.interface';
+import { BoardResultResponseDto } from '../../dto/responses';
+import { IBoardResultsService } from '../../interfaces/board-results.service.interface';
 import { BusinessAccessService } from '../business-access.service';
 
-interface IEvidenceRow {
-  evidence_id: string;
+interface IResultRow {
+  result_id: string;
   task_id: string;
   remarks: Record<string, unknown>;
   is_edited: boolean;
@@ -29,7 +29,7 @@ interface IEvidenceRow {
 }
 
 @Injectable()
-export class BoardEvidencesService implements IBoardEvidencesService {
+export class BoardResultsService implements IBoardResultsService {
   private readonly logger: AppLogger;
 
   constructor(
@@ -37,7 +37,7 @@ export class BoardEvidencesService implements IBoardEvidencesService {
     private readonly requestContext: RequestContextService,
     private readonly access: BusinessAccessService,
   ) {
-    this.logger = new AppLogger(BoardEvidencesService.name, requestContext);
+    this.logger = new AppLogger(BoardResultsService.name, requestContext);
   }
 
   /** @inheritdoc */
@@ -45,57 +45,57 @@ export class BoardEvidencesService implements IBoardEvidencesService {
     projectId: string,
     taskId: string,
     pageOptions: PageOptionsDto,
-  ): Promise<PageDto<BoardEvidenceResponseDto>> {
+  ): Promise<PageDto<BoardResultResponseDto>> {
     this.logger.log(
       `list — start | projectId: ${projectId}, taskId: ${taskId}, page: ${pageOptions.page}, limit: ${pageOptions.limit}`,
     );
     await this.access.resolveOwnedProject(projectId);
     await this.assertTaskOnBoard(projectId, taskId);
 
-    const baseQb = this.uow.taskEvidences
-      .createQueryBuilder('te')
-      .where('te.task_id = :taskId', { taskId })
-      .andWhere('te.is_deleted = false');
+    const baseQb = this.uow.taskResults
+      .createQueryBuilder('tr')
+      .where('tr.task_id = :taskId', { taskId })
+      .andWhere('tr.is_deleted = false');
 
     const itemCount = await baseQb.clone().getCount();
 
     const rows = await baseQb
       // The author is a User; we display them through their consultant_profile
-      // (only consultants can author evidences per ConsultantBoardEvidencesService).
-      .leftJoin('consultant_profiles', 'cp', 'cp.user_id = te.author_id')
-      .select('te.id', 'evidence_id')
-      .addSelect('te.task_id', 'task_id')
-      .addSelect('te.remarks', 'remarks')
-      .addSelect('te.is_edited', 'is_edited')
-      .addSelect('te.edited_at', 'edited_at')
-      .addSelect('te.created_at', 'created_at')
+      // (only consultants can author results per ConsultantBoardResultsService).
+      .leftJoin('consultant_profiles', 'cp', 'cp.user_id = tr.author_id')
+      .select('tr.id', 'result_id')
+      .addSelect('tr.task_id', 'task_id')
+      .addSelect('tr.remarks', 'remarks')
+      .addSelect('tr.is_edited', 'is_edited')
+      .addSelect('tr.edited_at', 'edited_at')
+      .addSelect('tr.created_at', 'created_at')
       .addSelect('cp.id', 'consultant_id')
       .addSelect('cp.full_name', 'consultant_name')
       .addSelect('cp.avatar_url', 'consultant_avatar')
-      .orderBy('te.created_at', 'DESC')
-      .addOrderBy('te.id', 'DESC')
+      .orderBy('tr.created_at', 'DESC')
+      .addOrderBy('tr.id', 'DESC')
       .skip(pageOptions.skip)
       .take(pageOptions.limit)
-      .getRawMany<IEvidenceRow>();
+      .getRawMany<IResultRow>();
 
     if (rows.length === 0) {
       return new PageDto([], new PageMetaDto({ pageOptionsDto: pageOptions, itemCount }));
     }
 
-    const evidenceIds = rows.map((r) => r.evidence_id);
-    const attachments = await this.uow.taskEvidenceAttachments.find({
-      where: { evidenceId: In(evidenceIds) },
+    const resultIds = rows.map((r) => r.result_id);
+    const attachments = await this.uow.taskResultAttachments.find({
+      where: { resultId: In(resultIds) },
       order: { uploadedAt: 'ASC' },
     });
 
-    const byEvidence = new Map<string, TaskEvidenceAttachment[]>();
+    const byResult = new Map<string, TaskResultAttachment[]>();
     for (const a of attachments) {
-      const list = byEvidence.get(a.evidenceId) ?? [];
+      const list = byResult.get(a.resultId) ?? [];
       list.push(a);
-      byEvidence.set(a.evidenceId, list);
+      byResult.set(a.resultId, list);
     }
 
-    const data = rows.map((r) => this.mapRow(r, byEvidence.get(r.evidence_id) ?? []));
+    const data = rows.map((r) => this.mapRow(r, byResult.get(r.result_id) ?? []));
     this.logger.log(
       `list — complete | taskId: ${taskId}, returned: ${data.length}, total: ${itemCount}`,
     );
@@ -115,11 +115,11 @@ export class BoardEvidencesService implements IBoardEvidencesService {
     }
   }
 
-  private mapRow(r: IEvidenceRow, attachments: TaskEvidenceAttachment[]): BoardEvidenceResponseDto {
+  private mapRow(r: IResultRow, attachments: TaskResultAttachment[]): BoardResultResponseDto {
     return plainToInstance(
-      BoardEvidenceResponseDto,
+      BoardResultResponseDto,
       {
-        id: r.evidence_id,
+        id: r.result_id,
         task_id: r.task_id,
         author: {
           consultant_id: r.consultant_id ?? '',

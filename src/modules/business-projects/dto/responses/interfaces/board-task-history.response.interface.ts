@@ -22,5 +22,5 @@ export interface IBoardTaskHistoryResponse {
   new_assignee: IBoardHistoryAssignee | null;
   author: IBoardHistoryAuthor;
   note: string | null;
-  changed_at: Date;
+  changed_at: string;
 }

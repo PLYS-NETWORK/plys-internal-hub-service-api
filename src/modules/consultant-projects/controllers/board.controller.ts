@@ -19,17 +19,10 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { PlatformGuard } from '../../../common/guards/platform.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
-import {
-  ChangeTaskStatusDto,
-  CreateBoardEvidenceDto,
-  UpdateBoardEvidenceDto,
-} from '../dto/requests';
-import {
-  ConsultantBoardEvidenceResponseDto,
-  ConsultantBoardTaskResponseDto,
-} from '../dto/responses';
+import { ChangeTaskStatusDto, CreateBoardResultDto, UpdateBoardResultDto } from '../dto/requests';
+import { ConsultantBoardResultResponseDto, ConsultantBoardTaskResponseDto } from '../dto/responses';
 import { ConsultantBoardService } from '../services/board/board.service';
-import { ConsultantBoardEvidencesService } from '../services/board/board-evidences.service';
+import { ConsultantBoardResultsService } from '../services/board/board-results.service';
 
 @ApiTags('Consultant Projects — Board')
 @ApiBearerAuth()
@@ -40,7 +33,7 @@ import { ConsultantBoardEvidencesService } from '../services/board/board-evidenc
 export class ConsultantBoardController {
   constructor(
     private readonly boardService: ConsultantBoardService,
-    private readonly evidencesService: ConsultantBoardEvidencesService,
+    private readonly resultsService: ConsultantBoardResultsService,
   ) {}
 
   @Get()
@@ -49,7 +42,7 @@ export class ConsultantBoardController {
     summary: 'List the kanban board for an active project member',
     description:
       'Returns every non-DRAFT task in the project, ordered by `display_order` ASC. Each row ' +
-      'carries the assignee snapshot plus live `evidences_count`.',
+      'carries the assignee snapshot plus live `results_count`.',
   })
   public async listTasks(
     @Param('id', ParseUUIDPipe) id: string,
@@ -96,6 +89,7 @@ export class ConsultantBoardController {
     summary: 'Move a task between consultant-allowed kanban statuses',
     description:
       'Allowed transitions: ASSIGNED→IN_PROGRESS, IN_PROGRESS→IN_REVIEW, IN_REVIEW→IN_PROGRESS. ' +
+      'First-time entry into IN_PROGRESS stamps `tasks.started_at`. ' +
       'Returns 409 TASK_CONSULTANT_ALREADY_IN_PROGRESS when target = IN_PROGRESS and the consultant ' +
       'already has another task in IN_PROGRESS.',
   })
@@ -107,41 +101,41 @@ export class ConsultantBoardController {
     await this.boardService.changeStatus(id, taskId, dto);
   }
 
-  // ─── Evidences ─────────────────────────────────────────────────────────────
+  // ─── Results ───────────────────────────────────────────────────────────────
 
-  @Post(':taskId/evidences')
+  @Post(':taskId/results')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create evidence on a task assigned to the calling consultant' })
-  public async createEvidence(
+  @ApiOperation({ summary: 'Create a result on a task assigned to the calling consultant' })
+  public async createResult(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('taskId', ParseUUIDPipe) taskId: string,
-    @Body() dto: CreateBoardEvidenceDto,
-  ): Promise<ITranslatedPayload<ConsultantBoardEvidenceResponseDto>> {
-    const data = await this.evidencesService.create(id, taskId, dto);
+    @Body() dto: CreateBoardResultDto,
+  ): Promise<ITranslatedPayload<ConsultantBoardResultResponseDto>> {
+    const data = await this.resultsService.create(id, taskId, dto);
     return { messageKey: 'success.created', data };
   }
 
-  @Patch(':taskId/evidences/:evidenceId')
+  @Patch(':taskId/results/:resultId')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update own evidence; flips is_edited and replaces attachments' })
-  public async updateEvidence(
+  @ApiOperation({ summary: 'Update own result; flips is_edited and replaces attachments' })
+  public async updateResult(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('taskId', ParseUUIDPipe) taskId: string,
-    @Param('evidenceId', ParseUUIDPipe) evidenceId: string,
-    @Body() dto: UpdateBoardEvidenceDto,
-  ): Promise<ITranslatedPayload<ConsultantBoardEvidenceResponseDto>> {
-    const data = await this.evidencesService.update(id, taskId, evidenceId, dto);
+    @Param('resultId', ParseUUIDPipe) resultId: string,
+    @Body() dto: UpdateBoardResultDto,
+  ): Promise<ITranslatedPayload<ConsultantBoardResultResponseDto>> {
+    const data = await this.resultsService.update(id, taskId, resultId, dto);
     return { messageKey: 'success.ok', data };
   }
 
-  @Delete(':taskId/evidences/:evidenceId')
+  @Delete(':taskId/results/:resultId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Soft-delete own evidence and detach its attachments' })
-  public async deleteEvidence(
+  @ApiOperation({ summary: 'Soft-delete own result and detach its attachments' })
+  public async deleteResult(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('taskId', ParseUUIDPipe) taskId: string,
-    @Param('evidenceId', ParseUUIDPipe) evidenceId: string,
+    @Param('resultId', ParseUUIDPipe) resultId: string,
   ): Promise<void> {
-    await this.evidencesService.delete(id, taskId, evidenceId);
+    await this.resultsService.delete(id, taskId, resultId);
   }
 }

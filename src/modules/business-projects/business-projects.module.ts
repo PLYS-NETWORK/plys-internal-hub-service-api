@@ -1,5 +1,6 @@
 import { EmailModule } from '@common/modules/email';
 import { EnvironmentsModule } from '@common/modules/environments';
+import { FileStorageModule } from '@common/modules/file-storage';
 import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { ProjectAiContextModule } from '@modules/project-ai-context/project-ai-context.module';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
@@ -13,8 +14,10 @@ import { BusinessProjectsController } from './controllers/projects.controller';
 import { SettingsController } from './controllers/settings.controller';
 import { BacklogsService } from './services/backlogs.service';
 import { BoardService } from './services/board/board.service';
-import { BoardEvidencesService } from './services/board/board-evidences.service';
+import { BoardAttachmentsService } from './services/board/board-attachments.service';
+import { BoardCacheService } from './services/board/board-cache.service';
 import { BoardHistoryService } from './services/board/board-history.service';
+import { BoardResultsService } from './services/board/board-results.service';
 import { BusinessAccessService } from './services/business-access.service';
 import { BusinessProjectOverviewService } from './services/overview.service';
 import { ProjectPublishService } from './services/projects/project-publish.service';
@@ -28,6 +31,7 @@ import { SettingsService } from './services/settings.service';
     UnitOfWorkModule,
     EmailModule,
     EnvironmentsModule,
+    FileStorageModule,
     NotificationsModule,
     // forwardRef breaks the cycle: ProjectAiContextModule imports
     // BusinessProjectsModule for BusinessAccessService.
@@ -51,9 +55,11 @@ import { SettingsService } from './services/settings.service';
     BacklogsService,
     SettingsService,
     BoardService,
+    BoardCacheService,
     BoardHistoryService,
-    BoardEvidencesService,
+    BoardResultsService,
+    BoardAttachmentsService,
   ],
-  exports: [BusinessAccessService, ProjectStatusService],
+  exports: [BusinessAccessService, BoardCacheService, ProjectStatusService],
 })
 export class BusinessProjectsModule {}

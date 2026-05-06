@@ -3,12 +3,12 @@ import { Exclude, Expose, Type } from 'class-transformer';
 
 import { ConsultantBoardAttachmentResponseDto } from './consultant-board-attachment-response.dto';
 import {
-  IConsultantBoardEvidenceAuthor,
-  IConsultantBoardEvidenceResponse,
-} from './interfaces/consultant-board-evidence.response.interface';
+  IConsultantBoardResultAuthor,
+  IConsultantBoardResultResponse,
+} from './interfaces/consultant-board-result.response.interface';
 
 @Exclude()
-export class ConsultantBoardEvidenceAuthorDto implements IConsultantBoardEvidenceAuthor {
+export class ConsultantBoardResultAuthorDto implements IConsultantBoardResultAuthor {
   @Expose() @ApiProperty({ name: 'user_id' }) public readonly user_id!: string;
   @Expose() @ApiProperty({ name: 'consultant_id' }) public readonly consultant_id!: string;
   @Expose() @ApiProperty({ name: 'full_name' }) public readonly full_name!: string;
@@ -19,14 +19,14 @@ export class ConsultantBoardEvidenceAuthorDto implements IConsultantBoardEvidenc
 }
 
 @Exclude()
-export class ConsultantBoardEvidenceResponseDto implements IConsultantBoardEvidenceResponse {
+export class ConsultantBoardResultResponseDto implements IConsultantBoardResultResponse {
   @Expose() @ApiProperty() public readonly id!: string;
   @Expose() @ApiProperty({ name: 'task_id' }) public readonly task_id!: string;
 
   @Expose()
-  @Type(() => ConsultantBoardEvidenceAuthorDto)
-  @ApiProperty({ type: () => ConsultantBoardEvidenceAuthorDto })
-  public readonly author!: ConsultantBoardEvidenceAuthorDto;
+  @Type(() => ConsultantBoardResultAuthorDto)
+  @ApiProperty({ type: () => ConsultantBoardResultAuthorDto })
+  public readonly author!: ConsultantBoardResultAuthorDto;
 
   @Expose()
   @ApiProperty({ type: 'object', additionalProperties: true })

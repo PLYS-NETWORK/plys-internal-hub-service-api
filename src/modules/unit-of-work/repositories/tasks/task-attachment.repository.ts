@@ -1,24 +1,24 @@
 import { AbstractRepository } from '@common/repositories';
-import { TaskEvidence } from '@database/entities';
+import { TaskAttachment } from '@database/entities';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 
-import { ITaskEvidenceRepository } from './interfaces';
+import { ITaskAttachmentRepository } from './interfaces';
 
 @Injectable()
-export class TaskEvidenceRepository
-  extends AbstractRepository<TaskEvidence>
-  implements ITaskEvidenceRepository
+export class TaskAttachmentRepository
+  extends AbstractRepository<TaskAttachment>
+  implements ITaskAttachmentRepository
 {
   constructor(
     @InjectEntityManager()
     manager: EntityManager,
   ) {
-    super(TaskEvidence, manager);
+    super(TaskAttachment, manager);
   }
 
   public withManager(manager: EntityManager): this {
-    return new TaskEvidenceRepository(manager) as this;
+    return new TaskAttachmentRepository(manager) as this;
   }
 }

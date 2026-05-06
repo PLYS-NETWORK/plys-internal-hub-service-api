@@ -1,4 +1,4 @@
-export interface IUpdateBoardEvidenceRequest {
+export interface IUpdateBoardResultRequest {
   remarks?: Record<string, unknown>;
   fileIds?: string[];
 }

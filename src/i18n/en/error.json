@@ -52,12 +52,16 @@
     "invalid_status_transition": "Invalid task status transition.",
     "already_assigned": "This task is already assigned to a consultant.",
     "project_not_in_progress": "Tasks can only be managed for in-progress projects.",
-    "evidence_not_found": "Task evidence not found.",
-    "evidence_forbidden": "You do not have permission to perform this action on this evidence.",
-    "evidence_not_assignee": "Only the consultant assigned to this task can manage its evidences.",
-    "evidence_file_not_owned": "One or more attached files do not belong to you or do not exist.",
-    "evidence_empty_update": "Provide remarks or file_ids to update.",
-    "consultant_already_in_progress": "You already have a task in progress. Complete or pause it before starting another."
+    "result_not_found": "Task result not found.",
+    "result_forbidden": "You do not have permission to perform this action on this result.",
+    "result_not_assignee": "Only the consultant assigned to this task can manage its results.",
+    "result_file_not_owned": "One or more attached files do not belong to you or do not exist.",
+    "result_empty_update": "Provide remarks or file_ids to update.",
+    "consultant_already_in_progress": "You already have a task in progress. Complete or pause it before starting another.",
+    "attachment_not_found": "Task attachment not found.",
+    "attachment_forbidden": "You do not have permission to manage attachments on this task.",
+    "attachment_file_not_owned": "One or more attached files do not belong to you or do not exist.",
+    "attachment_invalid_status": "Attachments cannot be modified for tasks in this status."
   },
   "payment": {
     "insufficient_balance": "Insufficient account balance.",

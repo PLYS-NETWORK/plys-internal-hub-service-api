@@ -1,16 +1,16 @@
 import { IConsultantBoardAttachmentResponse } from './consultant-board-attachment.response.interface';
 
-export interface IConsultantBoardEvidenceAuthor {
+export interface IConsultantBoardResultAuthor {
   user_id: string;
   consultant_id: string;
   full_name: string;
   avatar_url: string | null;
 }
 
-export interface IConsultantBoardEvidenceResponse {
+export interface IConsultantBoardResultResponse {
   id: string;
   task_id: string;
-  author: IConsultantBoardEvidenceAuthor;
+  author: IConsultantBoardResultAuthor;
   remarks: Record<string, unknown>;
   is_edited: boolean;
   edited_at: Date | null;

@@ -9,17 +9,17 @@ import {
   IsUUID,
 } from 'class-validator';
 
-import { ICreateBoardEvidenceRequest } from './interfaces/create-board-evidence.request.interface';
+import { ICreateBoardResultRequest } from './interfaces/create-board-result.request.interface';
 
 const MAX_ATTACHMENTS = 10;
 
-export class CreateBoardEvidenceDto implements ICreateBoardEvidenceRequest {
+export class CreateBoardResultDto implements ICreateBoardResultRequest {
   @Expose({ name: 'remarks' })
   @ApiProperty({
     name: 'remarks',
     type: 'object',
     additionalProperties: true,
-    description: 'Rich-text JSON document (TipTap/ProseMirror) describing the evidence.',
+    description: 'Rich-text JSON document (TipTap/ProseMirror) describing the result.',
   })
   @IsObject()
   @IsNotEmptyObject()

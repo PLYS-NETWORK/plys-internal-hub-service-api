@@ -1,11 +1,14 @@
-import { TaskCreationMode, TaskKanbanStatus } from '@database/enums';
+import { TimezoneDate } from '@common/decorators/timezone-date.decorator';
+import { TaskKanbanStatus } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 
+import { BoardTaskAttachmentResponseDto } from './board-task-attachment-response.dto';
 import {
   IBoardTaskAssignee,
   IBoardTaskDetailResponse,
   IBoardTaskResponse,
+  IBoardTaskWorkedDuration,
 } from './interfaces/board-task.response.interface';
 
 @Exclude()
@@ -18,20 +21,29 @@ export class BoardTaskAssigneeDto implements IBoardTaskAssignee {
 }
 
 @Exclude()
+export class BoardTaskWorkedDurationDto implements IBoardTaskWorkedDuration {
+  @Expose() @ApiProperty({ required: false, example: 1 }) public readonly days?: number;
+  @Expose() @ApiProperty({ example: 3 }) public readonly hours!: number;
+  @Expose()
+  @ApiProperty({ name: 'total_seconds', example: 97200 })
+  public readonly total_seconds!: number;
+}
+
+@Exclude()
 export class BoardTaskResponseDto implements IBoardTaskResponse {
   @Expose() @ApiProperty() public readonly id!: string;
   @Expose() @ApiProperty({ example: 'WEB-1' }) public readonly code!: string;
   @Expose() @ApiProperty() public readonly title!: string;
-  @Expose() @ApiProperty({ example: '500.00' }) public readonly price!: string;
+
   @Expose()
-  @ApiProperty({ name: 'creation_mode', enum: TaskCreationMode })
-  public readonly creation_mode!: TaskCreationMode;
+  @ApiProperty({ type: 'object', additionalProperties: true, nullable: true })
+  public readonly description!: Record<string, unknown> | null;
+
   @Expose()
   @ApiProperty({ name: 'kanban_status', enum: TaskKanbanStatus })
   public readonly kanban_status!: TaskKanbanStatus;
-  @Expose()
-  @ApiProperty({ name: 'display_order', example: 1 })
-  public readonly display_order!: number;
+
+  @Expose() @ApiProperty({ example: '500.00' }) public readonly price!: string;
 
   @Expose()
   @Type(() => BoardTaskAssigneeDto)
@@ -39,8 +51,23 @@ export class BoardTaskResponseDto implements IBoardTaskResponse {
   public readonly assignee!: BoardTaskAssigneeDto | null;
 
   @Expose()
-  @ApiProperty({ name: 'evidences_count', example: 0 })
-  public readonly evidences_count!: number;
+  @Type(() => BoardTaskWorkedDurationDto)
+  @ApiProperty({ name: 'total_time_worked', type: () => BoardTaskWorkedDurationDto })
+  public readonly total_time_worked!: BoardTaskWorkedDurationDto;
+
+  @Expose()
+  @ApiProperty({ name: 'attachments_count', example: 0 })
+  public readonly attachments_count!: number;
+
+  @Expose()
+  @TimezoneDate('YYYY-MM-DD HH:mm')
+  @ApiProperty({ name: 'last_update', example: '2026-05-06 14:30' })
+  public readonly last_update!: string;
+
+  @Expose()
+  @TimezoneDate('YYYY-MM-DD')
+  @ApiProperty({ name: 'created_day', example: '2026-05-06' })
+  public readonly created_day!: string;
 }
 
 @Exclude()
@@ -49,25 +76,41 @@ export class BoardTaskDetailResponseDto
   implements IBoardTaskDetailResponse
 {
   @Expose()
-  @ApiProperty({ type: 'object', additionalProperties: true, nullable: true })
-  public readonly description!: Record<string, unknown> | null;
-
-  @Expose()
   @ApiProperty({ name: 'platform_fee_amount', example: '50.00' })
   public readonly platform_fee_amount!: string;
+
   @Expose()
   @ApiProperty({ name: 'consultant_payout', example: '450.00' })
   public readonly consultant_payout!: string;
+
   @Expose()
   @ApiProperty({ name: 'approved_by', nullable: true })
   public readonly approved_by!: string | null;
+
   @Expose()
+  @TimezoneDate()
   @ApiProperty({ name: 'approved_at', nullable: true })
-  public readonly approved_at!: Date | null;
+  public readonly approved_at!: string | null;
+
   @Expose()
+  @TimezoneDate()
   @ApiProperty({ name: 'due_date', nullable: true })
-  public readonly due_date!: Date | null;
+  public readonly due_date!: string | null;
+
+  @Expose()
+  @TimezoneDate()
+  @ApiProperty({ name: 'started_at', nullable: true })
+  public readonly started_at!: string | null;
+
+  @Expose()
+  @TimezoneDate()
+  @ApiProperty({ name: 'completed_at', nullable: true })
+  public readonly completed_at!: string | null;
+
   @Expose() @ApiProperty({ example: 1 }) public readonly version!: number;
-  @Expose() @ApiProperty({ name: 'created_at' }) public readonly created_at!: Date;
-  @Expose() @ApiProperty({ name: 'updated_at' }) public readonly updated_at!: Date;
+
+  @Expose()
+  @Type(() => BoardTaskAttachmentResponseDto)
+  @ApiProperty({ type: () => BoardTaskAttachmentResponseDto, isArray: true })
+  public readonly attachments!: BoardTaskAttachmentResponseDto[];
 }

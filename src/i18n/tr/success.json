@@ -25,9 +25,12 @@
   },
   "task": {
     "created": "Görev başarıyla oluşturuldu.",
-    "evidence_created": "Kanıt başarıyla oluşturuldu.",
-    "evidence_updated": "Kanıt başarıyla güncellendi.",
-    "evidence_deleted": "Kanıt başarıyla silindi."
+    "result_created": "Sonuç başarıyla oluşturuldu.",
+    "result_updated": "Sonuç başarıyla güncellendi.",
+    "result_deleted": "Sonuç başarıyla silindi.",
+    "attachment_created": "Ekler başarıyla yüklendi.",
+    "attachment_updated": "Ek başarıyla güncellendi.",
+    "attachment_deleted": "Ek başarıyla silindi."
   },
   "billing": {
     "invoice_checkout_initiated": "Fatura ödemesi başlatıldı."

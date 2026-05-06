@@ -1,3 +1,4 @@
+import { TimezoneDate } from '@common/decorators/timezone-date.decorator';
 import { TaskHistoryChangeType, TaskKanbanStatus } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
@@ -66,5 +67,8 @@ export class BoardTaskHistoryResponseDto implements IBoardTaskHistoryResponse {
   @ApiProperty({ nullable: true })
   public readonly note!: string | null;
 
-  @Expose() @ApiProperty({ name: 'changed_at' }) public readonly changed_at!: Date;
+  @Expose()
+  @TimezoneDate()
+  @ApiProperty({ name: 'changed_at', example: '2026-05-06 14:30:00' })
+  public readonly changed_at!: string;
 }

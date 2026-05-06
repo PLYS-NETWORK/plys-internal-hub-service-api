@@ -1,12 +1,18 @@
 export { AddToBoardValidationResponseDto } from './add-to-board-validation-response.dto';
 export { BoardAttachmentResponseDto } from './board-attachment-response.dto';
-export { BoardEvidenceAuthorDto, BoardEvidenceResponseDto } from './board-evidence-response.dto';
+export { BoardResultAuthorDto, BoardResultResponseDto } from './board-result-response.dto';
+export { BoardTaskAttachmentResponseDto } from './board-task-attachment-response.dto';
 export {
   BoardHistoryAssigneeDto,
   BoardHistoryAuthorDto,
   BoardTaskHistoryResponseDto,
 } from './board-task-history-response.dto';
-export { BoardTaskDetailResponseDto, BoardTaskResponseDto } from './board-task-response.dto';
+export {
+  BoardTaskAssigneeDto,
+  BoardTaskDetailResponseDto,
+  BoardTaskResponseDto,
+  BoardTaskWorkedDurationDto,
+} from './board-task-response.dto';
 export { DraftTaskResponseDto } from './draft-task-response.dto';
 export { OverviewResponseDto } from './overview-response.dto';
 export { PayTasksResponseDto } from './pay-tasks-response.dto';

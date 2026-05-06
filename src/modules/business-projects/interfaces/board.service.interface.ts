@@ -1,4 +1,4 @@
-import { ReorderTasksDto } from '../dto/requests';
+import { ListBoardTasksDto } from '../dto/requests';
 import { BoardTaskDetailResponseDto, BoardTaskResponseDto } from '../dto/responses';
 
 /**
@@ -6,26 +6,26 @@ import { BoardTaskDetailResponseDto, BoardTaskResponseDto } from '../dto/respons
  * controller; movement between the two is mediated by `pay-tasks`.
  */
 export interface IBoardService {
-  /** All non-draft tasks for the project, ordered by display_order ASC. */
-  listTasks(projectId: string): Promise<BoardTaskResponseDto[]>;
-
   /**
-   * Reorders tasks within a single column. Every task in the payload must
-   * already be in `dto.currentStatus`; this endpoint never moves tasks
-   * between columns. Position updates are written in batches of 50 inside
-   * one transaction with the project row pessimistically locked.
+   * Returns the project's tasks (excluding DRAFT) with optional filters and
+   * sort, formatted for the business board view.
    *
-   * @param projectId The owning project (must be owned by the calling business).
-   * @param dto       The current column and per-task `display_order` values.
-   * @throws TranslatableException 422 TASK_INVALID_STATUS_TRANSITION when
-   *   `currentStatus` is DRAFT/DONE/CANCELLED, when the payload contains
-   *   duplicate `display_order` values, or when any referenced task is not
-   *   currently in `currentStatus`.
+   * The response is cached per (projectId, userId, timezone, filter-set) for
+   * a short TTL. Pass `is_remove_cache=true` to skip and refresh the cache.
+   *
+   * @param projectId Project owned by the calling business.
+   * @param filters   Optional kanban-status / assignee filter and sort.
+   * @returns Tasks with assignee, attachments_count, total_time_worked,
+   *   created_day and last_update formatted in the caller's timezone.
    * @throws TranslatableException 404 PROJECT_NOT_FOUND when the project is
    *   not owned by the calling business.
    */
-  reorderTasks(projectId: string, dto: ReorderTasksDto): Promise<void>;
+  listTasks(projectId: string, filters: ListBoardTasksDto): Promise<BoardTaskResponseDto[]>;
 
-  /** Full task detail (evidence bodies live on the dedicated endpoint). */
+  /**
+   * Full task detail including attachments. DRAFT tasks are surfaced as 404.
+   *
+   * @throws TranslatableException 404 TASK_NOT_FOUND.
+   */
   getTaskDetail(projectId: string, taskId: string): Promise<BoardTaskDetailResponseDto>;
 }

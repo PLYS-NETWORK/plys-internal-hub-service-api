@@ -4,17 +4,18 @@ import { IStorageProvider, STORAGE_PROVIDER } from '@common/modules/file-storage
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { DateUtil } from '@common/utils/date';
-import { ConsultantProfile, FileEntity, TaskEvidence } from '@database/entities';
+import { ConsultantProfile, FileEntity, TaskResult } from '@database/entities';
 import { FilePurpose, TaskKanbanStatus } from '@database/enums';
+import { BoardCacheService } from '@modules/business-projects/services/board/board-cache.service';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { In } from 'typeorm';
 
-import { CreateBoardEvidenceDto, UpdateBoardEvidenceDto } from '../../dto/requests';
-import { ConsultantBoardEvidenceResponseDto } from '../../dto/responses';
-import { IConsultantBoardEvidencesService } from '../../interfaces/consultant-board-evidences.service.interface';
+import { CreateBoardResultDto, UpdateBoardResultDto } from '../../dto/requests';
+import { ConsultantBoardResultResponseDto } from '../../dto/responses';
+import { IConsultantBoardResultsService } from '../../interfaces/consultant-board-results.service.interface';
 import { ConsultantAccessService } from '../consultant-access.service';
 
 interface IAttachmentSeed {
@@ -26,24 +27,25 @@ interface IAttachmentSeed {
 }
 
 @Injectable()
-export class ConsultantBoardEvidencesService implements IConsultantBoardEvidencesService {
+export class ConsultantBoardResultsService implements IConsultantBoardResultsService {
   private readonly logger: AppLogger;
 
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly access: ConsultantAccessService,
+    private readonly cache: BoardCacheService,
     @Inject(STORAGE_PROVIDER) private readonly storage: IStorageProvider,
   ) {
-    this.logger = new AppLogger(ConsultantBoardEvidencesService.name, requestContext);
+    this.logger = new AppLogger(ConsultantBoardResultsService.name, requestContext);
   }
 
   /** @inheritdoc */
   public async create(
     projectId: string,
     taskId: string,
-    dto: CreateBoardEvidenceDto,
-  ): Promise<ConsultantBoardEvidenceResponseDto> {
+    dto: CreateBoardResultDto,
+  ): Promise<ConsultantBoardResultResponseDto> {
     this.logger.log(
       `create — start | projectId: ${projectId}, taskId: ${taskId}, files: ${dto.fileIds?.length ?? 0}`,
     );
@@ -54,29 +56,31 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
     const seeds = await this.resolveAttachmentSeeds(dto.fileIds ?? [], userId);
 
     const saved = await this.uow.withTransaction(async (tx: IUnitOfWork) => {
-      const evidence = tx.taskEvidences.create({
+      const result = tx.taskResults.create({
         taskId,
         authorId: userId,
         remarks: dto.remarks,
       });
-      const persisted = (await tx.taskEvidences.save(evidence)) as TaskEvidence;
+      const persisted = (await tx.taskResults.save(result)) as TaskResult;
       if (seeds.length) {
         await this.insertAttachments(tx, persisted.id, seeds);
         await tx.files.markAsAttached(
           seeds.map((s) => s.fileId),
-          FilePurpose.TASK_EVIDENCE,
+          FilePurpose.TASK_RESULT,
         );
       }
       return persisted;
     });
 
-    const attachments = await this.uow.taskEvidenceAttachments.find({
-      where: { evidenceId: saved.id },
+    const attachments = await this.uow.taskResultAttachments.find({
+      where: { resultId: saved.id },
       order: { uploadedAt: 'ASC' },
     });
 
+    await this.cache.invalidateProject(projectId);
+
     this.logger.log(
-      `create — complete | evidenceId: ${saved.id}, attachments: ${attachments.length}`,
+      `create — complete | resultId: ${saved.id}, attachments: ${attachments.length}`,
     );
     return this.toResponseDto(saved, attachments, consultantProfile, userId);
   }
@@ -85,32 +89,32 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
   public async update(
     projectId: string,
     taskId: string,
-    evidenceId: string,
-    dto: UpdateBoardEvidenceDto,
-  ): Promise<ConsultantBoardEvidenceResponseDto> {
+    resultId: string,
+    dto: UpdateBoardResultDto,
+  ): Promise<ConsultantBoardResultResponseDto> {
     this.logger.log(
-      `update — start | projectId: ${projectId}, taskId: ${taskId}, evidenceId: ${evidenceId}`,
+      `update — start | projectId: ${projectId}, taskId: ${taskId}, resultId: ${resultId}`,
     );
     const { consultantProfile } = await this.access.resolveProjectMembership(projectId);
     await this.assertAssigneeOnBoard(projectId, taskId, consultantProfile.id);
 
     if (dto.remarks === undefined && dto.fileIds === undefined) {
       throw new TranslatableException({
-        messageKey: 'error.task.evidence_empty_update',
-        errorCode: ERROR_CODES.TASK_EVIDENCE_EMPTY_UPDATE,
+        messageKey: 'error.task.result_empty_update',
+        errorCode: ERROR_CODES.TASK_RESULT_EMPTY_UPDATE,
         status: HttpStatus.BAD_REQUEST,
       });
     }
 
-    const existing = await this.uow.taskEvidences.findOne({
-      where: { id: evidenceId, taskId },
+    const existing = await this.uow.taskResults.findOne({
+      where: { id: resultId, taskId },
     });
-    if (!existing || existing.isDeleted) throw this.evidenceNotFound(evidenceId);
+    if (!existing || existing.isDeleted) throw this.resultNotFound(resultId);
 
     const userId = this.requestContext.userId!;
     if (existing.authorId !== userId) {
-      this.logger.warn(`update — non-author | evidenceId: ${evidenceId}, userId: ${userId}`);
-      throw this.evidenceForbidden();
+      this.logger.warn(`update — non-author | resultId: ${resultId}, userId: ${userId}`);
+      throw this.resultForbidden();
     }
 
     const seeds =
@@ -118,8 +122,8 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
 
     const detachedFileIds: string[] = [];
     if (seeds !== null) {
-      const previous = await this.uow.taskEvidenceAttachments.find({
-        where: { evidenceId },
+      const previous = await this.uow.taskResultAttachments.find({
+        where: { resultId },
         select: { fileId: true },
       });
       const keep = new Set(seeds.map((s) => s.fileId));
@@ -134,15 +138,15 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
         existing.isEdited = true;
         existing.editedAt = DateUtil.nowDate();
       }
-      const persisted = (await tx.taskEvidences.save(existing)) as TaskEvidence;
+      const persisted = (await tx.taskResults.save(existing)) as TaskResult;
 
       if (seeds !== null) {
-        await tx.taskEvidenceAttachments.delete({ evidenceId });
+        await tx.taskResultAttachments.delete({ resultId });
         if (seeds.length) {
-          await this.insertAttachments(tx, evidenceId, seeds);
+          await this.insertAttachments(tx, resultId, seeds);
           await tx.files.markAsAttached(
             seeds.map((s) => s.fileId),
-            FilePurpose.TASK_EVIDENCE,
+            FilePurpose.TASK_RESULT,
           );
         }
         if (detachedFileIds.length) {
@@ -153,59 +157,63 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
       return persisted;
     });
 
-    const attachments = await this.uow.taskEvidenceAttachments.find({
-      where: { evidenceId: saved.id },
+    const attachments = await this.uow.taskResultAttachments.find({
+      where: { resultId: saved.id },
       order: { uploadedAt: 'ASC' },
     });
 
+    await this.cache.invalidateProject(projectId);
+
     this.logger.log(
-      `update — complete | evidenceId: ${saved.id}, attachments: ${attachments.length}, detached: ${detachedFileIds.length}`,
+      `update — complete | resultId: ${saved.id}, attachments: ${attachments.length}, detached: ${detachedFileIds.length}`,
     );
     return this.toResponseDto(saved, attachments, consultantProfile, userId);
   }
 
   /** @inheritdoc */
-  public async delete(projectId: string, taskId: string, evidenceId: string): Promise<void> {
+  public async delete(projectId: string, taskId: string, resultId: string): Promise<void> {
     this.logger.log(
-      `delete — start | projectId: ${projectId}, taskId: ${taskId}, evidenceId: ${evidenceId}`,
+      `delete — start | projectId: ${projectId}, taskId: ${taskId}, resultId: ${resultId}`,
     );
     const { consultantProfile } = await this.access.resolveProjectMembership(projectId);
     await this.assertAssigneeOnBoard(projectId, taskId, consultantProfile.id);
 
-    const existing = await this.uow.taskEvidences.findOne({
-      where: { id: evidenceId, taskId },
+    const existing = await this.uow.taskResults.findOne({
+      where: { id: resultId, taskId },
     });
-    if (!existing || existing.isDeleted) throw this.evidenceNotFound(evidenceId);
+    if (!existing || existing.isDeleted) throw this.resultNotFound(resultId);
 
     const userId = this.requestContext.userId!;
     if (existing.authorId !== userId) {
-      this.logger.warn(`delete — non-author | evidenceId: ${evidenceId}, userId: ${userId}`);
-      throw this.evidenceForbidden();
+      this.logger.warn(`delete — non-author | resultId: ${resultId}, userId: ${userId}`);
+      throw this.resultForbidden();
     }
 
-    const attachmentRows = await this.uow.taskEvidenceAttachments.find({
-      where: { evidenceId },
+    const attachmentRows = await this.uow.taskResultAttachments.find({
+      where: { resultId },
       select: { fileId: true },
     });
     const fileIds = attachmentRows.map((a) => a.fileId).filter((id): id is string => id !== null);
 
     await this.uow.withTransaction(async (tx: IUnitOfWork) => {
       existing.isDeleted = true;
-      await tx.taskEvidences.save(existing);
-      await tx.taskEvidenceAttachments.delete({ evidenceId });
+      await tx.taskResults.save(existing);
+      await tx.taskResultAttachments.delete({ resultId });
       if (fileIds.length) {
         await tx.files.markAsOrphaned(fileIds);
       }
     });
 
-    this.logger.log(`delete — complete | evidenceId: ${evidenceId}, files: ${fileIds.length}`);
+    await this.cache.invalidateProject(projectId);
+
+    this.logger.log(`delete — complete | resultId: ${resultId}, files: ${fileIds.length}`);
   }
 
   // ─── Private helpers ───────────────────────────────────────────────────────
 
-  // Evidence is restricted to the task's current assignee. The check covers
-  // both the task-on-board predicate and the assignee predicate so all entry
-  // points share one error contract.
+  // Result authoring is restricted to the task's current assignee. The check
+  // covers both the task-on-board predicate and the assignee predicate so all
+  // entry points share one error contract.
   private async assertAssigneeOnBoard(
     projectId: string,
     taskId: string,
@@ -221,8 +229,8 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
     }
     if (task.assignedTo !== consultantId) {
       throw new TranslatableException({
-        messageKey: 'error.task.evidence_not_assignee',
-        errorCode: ERROR_CODES.TASK_EVIDENCE_NOT_ASSIGNEE,
+        messageKey: 'error.task.result_not_assignee',
+        errorCode: ERROR_CODES.TASK_RESULT_NOT_ASSIGNEE,
         status: HttpStatus.FORBIDDEN,
       });
     }
@@ -244,8 +252,8 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
           `resolveAttachmentSeeds — file not owned | userId: ${userId}, fileId: ${id}`,
         );
         throw new TranslatableException({
-          messageKey: 'error.task.evidence_file_not_owned',
-          errorCode: ERROR_CODES.TASK_EVIDENCE_FILE_NOT_OWNED,
+          messageKey: 'error.task.result_file_not_owned',
+          errorCode: ERROR_CODES.TASK_RESULT_FILE_NOT_OWNED,
           status: HttpStatus.BAD_REQUEST,
         });
       }
@@ -267,12 +275,12 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
 
   private async insertAttachments(
     tx: IUnitOfWork,
-    evidenceId: string,
+    resultId: string,
     seeds: IAttachmentSeed[],
   ): Promise<void> {
     const rows = seeds.map((s) =>
-      tx.taskEvidenceAttachments.create({
-        evidenceId,
+      tx.taskResultAttachments.create({
+        resultId,
         fileId: s.fileId,
         fileName: s.fileName,
         fileUrl: s.fileUrl,
@@ -280,11 +288,11 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
         fileSizeBytes: s.fileSizeBytes,
       }),
     );
-    await tx.taskEvidenceAttachments.save(rows);
+    await tx.taskResultAttachments.save(rows);
   }
 
   private toResponseDto(
-    evidence: TaskEvidence,
+    result: TaskResult,
     attachments: {
       id: string;
       fileId: string | null;
@@ -296,22 +304,22 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
     }[],
     consultantProfile: ConsultantProfile,
     userId: string,
-  ): ConsultantBoardEvidenceResponseDto {
+  ): ConsultantBoardResultResponseDto {
     return plainToInstance(
-      ConsultantBoardEvidenceResponseDto,
+      ConsultantBoardResultResponseDto,
       {
-        id: evidence.id,
-        task_id: evidence.taskId,
+        id: result.id,
+        task_id: result.taskId,
         author: {
           user_id: userId,
           consultant_id: consultantProfile.id,
           full_name: consultantProfile.fullName,
           avatar_url: consultantProfile.avatarUrl ?? null,
         },
-        remarks: evidence.remarks,
-        is_edited: evidence.isEdited,
-        edited_at: evidence.editedAt,
-        created_at: evidence.createdAt,
+        remarks: result.remarks,
+        is_edited: result.isEdited,
+        edited_at: result.editedAt,
+        created_at: result.createdAt,
         attachments: attachments.map((a) => ({
           id: a.id,
           file_id: a.fileId,
@@ -326,19 +334,19 @@ export class ConsultantBoardEvidencesService implements IConsultantBoardEvidence
     );
   }
 
-  private evidenceNotFound(evidenceId: string): TranslatableException {
-    this.logger.warn(`evidence operation — not found | evidenceId: ${evidenceId}`);
+  private resultNotFound(resultId: string): TranslatableException {
+    this.logger.warn(`result operation — not found | resultId: ${resultId}`);
     return new TranslatableException({
-      messageKey: 'error.task.evidence_not_found',
-      errorCode: ERROR_CODES.TASK_EVIDENCE_NOT_FOUND,
+      messageKey: 'error.task.result_not_found',
+      errorCode: ERROR_CODES.TASK_RESULT_NOT_FOUND,
       status: HttpStatus.NOT_FOUND,
     });
   }
 
-  private evidenceForbidden(): TranslatableException {
+  private resultForbidden(): TranslatableException {
     return new TranslatableException({
-      messageKey: 'error.task.evidence_forbidden',
-      errorCode: ERROR_CODES.TASK_EVIDENCE_FORBIDDEN,
+      messageKey: 'error.task.result_forbidden',
+      errorCode: ERROR_CODES.TASK_RESULT_FORBIDDEN,
       status: HttpStatus.FORBIDDEN,
     });
   }

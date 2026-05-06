@@ -9,11 +9,11 @@ import {
   IsUUID,
 } from 'class-validator';
 
-import { IUpdateBoardEvidenceRequest } from './interfaces/update-board-evidence.request.interface';
+import { IUpdateBoardResultRequest } from './interfaces/update-board-result.request.interface';
 
 const MAX_ATTACHMENTS = 10;
 
-export class UpdateBoardEvidenceDto implements IUpdateBoardEvidenceRequest {
+export class UpdateBoardResultDto implements IUpdateBoardResultRequest {
   @Expose({ name: 'remarks' })
   @ApiPropertyOptional({
     name: 'remarks',
