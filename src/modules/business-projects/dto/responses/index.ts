@@ -1,5 +1,6 @@
 export { AddToBoardValidationResponseDto } from './add-to-board-validation-response.dto';
 export { BoardAttachmentResponseDto } from './board-attachment-response.dto';
+export { BoardMilestonesResponseDto } from './board-milestones-response.dto';
 export { BoardResultAuthorDto, BoardResultResponseDto } from './board-result-response.dto';
 export { BoardTaskAttachmentResponseDto } from './board-task-attachment-response.dto';
 export {

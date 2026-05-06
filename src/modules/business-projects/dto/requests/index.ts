@@ -1,6 +1,7 @@
 export { ATTACH_FILES_MAX, ATTACH_FILES_MIN, AttachFilesDto } from './attach-files.dto';
 export { CreateDraftTaskDto } from './create-draft-task.dto';
 export { CreateProjectDto } from './create-project.dto';
+export { GetMilestonesDto } from './get-milestones.dto';
 export type { BoardTaskOrderBy, BoardTaskSortBy } from './list-board-tasks.dto';
 export { ASSIGNEE_ID_UNASSIGNED, ListBoardTasksDto } from './list-board-tasks.dto';
 export { ListDraftTasksDto } from './list-draft-tasks.dto';

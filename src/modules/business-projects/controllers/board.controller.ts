@@ -23,7 +23,12 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { AttachFilesDto, ListBoardTasksDto, UpdateTaskAttachmentDto } from '../dto/requests';
+import {
+  AttachFilesDto,
+  GetMilestonesDto,
+  ListBoardTasksDto,
+  UpdateTaskAttachmentDto,
+} from '../dto/requests';
 import {
   BoardResultResponseDto,
   BoardTaskAttachmentResponseDto,
@@ -31,9 +36,11 @@ import {
   BoardTaskHistoryResponseDto,
   BoardTaskResponseDto,
 } from '../dto/responses';
+import { BoardMilestonesResponseDto } from '../dto/responses/board-milestones-response.dto';
 import { BoardService } from '../services/board/board.service';
 import { BoardAttachmentsService } from '../services/board/board-attachments.service';
 import { BoardHistoryService } from '../services/board/board-history.service';
+import { BoardMilestonesService } from '../services/board/board-milestones.service';
 import { BoardResultsService } from '../services/board/board-results.service';
 
 @ApiTags('Business Projects — Board')
@@ -48,25 +55,43 @@ export class BoardController {
     private readonly historyService: BoardHistoryService,
     private readonly resultsService: BoardResultsService,
     private readonly attachmentsService: BoardAttachmentsService,
+    private readonly milestonesService: BoardMilestonesService,
   ) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'List non-draft tasks with optional filters/sort and short-TTL cache',
+    summary: 'List non-draft tasks with optional filters/sort, pagination, and short-TTL cache',
     description:
-      'Returns every non-DRAFT task in the project. Optional `status` and `assignee_id` ' +
+      'Returns non-DRAFT tasks in the project (paginated). Optional `status` and `assignee_id` ' +
       'filters narrow the set; `sort_by` accepts `total_worked_hours`, `created_at`, or ' +
-      '`updated_at` (default), `order_by` accepts `ASC`/`DESC` (default DESC). The response ' +
-      'is cached per (project, user, timezone, filter-set) for ~60s; pass `is_remove_cache=true` ' +
+      '`updated_at` (default), `order_by` accepts `ASC`/`DESC` (default DESC). Use `page` and ' +
+      '`limit` (max 100, default 20) for pagination. The response is cached per ' +
+      '(project, user, timezone, filter-set, page, limit) for ~60s; pass `is_remove_cache=true` ' +
       'to bypass and refresh. Date fields (`last_update`, `created_day`) are formatted using ' +
       'the timezone supplied via the `x-timezone` header (default UTC).',
   })
   public async listTasks(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() filters: ListBoardTasksDto,
-  ): Promise<ITranslatedPayload<BoardTaskResponseDto[]>> {
+  ): Promise<ITranslatedPayload<PageDto<BoardTaskResponseDto>>> {
     const data = await this.boardService.listTasks(id, filters);
+    return { messageKey: 'success.ok', data };
+  }
+
+  @Get('milestones')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Task count summary grouped by kanban status (no DRAFT, no deleted)',
+    description:
+      'Returns the total number of tasks and per-status breakdowns for the project. ' +
+      'DRAFT tasks and soft-deleted tasks are excluded from all counts.',
+  })
+  public async getMilestones(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() filters: GetMilestonesDto,
+  ): Promise<ITranslatedPayload<BoardMilestonesResponseDto>> {
+    const data = await this.milestonesService.getSummary(id, filters);
     return { messageKey: 'success.ok', data };
   }
 

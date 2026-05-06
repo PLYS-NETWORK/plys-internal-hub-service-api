@@ -17,6 +17,7 @@ import { BoardService } from './services/board/board.service';
 import { BoardAttachmentsService } from './services/board/board-attachments.service';
 import { BoardCacheService } from './services/board/board-cache.service';
 import { BoardHistoryService } from './services/board/board-history.service';
+import { BoardMilestonesService } from './services/board/board-milestones.service';
 import { BoardResultsService } from './services/board/board-results.service';
 import { BusinessAccessService } from './services/business-access.service';
 import { BusinessProjectOverviewService } from './services/overview.service';
@@ -59,6 +60,7 @@ import { SettingsService } from './services/settings.service';
     BoardHistoryService,
     BoardResultsService,
     BoardAttachmentsService,
+    BoardMilestonesService,
   ],
   exports: [BusinessAccessService, BoardCacheService, ProjectStatusService],
 })

@@ -1,4 +1,6 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
+import { PageDto } from '@common/dto/page.dto';
+import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
@@ -49,7 +51,7 @@ export class BoardService implements IBoardService {
   public async listTasks(
     projectId: string,
     filters: ListBoardTasksDto,
-  ): Promise<BoardTaskResponseDto[]> {
+  ): Promise<PageDto<BoardTaskResponseDto>> {
     const userId = this.requestContext.userId!;
     const tz = this.requestContext.timezone ?? 'UTC';
     const sortBy = filters.sortBy ?? 'updated_at';
@@ -57,31 +59,59 @@ export class BoardService implements IBoardService {
     this.logger.log(
       `listTasks — start | projectId: ${projectId}, status: ${filters.status ?? '-'}, assignee: ${
         filters.assigneeId ?? '-'
-      }, sort: ${sortBy} ${orderBy}, removeCache: ${filters.isRemoveCache ?? false}`,
+      }, keywords: ${filters.keywords ?? '-'}, sort: ${sortBy} ${orderBy}, page: ${filters.page}, limit: ${filters.limit}, removeCache: ${filters.isRemoveCache ?? false}`,
     );
     await this.access.resolveOwnedProject(projectId);
 
     const cacheKey = this.cache.buildKey(projectId, userId, tz, {
       status: filters.status ?? null,
       assigneeId: filters.assigneeId ?? null,
+      keywords: filters.keywords ?? null,
       sortBy,
       orderBy,
+      page: filters.page,
+      limit: filters.limit,
     });
 
     if (!filters.isRemoveCache) {
-      const cached = await this.cache.get<unknown[]>(cacheKey);
+      const cached = await this.cache.get<{ data: unknown[]; meta: PageMetaDto }>(cacheKey);
       if (cached) {
-        this.logger.log(`listTasks — cache hit | key: ${cacheKey}, count: ${cached.length}`);
-        return cached.map((entry) =>
+        this.logger.log(`listTasks — cache hit | key: ${cacheKey}, count: ${cached.data.length}`);
+        const data = cached.data.map((entry) =>
           plainToInstance(BoardTaskResponseDto, entry, { excludeExtraneousValues: true }),
         );
+        return new PageDto(data, cached.meta as PageMetaDto);
       }
     } else {
       await this.cache.invalidateKey(cacheKey);
     }
 
-    const qb = this.uow.tasks
+    // Base query with filters only — cloned for COUNT before joins/selects are added.
+    const baseQb = this.uow.tasks
       .createQueryBuilder('t')
+      .where('t.project_id = :projectId', { projectId })
+      .andWhere('t.kanban_status != :draft', { draft: TaskKanbanStatus.DRAFT })
+      .andWhere('t.deleted_at IS NULL');
+
+    if (filters.status) {
+      baseQb.andWhere('t.kanban_status = :status', { status: filters.status });
+    }
+    if (filters.assigneeId) {
+      if (filters.assigneeId === ASSIGNEE_ID_UNASSIGNED) {
+        baseQb.andWhere('t.assigned_to IS NULL');
+      } else {
+        baseQb.andWhere('t.assigned_to = :assigneeId', { assigneeId: filters.assigneeId });
+      }
+    }
+    if (filters.keywords) {
+      baseQb.andWhere('(t.title ILIKE :keywords OR t.code ILIKE :keywords)', {
+        keywords: `%${filters.keywords}%`,
+      });
+    }
+
+    const itemCount = await baseQb.clone().getCount();
+
+    const dataQb = baseQb
       .leftJoin('t.assignee', 'cp')
       .select('t.id', 'task_id')
       .addSelect('t.code', 'task_code')
@@ -103,49 +133,37 @@ export class BoardService implements IBoardService {
       .addSelect(
         `EXTRACT(EPOCH FROM (COALESCE(t.completed_at, NOW()) - t.started_at))`,
         'worked_seconds',
-      )
-      .where('t.project_id = :projectId', { projectId })
-      .andWhere('t.kanban_status != :draft', { draft: TaskKanbanStatus.DRAFT })
-      .andWhere('t.deleted_at IS NULL');
+      );
 
-    if (filters.status) {
-      qb.andWhere('t.kanban_status = :status', { status: filters.status });
-    }
-    if (filters.assigneeId) {
-      if (filters.assigneeId === ASSIGNEE_ID_UNASSIGNED) {
-        qb.andWhere('t.assigned_to IS NULL');
-      } else {
-        qb.andWhere('t.assigned_to = :assigneeId', { assigneeId: filters.assigneeId });
-      }
-    }
-
-    // Stable secondary sort on id keeps pagination/dedupe deterministic if
-    // the primary sort key has ties (multiple tasks sharing updated_at).
+    // Stable secondary sort on id keeps pagination deterministic when the
+    // primary sort key has ties (multiple tasks sharing the same updated_at).
     if (sortBy === 'total_worked_hours') {
       // NULLS LAST on ASC, NULLS FIRST on DESC mirrors the user's expectation
       // that "no time logged" sorts to the bottom of an ascending list and to
       // the top of a descending one.
-      qb.orderBy(
+      dataQb.orderBy(
         `EXTRACT(EPOCH FROM (COALESCE(t.completed_at, NOW()) - t.started_at))`,
         orderBy,
         orderBy === 'ASC' ? 'NULLS LAST' : 'NULLS FIRST',
       );
     } else if (sortBy === 'created_at') {
-      qb.orderBy('t.created_at', orderBy);
+      dataQb.orderBy('t.created_at', orderBy);
     } else {
-      qb.orderBy('t.updated_at', orderBy);
+      dataQb.orderBy('t.updated_at', orderBy);
     }
-    qb.addOrderBy('t.id', 'ASC');
+    dataQb.addOrderBy('t.id', 'ASC').skip(filters.skip).take(filters.limit);
 
-    const rows = await qb.getRawMany<IBoardTaskRow>();
-
+    const rows = await dataQb.getRawMany<IBoardTaskRow>();
     const data = rows.map((r) => this.mapRow(r));
-    await this.cache.set(cacheKey, data);
+
+    const meta = new PageMetaDto({ pageOptionsDto: filters, itemCount });
+    const result = new PageDto(data, meta);
+    await this.cache.set(cacheKey, result);
 
     this.logger.log(
-      `listTasks — complete | projectId: ${projectId}, count: ${data.length}, cached: true`,
+      `listTasks — complete | projectId: ${projectId}, count: ${data.length}, total: ${itemCount}, cached: true`,
     );
-    return data;
+    return result;
   }
 
   /** @inheritdoc */

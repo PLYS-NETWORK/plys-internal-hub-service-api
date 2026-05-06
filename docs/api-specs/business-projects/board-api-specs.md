@@ -18,7 +18,7 @@
 
 ## Endpoints
 
-### 1. List board tasks (filtered, sorted, cached)
+### 1. List board tasks (filtered, sorted, paginated, cached)
 
 - **Endpoint:** `GET /projects/business/:id/board`
 - **Method:** `GET`
@@ -28,35 +28,48 @@
   |-------|------|----------|-------|
   | `status` | `TaskKanbanStatus` | no | Optional kanban-status filter. `DRAFT` is server-rejected (drafts are board-invisible). |
   | `assignee_id` | `string` (UUID v4) or `"unassigned"` | no | Filter by `consultant_profiles.id`. The literal string `unassigned` returns only tasks with no assignee. |
+  | `keywords` | `string` | no | Case-insensitive substring search against `title` and `code`. Min 2 chars, max 200 chars. Matched with `ILIKE '%…%'` on both columns (OR). |
   | `sort_by` | `"total_worked_hours" \| "created_at" \| "updated_at"` | no | Default `updated_at`. |
   | `order_by` | `"ASC" \| "DESC"` | no | Default `DESC`. |
   | `is_remove_cache` | `boolean` | no | When `true`, bypass the cached payload and refresh it. |
+  | `page` | `number` | no | Default `1`, min `1`. |
+  | `limit` | `number` | no | Default `20`, min `1`, max `100`. |
 - **Behaviour:**
-  - Returns every non-`DRAFT` task in the project (`DONE` and `CANCELLED` are included; use `status` to narrow).
+  - Returns non-`DRAFT` tasks in the project (`DONE` and `CANCELLED` are included; use `status` to narrow), paginated.
   - The `total_worked_hours` sort key is computed in SQL as `EXTRACT(EPOCH FROM (COALESCE(completed_at, NOW()) - started_at))`. NULLs sort last on `ASC`, first on `DESC`. A stable secondary sort on `id ASC` deduplicates ties.
-  - `attachments_count` is a correlated subquery on the new `task_attachments` table (no N+1).
-  - **Caching:** the response is cached in Redis for ~60s, keyed per `(project, user, timezone, filter-set)` via [BoardCacheService.buildKey](../../../src/modules/business-projects/services/board/board-cache.service.ts). `is_remove_cache=true` deletes the matching key and computes fresh. Any task / attachment / status mutation calls `BoardCacheService.invalidateProject(projectId)` and wipes every variant for the project.
-- **Response 200:** [`IBoardTaskResponse[]`](../../../src/modules/business-projects/dto/responses/interfaces/board-task.response.interface.ts)
-
-  Item shape:
+  - `attachments_count` is a correlated subquery on the `task_attachments` table (no N+1).
+  - **Caching:** the response is cached in Redis for ~60s, keyed per `(project, user, timezone, filter-set, page, limit)` via [BoardCacheService.buildKey](../../../src/modules/business-projects/services/board/board-cache.service.ts). `is_remove_cache=true` deletes the matching key and computes fresh. Any task / attachment / status mutation calls `BoardCacheService.invalidateProject(projectId)` and wipes every variant for the project.
+- **Response 200:** `PageDto<`[`IBoardTaskResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-task.response.interface.ts)`>`
 
   ```ts
   {
-    id: string,                                  // UUID
-    code: string,                                // e.g. "WEB-1"
-    title: string,
-    description: Record<string, unknown> | null, // rich-text JSONB; opaque to server
-    kanban_status: TaskKanbanStatus,
-    price: string,                               // "500.00"
-    assignee: { consultant_id, full_name, avatar_url } | null,
-    total_time_worked: {
-      days?: number,         // present only when total >= 24h
-      hours: number,         // 0–23 when days set, else floor(total_seconds / 3600)
-      total_seconds: number  // always present (sortable / recomputable)
-    },
-    attachments_count: number,
-    last_update: string,                         // formatted from updated_at, "YYYY-MM-DD HH:mm" in caller tz
-    created_day: string                          // formatted from created_at, "YYYY-MM-DD" in caller tz
+    data: [
+      {
+        id: string,                                  // UUID
+        code: string,                                // e.g. "WEB-1"
+        title: string,
+        description: Record<string, unknown> | null, // rich-text JSONB; opaque to server
+        kanban_status: TaskKanbanStatus,
+        price: string,                               // "500.00"
+        assignee: { consultant_id, full_name, avatar_url } | null,
+        total_time_worked: {
+          days?: number,         // present only when total >= 24h
+          hours: number,         // 0–23 when days set, else floor(total_seconds / 3600)
+          total_seconds: number  // always present (sortable / recomputable)
+        },
+        attachments_count: number,
+        last_update: string,                         // "YYYY-MM-DD HH:mm" in caller tz
+        created_day: string                          // "YYYY-MM-DD" in caller tz
+      }
+    ],
+    meta: {
+      page: number,
+      limit: number,
+      itemCount: number,
+      pageCount: number,
+      hasPreviousPage: boolean,
+      hasNextPage: boolean
+    }
   }
   ```
 
@@ -250,6 +263,56 @@
   |------|------------|------|
   | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT. |
   | 404 | `TASK_ATTACHMENT_NOT_FOUND` | Attachment missing or doesn't belong to this task. |
+
+---
+
+## Milestones (task-count summary)
+
+> **Service:** [BoardMilestonesService](../../../src/modules/business-projects/services/board/board-milestones.service.ts)
+> DRAFT tasks and soft-deleted rows (`deleted_at IS NOT NULL`) are excluded from all counts.
+
+### 8. Get task count summary by status
+
+- **Endpoint:** `GET /projects/business/:id/board/milestones`
+- **Method:** `GET`
+- **Path params:** `id` (UUID v4)
+- **Query params:** [`GetMilestonesDto`](../../../src/modules/business-projects/dto/requests/get-milestones.dto.ts)
+  | Field | Type | Required | Notes |
+  |-------|------|----------|-------|
+  | `is_remove_cache` | `boolean` | no | When `true`, bypass the cached payload and refresh it. |
+- **Behaviour:**
+  - Runs a single `SELECT kanban_status, COUNT(*)::int … GROUP BY kanban_status` query scoped to the project. No N+1.
+  - All nine non-DRAFT statuses are always present in the response; statuses with zero tasks return `0` (not omitted).
+  - **Caching:** result is cached in Redis for ~60s, keyed per `(project, user, timezone)` via [BoardCacheService.buildKey](../../../src/modules/business-projects/services/board/board-cache.service.ts) with digest `{ type: 'milestones' }`. `is_remove_cache=true` invalidates the key and recomputes. Any task or attachment mutation calls `BoardCacheService.invalidateProject(projectId)`, which wipes this key alongside all task-list page variants.
+- **Response 200:** [`IBoardMilestonesResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-milestones.response.interface.ts)
+
+  | Field                      | Maps to `TaskKanbanStatus` | Description                              |
+  | -------------------------- | -------------------------- | ---------------------------------------- |
+  | `total_tasks`              | —                          | Sum of all non-DRAFT, non-deleted tasks. |
+  | `total_to_do`              | `to_do`                    | Published, not yet claimed.              |
+  | `total_assigned`           | `assigned`                 | Claimed by a consultant, not started.    |
+  | `total_in_progress`        | `in_progress`              | Consultant actively working.             |
+  | `total_in_review`          | `in_review`                | Submitted, under review.                 |
+  | `total_pending_approval`   | `pending_approval`         | Awaiting business approval.              |
+  | `total_revision_requested` | `revision_requested`       | Sent back for rework.                    |
+  | `total_done`               | `done`                     | Approved and complete.                   |
+  | `total_cancelled`          | `cancelled`                | Cancelled at any stage.                  |
+
+  ```ts
+  {
+    total_tasks: number,
+    total_to_do: number,
+    total_assigned: number,
+    total_in_progress: number,
+    total_in_review: number,
+    total_pending_approval: number,
+    total_revision_requested: number,
+    total_done: number,
+    total_cancelled: number
+  }
+  ```
+
+- **Errors:** cross-cutting only (see top of document).
 
 ---
 

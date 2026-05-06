@@ -1,3 +1,5 @@
+import { PageDto } from '@common/dto/page.dto';
+
 import { ListBoardTasksDto } from '../dto/requests';
 import { BoardTaskDetailResponseDto, BoardTaskResponseDto } from '../dto/responses';
 
@@ -15,12 +17,12 @@ export interface IBoardService {
    *
    * @param projectId Project owned by the calling business.
    * @param filters   Optional kanban-status / assignee filter and sort.
-   * @returns Tasks with assignee, attachments_count, total_time_worked,
+   * @returns Paginated tasks with assignee, attachments_count, total_time_worked,
    *   created_day and last_update formatted in the caller's timezone.
    * @throws TranslatableException 404 PROJECT_NOT_FOUND when the project is
    *   not owned by the calling business.
    */
-  listTasks(projectId: string, filters: ListBoardTasksDto): Promise<BoardTaskResponseDto[]>;
+  listTasks(projectId: string, filters: ListBoardTasksDto): Promise<PageDto<BoardTaskResponseDto>>;
 
   /**
    * Full task detail including attachments. DRAFT tasks are surfaced as 404.
