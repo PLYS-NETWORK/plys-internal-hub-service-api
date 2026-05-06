@@ -11,6 +11,7 @@ import {
   PaymentType,
   ProjectStatus,
   TaskCreationMode,
+  TaskHistoryChangeType,
   TaskKanbanStatus,
   TransactionStatus,
 } from '@database/enums';
@@ -121,6 +122,13 @@ export class BacklogsService implements IBacklogsService {
         displayOrder: Number(maxOrder?.max_order ?? 0) + 1,
       });
       const saved = await tx.tasks.save(task);
+      await tx.taskHistory.save(
+        tx.taskHistory.create({
+          taskId: saved.id,
+          changeType: TaskHistoryChangeType.CREATED,
+          changedBy: this.requestContext.userId!,
+        }),
+      );
       await this.projectStatus.recomputeAutoStatus(tx, projectId);
       // Light AI-context update inside the same tx — flips `needs_reindex`
       // when the task is new so the FE re-derives `domain` / summaries.
@@ -169,6 +177,13 @@ export class BacklogsService implements IBacklogsService {
     // preserves the FE-supplied `summary` on update.
     const saved = await this.uow.withTransaction(async (tx) => {
       const persisted = await tx.tasks.save(task);
+      await tx.taskHistory.save(
+        tx.taskHistory.create({
+          taskId: persisted.id,
+          changeType: TaskHistoryChangeType.EDIT,
+          changedBy: this.requestContext.userId!,
+        }),
+      );
       await this.aiContext.patchTaskInIndex(tx, projectId, persisted);
       return persisted;
     });
@@ -340,6 +355,13 @@ export class BacklogsService implements IBacklogsService {
         if (row.description !== undefined) task.description = row.description ?? null;
         if (row.price !== undefined) task.price = Number(row.price);
         const saved = await tx.tasks.save(task);
+        await tx.taskHistory.save(
+          tx.taskHistory.create({
+            taskId: saved.id,
+            changeType: TaskHistoryChangeType.EDIT,
+            changedBy: this.requestContext.userId!,
+          }),
+        );
         await this.aiContext.patchTaskInIndex(tx, projectId, saved);
         results.push(
           plainToInstance(
@@ -380,6 +402,13 @@ export class BacklogsService implements IBacklogsService {
               kanbanStatus: TaskKanbanStatus.DRAFT,
               creationMode: TaskCreationMode.AI_ASSISTED,
               displayOrder: nextOrder,
+            }),
+          );
+          await tx.taskHistory.save(
+            tx.taskHistory.create({
+              taskId: created.id,
+              changeType: TaskHistoryChangeType.CREATED,
+              changedBy: this.requestContext.userId!,
             }),
           );
           await this.aiContext.patchTaskInIndex(tx, projectId, created);
@@ -543,6 +572,15 @@ export class BacklogsService implements IBacklogsService {
         task.displayOrder = nextOrder++;
       }
       await tx.tasks.save(tasks);
+      await tx.taskHistory.save(
+        tasks.map((task) =>
+          tx.taskHistory.create({
+            taskId: task.id,
+            changeType: TaskHistoryChangeType.PAID,
+            changedBy: userId,
+          }),
+        ),
+      );
 
       return { txnId: savedTxn.id, pricing };
     });

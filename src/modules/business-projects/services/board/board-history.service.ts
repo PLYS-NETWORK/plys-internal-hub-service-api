@@ -61,9 +61,12 @@ export class BoardHistoryService implements IBoardHistoryService {
     await this.assertTaskOnBoard(projectId, taskId);
 
     const allowedTypes = [
+      TaskHistoryChangeType.CREATED,
+      TaskHistoryChangeType.EDIT,
       TaskHistoryChangeType.STATUS_CHANGE,
       TaskHistoryChangeType.ASSIGNMENT,
       TaskHistoryChangeType.UNASSIGNMENT,
+      TaskHistoryChangeType.PAID,
     ];
 
     const baseQb = this.uow.taskHistory

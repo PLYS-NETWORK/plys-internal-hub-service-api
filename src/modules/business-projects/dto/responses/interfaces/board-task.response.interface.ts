@@ -35,13 +35,9 @@ export interface IBoardTaskResponse {
 }
 
 export interface IBoardTaskDetailResponse extends IBoardTaskResponse {
-  platform_fee_amount: string;
-  consultant_payout: string;
   approved_by: string | null;
   approved_at: string | null;
-  due_date: string | null;
   started_at: string | null;
   completed_at: string | null;
-  version: number;
   attachments: IBoardTaskAttachmentResponse[];
 }

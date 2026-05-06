@@ -76,14 +76,6 @@ export class BoardTaskDetailResponseDto
   implements IBoardTaskDetailResponse
 {
   @Expose()
-  @ApiProperty({ name: 'platform_fee_amount', example: '50.00' })
-  public readonly platform_fee_amount!: string;
-
-  @Expose()
-  @ApiProperty({ name: 'consultant_payout', example: '450.00' })
-  public readonly consultant_payout!: string;
-
-  @Expose()
   @ApiProperty({ name: 'approved_by', nullable: true })
   public readonly approved_by!: string | null;
 
@@ -94,11 +86,6 @@ export class BoardTaskDetailResponseDto
 
   @Expose()
   @TimezoneDate()
-  @ApiProperty({ name: 'due_date', nullable: true })
-  public readonly due_date!: string | null;
-
-  @Expose()
-  @TimezoneDate()
   @ApiProperty({ name: 'started_at', nullable: true })
   public readonly started_at!: string | null;
 
@@ -106,8 +93,6 @@ export class BoardTaskDetailResponseDto
   @TimezoneDate()
   @ApiProperty({ name: 'completed_at', nullable: true })
   public readonly completed_at!: string | null;
-
-  @Expose() @ApiProperty({ example: 1 }) public readonly version!: number;
 
   @Expose()
   @Type(() => BoardTaskAttachmentResponseDto)
