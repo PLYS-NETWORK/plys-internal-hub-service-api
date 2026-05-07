@@ -209,6 +209,110 @@ Verify the OTP and receive session tokens.
 
 ---
 
+### POST /auth/refresh
+
+Refresh the access token using a refresh token.
+
+Requires `Authorization: Bearer <refresh_token>` header.
+
+#### Headers
+
+| Header          | Required | Description                                     |
+| --------------- | -------- | ----------------------------------------------- |
+| `Authorization` | **Yes**  | `Bearer <refresh_token>`                        |
+| `x-device-id`   | No       | Stable device identifier for session binding    |
+| `x-fingerprint` | No       | Client fingerprint stored in the session record |
+
+#### Request Body
+
+```json
+{
+  "refresh_token": "eyJhbGci..."
+}
+```
+
+#### Responses
+
+**200 OK** — new session tokens returned
+
+```json
+{
+  "status_code": 200,
+  "message": "OK",
+  "error_code": null,
+  "data": {
+    "access_token": "eyJhbGci...",
+    "refresh_token": "eyJhbGci...",
+    "expires_in": 900,
+    "user": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "email": "admin@plysnetwork.com",
+      "is_email_verified": true,
+      "is_active": true
+    }
+  },
+  "timestamp": "2026-05-07T12:00:00.000Z",
+  "path": "/api/v1/auth/refresh"
+}
+```
+
+**401 Unauthorized** — refresh token invalid or expired (`AUTH_INVALID_TOKEN`)
+
+```json
+{
+  "status_code": 401,
+  "message": "The token is invalid or has expired.",
+  "error_code": "AUTH_INVALID_TOKEN",
+  "data": null,
+  "timestamp": "2026-05-07T12:00:00.000Z",
+  "path": "/api/v1/auth/refresh"
+}
+```
+
+---
+
+### POST /auth/logout
+
+Revoke the current admin session.
+
+Requires `Authorization: Bearer <access_token>` header.
+
+#### Headers
+
+| Header          | Required | Description             |
+| --------------- | -------- | ----------------------- |
+| `Authorization` | **Yes**  | `Bearer <access_token>` |
+
+#### Responses
+
+**200 OK** — session revoked
+
+```json
+{
+  "status_code": 200,
+  "message": "OK",
+  "error_code": null,
+  "data": null,
+  "timestamp": "2026-05-07T12:00:00.000Z",
+  "path": "/api/v1/auth/logout"
+}
+```
+
+**401 Unauthorized** — missing or invalid access token (`GENERIC_UNAUTHORIZED`)
+
+```json
+{
+  "status_code": 401,
+  "message": "Unauthorized",
+  "error_code": "GENERIC_UNAUTHORIZED",
+  "data": null,
+  "timestamp": "2026-05-07T12:00:00.000Z",
+  "path": "/api/v1/auth/logout"
+}
+```
+
+---
+
 ## Error Codes
 
 | Code                       | HTTP | Description                                                   |
@@ -218,4 +322,6 @@ Verify the OTP and receive session tokens.
 | `ADMIN_AUTH_RESEND_LIMIT`  | 429  | Per-email resend rate limit exceeded                          |
 | `GENERIC_BAD_REQUEST`      | 400  | `x-device-id` or `x-fingerprint` header missing               |
 | `GENERIC_FORBIDDEN`        | 403  | Admin account is inactive                                     |
+| `GENERIC_UNAUTHORIZED`     | 401  | Missing or invalid access token                               |
+| `AUTH_INVALID_TOKEN`       | 401  | Refresh token is invalid or expired                           |
 | `GENERIC_VALIDATION_ERROR` | 422  | Request body failed class-validator validation                |
