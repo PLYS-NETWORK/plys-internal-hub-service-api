@@ -1,4 +1,4 @@
-name: Deploy to Production — ployos.com
+name: Deploy to Production — api.lona.my
 
 on:
   workflow_dispatch:

@@ -1,5 +1,5 @@
 name: 'Restart app on VPS (dev)'
-description: 'Install prod deps, run seeds, and reload PM2 on the dev VPS'
+description: 'Install prod deps, run migrations, and reload PM2 on the dev VPS'
 
 inputs:
   host:
@@ -32,7 +32,7 @@ runs:
           export PNPM_HOME="$HOME/.local/share/pnpm"
           export PATH="$PNPM_HOME:$PATH"
 
-          APP_DIR="/apps/dev"
+          APP_DIR="/apps/internal-hub-be/dev"
           DEPLOY_DIR="$APP_DIR/current"
 
           cd "$DEPLOY_DIR"
@@ -41,14 +41,14 @@ runs:
           pnpm install --frozen-lockfile --prod
 
           echo "==> Copying environment file..."
-          cp "$APP_DIR/.env.development" "$DEPLOY_DIR/.env.development"
+          cp /apps/environments/dev/.env.internal-hub-be "$DEPLOY_DIR/.env.development"
 
-          echo "==> Running database seeds..."
-          NODE_ENV=development node dist/database/seeds/seed-runner.js
+          echo "==> Running database migrations..."
+          NODE_ENV=development pnpm run typeorm migration:run -- -d dist/database/data-source.js
 
-          echo "==> Restarting PM2 (migrations auto-run on app startup)..."
+          echo "==> Restarting PM2..."
           cd "$APP_DIR"
           pm2 startOrReload ecosystem.config.js
           pm2 save
 
-          echo "✓ marketplace-ployos-dev deployed successfully"
+          echo "✓ internal-hub-be dev deployed successfully"

@@ -31,8 +31,8 @@ runs:
           export PNPM_HOME="$HOME/.local/share/pnpm"
           export PATH="$PNPM_HOME:$PATH"
 
-          if [ -d "/apps/prod/current/dist" ]; then
-            BACKUP_DIR="/apps/prod/backup_$(date +%Y%m%d_%H%M%S)"
-            cp -r /apps/prod/current/dist "$BACKUP_DIR"
+          if [ -d "/apps/internal-hub-be/prod/current/dist" ]; then
+            BACKUP_DIR="/apps/internal-hub-be/prod/backup_$(date +%Y%m%d_%H%M%S)"
+            cp -r /apps/internal-hub-be/prod/current/dist "$BACKUP_DIR"
             echo "Backup saved to $BACKUP_DIR"
           fi

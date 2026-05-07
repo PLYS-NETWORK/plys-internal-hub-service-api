@@ -30,7 +30,7 @@ runs:
         port: ${{ inputs.port }}
         script: |
           set -e
-          rm -rf /apps/prod/current/dist
+          rm -rf /apps/internal-hub-be/prod/current/dist
 
     - name: Upload to VPS
       uses: appleboy/scp-action@v0.1.7
@@ -40,5 +40,5 @@ runs:
         key: ${{ inputs.key }}
         port: ${{ inputs.port }}
         source: 'deploy-package/*'
-        target: '/apps/prod/current'
+        target: '/apps/internal-hub-be/prod/current'
         strip_components: 1
