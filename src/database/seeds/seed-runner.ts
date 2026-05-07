@@ -19,7 +19,7 @@ const ADMIN_ALLOWED_EMAILS: readonly string[] = ['huuphuc9410@gmail.com'];
 const BCRYPT_ROUNDS = 12;
 const KEY_REGEX = /^(skill|category|industry)_[a-z0-9_]+$/;
 
-const GROQ_API_KEY = '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';
+const GROQ_API_KEY = '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';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const GROQ_LABEL = 'Groq Llama 3.3 70B';
 // Must match the LABEL constant inside MasterKeyCipher so the cipher can
