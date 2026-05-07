@@ -83,6 +83,7 @@ export default registerAs('app', () => ({
   },
   ployosUrl: process.env.PLOYOS_URL ?? 'http://localhost:3000',
   lonaUrl: process.env.LONA_URL ?? 'http://localhost:3001',
+  internalHubUrl: process.env.INTERNAL_HUB_URL ?? 'http://localhost:3002',
   redis: {
     host: process.env.REDIS_HOST ?? 'localhost',
     port: parseInt(process.env.REDIS_PORT ?? '6379', 10),

@@ -1,3 +1,9 @@
+export interface IAdminOtpEmailOptions {
+  readonly otp: string;
+  /** Expiry duration shown in the email copy. Defaults to 10 minutes. */
+  readonly expiryMinutes?: number;
+}
+
 export interface IVerifyRegistrationEmailOptions {
   readonly userName: string;
   readonly verificationUrl: string;

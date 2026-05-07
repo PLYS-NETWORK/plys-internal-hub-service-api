@@ -1,4 +1,5 @@
 import {
+  IAdminAllowedEmailRepository,
   IAiProviderApiKeyRepository,
   IAiSessionMessageRepository,
   IAiTaskSessionRepository,
@@ -42,6 +43,9 @@ import {
 // produces a scoped UoW where every read/write goes through the same
 // EntityManager and participates in one atomic unit.
 export interface IUnitOfWork {
+  // Domain 0 — Admin
+  readonly adminAllowedEmails: IAdminAllowedEmailRepository;
+
   // Domain 1 — Auth & Identity
   readonly users: IUserRepository;
   readonly authTokens: IAuthTokenRepository;

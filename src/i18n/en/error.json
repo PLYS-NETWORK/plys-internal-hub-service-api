@@ -124,5 +124,10 @@
   },
   "project_status": {
     "price_gate_failed": "Cannot transition to configured: one or more tasks have price = 0."
+  },
+  "admin": {
+    "otp_invalid": "The verification code is invalid or has expired.",
+    "otp_locked": "Your account has been temporarily locked due to too many failed attempts. Please try again later.",
+    "resend_limit": "You have requested too many codes. Please wait before requesting a new one."
   }
 }

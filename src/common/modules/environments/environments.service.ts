@@ -174,6 +174,11 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.configService.getOrThrow<string>('app.lonaUrl');
   }
 
+  /** Base URL for the Admin internal hub frontend. */
+  public get internalHubUrl(): string {
+    return this.configService.getOrThrow<string>('app.internalHubUrl');
+  }
+
   public get redisHost(): string {
     return this.configService.getOrThrow<string>('app.redis.host');
   }

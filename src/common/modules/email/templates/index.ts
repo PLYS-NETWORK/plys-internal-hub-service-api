@@ -1,3 +1,6 @@
+// Admin Hub templates
+export { buildAdminOtpEmail, type IAdminOtpTemplateOptions } from './admin/admin-otp.template';
+
 // Business (Ployos) templates
 export {
   buildBusinessForgotPasswordOtpEmail,

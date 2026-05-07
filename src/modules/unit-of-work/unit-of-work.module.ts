@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import {
+  AdminAllowedEmailRepository,
   AiProviderApiKeyRepository,
   AiSessionMessageRepository,
   AiTaskSessionRepository,
@@ -41,6 +42,8 @@ import {
 import { UnitOfWorkService } from './unit-of-work.service';
 
 const repositories = [
+  // Domain 0 — Admin
+  AdminAllowedEmailRepository,
   // Domain 1 — Auth & Identity
   UserRepository,
   AuthTokenRepository,

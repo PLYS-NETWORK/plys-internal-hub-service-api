@@ -1,6 +1,7 @@
 import { ActivePlatform } from '@database/enums';
 
 import {
+  IAdminOtpEmailOptions,
   IForgotPasswordOtpEmailOptions,
   IMonthlyInvoiceEmailOptions,
   IVerifyRegistrationEmailOptions,
@@ -8,6 +9,17 @@ import {
 } from './email-send-options.interface';
 
 export interface IEmailService {
+  /**
+   * Sends a one-time login OTP to an admin user for the Admin Hub.
+   *
+   * Always sent from the platform admin sender address.
+   *
+   * @param to      - Recipient admin email address.
+   * @param options - Template variables (OTP code, expiry minutes).
+   * @returns Resolves when the email has been handed off to the delivery provider.
+   * @throws InternalServerErrorException — if the delivery provider returns an error.
+   */
+  sendAdminOtpEmail(to: string, options: IAdminOtpEmailOptions): Promise<void>;
   /**
    * Sends an email verification / registration confirmation email to the given address.
    *

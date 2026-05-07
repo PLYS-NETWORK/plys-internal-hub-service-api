@@ -120,5 +120,10 @@
   },
   "project_status": {
     "price_gate_failed": "Yapılandırıldı durumuna geçilemez: bir veya daha fazla görevin fiyatı = 0."
+  },
+  "admin": {
+    "otp_invalid": "Doğrulama kodu geçersiz veya süresi dolmuş.",
+    "otp_locked": "Çok fazla başarısız deneme nedeniyle hesabınız geçici olarak kilitlendi. Lütfen daha sonra tekrar deneyin.",
+    "resend_limit": "Çok fazla kod istediniz. Yeni bir kod istemeden önce lütfen bekleyin."
   }
 }

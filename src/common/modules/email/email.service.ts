@@ -7,6 +7,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { EMAIL_PROVIDER_TOKEN } from './constants';
 import { IEmailProvider } from './interfaces/email-provider.interface';
 import {
+  IAdminOtpEmailOptions,
   IForgotPasswordOtpEmailOptions,
   IMonthlyInvoiceEmailOptions,
   IVerifyRegistrationEmailOptions,
@@ -14,6 +15,7 @@ import {
 } from './interfaces/email-send-options.interface';
 import { IEmailService } from './interfaces/email-service.interface';
 import {
+  buildAdminOtpEmail,
   buildBusinessForgotPasswordOtpEmail,
   buildBusinessMonthlyInvoiceEmail,
   buildBusinessProjectPublishedReceiptEmail,
@@ -105,6 +107,24 @@ export class EmailService implements IEmailService {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`sendForgotPasswordOtpEmail — failed | to: ${to} | error: ${message}`);
+      throw err;
+    }
+  }
+
+  /** @inheritdoc */
+  public async sendAdminOtpEmail(to: string, options: IAdminOtpEmailOptions): Promise<void> {
+    this.logger.log(`sendAdminOtpEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        from: this.env.resendPloyosEmail,
+        to,
+        subject: 'Your Admin Hub login code',
+        html: await buildAdminOtpEmail(options),
+      });
+      this.logger.log(`sendAdminOtpEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`sendAdminOtpEmail — failed | to: ${to} | error: ${message}`);
       throw err;
     }
   }

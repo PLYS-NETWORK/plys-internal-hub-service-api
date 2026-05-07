@@ -1,5 +1,6 @@
 import { IAiKeysVersionedSecrets } from '@common/modules/environments/interfaces';
 import { AppDataSource } from '@database/data-source';
+import { AdminAllowedEmail } from '@database/entities/admin/admin-allowed-email.entity';
 import { User } from '@database/entities/auth/user.entity';
 import { AiProviderApiKey } from '@database/entities/infra/ai-provider-api-key.entity';
 import { Skill } from '@database/entities/profiles/skill.entity';
@@ -14,6 +15,7 @@ import * as path from 'path';
 // ---------------------------------------------------------------------------
 
 const ADMIN_EMAIL = 'admin-platform@ployos.com';
+const ADMIN_ALLOWED_EMAILS: readonly string[] = ['huuphuc9410@gmail.com'];
 const BCRYPT_ROUNDS = 12;
 const KEY_REGEX = /^(skill|category|industry)_[a-z0-9_]+$/;
 
@@ -118,6 +120,31 @@ async function seedAdmin(): Promise<void> {
 
   await userRepo.save(admin);
   console.log(`[admin] Seeded: ${ADMIN_EMAIL}`);
+}
+
+async function seedAdminAllowedEmails(): Promise<void> {
+  const repo = AppDataSource.getRepository(AdminAllowedEmail);
+  let inserted = 0;
+
+  for (const email of ADMIN_ALLOWED_EMAILS) {
+    const existing = await repo
+      .createQueryBuilder('ae')
+      .where('LOWER(ae.email) = LOWER(:email)', { email })
+      .getOne();
+
+    if (existing) {
+      console.log(`[admin-whitelist] Already exists: ${email}`);
+      continue;
+    }
+
+    await repo.save(repo.create({ email: email.toLowerCase(), isActive: true }));
+    inserted += 1;
+    console.log(`[admin-whitelist] Seeded: ${email}`);
+  }
+
+  console.log(
+    `[admin-whitelist] ${inserted} inserted, ${ADMIN_ALLOWED_EMAILS.length - inserted} skipped`,
+  );
 }
 
 function buildAiMasterSecrets(): IAiKeysVersionedSecrets {
@@ -286,6 +313,7 @@ async function main(): Promise<void> {
   try {
     await seedSkills(dataDir, i18nDir);
     await seedAdmin();
+    await seedAdminAllowedEmails();
     await seedGroqApiKey();
   } finally {
     await AppDataSource.destroy();

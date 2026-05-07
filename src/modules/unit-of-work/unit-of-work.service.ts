@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 
 import { IUnitOfWork } from './interfaces/unit-of-work.interface';
 import {
+  AdminAllowedEmailRepository,
   AiProviderApiKeyRepository,
   AiSessionMessageRepository,
   AiTaskSessionRepository,
@@ -16,6 +17,7 @@ import {
   ConsultantSkillRepository,
   ConsultantTransactionRepository,
   FileRepository,
+  IAdminAllowedEmailRepository,
   IAiProviderApiKeyRepository,
   IAiSessionMessageRepository,
   IAiTaskSessionRepository,
@@ -81,6 +83,7 @@ import {
 // All reads/writes inside `withTransaction` callback share the same manager.
 class TransactionalUnitOfWork implements IUnitOfWork {
   constructor(
+    public readonly adminAllowedEmails: IAdminAllowedEmailRepository,
     public readonly users: IUserRepository,
     public readonly authTokens: IAuthTokenRepository,
     public readonly userSsoProviders: IUserSsoProviderRepository,
@@ -129,6 +132,8 @@ class TransactionalUnitOfWork implements IUnitOfWork {
 export class UnitOfWorkService implements IUnitOfWork {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
+    // Domain 0 — Admin
+    public readonly adminAllowedEmails: AdminAllowedEmailRepository,
     // Domain 1 — Auth & Identity
     public readonly users: UserRepository,
     public readonly authTokens: AuthTokenRepository,
@@ -185,6 +190,7 @@ export class UnitOfWorkService implements IUnitOfWork {
       const { manager } = queryRunner;
 
       const txUow = new TransactionalUnitOfWork(
+        this.adminAllowedEmails.withManager(manager),
         this.users.withManager(manager),
         this.authTokens.withManager(manager),
         this.userSsoProviders.withManager(manager),
