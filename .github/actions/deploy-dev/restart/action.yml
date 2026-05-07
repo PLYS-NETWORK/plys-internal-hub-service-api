@@ -44,7 +44,7 @@ runs:
           cp /apps/environments/dev/.env.internal-hub-be "$DEPLOY_DIR/.env.development"
 
           echo "==> Running database migrations..."
-          NODE_ENV=development pnpm run typeorm migration:run -- -d dist/database/data-source.js
+          NODE_ENV=development pnpm exec typeorm migration:run -d dist/database/data-source.js
 
           echo "==> Restarting PM2..."
           cd "$APP_DIR"

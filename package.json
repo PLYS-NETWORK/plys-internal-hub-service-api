@@ -78,6 +78,7 @@
     "winston": "^3.19.0"
   },
   "devDependencies": {
+    "@jest/globals": "^30.4.0",
     "@nestjs/cli": "^10.0.0",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
@@ -136,5 +137,12 @@
       "^@modules/(.*)$": "<rootDir>/modules/$1",
       "^@config/(.*)$": "<rootDir>/config/$1"
     }
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "msgpackr-extract",
+      "unrs-resolver"
+    ]
   }
 }
