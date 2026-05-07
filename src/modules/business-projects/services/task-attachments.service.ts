@@ -3,7 +3,7 @@ import { TranslatableException } from '@common/exceptions/translatable.exception
 import { IStorageProvider, STORAGE_PROVIDER } from '@common/modules/file-storage';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { FileEntity, TaskAttachment } from '@database/entities';
+import { FileEntity, Task, TaskAttachment } from '@database/entities';
 import { FilePurpose, TaskKanbanStatus } from '@database/enums';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
@@ -11,11 +11,11 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { In } from 'typeorm';
 
-import { AttachFilesDto, UpdateTaskAttachmentDto } from '../../dto/requests';
-import { BoardTaskAttachmentResponseDto } from '../../dto/responses';
-import { IBoardAttachmentsService } from '../../interfaces/board-attachments.service.interface';
-import { BusinessAccessService } from '../business-access.service';
-import { BoardCacheService } from './board-cache.service';
+import { AttachFilesDto, UpdateTaskAttachmentDto } from '../dto/requests';
+import { TaskAttachmentResponseDto } from '../dto/responses';
+import { ITaskAttachmentsService } from '../interfaces/task-attachments.service.interface';
+import { BoardCacheService } from './board/board-cache.service';
+import { BusinessAccessService } from './business-access.service';
 
 interface IAttachmentSeed {
   fileId: string;
@@ -26,7 +26,15 @@ interface IAttachmentSeed {
 }
 
 @Injectable()
-export class BoardAttachmentsService implements IBoardAttachmentsService {
+export class TaskAttachmentsService implements ITaskAttachmentsService {
+  // Statuses where the business owner is allowed to curate attachments.
+  // DRAFT = pre-payment, TO_DO = paid but consultant has not picked up.
+  // Once IN_PROGRESS, the work surface freezes for that purpose.
+  private static readonly ATTACHABLE_STATUSES: readonly TaskKanbanStatus[] = [
+    TaskKanbanStatus.DRAFT,
+    TaskKanbanStatus.TO_DO,
+  ];
+
   private readonly logger: AppLogger;
 
   constructor(
@@ -36,7 +44,7 @@ export class BoardAttachmentsService implements IBoardAttachmentsService {
     private readonly cache: BoardCacheService,
     @Inject(STORAGE_PROVIDER) private readonly storage: IStorageProvider,
   ) {
-    this.logger = new AppLogger(BoardAttachmentsService.name, requestContext);
+    this.logger = new AppLogger(TaskAttachmentsService.name, requestContext);
   }
 
   /** @inheritdoc */
@@ -44,12 +52,12 @@ export class BoardAttachmentsService implements IBoardAttachmentsService {
     projectId: string,
     taskId: string,
     dto: AttachFilesDto,
-  ): Promise<BoardTaskAttachmentResponseDto[]> {
+  ): Promise<TaskAttachmentResponseDto[]> {
     this.logger.log(
       `attach — start | projectId: ${projectId}, taskId: ${taskId}, files: ${dto.fileIds.length}`,
     );
     await this.access.resolveOwnedProject(projectId);
-    await this.assertTaskOnBoard(projectId, taskId);
+    const task = await this.assertTaskAttachable(projectId, taskId);
 
     const userId = this.requestContext.userId!;
     const seeds = await this.resolveAttachmentSeeds(dto.fileIds, userId);
@@ -73,7 +81,7 @@ export class BoardAttachmentsService implements IBoardAttachmentsService {
       return saved;
     });
 
-    await this.cache.invalidateProject(projectId);
+    await this.invalidateBoardCacheIfNeeded(task, projectId);
 
     this.logger.log(`attach — complete | taskId: ${taskId}, attached: ${inserted.length}`);
     return inserted.map((row) => this.toResponseDto(row));
@@ -85,12 +93,12 @@ export class BoardAttachmentsService implements IBoardAttachmentsService {
     taskId: string,
     attachmentId: string,
     dto: UpdateTaskAttachmentDto,
-  ): Promise<BoardTaskAttachmentResponseDto> {
+  ): Promise<TaskAttachmentResponseDto> {
     this.logger.log(
       `update — start | projectId: ${projectId}, taskId: ${taskId}, attachmentId: ${attachmentId}`,
     );
     await this.access.resolveOwnedProject(projectId);
-    await this.assertTaskOnBoard(projectId, taskId);
+    const task = await this.assertTaskAttachable(projectId, taskId);
 
     const existing = await this.uow.taskAttachments.findOne({
       where: { id: attachmentId, taskId },
@@ -100,7 +108,7 @@ export class BoardAttachmentsService implements IBoardAttachmentsService {
     existing.fileName = dto.fileName;
     const saved = (await this.uow.taskAttachments.save(existing)) as TaskAttachment;
 
-    await this.cache.invalidateProject(projectId);
+    await this.invalidateBoardCacheIfNeeded(task, projectId);
 
     this.logger.log(`update — complete | attachmentId: ${attachmentId}`);
     return this.toResponseDto(saved);
@@ -112,7 +120,7 @@ export class BoardAttachmentsService implements IBoardAttachmentsService {
       `remove — start | projectId: ${projectId}, taskId: ${taskId}, attachmentId: ${attachmentId}`,
     );
     await this.access.resolveOwnedProject(projectId);
-    await this.assertTaskOnBoard(projectId, taskId);
+    const task = await this.assertTaskAttachable(projectId, taskId);
 
     const existing = await this.uow.taskAttachments.findOne({
       where: { id: attachmentId, taskId },
@@ -126,21 +134,41 @@ export class BoardAttachmentsService implements IBoardAttachmentsService {
       if (fileId) await tx.files.markAsOrphaned([fileId]);
     });
 
-    await this.cache.invalidateProject(projectId);
+    await this.invalidateBoardCacheIfNeeded(task, projectId);
 
     this.logger.log(`remove — complete | attachmentId: ${attachmentId}, file: ${fileId ?? 'null'}`);
   }
 
   // ─── Private helpers ───────────────────────────────────────────────────────
 
-  private async assertTaskOnBoard(projectId: string, taskId: string): Promise<void> {
+  private async assertTaskAttachable(projectId: string, taskId: string): Promise<Task> {
     const task = await this.uow.tasks.findOne({ where: { id: taskId, projectId } });
-    if (!task || task.kanbanStatus === TaskKanbanStatus.DRAFT) {
+    if (!task) {
       throw new TranslatableException({
         messageKey: 'error.task.not_found',
         errorCode: ERROR_CODES.TASK_NOT_FOUND,
         status: HttpStatus.NOT_FOUND,
       });
+    }
+    if (!TaskAttachmentsService.ATTACHABLE_STATUSES.includes(task.kanbanStatus)) {
+      this.logger.warn(
+        `assertTaskAttachable — wrong status | taskId: ${taskId}, status: ${task.kanbanStatus}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.task.invalid_status_transition',
+        errorCode: ERROR_CODES.TASK_INVALID_STATUS_TRANSITION,
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+      });
+    }
+    return task;
+  }
+
+  // The board cache only covers non-DRAFT tasks (BoardService.listTasks filters
+  // DRAFT out), so attaching to a draft would invalidate nothing. Skip the
+  // cache hop in that case.
+  private async invalidateBoardCacheIfNeeded(task: Task, projectId: string): Promise<void> {
+    if (task.kanbanStatus !== TaskKanbanStatus.DRAFT) {
+      await this.cache.invalidateProject(projectId);
     }
   }
 
@@ -180,9 +208,9 @@ export class BoardAttachmentsService implements IBoardAttachmentsService {
     };
   }
 
-  private toResponseDto(row: TaskAttachment): BoardTaskAttachmentResponseDto {
+  private toResponseDto(row: TaskAttachment): TaskAttachmentResponseDto {
     return plainToInstance(
-      BoardTaskAttachmentResponseDto,
+      TaskAttachmentResponseDto,
       {
         id: row.id,
         file_id: row.fileId,

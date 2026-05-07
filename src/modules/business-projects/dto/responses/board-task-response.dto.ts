@@ -3,13 +3,13 @@ import { TaskKanbanStatus } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 
-import { BoardTaskAttachmentResponseDto } from './board-task-attachment-response.dto';
 import {
   IBoardTaskAssignee,
   IBoardTaskDetailResponse,
   IBoardTaskResponse,
   IBoardTaskWorkedDuration,
 } from './interfaces/board-task.response.interface';
+import { TaskAttachmentResponseDto } from './task-attachment-response.dto';
 
 @Exclude()
 export class BoardTaskAssigneeDto implements IBoardTaskAssignee {
@@ -95,7 +95,7 @@ export class BoardTaskDetailResponseDto
   public readonly completed_at!: string | null;
 
   @Expose()
-  @Type(() => BoardTaskAttachmentResponseDto)
-  @ApiProperty({ type: () => BoardTaskAttachmentResponseDto, isArray: true })
-  public readonly attachments!: BoardTaskAttachmentResponseDto[];
+  @Type(() => TaskAttachmentResponseDto)
+  @ApiProperty({ type: () => TaskAttachmentResponseDto, isArray: true })
+  public readonly attachments!: TaskAttachmentResponseDto[];
 }

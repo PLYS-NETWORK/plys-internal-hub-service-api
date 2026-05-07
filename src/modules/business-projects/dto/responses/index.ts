@@ -2,7 +2,6 @@ export { AddToBoardValidationResponseDto } from './add-to-board-validation-respo
 export { BoardAttachmentResponseDto } from './board-attachment-response.dto';
 export { BoardMilestonesResponseDto } from './board-milestones-response.dto';
 export { BoardResultAuthorDto, BoardResultResponseDto } from './board-result-response.dto';
-export { BoardTaskAttachmentResponseDto } from './board-task-attachment-response.dto';
 export {
   BoardHistoryAssigneeDto,
   BoardHistoryAuthorDto,
@@ -21,3 +20,4 @@ export { ProjectListItemResponseDto } from './project-list-item-response.dto';
 export { ProjectSettingsResponseDto } from './project-settings-response.dto';
 export { ProjectSummaryResponseDto } from './project-summary-response.dto';
 export { PublishValidationResponseDto } from './publish-validation-response.dto';
+export { TaskAttachmentResponseDto } from './task-attachment-response.dto';

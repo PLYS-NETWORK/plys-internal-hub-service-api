@@ -1,4 +1,4 @@
-export interface IBoardTaskAttachmentResponse {
+export interface ITaskAttachmentResponse {
   id: string;
   file_id: string | null;
   file_name: string;

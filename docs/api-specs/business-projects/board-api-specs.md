@@ -189,80 +189,12 @@
 
 ---
 
-## Attachments (task-level, owned by the business)
+## Attachments (moved)
 
-> **Service:** [BoardAttachmentsService](../../../src/modules/business-projects/services/board/board-attachments.service.ts)
-> Distinct from result attachments — these are briefs / reference files attached to the task itself.
-> **Two-step upload flow:** the client first uploads files via `POST /files/upload` (out of scope here), then submits the returned `file_id`s via the endpoints below. The service snapshots metadata into `task_attachments` and flips the file's `purpose` to `task_attachment` so the orphan-cleanup cron does not reclaim it.
-
-### 5. Attach previously-uploaded files
-
-- **Endpoint:** `POST /projects/business/:id/board/:taskId/attachments`
-- **Method:** `POST`
-- **Path params:** `id` (UUID v4), `taskId` (UUID v4)
-- **Headers:** `Idempotency-Key` (recommended) — see [shared/idempotency.md](../shared/idempotency.md). Annotated by `@IdempotencyKey()`.
-- **Request body:** [`AttachFilesDto`](../../../src/modules/business-projects/dto/requests/attach-files.dto.ts)
-  | Field | Type | Required | Notes |
-  |-------|------|----------|-------|
-  | `file_ids` | `string[]` (UUID v4) | yes | size 1–20; unique; every entry must be owned by the caller |
-- **Behaviour:**
-  - Verifies the task exists and is not DRAFT.
-  - Verifies every `file_id` is present, not soft-deleted, and `owner_user_id === caller.user_id` — otherwise rejects with `TASK_ATTACHMENT_FILE_NOT_OWNED`.
-  - Inside one transaction: snapshots `{ file_name, file_url, mime_type, file_size_bytes }` into `task_attachments`, then calls `files.markAsAttached(fileIds, FilePurpose.TASK_ATTACHMENT)`.
-  - Storage URLs are resolved **outside** the transaction to keep storage-provider failures off long-lived locks.
-  - On success, the project's board cache is wiped via `BoardCacheService.invalidateProject` so the next list call recomputes `attachments_count`.
-- **Response 201:** [`IBoardTaskAttachmentResponse[]`](../../../src/modules/business-projects/dto/responses/interfaces/board-task-attachment.response.interface.ts)
-
-  Item shape:
-
-  ```ts
-  {
-    id: string,
-    file_id: string | null,    // canonical files.id, kept for audit; null when source row is later removed
-    file_name: string,
-    file_url: string,
-    mime_type: string | null,
-    file_size_bytes: number | null,
-    uploaded_at: string         // formatted in caller tz
-  }
-  ```
-
-- **Errors:**
-  | HTTP | error_code | When |
-  |------|------------|------|
-  | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT. |
-  | 400 | `TASK_ATTACHMENT_FILE_NOT_OWNED` | Any supplied `file_id` is missing, soft-deleted, or owned by another user. |
-
-### 6. Rename an existing attachment
-
-- **Endpoint:** `PATCH /projects/business/:id/board/:taskId/attachments/:attachmentId`
-- **Method:** `PATCH`
-- **Path params:** `id` (UUID v4), `taskId` (UUID v4), `attachmentId` (UUID v4)
-- **Headers:** `Idempotency-Key` (recommended).
-- **Request body:** [`UpdateTaskAttachmentDto`](../../../src/modules/business-projects/dto/requests/update-task-attachment.dto.ts)
-  | Field | Type | Required | Notes |
-  |-------|------|----------|-------|
-  | `file_name` | `string` | yes | trimmed, 1–255 chars; display name only — the canonical storage key never changes |
-- **Behaviour:** Only the display `file_name` is mutable. The `files` row, the storage object, and `file_url` / `mime_type` / `file_size_bytes` are immutable through this endpoint. Wipes the project's board cache.
-- **Response 200:** [`IBoardTaskAttachmentResponse`](../../../src/modules/business-projects/dto/responses/interfaces/board-task-attachment.response.interface.ts) — same shape as create.
-- **Errors:**
-  | HTTP | error_code | When |
-  |------|------------|------|
-  | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT. |
-  | 404 | `TASK_ATTACHMENT_NOT_FOUND` | Attachment missing or doesn't belong to this task. |
-
-### 7. Delete an attachment
-
-- **Endpoint:** `DELETE /projects/business/:id/board/:taskId/attachments/:attachmentId`
-- **Method:** `DELETE`
-- **Path params:** `id` (UUID v4), `taskId` (UUID v4), `attachmentId` (UUID v4)
-- **Behaviour:** Soft-deletes the snapshot row (`task_attachments.deleted_at`) and calls `files.markAsOrphaned([file_id])` so the weekly orphan-cleanup cron can reclaim storage after `FILES_ORPHAN_GRACE_HOURS`. Wipes the project's board cache. Atomic — single transaction.
-- **Response 204:** empty body.
-- **Errors:**
-  | HTTP | error_code | When |
-  |------|------------|------|
-  | 404 | `TASK_NOT_FOUND` | Task missing or in DRAFT. |
-  | 404 | `TASK_ATTACHMENT_NOT_FOUND` | Attachment missing or doesn't belong to this task. |
+> Task-level attachments are no longer mounted under `/board/:taskId/attachments`. They were
+> consolidated into the task-scoped controller at `/projects/business/:id/tasks/:taskId/attachments`,
+> which works for both DRAFT and TO_DO tasks. See
+> [task-attachments-api-specs.md](./task-attachments-api-specs.md) for the current contract.
 
 ---
 

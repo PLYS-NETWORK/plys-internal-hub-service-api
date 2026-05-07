@@ -2,10 +2,10 @@ import { TimezoneDate } from '@common/decorators/timezone-date.decorator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 
-import { IBoardTaskAttachmentResponse } from './interfaces/board-task-attachment.response.interface';
+import { ITaskAttachmentResponse } from './interfaces/task-attachment.response.interface';
 
 @Exclude()
-export class BoardTaskAttachmentResponseDto implements IBoardTaskAttachmentResponse {
+export class TaskAttachmentResponseDto implements ITaskAttachmentResponse {
   @Expose() @ApiProperty() public readonly id!: string;
 
   @Expose()

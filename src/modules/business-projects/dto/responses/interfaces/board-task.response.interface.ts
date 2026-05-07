@@ -1,6 +1,6 @@
 import { TaskKanbanStatus } from '@database/enums';
 
-import { IBoardTaskAttachmentResponse } from './board-task-attachment.response.interface';
+import { ITaskAttachmentResponse } from './task-attachment.response.interface';
 
 export interface IBoardTaskAssignee {
   consultant_id: string;
@@ -39,5 +39,5 @@ export interface IBoardTaskDetailResponse extends IBoardTaskResponse {
   approved_at: string | null;
   started_at: string | null;
   completed_at: string | null;
-  attachments: IBoardTaskAttachmentResponse[];
+  attachments: ITaskAttachmentResponse[];
 }

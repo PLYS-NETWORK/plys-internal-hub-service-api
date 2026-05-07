@@ -1,4 +1,3 @@
-import { IdempotencyKey } from '@common/decorators/idempotency-key.decorator';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
@@ -8,37 +7,26 @@ import { RolesGuard } from '@common/guards/roles.guard';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { ActivePlatform, UserRole } from '@database/enums';
 import {
-  Body,
   Controller,
-  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
   ParseUUIDPipe,
-  Patch,
-  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import {
-  AttachFilesDto,
-  GetMilestonesDto,
-  ListBoardTasksDto,
-  UpdateTaskAttachmentDto,
-} from '../dto/requests';
+import { GetMilestonesDto, ListBoardTasksDto } from '../dto/requests';
 import {
   BoardResultResponseDto,
-  BoardTaskAttachmentResponseDto,
   BoardTaskDetailResponseDto,
   BoardTaskHistoryResponseDto,
   BoardTaskResponseDto,
 } from '../dto/responses';
 import { BoardMilestonesResponseDto } from '../dto/responses/board-milestones-response.dto';
 import { BoardService } from '../services/board/board.service';
-import { BoardAttachmentsService } from '../services/board/board-attachments.service';
 import { BoardHistoryService } from '../services/board/board-history.service';
 import { BoardMilestonesService } from '../services/board/board-milestones.service';
 import { BoardResultsService } from '../services/board/board-results.service';
@@ -54,7 +42,6 @@ export class BoardController {
     private readonly boardService: BoardService,
     private readonly historyService: BoardHistoryService,
     private readonly resultsService: BoardResultsService,
-    private readonly attachmentsService: BoardAttachmentsService,
     private readonly milestonesService: BoardMilestonesService,
   ) {}
 
@@ -132,53 +119,5 @@ export class BoardController {
   ): Promise<ITranslatedPayload<PageDto<BoardResultResponseDto>>> {
     const data = await this.resultsService.list(id, taskId, pageOptions);
     return { messageKey: 'success.ok', data };
-  }
-
-  // ─── Attachments ───────────────────────────────────────────────────────────
-
-  @Post(':taskId/attachments')
-  @IdempotencyKey()
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary: 'Attach previously-uploaded files to the task',
-    description:
-      'Two-step flow: upload via `/files/upload` first, then submit the returned `file_id`s ' +
-      'here. The service snapshots metadata into `task_attachments` and flips the file purpose ' +
-      'to `task_attachment`.',
-  })
-  public async attachFiles(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('taskId', ParseUUIDPipe) taskId: string,
-    @Body() dto: AttachFilesDto,
-  ): Promise<ITranslatedPayload<BoardTaskAttachmentResponseDto[]>> {
-    const data = await this.attachmentsService.attach(id, taskId, dto);
-    return { messageKey: 'success.task.attachment_created', data };
-  }
-
-  @Patch(':taskId/attachments/:attachmentId')
-  @IdempotencyKey()
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Rename an existing task attachment (display name only)' })
-  public async updateAttachment(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('taskId', ParseUUIDPipe) taskId: string,
-    @Param('attachmentId', ParseUUIDPipe) attachmentId: string,
-    @Body() dto: UpdateTaskAttachmentDto,
-  ): Promise<ITranslatedPayload<BoardTaskAttachmentResponseDto>> {
-    const data = await this.attachmentsService.update(id, taskId, attachmentId, dto);
-    return { messageKey: 'success.task.attachment_updated', data };
-  }
-
-  @Delete(':taskId/attachments/:attachmentId')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({
-    summary: 'Soft-delete a task attachment and orphan the underlying file for cleanup',
-  })
-  public async deleteAttachment(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('taskId', ParseUUIDPipe) taskId: string,
-    @Param('attachmentId', ParseUUIDPipe) attachmentId: string,
-  ): Promise<void> {
-    await this.attachmentsService.remove(id, taskId, attachmentId);
   }
 }

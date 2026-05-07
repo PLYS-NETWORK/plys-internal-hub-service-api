@@ -12,9 +12,9 @@ import { BoardController } from './controllers/board.controller';
 import { BusinessProjectOverviewController } from './controllers/overview.controller';
 import { BusinessProjectsController } from './controllers/projects.controller';
 import { SettingsController } from './controllers/settings.controller';
+import { TaskAttachmentsController } from './controllers/task-attachments.controller';
 import { BacklogsService } from './services/backlogs.service';
 import { BoardService } from './services/board/board.service';
-import { BoardAttachmentsService } from './services/board/board-attachments.service';
 import { BoardCacheService } from './services/board/board-cache.service';
 import { BoardHistoryService } from './services/board/board-history.service';
 import { BoardMilestonesService } from './services/board/board-milestones.service';
@@ -26,6 +26,7 @@ import { ProjectRepublishService } from './services/projects/project-republish.s
 import { ProjectStatusService } from './services/projects/project-status.service';
 import { BusinessProjectsService } from './services/projects/projects.service';
 import { SettingsService } from './services/settings.service';
+import { TaskAttachmentsService } from './services/task-attachments.service';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { SettingsService } from './services/settings.service';
     BacklogsController,
     SettingsController,
     BoardController,
+    TaskAttachmentsController,
     AiSyncController,
   ],
   providers: [
@@ -59,7 +61,7 @@ import { SettingsService } from './services/settings.service';
     BoardCacheService,
     BoardHistoryService,
     BoardResultsService,
-    BoardAttachmentsService,
+    TaskAttachmentsService,
     BoardMilestonesService,
   ],
   exports: [BusinessAccessService, BoardCacheService, ProjectStatusService],
