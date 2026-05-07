@@ -136,12 +136,5 @@
       "^@modules/(.*)$": "<rootDir>/modules/$1",
       "^@config/(.*)$": "<rootDir>/config/$1"
     }
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@nestjs/core",
-      "msgpackr-extract",
-      "unrs-resolver"
-    ]
   }
 }
