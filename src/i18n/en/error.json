@@ -41,6 +41,7 @@
     "cannot_be_edited": "Project cannot be edited in its current status.",
     "cannot_publish": "This project cannot be published in its current state.",
     "insufficient_balance": "Insufficient account balance to publish this project.",
+    "invalid_task_price": "Project cannot be published — every task must have a price greater than zero.",
     "recall_transaction_not_found": "Original publication transaction not found for recall refund.",
     "cannot_be_deleted": "Only draft, setting-up, or configured projects can be deleted.",
     "invalid_status_transition": "Invalid project status transition.",
@@ -50,18 +51,17 @@
     "not_found": "Task not found.",
     "invalid_status_transition": "Invalid task status transition.",
     "already_assigned": "This task is already assigned to a consultant.",
-    "consultant_not_project_member": "This consultant is not an active member of the project.",
     "project_not_in_progress": "Tasks can only be managed for in-progress projects.",
-    "comment_not_found": "Task comment not found.",
-    "comment_forbidden": "You do not have permission to perform this action on this comment.",
-    "comment_file_not_owned": "One or more attached files do not belong to you or do not exist.",
-    "comment_empty_update": "Provide comment or file_ids to update.",
-    "evidence_not_found": "Task evidence not found.",
-    "evidence_forbidden": "You do not have permission to perform this action on this evidence.",
-    "evidence_not_assignee": "Only the consultant assigned to this task can manage its evidences.",
-    "evidence_file_not_owned": "One or more attached files do not belong to you or do not exist.",
-    "evidence_empty_update": "Provide remarks or file_ids to update.",
-    "consultant_already_in_progress": "You already have a task in progress. Complete or pause it before starting another."
+    "result_not_found": "Task result not found.",
+    "result_forbidden": "You do not have permission to perform this action on this result.",
+    "result_not_assignee": "Only the consultant assigned to this task can manage its results.",
+    "result_file_not_owned": "One or more attached files do not belong to you or do not exist.",
+    "result_empty_update": "Provide remarks or file_ids to update.",
+    "consultant_already_in_progress": "You already have a task in progress. Complete or pause it before starting another.",
+    "attachment_not_found": "Task attachment not found.",
+    "attachment_forbidden": "You do not have permission to manage attachments on this task.",
+    "attachment_file_not_owned": "One or more attached files do not belong to you or do not exist.",
+    "attachment_invalid_status": "Attachments cannot be modified for tasks in this status."
   },
   "payment": {
     "insufficient_balance": "Insufficient account balance.",
@@ -76,19 +76,6 @@
     "unique_violation": "A record with these values already exists",
     "foreign_key_violation": "Referenced record does not exist",
     "not_null_violation": "A required field is missing"
-  },
-  "application": {
-    "project_not_accepting": "This project is not currently accepting applications.",
-    "already_applied": "You have already applied to this project.",
-    "no_matching_skills": "Your skills do not match the project requirements.",
-    "missing_answers": "Please answer all required interview questions before applying.",
-    "ai_detected": "Your answers have been detected as AI-generated content. You cannot apply to this project.",
-    "ai_check_failed": "Unable to verify your answers at this time. Please try again later.",
-    "cover_letter_required": "A cover letter is required when applying to this project.",
-    "not_found": "Application not found.",
-    "cannot_approve": "This application cannot be approved in its current status.",
-    "cannot_reject": "This application cannot be rejected in its current status.",
-    "cannot_withdraw": "Only pending applications can be withdrawn."
   },
   "billing": {
     "period_not_found": "Billing period not found.",
@@ -111,5 +98,36 @@
   "notification": {
     "not_found": "Notification not found.",
     "forbidden": "You do not have access to this notification."
+  },
+  "ai_provider_key": {
+    "not_configured": "No active AI provider key is configured. Please contact an administrator.",
+    "not_found": "AI provider key not found.",
+    "active_requires_replacement": "Cannot revoke the only active key for this provider. Activate a replacement first.",
+    "cipher_failed": "Failed to encrypt or decrypt an AI provider key."
+  },
+  "chat_session": {
+    "not_found": "Chat session not found.",
+    "not_active": "Cannot modify a chat session that is not active.",
+    "mode_not_allowed": "Selected chat mode is not allowed for the project's current status.",
+    "message_limit_exceeded": "Chat session has reached its message cap; start a new session to continue."
+  },
+  "ai_context": {
+    "not_found": "AI context not initialised for this project.",
+    "derived_html_forbidden": "Derived AI context fields must be plain text — HTML markers are not accepted."
+  },
+  "idempotency": {
+    "body_mismatch": "Idempotency-Key reused with a different request body."
+  },
+  "ai_sync": {
+    "task_rejected": "One or more tasks in the batch could not be applied for the project's current status.",
+    "skill_not_found": "One or more skill IDs do not exist."
+  },
+  "project_status": {
+    "price_gate_failed": "Cannot transition to configured: one or more tasks have price = 0."
+  },
+  "admin": {
+    "otp_invalid": "The verification code is invalid or has expired.",
+    "otp_locked": "Your account has been temporarily locked due to too many failed attempts. Please try again later.",
+    "resend_limit": "You have requested too many codes. Please wait before requesting a new one."
   }
 }

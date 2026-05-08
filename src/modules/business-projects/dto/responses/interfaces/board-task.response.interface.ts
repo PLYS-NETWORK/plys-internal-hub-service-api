@@ -1,4 +1,6 @@
-import { TaskDifficulty, TaskKanbanStatus } from '@database/enums';
+import { TaskKanbanStatus } from '@database/enums';
+
+import { ITaskAttachmentResponse } from './task-attachment.response.interface';
 
 export interface IBoardTaskAssignee {
   consultant_id: string;
@@ -6,27 +8,36 @@ export interface IBoardTaskAssignee {
   avatar_url: string | null;
 }
 
+/**
+ * Time-on-task aggregate.
+ *  - When < 24 h, only `hours` is returned.
+ *  - When >= 24 h, `days` + the integer-hour remainder (0–23) are returned.
+ *  - `total_seconds` is always present so the UI can sort/recompute.
+ */
+export interface IBoardTaskWorkedDuration {
+  days?: number;
+  hours: number;
+  total_seconds: number;
+}
+
 export interface IBoardTaskResponse {
   id: string;
   code: string;
   title: string;
-  price: string;
-  difficulty_level: TaskDifficulty;
+  description: Record<string, unknown> | null;
   kanban_status: TaskKanbanStatus;
-  display_order: number;
+  price: string;
   assignee: IBoardTaskAssignee | null;
-  comments_count: number;
-  evidences_count: number;
+  total_time_worked: IBoardTaskWorkedDuration;
+  attachments_count: number;
+  last_update: string;
+  created_day: string;
 }
 
 export interface IBoardTaskDetailResponse extends IBoardTaskResponse {
-  description: Record<string, unknown> | null;
-  platform_fee_amount: string;
-  consultant_payout: string;
   approved_by: string | null;
-  approved_at: Date | null;
-  due_date: Date | null;
-  version: number;
-  created_at: Date;
-  updated_at: Date;
+  approved_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  attachments: ITaskAttachmentResponse[];
 }

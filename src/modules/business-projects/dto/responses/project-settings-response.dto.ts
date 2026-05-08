@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 
 import {
-  IProjectSettingsInterviewQuestion,
   IProjectSettingsRequiredSkill,
   IProjectSettingsResponse,
 } from './interfaces/project-settings.response.interface';
@@ -16,25 +15,6 @@ export class ProjectSettingsRequiredSkillDto implements IProjectSettingsRequired
   @Expose()
   @ApiProperty({ example: 'React', description: 'Translated for the active locale.' })
   public readonly name!: string;
-}
-
-@Exclude()
-export class ProjectSettingsInterviewQuestionDto implements IProjectSettingsInterviewQuestion {
-  @Expose()
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
-  public readonly id!: string;
-
-  @Expose()
-  @ApiProperty({ name: 'question_text' })
-  public readonly question_text!: string;
-
-  @Expose()
-  @ApiProperty({ name: 'display_order', example: 1 })
-  public readonly display_order!: number;
-
-  @Expose()
-  @ApiProperty({ name: 'is_required', example: true })
-  public readonly is_required!: boolean;
 }
 
 @Exclude()
@@ -59,14 +39,4 @@ export class ProjectSettingsResponseDto implements IProjectSettingsResponse {
   @Expose()
   @ApiProperty({ name: 'max_consultants', example: 1 })
   public readonly max_consultants!: number;
-
-  @Expose()
-  @Type(() => ProjectSettingsInterviewQuestionDto)
-  @ApiProperty({
-    name: 'interview_questions',
-    type: () => ProjectSettingsInterviewQuestionDto,
-    isArray: true,
-    description: 'Active questions only — soft-deleted ones are excluded.',
-  })
-  public readonly interview_questions!: ProjectSettingsInterviewQuestionDto[];
 }

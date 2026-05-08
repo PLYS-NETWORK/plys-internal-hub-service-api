@@ -5,5 +5,6 @@
  */
 export enum FilePurpose {
   TASK_COMMENT = 'task_comment',
-  TASK_EVIDENCE = 'task_evidence',
+  TASK_RESULT = 'task_result',
+  TASK_ATTACHMENT = 'task_attachment',
 }

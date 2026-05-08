@@ -16,15 +16,14 @@ export interface IProjectStatusService {
    * completeness signals (draft tasks, required skills, required consultants).
    *
    * Rules — applied bidirectionally:
-   *   - drafts == 0                                            → DRAFT
-   *   - drafts > 0 AND (skills == 0 OR consultants == 0)       → SETTING_UP
+   *   - drafts == 0 OR skills == 0 OR consultants == 0         → DRAFT
    *   - drafts > 0 AND skills > 0 AND consultants > 0          → CONFIGURED
    *
    * Silently no-ops when the project has been published (`publishedAt IS NOT
-   * NULL`) or when its status is not in `{DRAFT, SETTING_UP, CONFIGURED}` —
-   * those are downstream states that this helper must never touch (so e.g.
-   * republishing a project does not demote it back to DRAFT just because the
-   * draft-task count is zero post-payTasks).
+   * NULL`) or when its status is not in `{DRAFT, CONFIGURED}` — those are
+   * downstream states that this helper must never touch (so e.g. republishing
+   * a project does not demote it back to DRAFT just because the draft-task
+   * count is zero post-payTasks).
    *
    * @param tx Active unit of work. Caller controls the surrounding transaction.
    * @param projectId Project to recompute.

@@ -28,15 +28,6 @@ export interface IProjectUnpublishedMetadata {
   refund_amount?: number;
 }
 
-export interface INewApplicationMetadata {
-  project_id: string;
-  project_code: string;
-  project_title: string;
-  application_id: string;
-  consultant_id: string;
-  consultant_name: string;
-}
-
 export interface ITopUpCompletedMetadata {
   transaction_id: string;
   transaction_number: string;
@@ -65,7 +56,6 @@ export type NotificationMetadataMap = {
   [NOTIFICATION_TYPES.PASSWORD_CHANGED]: IPasswordChangedMetadata;
   [NOTIFICATION_TYPES.PROJECT_PUBLISHED]: IProjectPublishedMetadata;
   [NOTIFICATION_TYPES.PROJECT_UNPUBLISHED]: IProjectUnpublishedMetadata;
-  [NOTIFICATION_TYPES.NEW_APPLICATION]: INewApplicationMetadata;
   [NOTIFICATION_TYPES.TOP_UP_COMPLETED]: ITopUpCompletedMetadata;
   [NOTIFICATION_TYPES.WITHDRAW_COMPLETED]: IWithdrawCompletedMetadata;
   [NOTIFICATION_TYPES.WITHDRAW_REVERSED]: IWithdrawReversedMetadata;

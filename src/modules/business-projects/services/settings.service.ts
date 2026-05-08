@@ -2,8 +2,9 @@ import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { ProjectInterviewQuestion, ProjectRequiredSkill } from '@database/entities';
+import { ProjectRequiredSkill } from '@database/entities';
 import { ProjectStatus } from '@database/enums';
+import { ProjectAiContextService } from '@modules/project-ai-context/project-ai-context.service';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
@@ -11,16 +12,10 @@ import { plainToInstance } from 'class-transformer';
 import { I18nService } from 'nestjs-i18n';
 import { In } from 'typeorm';
 
-import {
-  UpdateInterviewQuestionDto,
-  UpdateProjectSettingsDto,
-  UpsertInterviewQuestionDto,
-} from '../dto/requests';
-import {
-  InterviewQuestionResponseDto,
-  ProjectSettingsResponseDto,
-  ProjectSummaryResponseDto,
-} from '../dto/responses';
+import { UpdateProjectSettingsDto } from '../dto/requests';
+import { AiSyncSettingsDto } from '../dto/requests/ai-sync-settings.dto';
+import { AiSyncSkillsDto } from '../dto/requests/ai-sync-skills.dto';
+import { ProjectSettingsResponseDto, ProjectSummaryResponseDto } from '../dto/responses';
 import { ISettingsService } from '../interfaces/settings.service.interface';
 import { BusinessAccessService } from './business-access.service';
 import { ProjectStatusService } from './projects/project-status.service';
@@ -37,6 +32,7 @@ export class SettingsService implements ISettingsService {
     private readonly access: BusinessAccessService,
     private readonly i18n: I18nService,
     private readonly projectStatus: ProjectStatusService,
+    private readonly aiContext: ProjectAiContextService,
   ) {
     this.logger = new AppLogger(SettingsService.name, requestContext);
   }
@@ -46,33 +42,19 @@ export class SettingsService implements ISettingsService {
     this.logger.log(`getSettings — start | projectId: ${projectId}`);
     const { project } = await this.access.resolveOwnedProject(projectId);
 
-    const [skillRows, questions] = await Promise.all([
-      this.uow.projectRequiredSkills.find({
-        where: { projectId },
-        relations: { skill: true },
-      }),
-      // Default `find` excludes soft-deleted rows because the entity uses
-      // `@DeleteDateColumn` — no need to filter manually.
-      this.uow.projectInterviewQuestions.find({
-        where: { projectId },
-        order: { displayOrder: 'ASC' },
-      }),
-    ]);
+    const skillRows = await this.uow.projectRequiredSkills.find({
+      where: { projectId },
+      relations: { skill: true },
+    });
 
     const lang = this.requestContext.lang;
     const required_skills = skillRows.map((s) => ({
       id: s.skillId,
       name: this.translateSkillKey(s.skill.name, lang),
     }));
-    const interview_questions = questions.map((q) => ({
-      id: q.id,
-      question_text: q.questionText,
-      display_order: q.displayOrder,
-      is_required: q.isRequired,
-    }));
 
     this.logger.log(
-      `getSettings — complete | projectId: ${projectId}, skills: ${required_skills.length}, questions: ${interview_questions.length}`,
+      `getSettings — complete | projectId: ${projectId}, skills: ${required_skills.length}`,
     );
 
     return plainToInstance(
@@ -82,7 +64,6 @@ export class SettingsService implements ISettingsService {
         introduction: project.introduction,
         required_skills,
         max_consultants: project.requiredConsultants,
-        interview_questions,
       },
       { excludeExtraneousValues: true },
     );
@@ -132,56 +113,99 @@ export class SettingsService implements ISettingsService {
     );
   }
 
-  /** @inheritdoc */
-  public async createQuestion(
+  /**
+   * AI-sync variant of `updateProject` scoped to title / introduction /
+   * max_consultants. Single transaction; recomputes auto-status afterwards.
+   * Idempotent at the controller level via `@IdempotencyKey()`.
+   */
+  public async aiSyncSettings(
     projectId: string,
-    dto: UpsertInterviewQuestionDto,
-  ): Promise<InterviewQuestionResponseDto> {
-    this.logger.log(`createQuestion — start | projectId: ${projectId}`);
-    await this.access.resolveOwnedProject(projectId);
+    dto: AiSyncSettingsDto,
+  ): Promise<ProjectSummaryResponseDto> {
+    this.logger.log(
+      `aiSyncSettings — start | projectId: ${projectId}, ` +
+        `title: ${dto.title !== undefined ? 'set' : 'unchanged'}, ` +
+        `introduction: ${dto.introduction !== undefined ? 'set' : 'unchanged'}, ` +
+        `max_consultants: ${dto.maxConsultants !== undefined ? dto.maxConsultants : 'unchanged'}`,
+    );
+    const { project } = await this.access.resolveOwnedProject(projectId);
+    this.assertProjectEditable(project.status, projectId);
 
-    const displayOrder = dto.displayOrder ?? (await this.nextQuestionOrder(projectId));
-    const question = this.uow.projectInterviewQuestions.create({
-      projectId,
-      questionText: dto.questionText!,
-      displayOrder,
-      isRequired: dto.isRequired ?? true,
+    const updated = await this.uow.withTransaction(async (tx) => {
+      if (dto.title !== undefined) project.title = dto.title;
+      if (dto.introduction !== undefined) project.introduction = dto.introduction ?? null;
+      if (dto.maxConsultants !== undefined) project.requiredConsultants = dto.maxConsultants;
+      const saved = await tx.projects.save(project);
+      saved.status = await this.projectStatus.recomputeAutoStatus(tx, projectId);
+      return saved;
     });
-    const saved = await this.uow.projectInterviewQuestions.save(question);
 
-    this.logger.log(`createQuestion — complete | questionId: ${saved.id}`);
-    return this.toQuestionResponse(saved);
+    this.logger.log(
+      `aiSyncSettings — complete | projectId: ${projectId}, status: ${updated.status}`,
+    );
+    return this.toSummaryDto(updated);
   }
 
-  /** @inheritdoc */
-  public async updateQuestion(
+  /**
+   * AI-sync replace-set skills. Validates every skill UUID exists, swaps the
+   * project_required_skill rows in one transaction, recomputes auto-status,
+   * and flips `needs_reindex=true` so the FE knows the skill clusters need
+   * to be re-derived.
+   */
+  public async aiSyncSkills(
     projectId: string,
-    questionId: string,
-    dto: UpdateInterviewQuestionDto,
-  ): Promise<InterviewQuestionResponseDto> {
-    this.logger.log(`updateQuestion — start | projectId: ${projectId}, questionId: ${questionId}`);
-    await this.access.resolveOwnedProject(projectId);
+    dto: AiSyncSkillsDto,
+  ): Promise<ProjectSummaryResponseDto> {
+    this.logger.log(
+      `aiSyncSkills — start | projectId: ${projectId}, count: ${dto.skillIds.length}`,
+    );
+    const { project } = await this.access.resolveOwnedProject(projectId);
+    this.assertProjectEditable(project.status, projectId);
 
-    const question = await this.findActiveQuestion(projectId, questionId);
-    if (dto.questionText !== undefined) question.questionText = dto.questionText;
-    if (dto.displayOrder !== undefined) question.displayOrder = dto.displayOrder;
-    if (dto.isRequired !== undefined) question.isRequired = dto.isRequired;
-    const saved = await this.uow.projectInterviewQuestions.save(question);
+    const updated = await this.uow.withTransaction(async (tx) => {
+      await this.replaceRequiredSkills(tx, projectId, dto.skillIds);
+      // Skill set change → existing FE-derived skill_clusters are stale.
+      // The lazy ensure inside the service handles missing rows.
+      await this.aiContext.ensureExists(tx, projectId);
+      const ctx = await tx.projectAiContexts.findOne({ where: { projectId } });
+      if (ctx) {
+        ctx.needsReindex = true;
+        await tx.projectAiContexts.save(ctx);
+      }
+      project.status = await this.projectStatus.recomputeAutoStatus(tx, projectId);
+      return tx.projects.save(project);
+    });
 
-    this.logger.log(`updateQuestion — complete | questionId: ${saved.id}`);
-    return this.toQuestionResponse(saved);
+    this.logger.log(`aiSyncSkills — complete | projectId: ${projectId}, status: ${updated.status}`);
+    return this.toSummaryDto(updated);
   }
 
-  /** @inheritdoc */
-  public async deleteQuestion(projectId: string, questionId: string): Promise<void> {
-    this.logger.log(`deleteQuestion — start | projectId: ${projectId}, questionId: ${questionId}`);
-    await this.access.resolveOwnedProject(projectId);
-    const question = await this.findActiveQuestion(projectId, questionId);
-
-    // Soft delete via AuditableEntity columns. The auth user id stamps
-    // deleted_by; AuditSubscriber populates timestamps automatically.
-    await this.uow.projectInterviewQuestions.softDelete({ id: question.id });
-    this.logger.log(`deleteQuestion — complete | questionId: ${question.id}`);
+  private toSummaryDto(project: {
+    id: string;
+    code: string;
+    title: string;
+    introduction: Record<string, unknown> | null;
+    status: ProjectStatus;
+    requiredConsultants: number;
+    publishedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }): ProjectSummaryResponseDto {
+    return plainToInstance(
+      ProjectSummaryResponseDto,
+      {
+        id: project.id,
+        code: project.code,
+        title: project.title,
+        introduction: project.introduction,
+        status: project.status,
+        required_consultants: project.requiredConsultants,
+        published_at: project.publishedAt,
+        created_at: project.createdAt,
+        updated_at: project.updatedAt,
+      },
+      { excludeExtraneousValues: true },
+    );
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -223,52 +247,6 @@ export class SettingsService implements ISettingsService {
       skillId,
     }));
     await tx.projectRequiredSkills.save(rows);
-  }
-
-  private async nextQuestionOrder(projectId: string): Promise<number> {
-    const row = await this.uow.projectInterviewQuestions
-      .createQueryBuilder('q')
-      .select('COALESCE(MAX(q.display_order), 0)', 'max_order')
-      .where('q.project_id = :projectId', { projectId })
-      .andWhere('q.deleted_at IS NULL')
-      .getRawOne<{ max_order: number }>();
-    return Number(row?.max_order ?? 0) + 1;
-  }
-
-  private async findActiveQuestion(
-    projectId: string,
-    questionId: string,
-  ): Promise<ProjectInterviewQuestion> {
-    // Default `find` excludes rows with `deleted_at IS NOT NULL` because the
-    // entity uses `@DeleteDateColumn` — no need to filter manually here.
-    const question = await this.uow.projectInterviewQuestions.findOne({
-      where: { id: questionId, projectId },
-    });
-    if (!question) {
-      this.logger.warn(
-        `findActiveQuestion — not found | projectId: ${projectId}, questionId: ${questionId}`,
-      );
-      throw new TranslatableException({
-        messageKey: 'error.project.interview_question_not_found',
-        errorCode: ERROR_CODES.PROJECT_NOT_FOUND,
-        status: HttpStatus.NOT_FOUND,
-      });
-    }
-    return question;
-  }
-
-  private toQuestionResponse(q: ProjectInterviewQuestion): InterviewQuestionResponseDto {
-    return plainToInstance(
-      InterviewQuestionResponseDto,
-      {
-        id: q.id,
-        question_text: q.questionText,
-        display_order: q.displayOrder,
-        is_required: q.isRequired,
-        created_at: q.createdAt,
-      },
-      { excludeExtraneousValues: true },
-    );
   }
 
   // Skill names are i18n keys (e.g. `skill_react`); fall back to the raw key

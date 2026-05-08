@@ -1,3 +1,4 @@
-ignoredBuiltDependencies:
-  - '@nestjs/core'
-  - unrs-resolver
+allowBuilds:
+  '@nestjs/core': true
+  msgpackr-extract: true
+  unrs-resolver: true

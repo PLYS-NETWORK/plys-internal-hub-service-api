@@ -2,22 +2,15 @@
  * Categories of activity events the feed accepts as a `?types=` filter.
  * The repository pre-bakes one LIKE pattern per category onto the union.
  */
-export type ActivityType = 'task' | 'application' | 'member' | 'project';
+export type ActivityType = 'task' | 'member' | 'project';
 
 /** Concrete event types — the union of every `event_type` the SQL emits. */
-export type ActivityEventType =
-  | 'task_status_changed'
-  | 'application_received'
-  | 'application_approved'
-  | 'application_rejected'
-  | 'member_joined'
-  | 'project_status_changed';
+export type ActivityEventType = 'task_status_changed' | 'member_joined' | 'project_status_changed';
 
 /**
  * Raw event row returned from the activity-feed UNION. The service layer
  * shapes this into a response DTO. `actor_user_id` and `actor_name` may both
- * be `null` for system-generated events (e.g. `application_received` — the
- * applicant is captured inside `payload`, not as the actor).
+ * be `null` for system-generated events.
  */
 export interface IActivityEventRow {
   event_type: ActivityEventType;

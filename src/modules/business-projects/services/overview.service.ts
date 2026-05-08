@@ -2,12 +2,7 @@ import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { DateUtil } from '@common/utils/date';
 import { Money } from '@common/utils/money';
-import {
-  ApplicationStatus,
-  ProjectMemberActiveStatus,
-  ProjectMemberStatus,
-  TaskKanbanStatus,
-} from '@database/enums';
+import { ProjectMemberActiveStatus, ProjectMemberStatus, TaskKanbanStatus } from '@database/enums';
 import { ActivityType, IActivityEventRow } from '@modules/unit-of-work/repositories';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable } from '@nestjs/common';
@@ -15,7 +10,6 @@ import { plainToInstance } from 'class-transformer';
 
 import {
   IOverviewActivityEvent,
-  IOverviewApplicationBreakdown,
   IOverviewStatistics,
   IOverviewSummary,
   IOverviewTaskStatuses,
@@ -54,20 +48,8 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
 
     const { project, businessProfile } = await this.access.resolveOwnedProject(projectId);
 
-    // Run the six independent queries in parallel — each maps to one section
-    // of the response. All six are scoped to a single projectId so there's no
-    // cross-tenant risk; ownership has already been asserted above.
-    const [
-      taskStatuses,
-      applicationCounts,
-      pendingApplicationsCount,
-      teamMembers,
-      activityRows,
-      projectCost,
-    ] = await Promise.all([
+    const [taskStatuses, teamMembers, activityRows, projectCost] = await Promise.all([
       this.fetchTaskStatuses(projectId),
-      this.fetchApplicationCounts(projectId),
-      this.uow.projectApplications.countByProjectIdAndStatus(projectId, ApplicationStatus.PENDING),
       this.fetchTeamMembers(projectId),
       this.uow.projectActivity.findEventsByProjectId(
         projectId,
@@ -89,22 +71,12 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
       project_cost: projectCost.toFixedString(),
     };
 
-    const totalApplications =
-      applicationCounts.pending +
-      applicationCounts.accepted +
-      applicationCounts.rejected +
-      applicationCounts.withdrawn;
-
     const statistics: IOverviewStatistics = {
       // total_tasks excludes drafts (drafts are not "on the board" yet).
       total_tasks: this.sumNonDraft(taskStatuses),
       completed_tasks: taskStatuses[TaskKanbanStatus.DONE],
       in_progress_tasks: taskStatuses[TaskKanbanStatus.IN_PROGRESS],
       total_project_members: teamMembers.length,
-      total_pending_applications: pendingApplicationsCount,
-      total_applications: totalApplications,
-      total_approved: applicationCounts.accepted,
-      total_rejected: applicationCounts.rejected,
     };
 
     const taskStatusesDto: IOverviewTaskStatuses = {
@@ -128,16 +100,6 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
       active_status: bucketActiveStatus(m.last_login_at, now),
     }));
 
-    const reviewedTotal = applicationCounts.accepted + applicationCounts.rejected;
-    const applicationBreakdown: IOverviewApplicationBreakdown = {
-      pending: applicationCounts.pending,
-      accepted: applicationCounts.accepted,
-      rejected: applicationCounts.rejected,
-      withdrawn: applicationCounts.withdrawn,
-      approval_rate:
-        reviewedTotal === 0 ? null : Math.round((applicationCounts.accepted / reviewedTotal) * 100),
-    };
-
     const [rows] = activityRows;
     const recentActivity: IOverviewActivityEvent[] = rows.map((row) => this.toActivityEvent(row));
 
@@ -152,7 +114,6 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
         statistics,
         task_statuses: taskStatusesDto,
         team_members: teamMemberDtos,
-        application_breakdown: applicationBreakdown,
         recent_activity: recentActivity,
       },
       { excludeExtraneousValues: true },
@@ -172,25 +133,6 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
       total += byStatus[status];
     }
     return total;
-  }
-
-  private async fetchApplicationCounts(projectId: string): Promise<{
-    pending: number;
-    accepted: number;
-    rejected: number;
-    withdrawn: number;
-  }> {
-    const rows = await this.uow.projectApplications.countByProjectIdsGroupedByProjectAndStatus(
-      [projectId],
-      projectId,
-    );
-    const row = rows[0];
-    return {
-      pending: row?.pending_count ?? 0,
-      accepted: row?.approved_count ?? 0,
-      rejected: row?.rejected_count ?? 0,
-      withdrawn: row?.withdrawn_count ?? 0,
-    };
   }
 
   // Active members of a project with the consultant profile and their last

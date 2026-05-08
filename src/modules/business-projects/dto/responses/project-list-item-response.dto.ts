@@ -49,8 +49,4 @@ export class ProjectListItemResponseDto implements IProjectListItemResponse {
   @Expose()
   @ApiProperty({ name: 'total_active_members', example: 3 })
   public readonly total_active_members!: number;
-
-  @Expose()
-  @ApiProperty({ name: 'total_pending_applications', example: 5 })
-  public readonly total_pending_applications!: number;
 }

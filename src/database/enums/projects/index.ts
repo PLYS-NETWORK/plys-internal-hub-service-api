@@ -1,3 +1,6 @@
+export { CHAT_MESSAGE_ROLES, ChatMessageRole } from './chat-message-role.enum';
+export { CHAT_SESSION_MODES, ChatSessionMode } from './chat-session-mode.enum';
+export { CHAT_SESSION_STATUSES, ChatSessionStatus } from './chat-session-status.enum';
 export {
   PROJECT_ACTIVITY_EVENT_TYPES,
   ProjectActivityEventType,
@@ -6,5 +9,6 @@ export {
   PROJECT_MEMBER_ACTIVE_STATUSES,
   ProjectMemberActiveStatus,
 } from './project-member-active-status.enum';
+export { ProjectMemberStatus } from './project-member-status.enum';
 export { PROJECT_PAYMENT_TYPES, ProjectPaymentType } from './project-payment-type.enum';
 export { PROJECT_STATUSES, ProjectStatus } from './project-status.enum';

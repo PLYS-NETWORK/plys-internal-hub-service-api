@@ -86,7 +86,7 @@
 - **Method:** `DELETE`
 - **Scope:** `@Roles(USER)`, `@Platform(BUSINESS)`
 - **Path params:** `id` (UUID v4)
-- **Pre-condition:** project status **must be** one of `DRAFT`, `SETTING_UP`, or `CONFIGURED`. Anything from `PUBLISHED` onwards carries financial / member commitments and must go through the cancellation flow instead.
+- **Pre-condition:** project status **must be** one of `DRAFT` or `CONFIGURED`. Anything from `PUBLISHED` onwards carries financial / member commitments and must go through the cancellation flow instead.
 - **Behaviour:** [BusinessProjectsService.deleteProject](../../../src/modules/business-projects/services/projects/projects.service.ts) resolves ownership via [BusinessAccessService.resolveOwnedProject](../../../src/modules/business-projects/services/business-access.service.ts), asserts the status is in the deletable set, then calls `softDelete` on the project repository. `deleted_at` and `deleted_by` are stamped via `AuditSubscriber`. Child rows (tasks, interview questions, required skills) are **left in place** — their FKs declare `ON DELETE CASCADE` only at the row-delete layer, so a soft delete does not cascade. Existing read paths already filter out soft-deleted projects via `project.deleted_at IS NULL`, so the children become unreachable through the project surface.
 - **Response 204:** empty body.
 - **Errors:**
@@ -120,3 +120,43 @@
   | 422 | `PROJECT_INVALID_STATUS_TRANSITION` | Project is not currently `PUBLISHED` — including the case where it has auto-progressed to `IN_PROGRESS` because a task was assigned. Also raised defensively if any task on the project still has `assigned_to != NULL` at republish time. |
   | 422 | `PROJECT_RECALL_TRANSACTION_NOT_FOUND` | Pre-paid business: no completed `PROJECT_PUBLISHED` transaction on file for the project, so the publish-fee refund amount cannot be determined. |
   | 403 | `BUSINESS_PROFILE_NOT_FOUND` | Defensive — the locked profile vanished mid-transaction. |
+
+### 7. Explicit `draft → configured` transition (price-gate)
+
+- **Endpoint:** `PATCH /projects/business/:id/status`
+- **Method:** `PATCH`
+- **Scope:** `@Roles(USER)`, `@Platform(BUSINESS)`
+- **Idempotency:** opt-in via `Idempotency-Key` request header (see [shared idempotency note](../shared/idempotency.md)).
+- **Path params:** `id` (UUID v4)
+- **Request body:** [`TransitionProjectStatusDto`](../../../src/modules/business-projects/dto/requests/transition-project-status.dto.ts)
+  | Field | Type | Required | Notes |
+  | -------- | ------------------------ | -------- | ----- |
+  | `status` | `'configured'` | yes | Whitelist of one — only this transition is accepted via this endpoint. |
+- **Pre-condition:** project status **must be** `draft`. Other transitions go through the dedicated lifecycle flows (`/publish`, `/re-publish`, `/cancel`).
+- **Behaviour:** [BusinessProjectsService.transitionStatus](../../../src/modules/business-projects/services/projects/projects.service.ts):
+  1. Resolves project ownership.
+  2. Asserts the project is currently `draft` — rejects 409 `PROJECT_INVALID_STATUS_TRANSITION` otherwise.
+  3. Runs the price gate: `SELECT id FROM tasks WHERE project_id = :id AND kanban_status = 'draft' AND price = 0 AND deleted_at IS NULL`. If any rows match, rejects 409 `PROJECT_PRICE_GATE_FAILED` with `data.offending_task_ids`. Drafts with `price = 0` are placeholders the AI / user hasn't sized yet; publishing them would charge nothing and break the payout invariant.
+  4. Sets `status = 'configured'`, saves, returns.
+- **Why both an auto-recompute AND this explicit endpoint?** The auto-recompute (drafts > 0 ∧ skills > 0 ∧ consultants > 0) handles the implicit case — the project flips to `configured` whenever those signals are all set. This endpoint is the AI runner's "stamp it" button: it asserts the price gate **and** flips the status idempotently. Calling it on an already-`configured` project returns 409 (it's the wrong tool — that means the FE got out of sync).
+- **Response 200:** [`IProjectSummaryResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-summary.response.interface.ts) — final project metadata with `status = 'configured'`.
+- **Errors:**
+  | HTTP | error_code | When |
+  | ---- | ---------- | ---- |
+  | 409 | `PROJECT_INVALID_STATUS_TRANSITION` | Project is not currently `draft`. |
+  | 409 | `PROJECT_PRICE_GATE_FAILED` | One or more draft tasks have `price = 0`. **`data: { offending_task_ids: string[] }`** lists the offenders. `args.count` carries the count for translated messages. |
+  | 409 | `IDEMPOTENCY_KEY_BODY_MISMATCH` | `Idempotency-Key` reused with a different body. |
+
+```jsonc
+// Example 409 (price gate)
+{
+  "status_code": 409,
+  "error_code": "PROJECT_PRICE_GATE_FAILED",
+  "message": "Cannot transition to configured: one or more tasks have price = 0.",
+  "data": {
+    "offending_task_ids": ["uuid-a", "uuid-b"],
+  },
+  "timestamp": "2026-05-05T16:00:00.000Z",
+  "path": "/projects/business/<uuid>/status",
+}
+```

@@ -7,23 +7,17 @@ import { ActivePlatform, UserRole } from '@database/enums';
 import { Controller, Get, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { PendingApplicationsDto } from '../dto/requests/pending-applications.dto';
 import { ProjectsTrendDto } from '../dto/requests/projects-trend.dto';
 import { StatsDateRangeDto } from '../dto/requests/stats-date-range.dto';
-import { ApplicationFunnelResponseDto } from '../dto/responses/application-funnel-response.dto';
-import { ApplicationsPerProjectResponseDto } from '../dto/responses/applications-per-project-response.dto';
 import { BillingDraftRatioResponseDto } from '../dto/responses/billing-draft-ratio-response.dto';
 import { BillingSpendTrendResponseDto } from '../dto/responses/billing-spend-trend-response.dto';
 import { BillingSummaryResponseDto } from '../dto/responses/billing-summary-response.dto';
 import { DashboardSummaryResponseDto } from '../dto/responses/dashboard-summary-response.dto';
-import { PendingApplicationsResponseDto } from '../dto/responses/pending-applications-response.dto';
-import { ProjectInterviewStatsResponseDto } from '../dto/responses/project-interview-stats-response.dto';
 import { ProjectStatsResponseDto } from '../dto/responses/project-stats-response.dto';
 import { ProjectTrendResponseDto } from '../dto/responses/project-trend-response.dto';
 import { TaskStatsResponseDto } from '../dto/responses/task-stats-response.dto';
 import { TasksCompletionResponseDto } from '../dto/responses/tasks-completion-response.dto';
 import { TasksOverdueResponseDto } from '../dto/responses/tasks-overdue-response.dto';
-import { BusinessApplicationStatisticsService } from './services/business-application-statistics.service';
 import { BusinessBillingStatisticsService } from './services/business-billing-statistics.service';
 import { BusinessDashboardSummaryService } from './services/business-dashboard-summary.service';
 import { BusinessProjectStatisticsService } from './services/business-project-statistics.service';
@@ -39,7 +33,6 @@ export class BusinessStatisticsController {
   constructor(
     private readonly projectStats: BusinessProjectStatisticsService,
     private readonly taskStats: BusinessTaskStatisticsService,
-    private readonly applicationStats: BusinessApplicationStatisticsService,
     private readonly billingStats: BusinessBillingStatisticsService,
     private readonly dashboardSummary: BusinessDashboardSummaryService,
   ) {}
@@ -63,16 +56,6 @@ export class BusinessStatisticsController {
     @Query() query: ProjectsTrendDto,
   ): Promise<ITranslatedPayload<ProjectTrendResponseDto>> {
     const data = await this.projectStats.getTrend(query);
-    return { messageKey: 'success.ok', data };
-  }
-
-  @Get('projects/interview-stats')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Interview-question adoption stats across own projects' })
-  public async getProjectInterviewStats(): Promise<
-    ITranslatedPayload<ProjectInterviewStatsResponseDto>
-  > {
-    const data = await this.projectStats.getInterviewStats();
     return { messageKey: 'success.ok', data };
   }
 
@@ -105,40 +88,6 @@ export class BusinessStatisticsController {
     @Query() query: StatsDateRangeDto,
   ): Promise<ITranslatedPayload<TasksCompletionResponseDto>> {
     const data = await this.taskStats.getCompletion(query);
-    return { messageKey: 'success.ok', data };
-  }
-
-  // ─── Applications ──────────────────────────────────────────────────────────
-
-  @Get('applications/funnel')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Consultant application funnel (applied → reviewed → approved → active)',
-  })
-  public async getApplicationFunnel(
-    @Query() query: StatsDateRangeDto,
-  ): Promise<ITranslatedPayload<ApplicationFunnelResponseDto>> {
-    const data = await this.applicationStats.getFunnel(query);
-    return { messageKey: 'success.ok', data };
-  }
-
-  @Get('applications/per-project')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Applications per project, split by status' })
-  public async getApplicationsPerProject(
-    @Query() query: StatsDateRangeDto,
-  ): Promise<ITranslatedPayload<ApplicationsPerProjectResponseDto>> {
-    const data = await this.applicationStats.getPerProject(query);
-    return { messageKey: 'success.ok', data };
-  }
-
-  @Get('applications/pending')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Paginated list of pending applications across own projects' })
-  public async getPendingApplications(
-    @Query() query: PendingApplicationsDto,
-  ): Promise<ITranslatedPayload<PendingApplicationsResponseDto>> {
-    const data = await this.applicationStats.getPending(query);
     return { messageKey: 'success.ok', data };
   }
 

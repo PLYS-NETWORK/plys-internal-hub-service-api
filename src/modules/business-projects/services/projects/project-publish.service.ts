@@ -107,6 +107,14 @@ export class ProjectPublishService implements IProjectPublishService {
           status: HttpStatus.UNPROCESSABLE_ENTITY,
         });
       }
+      if (preview.reasonCode === 'INVALID_TASK_PRICE') {
+        this.logger.warn(`confirmPublish — invalid task price | projectId: ${projectId}`);
+        throw new TranslatableException({
+          messageKey: 'error.project.invalid_task_price',
+          errorCode: ERROR_CODES.PROJECT_INVALID_TASK_PRICE,
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+        });
+      }
       this.logger.warn(
         `confirmPublish — cannot publish | projectId: ${projectId}, reasonCode: ${preview.reasonCode}`,
       );
@@ -144,6 +152,13 @@ export class ProjectPublishService implements IProjectPublishService {
             throw new TranslatableException({
               messageKey: 'error.project.insufficient_balance',
               errorCode: ERROR_CODES.PROJECT_INSUFFICIENT_BALANCE,
+              status: HttpStatus.UNPROCESSABLE_ENTITY,
+            });
+          }
+          if (lockedEligibility.reasonCode === 'INVALID_TASK_PRICE') {
+            throw new TranslatableException({
+              messageKey: 'error.project.invalid_task_price',
+              errorCode: ERROR_CODES.PROJECT_INVALID_TASK_PRICE,
               status: HttpStatus.UNPROCESSABLE_ENTITY,
             });
           }
@@ -295,6 +310,10 @@ export class ProjectPublishService implements IProjectPublishService {
 
     if (project.status !== ProjectStatus.CONFIGURED) {
       return { ...baseResult, canPublish: false, reasonCode: 'NOT_CONFIGURED' };
+    }
+
+    if (tasks.length === 0 || tasks.some((t) => !Money.from(t.price).isPositive())) {
+      return { ...baseResult, canPublish: false, reasonCode: 'INVALID_TASK_PRICE' };
     }
 
     if (paymentType === PaymentType.CREDIT) {

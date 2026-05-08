@@ -2,7 +2,7 @@ import { User } from '@database/entities/auth/user.entity';
 import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
 import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
 import { Project } from '@database/entities/projects/project.entity';
-import { TaskCreationMode, TaskDifficulty, TaskKanbanStatus } from '@database/enums';
+import { TaskCreationMode, TaskKanbanStatus } from '@database/enums';
 import {
   Column,
   Entity,
@@ -40,6 +40,8 @@ import {
 @Index('idx_tasks_project_status_order', ['projectId', 'kanbanStatus', 'displayOrder'])
 @Index('idx_tasks_billing_period', ['billingPeriodId'])
 @Index('idx_tasks_due_date', ['dueDate'])
+@Index('idx_tasks_started_at', ['startedAt'])
+@Index('idx_tasks_completed_at', ['completedAt'])
 @Index('idx_tasks_code', ['code'])
 @Index('uq_tasks_project_code_seq', ['projectId', 'codeSeq'], { unique: true })
 export class Task extends AuditableEntity {
@@ -113,14 +115,6 @@ export class Task extends AuditableEntity {
   public readonly consultantPayout!: number;
 
   @Column({
-    name: 'difficulty_level',
-    type: 'varchar',
-    length: 20,
-    default: TaskDifficulty.MEDIUM,
-  })
-  public difficultyLevel!: TaskDifficulty;
-
-  @Column({
     name: 'creation_mode',
     type: 'varchar',
     length: 15,
@@ -173,6 +167,18 @@ export class Task extends AuditableEntity {
 
   @Column({ name: 'display_order', type: 'int', default: 0 })
   public displayOrder!: number;
+
+  // First time the task entered IN_PROGRESS — populated by the consultant-side
+  // status-transition handler. Never reset on subsequent transitions so that
+  // `total_worked = completed_at - started_at` covers the full lifetime of the
+  // task even when it round-trips through REVISION_REQUESTED.
+  @Column({ name: 'started_at', type: 'timestamptz', nullable: true })
+  public startedAt!: Date | null;
+
+  // Most recent transition into DONE. Cleared when the task is moved out of
+  // DONE (e.g. revision requested) so the next completion measures fresh.
+  @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
+  public completedAt!: Date | null;
 
   // §H1 — TypeORM-managed optimistic lock counter.
   @VersionColumn()

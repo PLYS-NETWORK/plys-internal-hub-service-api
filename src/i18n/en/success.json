@@ -25,21 +25,12 @@
   },
   "task": {
     "created": "Task created successfully.",
-    "assigned": "Task assigned successfully.",
-    "claimed": "Task claimed successfully.",
-    "status_updated": "Task status updated successfully.",
-    "comment_created": "Comment created successfully.",
-    "comment_updated": "Comment updated successfully.",
-    "comment_deleted": "Comment deleted successfully.",
-    "evidence_created": "Evidence created successfully.",
-    "evidence_updated": "Evidence updated successfully.",
-    "evidence_deleted": "Evidence deleted successfully."
-  },
-  "application": {
-    "created": "Application submitted successfully.",
-    "approved": "Application approved successfully.",
-    "rejected": "Application rejected successfully.",
-    "withdrawn": "Application withdrawn successfully."
+    "result_created": "Result created successfully.",
+    "result_updated": "Result updated successfully.",
+    "result_deleted": "Result deleted successfully.",
+    "attachment_created": "Attachments uploaded successfully.",
+    "attachment_updated": "Attachment updated successfully.",
+    "attachment_deleted": "Attachment deleted successfully."
   },
   "billing": {
     "invoice_checkout_initiated": "Invoice payment initiated."

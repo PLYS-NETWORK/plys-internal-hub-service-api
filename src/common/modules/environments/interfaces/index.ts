@@ -1,3 +1,4 @@
+export type { IAiKeysConfig, IAiKeysVersionedSecrets } from './ai-keys-config.interface';
 export type { IAppConfig } from './app-config.interface';
 export type { IAwsS3Config } from './aws-s3-config.interface';
 export type { ICopyleaksConfig } from './copyleaks-config.interface';

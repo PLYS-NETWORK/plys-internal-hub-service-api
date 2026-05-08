@@ -37,6 +37,7 @@
     "cannot_be_edited": "Proje mevcut durumunda düzenlenemez.",
     "cannot_publish": "Bu proje mevcut durumunda yayınlanamaz.",
     "insufficient_balance": "Bu projeyi yayınlamak için yeterli hesap bakiyesi yok.",
+    "invalid_task_price": "Proje yayınlanamaz — her görevin fiyatı sıfırdan büyük olmalıdır.",
     "recall_transaction_not_found": "Geri çağırma iadesi için orijinal yayın işlemi bulunamadı.",
     "cannot_be_deleted": "Yalnızca taslak, kurulum aşamasında veya yapılandırılmış projeler silinebilir.",
     "invalid_status_transition": "Geçersiz proje durumu geçişi.",
@@ -46,18 +47,17 @@
     "not_found": "Görev bulunamadı.",
     "invalid_status_transition": "Geçersiz görev durumu geçişi.",
     "already_assigned": "Bu görev zaten bir danışmana atanmış.",
-    "consultant_not_project_member": "Bu danışman projenin aktif bir üyesi değil.",
     "project_not_in_progress": "Görevler yalnızca devam eden projeler için yönetilebilir.",
-    "comment_not_found": "Görev yorumu bulunamadı.",
-    "comment_forbidden": "Bu yorum üzerinde işlem yapma yetkiniz yok.",
-    "comment_file_not_owned": "Eklenen dosyalardan biri veya birkaçı size ait değil ya da mevcut değil.",
-    "comment_empty_update": "Güncellemek için comment veya file_ids alanlarından en az birini gönderin.",
-    "evidence_not_found": "Görev kanıtı bulunamadı.",
-    "evidence_forbidden": "Bu kanıt üzerinde işlem yapma yetkiniz yok.",
-    "evidence_not_assignee": "Bu göreve atanan danışman dışında kimse görev kanıtlarını yönetemez.",
-    "evidence_file_not_owned": "Eklenen dosyalardan biri veya birkaçı size ait değil ya da mevcut değil.",
-    "evidence_empty_update": "Güncellemek için remarks veya file_ids alanlarından en az birini gönderin.",
-    "consultant_already_in_progress": "Devam eden bir göreviniz zaten var. Yeni bir göreve başlamadan önce onu tamamlayın veya durdurun."
+    "result_not_found": "Görev sonucu bulunamadı.",
+    "result_forbidden": "Bu sonuç üzerinde işlem yapma yetkiniz yok.",
+    "result_not_assignee": "Bu göreve atanan danışman dışında kimse görev sonuçlarını yönetemez.",
+    "result_file_not_owned": "Eklenen dosyalardan biri veya birkaçı size ait değil ya da mevcut değil.",
+    "result_empty_update": "Güncellemek için remarks veya file_ids alanlarından en az birini gönderin.",
+    "consultant_already_in_progress": "Devam eden bir göreviniz zaten var. Yeni bir göreve başlamadan önce onu tamamlayın veya durdurun.",
+    "attachment_not_found": "Görev eki bulunamadı.",
+    "attachment_forbidden": "Bu görevin eklerini yönetme yetkiniz yok.",
+    "attachment_file_not_owned": "Eklenen dosyalardan biri veya birkaçı size ait değil ya da mevcut değil.",
+    "attachment_invalid_status": "Bu durumdaki görevlerin ekleri değiştirilemez."
   },
   "payment": {
     "insufficient_balance": "Yetersiz hesap bakiyesi.",
@@ -72,19 +72,6 @@
     "unique_violation": "Bu değerlere sahip bir kayıt zaten mevcut",
     "foreign_key_violation": "Başvurulan kayıt bulunamadı",
     "not_null_violation": "Zorunlu bir alan eksik"
-  },
-  "application": {
-    "project_not_accepting": "Bu proje şu anda başvuru kabul etmiyor.",
-    "already_applied": "Bu projeye zaten başvurdunuz.",
-    "no_matching_skills": "Becerileriniz proje gereksinimleriyle eşleşmiyor.",
-    "missing_answers": "Başvurmadan önce lütfen tüm gerekli mülakat sorularını yanıtlayın.",
-    "ai_detected": "Yanıtlarınız yapay zeka tarafından oluşturulmuş içerik olarak tespit edildi. Bu projeye başvuramazsınız.",
-    "ai_check_failed": "Yanıtlarınız şu anda doğrulanamıyor. Lütfen daha sonra tekrar deneyin.",
-    "cover_letter_required": "Bu projeye başvururken bir ön yazı gereklidir.",
-    "not_found": "Başvuru bulunamadı.",
-    "cannot_approve": "Bu başvuru mevcut durumunda onaylanamaz.",
-    "cannot_reject": "Bu başvuru mevcut durumunda reddedilemez.",
-    "cannot_withdraw": "Yalnızca bekleyen başvurular geri çekilebilir."
   },
   "billing": {
     "period_not_found": "Faturalama dönemi bulunamadı.",
@@ -107,5 +94,36 @@
   "notification": {
     "not_found": "Bildirim bulunamadı.",
     "forbidden": "Bu bildirime erişim yetkiniz yok."
+  },
+  "ai_provider_key": {
+    "not_configured": "Aktif bir AI sağlayıcı anahtarı yapılandırılmamış. Lütfen bir yönetici ile iletişime geçin.",
+    "not_found": "AI sağlayıcı anahtarı bulunamadı.",
+    "active_requires_replacement": "Bu sağlayıcı için aktif olan tek anahtar iptal edilemez. Önce bir yedek aktif edin.",
+    "cipher_failed": "AI sağlayıcı anahtarı şifrelenemedi veya çözülemedi."
+  },
+  "chat_session": {
+    "not_found": "Sohbet oturumu bulunamadı.",
+    "not_active": "Aktif olmayan bir sohbet oturumu güncellenemez.",
+    "mode_not_allowed": "Seçilen sohbet modu projenin mevcut durumunda kullanılamaz.",
+    "message_limit_exceeded": "Sohbet oturumu mesaj sınırına ulaştı; devam etmek için yeni bir oturum başlatın."
+  },
+  "ai_context": {
+    "not_found": "Bu proje için AI bağlamı henüz oluşturulmadı.",
+    "derived_html_forbidden": "AI bağlamından türetilen alanlar düz metin olmalıdır — HTML işaretleri kabul edilmez."
+  },
+  "idempotency": {
+    "body_mismatch": "Idempotency-Key farklı bir istek gövdesiyle yeniden kullanıldı."
+  },
+  "ai_sync": {
+    "task_rejected": "Toplu işlemdeki bir veya daha fazla görev, projenin mevcut durumunda uygulanamaz.",
+    "skill_not_found": "Bir veya daha fazla yetenek kimliği bulunamadı."
+  },
+  "project_status": {
+    "price_gate_failed": "Yapılandırıldı durumuna geçilemez: bir veya daha fazla görevin fiyatı = 0."
+  },
+  "admin": {
+    "otp_invalid": "Doğrulama kodu geçersiz veya süresi dolmuş.",
+    "otp_locked": "Çok fazla başarısız deneme nedeniyle hesabınız geçici olarak kilitlendi. Lütfen daha sonra tekrar deneyin.",
+    "resend_limit": "Çok fazla kod istediniz. Yeni bir kod istemeden önce lütfen bekleyin."
   }
 }

@@ -23,8 +23,7 @@ const MAX_CONCURRENT_PROJECTS = 5;
 
 /**
  * Consultant-side discovery + detail. Mirrors `BusinessProjectsService` in
- * `business-projects/services/projects/projects.service.ts`. Read-only;
- * mutating flows (apply, withdraw) live in `applications` module.
+ * `business-projects/services/projects/projects.service.ts`. Read-only.
  */
 @Injectable()
 export class ConsultantProjectsService implements IConsultantProjectsService {
@@ -69,15 +68,12 @@ export class ConsultantProjectsService implements IConsultantProjectsService {
     const projectIds = projects.map((p) => p.id);
     const businessIds = Array.from(new Set(projects.map((p) => p.businessId)));
 
-    // Run cross-cutting aggregations in parallel — all keyed by projectId so
-    // building the response is a constant-cost lookup.
     const [
       businessProfiles,
       requiredCounts,
       matchedCounts,
       avgPriceMap,
       memberCounts,
-      appliedSet,
       activeMembershipCount,
     ] = await Promise.all([
       this.loadBusinessProfilesById(businessIds),
@@ -85,10 +81,6 @@ export class ConsultantProjectsService implements IConsultantProjectsService {
       this.countMatchedSkillsByProject(projectIds, consultantId),
       this.uow.tasks.avgPriceByProjectIds(projectIds),
       this.uow.projectMembers.countActiveByProjectIds(projectIds),
-      this.uow.projectApplications.findActiveProjectIdsByConsultantAndProjects(
-        consultantId,
-        projectIds,
-      ),
       this.countActiveMemberships(consultantId),
     ]);
 
@@ -100,7 +92,6 @@ export class ConsultantProjectsService implements IConsultantProjectsService {
         matchedCounts.get(project.id) ?? 0,
         avgPriceMap.get(project.id) ?? null,
         memberCounts.get(project.id) ?? 0,
-        appliedSet.has(project.id),
         activeMembershipCount,
       ),
     );
@@ -117,52 +108,33 @@ export class ConsultantProjectsService implements IConsultantProjectsService {
     const consultantId = consultantProfile.id;
     this.logger.log(`getDetail — start | projectId: ${projectId}, consultantId: ${consultantId}`);
 
-    const [
-      businessProfile,
-      requiredCount,
-      matchedCount,
-      memberCount,
-      isApplied,
-      hasInterview,
-      activeMembershipCount,
-    ] = await Promise.all([
-      this.uow.businessProfiles.findOne({ where: { id: project.businessId } }),
-      this.uow.projectRequiredSkills.count({ where: { projectId } }),
-      this.uow.consultantSkills
-        .createQueryBuilder('cs')
-        .select('COUNT(*)::int', 'count')
-        .where('cs.consultant_id = :consultantId', { consultantId })
-        .andWhere(
-          'cs.skill_id IN (SELECT prs.skill_id FROM project_required_skills prs WHERE prs.project_id = :projectId)',
-          { projectId },
-        )
-        .getRawOne<{ count: number }>()
-        .then((row) => Number(row?.count ?? 0)),
-      this.uow.projectMembers.countActiveTotalByProjectIds([projectId]),
-      this.uow.projectApplications.existsActiveByConsultantAndProject(consultantId, projectId),
-      this.uow.projectInterviewQuestions
-        .createQueryBuilder('q')
-        .select('1', 'present')
-        .where('q.project_id = :projectId', { projectId })
-        .andWhere('q.deleted_at IS NULL')
-        .limit(1)
-        .getRawOne<{ present: number }>()
-        .then((row) => row !== undefined),
-      this.countActiveMemberships(consultantId),
-    ]);
+    const [businessProfile, requiredCount, matchedCount, memberCount, activeMembershipCount] =
+      await Promise.all([
+        this.uow.businessProfiles.findOne({ where: { id: project.businessId } }),
+        this.uow.projectRequiredSkills.count({ where: { projectId } }),
+        this.uow.consultantSkills
+          .createQueryBuilder('cs')
+          .select('COUNT(*)::int', 'count')
+          .where('cs.consultant_id = :consultantId', { consultantId })
+          .andWhere(
+            'cs.skill_id IN (SELECT prs.skill_id FROM project_required_skills prs WHERE prs.project_id = :projectId)',
+            { projectId },
+          )
+          .getRawOne<{ count: number }>()
+          .then((row) => Number(row?.count ?? 0)),
+        this.uow.projectMembers.countActiveTotalByProjectIds([projectId]),
+        this.countActiveMemberships(consultantId),
+      ]);
 
     const matchRate = this.computeMatchRate(requiredCount, matchedCount);
     const isAvailable = this.computeIsAvailable(
       project.status,
       memberCount,
       project.requiredConsultants,
-      isApplied,
       activeMembershipCount,
     );
 
-    this.logger.log(
-      `getDetail — complete | projectId: ${projectId}, matchRate: ${matchRate}, isApplied: ${isApplied}`,
-    );
+    this.logger.log(`getDetail — complete | projectId: ${projectId}, matchRate: ${matchRate}`);
 
     return plainToInstance(
       ConsultantProjectDetailResponseDto,
@@ -174,7 +146,6 @@ export class ConsultantProjectsService implements IConsultantProjectsService {
         is_available_to_apply: isAvailable,
         match_rate: matchRate,
         payment_type: project.paymentType,
-        is_need_interview: hasInterview,
       },
       { excludeExtraneousValues: true },
     );
@@ -189,7 +160,6 @@ export class ConsultantProjectsService implements IConsultantProjectsService {
     matchedCount: number,
     avgPrice: number | null,
     memberCount: number,
-    isApplied: boolean,
     activeMembershipCount: number,
   ): ConsultantProjectListItemResponseDto {
     const matchRate = this.computeMatchRate(requiredCount, matchedCount);
@@ -197,7 +167,6 @@ export class ConsultantProjectsService implements IConsultantProjectsService {
       project.status,
       memberCount,
       project.requiredConsultants,
-      isApplied,
       activeMembershipCount,
     );
 
@@ -212,7 +181,6 @@ export class ConsultantProjectsService implements IConsultantProjectsService {
         is_platform_partner: businessProfile?.isPartnerPlatform ?? false,
         avg_price_per_task: project.paymentType === ProjectPaymentType.PER_MONTH ? null : avgPrice,
         payment_type: project.paymentType,
-        is_applied: isApplied,
       },
       { excludeExtraneousValues: true },
     );
@@ -223,18 +191,17 @@ export class ConsultantProjectsService implements IConsultantProjectsService {
     return Math.round((matchedCount / requiredCount) * 100);
   }
 
-  // Eligibility flag the discovery feed surfaces. The "applied" predicate
-  // means the consultant has a non-terminal application (PENDING|ACCEPTED).
+  // Eligibility flag the discovery feed surfaces. With applications removed,
+  // this reflects whether the project still has slots and the consultant has
+  // capacity — a future direct-membership mechanism will gate the actual join.
   private computeIsAvailable(
     status: ProjectStatus,
     memberCount: number,
     requiredConsultants: number,
-    isApplied: boolean,
     activeMembershipCount: number,
   ): boolean {
     if (status !== ProjectStatus.PUBLISHED && status !== ProjectStatus.IN_PROGRESS) return false;
     if (memberCount >= requiredConsultants) return false;
-    if (isApplied) return false;
     if (activeMembershipCount >= MAX_CONCURRENT_PROJECTS) return false;
     return true;
   }

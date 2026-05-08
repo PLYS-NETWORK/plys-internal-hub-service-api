@@ -5,7 +5,6 @@ import { TranslatableException } from '@common/exceptions/translatable.exception
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import {
-  ApplicationStatus,
   ProjectMemberStatus,
   ProjectPaymentType,
   ProjectStatus,
@@ -17,6 +16,7 @@ import { plainToInstance } from 'class-transformer';
 import { ILike } from 'typeorm';
 
 import { CreateProjectDto, ListProjectsDto } from '../../dto/requests';
+import { TransitionProjectStatusDto } from '../../dto/requests/transition-project-status.dto';
 import { ProjectListItemResponseDto, ProjectSummaryResponseDto } from '../../dto/responses';
 import { IBusinessProjectsService } from '../../interfaces/projects.service.interface';
 import { BusinessAccessService } from '../business-access.service';
@@ -25,11 +25,7 @@ import { BusinessAccessService } from '../business-access.service';
 // commitments and can be safely soft-deleted. Anything past `CONFIGURED`
 // (i.e. `PUBLISHED`, `IN_PROGRESS`, `DONE`, `CANCELLED`) must be cancelled
 // through the dedicated lifecycle flow instead.
-const DELETABLE_STATUSES = new Set<ProjectStatus>([
-  ProjectStatus.DRAFT,
-  ProjectStatus.SETTING_UP,
-  ProjectStatus.CONFIGURED,
-]);
+const DELETABLE_STATUSES = new Set<ProjectStatus>([ProjectStatus.DRAFT, ProjectStatus.CONFIGURED]);
 
 @Injectable()
 export class BusinessProjectsService implements IBusinessProjectsService {
@@ -96,10 +92,9 @@ export class BusinessProjectsService implements IBusinessProjectsService {
     });
 
     const projectIds = projects.map((p) => p.id);
-    const [taskCounts, memberCounts, applicationCounts] = await Promise.all([
+    const [taskCounts, memberCounts] = await Promise.all([
       this.countTasksPerProject(projectIds),
       this.countActiveMembersPerProject(projectIds),
-      this.countPendingApplicationsPerProject(projectIds),
     ]);
 
     const data = projects.map((p) => {
@@ -118,7 +113,6 @@ export class BusinessProjectsService implements IBusinessProjectsService {
           total_tasks: tasks?.total ?? 0,
           total_completed_tasks: tasks?.completed ?? 0,
           total_active_members: memberCounts.get(p.id) ?? 0,
-          total_pending_applications: applicationCounts.get(p.id) ?? 0,
         },
         { excludeExtraneousValues: true },
       );
@@ -154,6 +148,63 @@ export class BusinessProjectsService implements IBusinessProjectsService {
     this.logger.log(`deleteProject — complete | projectId: ${project.id}`);
   }
 
+  /** @inheritdoc */
+  public async transitionStatus(
+    projectId: string,
+    dto: TransitionProjectStatusDto,
+  ): Promise<ProjectSummaryResponseDto> {
+    this.logger.log(`transitionStatus — start | projectId: ${projectId}, target: ${dto.status}`);
+    const { project } = await this.access.resolveOwnedProject(projectId);
+
+    // Guard: only `draft → configured` accepted via this endpoint. Anything
+    // else (publish, start, cancel) is a different lifecycle flow.
+    if (project.status !== ProjectStatus.DRAFT) {
+      this.logger.warn(
+        `transitionStatus — refused | projectId: ${projectId}, current: ${project.status}, target: ${dto.status}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.project.invalid_status_transition',
+        errorCode: ERROR_CODES.PROJECT_INVALID_STATUS_TRANSITION,
+        status: HttpStatus.CONFLICT,
+      });
+    }
+
+    // Price gate. Drafts with `price = 0` are placeholders the AI / user
+    // hasn't sized yet; publishing them would charge nothing and break the
+    // payout invariant. Surface the offending IDs so the FE can scroll to
+    // them in the backlog UI.
+    const offending = await this.uow.tasks
+      .createQueryBuilder('t')
+      .select('t.id', 'id')
+      .where('t.project_id = :projectId', { projectId })
+      .andWhere('t.kanban_status = :draft', { draft: TaskKanbanStatus.DRAFT })
+      .andWhere('t.price = 0')
+      .andWhere('t.deleted_at IS NULL')
+      .getRawMany<{ id: string }>();
+
+    if (offending.length > 0) {
+      const offendingIds = offending.map((row) => row.id);
+      this.logger.warn(
+        `transitionStatus — price gate failed | projectId: ${projectId}, count: ${offendingIds.length}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.project_status.price_gate_failed',
+        errorCode: ERROR_CODES.PROJECT_PRICE_GATE_FAILED,
+        status: HttpStatus.CONFLICT,
+        args: { count: offendingIds.length },
+        details: { offending_task_ids: offendingIds },
+      });
+    }
+
+    project.status = ProjectStatus.CONFIGURED;
+    const saved = await this.uow.projects.save(project);
+
+    this.logger.log(
+      `transitionStatus — complete | projectId: ${projectId}, status: ${saved.status}`,
+    );
+    return this.toSummaryResponseDto(saved);
+  }
+
   // ─── Helpers ───────────────────────────────────────────────────────────────
 
   private async countTasksPerProject(
@@ -184,21 +235,6 @@ export class BusinessProjectsService implements IBusinessProjectsService {
       .where('pm.project_id IN (:...projectIds)', { projectIds })
       .andWhere('pm.status = :active', { active: ProjectMemberStatus.ACTIVE })
       .groupBy('pm.project_id')
-      .getRawMany<{ project_id: string; count: number }>();
-    return new Map(rows.map((r) => [r.project_id, Number(r.count)]));
-  }
-
-  private async countPendingApplicationsPerProject(
-    projectIds: string[],
-  ): Promise<Map<string, number>> {
-    if (projectIds.length === 0) return new Map();
-    const rows = await this.uow.projectApplications
-      .createQueryBuilder('pa')
-      .select('pa.project_id', 'project_id')
-      .addSelect('COUNT(*)::int', 'count')
-      .where('pa.project_id IN (:...projectIds)', { projectIds })
-      .andWhere('pa.status = :pending', { pending: ApplicationStatus.PENDING })
-      .groupBy('pa.project_id')
       .getRawMany<{ project_id: string; count: number }>();
     return new Map(rows.map((r) => [r.project_id, Number(r.count)]));
   }

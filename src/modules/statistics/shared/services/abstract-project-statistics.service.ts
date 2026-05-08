@@ -6,7 +6,6 @@ import { plainToInstance } from 'class-transformer';
 
 import { ProjectsTrendDto, TrendPeriod } from '../../dto/requests/projects-trend.dto';
 import { StatsDateRangeDto } from '../../dto/requests/stats-date-range.dto';
-import { ProjectInterviewStatsResponseDto } from '../../dto/responses/project-interview-stats-response.dto';
 import { ProjectStatsResponseDto } from '../../dto/responses/project-stats-response.dto';
 import { ProjectTrendResponseDto } from '../../dto/responses/project-trend-response.dto';
 import { IProjectStatisticsService, IStatisticsScope } from '../interfaces';
@@ -75,36 +74,6 @@ export abstract class AbstractProjectStatisticsService implements IProjectStatis
     return plainToInstance(
       ProjectTrendResponseDto,
       { period: query.period, data },
-      { excludeExtraneousValues: true },
-    );
-  }
-
-  /** @inheritdoc */
-  public async getInterviewStats(): Promise<ProjectInterviewStatsResponseDto> {
-    this.logger.log('getInterviewStats — start');
-    const projectIds = await this.scope.getOwnedProjectIds();
-    const totalProjects = projectIds.length;
-
-    const withQuestions =
-      totalProjects === 0
-        ? 0
-        : await this.uow.projectInterviewQuestions.countDistinctProjectIds(projectIds);
-
-    const withoutQuestions = totalProjects - withQuestions;
-    const adoptionRate = totalProjects === 0 ? 0 : roundRatio(withQuestions / totalProjects);
-
-    this.logger.log(
-      `getInterviewStats — complete | total: ${totalProjects}, with_questions: ${withQuestions}`,
-    );
-
-    return plainToInstance(
-      ProjectInterviewStatsResponseDto,
-      {
-        total_projects: totalProjects,
-        with_questions_count: withQuestions,
-        without_questions_count: withoutQuestions,
-        adoption_rate: adoptionRate,
-      },
       { excludeExtraneousValues: true },
     );
   }

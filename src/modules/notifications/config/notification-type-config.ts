@@ -4,7 +4,6 @@ import {
   NotificationType,
 } from '../enums/notification-type.enum';
 import {
-  INewApplicationMetadata,
   IPasswordChangedMetadata,
   IProfileUpdatedMetadata,
   IProjectPublishedMetadata,
@@ -88,20 +87,6 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
     bodyArgs: (m: IProjectUnpublishedMetadata) => ({
       title: m.project_title,
       code: m.project_code,
-    }),
-  },
-  [NOTIFICATION_TYPES.NEW_APPLICATION]: {
-    entityType: NOTIFICATION_ENTITY_TYPES.APPLICATION,
-    getEntityId: (m: INewApplicationMetadata) => m.application_id,
-    getRedirectUrl: (m, base, businessId) =>
-      businessId
-        ? `${base}/c/${businessId}/projects/${m.project_id}/applications/${m.application_id}`
-        : null,
-    titleKey: 'notification.new_application.title',
-    bodyKey: 'notification.new_application.body',
-    bodyArgs: (m: INewApplicationMetadata) => ({
-      consultant: m.consultant_name,
-      title: m.project_title,
     }),
   },
   [NOTIFICATION_TYPES.TOP_UP_COMPLETED]: {

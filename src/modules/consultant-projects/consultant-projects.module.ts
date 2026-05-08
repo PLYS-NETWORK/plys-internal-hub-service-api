@@ -7,8 +7,7 @@ import { ConsultantBoardController } from './controllers/board.controller';
 import { ConsultantOverviewController } from './controllers/overview.controller';
 import { ConsultantProjectsController } from './controllers/projects.controller';
 import { ConsultantBoardService } from './services/board/board.service';
-import { ConsultantBoardCommentsService } from './services/board/board-comments.service';
-import { ConsultantBoardEvidencesService } from './services/board/board-evidences.service';
+import { ConsultantBoardResultsService } from './services/board/board-results.service';
 import { ConsultantAccessService } from './services/consultant-access.service';
 import { ConsultantOverviewService } from './services/overview.service';
 import { ConsultantProjectsService } from './services/projects.service';
@@ -31,8 +30,7 @@ import { ConsultantProjectsService } from './services/projects.service';
     ConsultantProjectsService,
     ConsultantOverviewService,
     ConsultantBoardService,
-    ConsultantBoardCommentsService,
-    ConsultantBoardEvidencesService,
+    ConsultantBoardResultsService,
   ],
 })
 export class ConsultantProjectsModule {}

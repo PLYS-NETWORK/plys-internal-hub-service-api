@@ -40,7 +40,7 @@ export interface IFileRepository extends AbstractRepository<FileEntity> {
    * Caller is expected to be inside a transaction (use `tx.files`).
    *
    * @param fileIds Files to update. No-op when empty.
-   * @param purpose The owning surface (e.g. `TASK_COMMENT`, `TASK_EVIDENCE`).
+   * @param purpose The owning surface (e.g. `TASK_RESULT`, `TASK_ATTACHMENT`).
    */
   markAsAttached(fileIds: string[], purpose: FilePurpose): Promise<void>;
 

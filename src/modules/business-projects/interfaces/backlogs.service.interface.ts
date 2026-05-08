@@ -63,7 +63,7 @@ export interface IBacklogsService {
   payTasks(projectId: string, dto: TaskIdsDto): Promise<PayTasksResponseDto>;
 
   /**
-   * Partially updates a DRAFT task's title, description, price, or difficulty.
+   * Partially updates a DRAFT task's title, description, or price.
    * @throws TranslatableException 404 TASK_NOT_FOUND if the task is missing or not DRAFT.
    */
   updateDraftTask(

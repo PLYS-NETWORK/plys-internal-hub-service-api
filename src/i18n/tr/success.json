@@ -25,21 +25,12 @@
   },
   "task": {
     "created": "Görev başarıyla oluşturuldu.",
-    "assigned": "Görev başarıyla atandı.",
-    "claimed": "Görev başarıyla alındı.",
-    "status_updated": "Görev durumu başarıyla güncellendi.",
-    "comment_created": "Yorum başarıyla oluşturuldu.",
-    "comment_updated": "Yorum başarıyla güncellendi.",
-    "comment_deleted": "Yorum başarıyla silindi.",
-    "evidence_created": "Kanıt başarıyla oluşturuldu.",
-    "evidence_updated": "Kanıt başarıyla güncellendi.",
-    "evidence_deleted": "Kanıt başarıyla silindi."
-  },
-  "application": {
-    "created": "Başvuru başarıyla gönderildi.",
-    "approved": "Başvuru başarıyla onaylandı.",
-    "rejected": "Başvuru başarıyla reddedildi.",
-    "withdrawn": "Başvuru başarıyla geri çekildi."
+    "result_created": "Sonuç başarıyla oluşturuldu.",
+    "result_updated": "Sonuç başarıyla güncellendi.",
+    "result_deleted": "Sonuç başarıyla silindi.",
+    "attachment_created": "Ekler başarıyla yüklendi.",
+    "attachment_updated": "Ek başarıyla güncellendi.",
+    "attachment_deleted": "Ek başarıyla silindi."
   },
   "billing": {
     "invoice_checkout_initiated": "Fatura ödemesi başlatıldı."

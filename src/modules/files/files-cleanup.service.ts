@@ -2,7 +2,7 @@ import { EnvironmentsService } from '@common/modules/environments';
 import { IStorageProvider, STORAGE_PROVIDER } from '@common/modules/file-storage';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { FileEntity, TaskCommentAttachment, TaskEvidenceAttachment } from '@database/entities';
+import { FileEntity, TaskAttachment, TaskResultAttachment } from '@database/entities';
 import { FileStorageProvider } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Inject, Injectable } from '@nestjs/common';
@@ -66,8 +66,8 @@ export class FilesCleanupService {
    * matching `LEFT JOIN ... WHERE ... IS NULL` clause to the candidate
    * query below — otherwise this sweep will incorrectly reclaim files that
    * are in active use elsewhere. Reference tables today:
-   *   - task_comment_attachments
-   *   - task_evidence_attachments
+   *   - task_result_attachments
+   *   - task_attachments
    */
   public async purgeOrphanedUploads(): Promise<void> {
     const cutoff = new Date(Date.now() - this.env.filesOrphanGraceHours * MS_PER_HOUR);
@@ -80,13 +80,13 @@ export class FilesCleanupService {
       for (;;) {
         const batch = await this.uow.files
           .createQueryBuilder('f')
-          .leftJoin(TaskCommentAttachment, 'tca', 'tca.file_id = f.id')
-          .leftJoin(TaskEvidenceAttachment, 'tea', 'tea.file_id = f.id')
+          .leftJoin(TaskResultAttachment, 'tra', 'tra.file_id = f.id')
+          .leftJoin(TaskAttachment, 'ta', 'ta.file_id = f.id AND ta.deleted_at IS NULL')
           .where('f.purpose IS NULL')
           .andWhere('f.deleted_at IS NULL')
           .andWhere('f.created_at < :cutoff', { cutoff })
-          .andWhere('tca.id IS NULL')
-          .andWhere('tea.id IS NULL')
+          .andWhere('tra.id IS NULL')
+          .andWhere('ta.id IS NULL')
           .orderBy('f.created_at', 'ASC')
           .take(PURGE_BATCH_SIZE)
           .getMany();

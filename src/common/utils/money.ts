@@ -101,6 +101,10 @@ export class Money {
     return this.minor < 0n;
   }
 
+  public isPositive(): boolean {
+    return this.minor > 0n;
+  }
+
   /** Fixed-point string ("1234.56") suitable for writing to numeric(n,2) columns. */
   public toFixedString(): string {
     return fromMinorUnits(this.minor);

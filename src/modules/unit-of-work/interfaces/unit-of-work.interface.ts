@@ -1,34 +1,36 @@
 import {
+  IAdminAllowedEmailRepository,
+  IAiProviderApiKeyRepository,
   IAiSessionMessageRepository,
   IAiTaskSessionRepository,
   IAuthTokenRepository,
   IBillingPeriodRepository,
   IBusinessProfileRepository,
   IBusinessTransactionRepository,
+  IChatMessageRepository,
   IConsultantProfileRepository,
   IConsultantSkillRepository,
   IConsultantTransactionRepository,
   IFileRepository,
-  IInterviewAnswerRepository,
+  IIdempotencyKeyRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
   INotificationRepository,
   IProjectActivityRepository,
-  IProjectApplicationRepository,
-  IProjectInterviewQuestionRepository,
+  IProjectAiContextRepository,
+  IProjectChatSessionRepository,
   IProjectMemberRepository,
   IProjectRepository,
   IProjectRequiredSkillRepository,
   IProjectStatusHistoryRepository,
   ISkillRepository,
+  ITaskAttachmentRepository,
   ITaskCodeService,
-  ITaskCommentAttachmentRepository,
-  ITaskCommentRepository,
   ITaskDisputeRepository,
-  ITaskEvidenceAttachmentRepository,
-  ITaskEvidenceRepository,
   ITaskHistoryRepository,
   ITaskRepository,
+  ITaskResultAttachmentRepository,
+  ITaskResultRepository,
   IUserRepository,
   IUserSessionRepository,
   IUserSsoProviderRepository,
@@ -41,6 +43,9 @@ import {
 // produces a scoped UoW where every read/write goes through the same
 // EntityManager and participates in one atomic unit.
 export interface IUnitOfWork {
+  // Domain 0 — Admin
+  readonly adminAllowedEmails: IAdminAllowedEmailRepository;
+
   // Domain 1 — Auth & Identity
   readonly users: IUserRepository;
   readonly authTokens: IAuthTokenRepository;
@@ -55,31 +60,28 @@ export interface IUnitOfWork {
 
   // Domain 3 — Projects
   readonly projects: IProjectRepository;
-  readonly projectInterviewQuestions: IProjectInterviewQuestionRepository;
   readonly projectRequiredSkills: IProjectRequiredSkillRepository;
   readonly projectActivity: IProjectActivityRepository;
   readonly projectStatusHistory: IProjectStatusHistoryRepository;
   readonly taskCodes: ITaskCodeService;
+  readonly projectMembers: IProjectMemberRepository;
+  readonly projectChatSessions: IProjectChatSessionRepository;
+  readonly chatMessages: IChatMessageRepository;
+  readonly projectAiContexts: IProjectAiContextRepository;
 
   // Domain 4 — Tasks
   readonly tasks: ITaskRepository;
+  readonly taskAttachments: ITaskAttachmentRepository;
   readonly taskDisputes: ITaskDisputeRepository;
   readonly taskHistory: ITaskHistoryRepository;
-  readonly taskComments: ITaskCommentRepository;
-  readonly taskCommentAttachments: ITaskCommentAttachmentRepository;
-  readonly taskEvidences: ITaskEvidenceRepository;
-  readonly taskEvidenceAttachments: ITaskEvidenceAttachmentRepository;
+  readonly taskResults: ITaskResultRepository;
+  readonly taskResultAttachments: ITaskResultAttachmentRepository;
 
   // Domain 5 — AI
   readonly aiTaskSessions: IAiTaskSessionRepository;
   readonly aiSessionMessages: IAiSessionMessageRepository;
 
-  // Domain 6 — Applications
-  readonly projectApplications: IProjectApplicationRepository;
-  readonly interviewAnswers: IInterviewAnswerRepository;
-  readonly projectMembers: IProjectMemberRepository;
-
-  // Domain 8 — Finance
+  // Domain 6 — Finance
   readonly billingPeriods: IBillingPeriodRepository;
   readonly invoices: IInvoiceRepository;
   readonly invoiceLineItems: IInvoiceLineItemRepository;
@@ -88,11 +90,15 @@ export interface IUnitOfWork {
   readonly transactionNumbers: TransactionNumberService;
   readonly webhookEvents: IWebhookEventRepository;
 
-  // Domain 9 — Files
+  // Domain 7 — Files
   readonly files: IFileRepository;
 
-  // Domain 10 — Notifications
+  // Domain 8 — Notifications
   readonly notifications: INotificationRepository;
+
+  // Domain 9 — Infra (cross-cutting)
+  readonly idempotencyKeys: IIdempotencyKeyRepository;
+  readonly aiProviderApiKeys: IAiProviderApiKeyRepository;
 
   withTransaction<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T>;
 }

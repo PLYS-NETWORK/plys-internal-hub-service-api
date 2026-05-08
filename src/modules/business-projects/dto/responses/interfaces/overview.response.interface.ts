@@ -22,10 +22,6 @@ export interface IOverviewStatistics {
   completed_tasks: number;
   in_progress_tasks: number;
   total_project_members: number;
-  total_pending_applications: number;
-  total_applications: number;
-  total_approved: number;
-  total_rejected: number;
 }
 
 export interface IOverviewTaskStatuses {
@@ -47,15 +43,6 @@ export interface IOverviewTeamMember {
   active_status: ProjectMemberActiveStatus;
 }
 
-export interface IOverviewApplicationBreakdown {
-  pending: number;
-  accepted: number;
-  rejected: number;
-  withdrawn: number;
-  /** accepted / (accepted + rejected) × 100, rounded; null when denominator = 0. */
-  approval_rate: number | null;
-}
-
 export interface IOverviewActivityEvent {
   event_type: ProjectActivityEventType;
   event_id: string;
@@ -69,6 +56,5 @@ export interface IOverviewResponse {
   statistics: IOverviewStatistics;
   task_statuses: IOverviewTaskStatuses;
   team_members: IOverviewTeamMember[];
-  application_breakdown: IOverviewApplicationBreakdown;
   recent_activity: IOverviewActivityEvent[];
 }

@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 
 import {
-  IDashboardSummaryApplications,
   IDashboardSummaryBilling,
   IDashboardSummaryProjects,
   IDashboardSummaryResponse,
@@ -36,13 +35,6 @@ export class DashboardSummaryTasksDto implements IDashboardSummaryTasks {
 }
 
 @Exclude()
-export class DashboardSummaryApplicationsDto implements IDashboardSummaryApplications {
-  @Expose()
-  @ApiProperty({ name: 'pending_count', example: 17 })
-  public readonly pending_count!: number;
-}
-
-@Exclude()
 export class DashboardSummaryBillingDto implements IDashboardSummaryBilling {
   @Expose()
   @ApiProperty({ name: 'total_spend', example: '840.00' })
@@ -64,11 +56,6 @@ export class DashboardSummaryResponseDto implements IDashboardSummaryResponse {
   @ApiProperty({ type: DashboardSummaryTasksDto })
   @Type(() => DashboardSummaryTasksDto)
   public readonly tasks!: DashboardSummaryTasksDto;
-
-  @Expose()
-  @ApiProperty({ type: DashboardSummaryApplicationsDto })
-  @Type(() => DashboardSummaryApplicationsDto)
-  public readonly applications!: DashboardSummaryApplicationsDto;
 
   @Expose()
   @ApiProperty({ type: DashboardSummaryBillingDto })

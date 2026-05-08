@@ -1,4 +1,4 @@
-name: Deploy to Dev — dev.ployos.com
+name: Deploy to Dev — api-dev.lona.my
 
 on:
   push:

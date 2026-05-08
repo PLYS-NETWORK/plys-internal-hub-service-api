@@ -114,6 +114,6 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
     // /forgot-password, otherwise falls back to the default IP-only key.
     { provide: APP_GUARD, useClass: AuthThrottlerGuard },
   ],
-  exports: [AuthService, JwtModule],
+  exports: [AuthService, SessionService, JwtModule],
 })
 export class AuthModule {}

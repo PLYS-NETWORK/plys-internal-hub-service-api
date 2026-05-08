@@ -18,6 +18,20 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    # SCP overlays files in place — it does NOT delete VPS files absent from
+    # the new package. Wipe the previous `dist/` first so removed source files
+    # don't leave stale `*.js` behind for TypeORM's entity glob to load.
+    - name: Wipe previous dist on VPS
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ inputs.host }}
+        username: ${{ inputs.username }}
+        key: ${{ inputs.key }}
+        port: ${{ inputs.port }}
+        script: |
+          set -e
+          rm -rf /apps/internal-hub-be/prod/current/dist
+
     - name: Upload to VPS
       uses: appleboy/scp-action@v0.1.7
       with:
@@ -26,5 +40,5 @@ runs:
         key: ${{ inputs.key }}
         port: ${{ inputs.port }}
         source: 'deploy-package/*'
-        target: '/apps/prod/current'
+        target: '/apps/internal-hub-be/prod/current'
         strip_components: 1

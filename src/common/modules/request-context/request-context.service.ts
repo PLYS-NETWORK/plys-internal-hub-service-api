@@ -11,71 +11,82 @@ import {
 @Injectable()
 export class RequestContextService {
   // One AsyncLocalStorage instance shared across the NestJS DI scope.
-  // Each request gets its own isolated store via run().
-  private readonly storage = new AsyncLocalStorage<IRequestContext>();
+  // Each request gets its own isolated store via run(). Static so that
+  // non-DI callers (e.g. class-transformer decorators) can read the
+  // current store via RequestContextService.currentTimezone() etc.
+  private static readonly storage = new AsyncLocalStorage<IRequestContext>();
 
   public run<T>(context: IRequestContext, callback: () => T): T {
-    return this.storage.run(context, callback);
+    return RequestContextService.storage.run(context, callback);
+  }
+
+  /**
+   * Static accessor for the active request's timezone.
+   * Used by decorators (@TimezoneDate) that run outside the DI scope.
+   * Falls back to 'UTC' when no request context is active or none was supplied.
+   */
+  public static currentTimezone(): string {
+    return RequestContextService.storage.getStore()?.timezone ?? 'UTC';
   }
 
   public getContext(): IRequestContext | undefined {
-    return this.storage.getStore();
+    return RequestContextService.storage.getStore();
   }
 
   public get requestId(): string {
-    return this.storage.getStore()?.requestId ?? '';
+    return RequestContextService.storage.getStore()?.requestId ?? '';
   }
 
   public get userId(): string | null {
-    return this.storage.getStore()?.userId ?? null;
+    return RequestContextService.storage.getStore()?.userId ?? null;
   }
 
   public get email(): string | null {
-    return this.storage.getStore()?.email ?? null;
+    return RequestContextService.storage.getStore()?.email ?? null;
   }
 
   public get userRole(): UserRole | null {
-    return this.storage.getStore()?.userRole ?? null;
+    return RequestContextService.storage.getStore()?.userRole ?? null;
   }
 
   public get sessionId(): string | null {
-    return this.storage.getStore()?.sessionId ?? null;
+    return RequestContextService.storage.getStore()?.sessionId ?? null;
   }
 
   public get deviceId(): string | null {
-    return this.storage.getStore()?.deviceId ?? null;
+    return RequestContextService.storage.getStore()?.deviceId ?? null;
   }
 
   public get ipAddress(): string {
-    return this.storage.getStore()?.ipAddress ?? '';
+    return RequestContextService.storage.getStore()?.ipAddress ?? '';
   }
 
   public get userAgent(): string | null {
-    return this.storage.getStore()?.userAgent ?? null;
+    return RequestContextService.storage.getStore()?.userAgent ?? null;
   }
 
   public get path(): string {
-    return this.storage.getStore()?.path ?? '';
+    return RequestContextService.storage.getStore()?.path ?? '';
   }
 
   public get method(): string {
-    return this.storage.getStore()?.method ?? '';
+    return RequestContextService.storage.getStore()?.method ?? '';
   }
 
   public get lang(): SupportedLocale {
-    return this.storage.getStore()?.lang ?? DEFAULT_LOCALE;
+    return RequestContextService.storage.getStore()?.lang ?? DEFAULT_LOCALE;
   }
 
   public get activePlatform(): ActivePlatform | null {
-    return this.storage.getStore()?.activePlatform ?? null;
+    return RequestContextService.storage.getStore()?.activePlatform ?? null;
   }
 
   public get businessId(): string | null {
-    return this.storage.getStore()?.businessId ?? null;
+    return RequestContextService.storage.getStore()?.businessId ?? null;
   }
 
   public get timezone(): string | null {
-    return this.storage.getStore()?.timezone ?? null;
+    return RequestContextService.storage.getStore()?.timezone ?? null;
   }
 
   // Called by JwtContextMiddleware after the JWT is verified.
@@ -88,7 +99,7 @@ export class RequestContextService {
     activePlatform: ActivePlatform,
     businessId: string | null = null,
   ): void {
-    const store = this.storage.getStore();
+    const store = RequestContextService.storage.getStore();
     if (store) {
       store.userId = userId;
       store.email = email;

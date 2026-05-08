@@ -1,3 +1,4 @@
+import { IdempotencyKey } from '@common/decorators/idempotency-key.decorator';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
@@ -44,11 +45,12 @@ export class BacklogsController {
   constructor(private readonly backlogsService: BacklogsService) {}
 
   @Post()
+  @IdempotencyKey()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Create a single draft task',
     description:
-      'Side effect: adding the first draft task auto-transitions the project from `draft` to `setting_up` (or straight to `configured` if `required_skills` and `max_consultants > 0` are already set).',
+      'Side effect: adding the first draft task auto-transitions the project from `draft` to `configured` when `required_skills` and `max_consultants > 0` are already set; otherwise the project stays at `draft` until those signals are present. Idempotent — pass `Idempotency-Key` header to make retries safe.',
   })
   public async createDraftTask(
     @Param('id', ParseUUIDPipe) id: string,
@@ -70,9 +72,10 @@ export class BacklogsController {
   }
 
   @Patch(':taskId')
+  @IdempotencyKey()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Partially update a draft task (title, description, price, difficulty)',
+    summary: 'Partially update a draft task (title, description, price)',
   })
   public async updateDraftTask(
     @Param('id', ParseUUIDPipe) id: string,
@@ -84,11 +87,12 @@ export class BacklogsController {
   }
 
   @Delete()
+  @IdempotencyKey()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Hard-delete one or more draft tasks (atomic)',
     description:
-      'Side effect: removing the last draft task on a setup-phase project demotes its status back toward `draft`/`setting_up`.',
+      'Side effect: removing the last draft task on a setup-phase project demotes its status back to `draft`.',
   })
   public async bulkDelete(
     @Param('id', ParseUUIDPipe) id: string,

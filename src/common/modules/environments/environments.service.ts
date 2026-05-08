@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { FilesStorageProviderName, IEnvironmentsService } from './interfaces';
+import {
+  FilesStorageProviderName,
+  IAiKeysVersionedSecrets,
+  IEnvironmentsService,
+} from './interfaces';
 
 @Injectable()
 export class EnvironmentsService implements IEnvironmentsService {
@@ -170,6 +174,11 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.configService.getOrThrow<string>('app.lonaUrl');
   }
 
+  /** Base URL for the Admin internal hub frontend. */
+  public get internalHubUrl(): string {
+    return this.configService.getOrThrow<string>('app.internalHubUrl');
+  }
+
   public get redisHost(): string {
     return this.configService.getOrThrow<string>('app.redis.host');
   }
@@ -260,5 +269,23 @@ export class EnvironmentsService implements IEnvironmentsService {
 
   public get awsS3Endpoint(): string {
     return this.configService.get<string>('app.awsS3.endpoint') ?? '';
+  }
+
+  /**
+   * Master key set used to encrypt `ai_provider_api_key.key_ciphertext` at
+   * rest. Both `currentVersion` and at least one `versions` entry are
+   * required for the service to start; the cipher validates this on first
+   * use and throws a typed error if violated.
+   */
+  public get aiKeysMaster(): IAiKeysVersionedSecrets {
+    return this.configService.getOrThrow<IAiKeysVersionedSecrets>('app.aiKeys.master');
+  }
+
+  /**
+   * Secret set shared with the FE BFF for wrapping the GET /ai-provider-keys/active
+   * response. Same versioning scheme as `aiKeysMaster`.
+   */
+  public get aiKeysBff(): IAiKeysVersionedSecrets {
+    return this.configService.getOrThrow<IAiKeysVersionedSecrets>('app.aiKeys.bff');
   }
 }

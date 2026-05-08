@@ -11,7 +11,6 @@ import { IProjectStatusService } from '../../interfaces/project-status.service.i
 // that must not be auto-mutated by completeness signals.
 const SETUP_PHASE_STATUSES = new Set<ProjectStatus>([
   ProjectStatus.DRAFT,
-  ProjectStatus.SETTING_UP,
   ProjectStatus.CONFIGURED,
 ]);
 
@@ -90,12 +89,9 @@ export class ProjectStatusService implements IProjectStatusService {
   }
 
   private computeDesiredStatus(drafts: number, skills: number, consultants: number): ProjectStatus {
-    if (drafts === 0) {
+    if (drafts === 0 || consultants === 0 || skills === 0) {
       return ProjectStatus.DRAFT;
     }
-    if (skills > 0 && consultants > 0) {
-      return ProjectStatus.CONFIGURED;
-    }
-    return ProjectStatus.SETTING_UP;
+    return ProjectStatus.CONFIGURED;
   }
 }

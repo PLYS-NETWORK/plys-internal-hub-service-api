@@ -1,3 +1,4 @@
+import { IAiKeysConfig } from './ai-keys-config.interface';
 import { IAppConfig } from './app-config.interface';
 import { IAwsS3Config } from './aws-s3-config.interface';
 import { ICopyleaksConfig } from './copyleaks-config.interface';
@@ -12,6 +13,7 @@ import { ISecurityConfig } from './security-config.interface';
 
 export interface IEnvironmentsService
   extends
+    IAiKeysConfig,
     IAppConfig,
     IAwsS3Config,
     ICopyleaksConfig,

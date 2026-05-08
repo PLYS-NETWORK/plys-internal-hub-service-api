@@ -1,36 +1,38 @@
 import { Module } from '@nestjs/common';
 
 import {
+  AdminAllowedEmailRepository,
+  AiProviderApiKeyRepository,
   AiSessionMessageRepository,
   AiTaskSessionRepository,
   AuthTokenRepository,
   BillingPeriodRepository,
   BusinessProfileRepository,
   BusinessTransactionRepository,
+  ChatMessageRepository,
   ConsultantProfileRepository,
   ConsultantSkillRepository,
   ConsultantTransactionRepository,
   FileRepository,
-  InterviewAnswerRepository,
+  IdempotencyKeyRepository,
   InvoiceLineItemRepository,
   InvoiceRepository,
   NotificationRepository,
   ProjectActivityRepository,
-  ProjectApplicationRepository,
-  ProjectInterviewQuestionRepository,
+  ProjectAiContextRepository,
+  ProjectChatSessionRepository,
   ProjectMemberRepository,
   ProjectRepository,
   ProjectRequiredSkillRepository,
   ProjectStatusHistoryRepository,
   SkillRepository,
+  TaskAttachmentRepository,
   TaskCodeService,
-  TaskCommentAttachmentRepository,
-  TaskCommentRepository,
   TaskDisputeRepository,
-  TaskEvidenceAttachmentRepository,
-  TaskEvidenceRepository,
   TaskHistoryRepository,
   TaskRepository,
+  TaskResultAttachmentRepository,
+  TaskResultRepository,
   TransactionNumberService,
   UserRepository,
   UserSessionRepository,
@@ -40,6 +42,8 @@ import {
 import { UnitOfWorkService } from './unit-of-work.service';
 
 const repositories = [
+  // Domain 0 — Admin
+  AdminAllowedEmailRepository,
   // Domain 1 — Auth & Identity
   UserRepository,
   AuthTokenRepository,
@@ -55,33 +59,34 @@ const repositories = [
   ProjectRequiredSkillRepository,
   ProjectActivityRepository,
   ProjectStatusHistoryRepository,
+  ProjectMemberRepository,
+  ProjectChatSessionRepository,
+  ChatMessageRepository,
+  ProjectAiContextRepository,
   // Domain 4 — Tasks
   TaskRepository,
+  TaskAttachmentRepository,
   TaskDisputeRepository,
   TaskHistoryRepository,
-  TaskCommentRepository,
-  TaskCommentAttachmentRepository,
-  TaskEvidenceRepository,
-  TaskEvidenceAttachmentRepository,
+  TaskResultRepository,
+  TaskResultAttachmentRepository,
   // Domain 5 — AI
   AiTaskSessionRepository,
   AiSessionMessageRepository,
-  // Domain 6 — Applications
-  ProjectApplicationRepository,
-  InterviewAnswerRepository,
-  ProjectMemberRepository,
-  // Domain 8 — Finance
+  // Domain 6 — Finance
   BillingPeriodRepository,
   InvoiceRepository,
   InvoiceLineItemRepository,
   ConsultantTransactionRepository,
   BusinessTransactionRepository,
   WebhookEventRepository,
-  ProjectInterviewQuestionRepository,
-  // Domain 9 — Files
+  // Domain 7 — Files
   FileRepository,
-  // Domain 10 — Notifications
+  // Domain 8 — Notifications
   NotificationRepository,
+  // Domain 9 — Infra (cross-cutting)
+  IdempotencyKeyRepository,
+  AiProviderApiKeyRepository,
 ];
 
 @Module({

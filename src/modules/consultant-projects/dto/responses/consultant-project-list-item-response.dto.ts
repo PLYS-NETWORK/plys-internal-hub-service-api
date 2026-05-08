@@ -37,8 +37,4 @@ export class ConsultantProjectListItemResponseDto implements IConsultantProjectL
   @Expose()
   @ApiProperty({ name: 'payment_type', enum: ProjectPaymentType })
   public readonly payment_type!: ProjectPaymentType;
-
-  @Expose()
-  @ApiProperty({ name: 'is_applied', example: false })
-  public readonly is_applied!: boolean;
 }

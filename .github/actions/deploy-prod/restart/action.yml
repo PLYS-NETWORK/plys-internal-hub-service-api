@@ -1,5 +1,5 @@
 name: 'Restart app on VPS (prod)'
-description: 'Install prod deps, run seeds, reload PM2 (zero-downtime), and prune old backups'
+description: 'Install prod deps, run migrations, reload PM2 (zero-downtime), and prune old backups'
 
 inputs:
   host:
@@ -32,7 +32,7 @@ runs:
           export PNPM_HOME="$HOME/.local/share/pnpm"
           export PATH="$PNPM_HOME:$PATH"
 
-          APP_DIR="/apps/prod"
+          APP_DIR="/apps/internal-hub-be/prod"
           DEPLOY_DIR="$APP_DIR/current"
 
           cd "$DEPLOY_DIR"
@@ -41,12 +41,12 @@ runs:
           pnpm install --frozen-lockfile --prod
 
           echo "==> Copying environment file..."
-          cp "$APP_DIR/.env.production" "$DEPLOY_DIR/.env.production"
+          cp /apps/environments/prod/.env.internal-hub-be "$DEPLOY_DIR/.env.production"
 
-          echo "==> Running database seeds..."
-          NODE_ENV=production node dist/database/seeds/seed-runner.js
+          echo "==> Running database migrations..."
+          NODE_ENV=production pnpm exec typeorm migration:run -d dist/database/data-source.js
 
-          echo "==> Reloading PM2 (zero-downtime, migrations auto-run on app startup)..."
+          echo "==> Reloading PM2 (zero-downtime)..."
           cd "$APP_DIR"
           pm2 startOrReload ecosystem.config.js
           pm2 save
@@ -54,4 +54,4 @@ runs:
           echo "==> Cleaning old backups (keep last 3)..."
           ls -dt "$APP_DIR"/backup_* 2>/dev/null | tail -n +4 | xargs rm -rf || true
 
-          echo "✓ marketplace-ployos-prod deployed successfully"
+          echo "✓ internal-hub-be prod deployed successfully"

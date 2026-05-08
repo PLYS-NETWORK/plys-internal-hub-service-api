@@ -12,5 +12,4 @@ export interface IProjectListItemResponse {
   total_tasks: number;
   total_completed_tasks: number;
   total_active_members: number;
-  total_pending_applications: number;
 }

@@ -1,3 +1,4 @@
+import { TimezoneDate } from '@common/decorators/timezone-date.decorator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 
@@ -23,5 +24,8 @@ export class BoardAttachmentResponseDto implements IBoardAttachmentResponse {
   @ApiProperty({ name: 'file_size_bytes', nullable: true })
   public readonly file_size_bytes!: number | null;
 
-  @Expose() @ApiProperty({ name: 'uploaded_at' }) public readonly uploaded_at!: Date;
+  @Expose()
+  @TimezoneDate()
+  @ApiProperty({ name: 'uploaded_at', example: '2026-05-06 14:30:00' })
+  public readonly uploaded_at!: string;
 }

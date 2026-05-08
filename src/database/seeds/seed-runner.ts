@@ -1,7 +1,11 @@
+import { IAiKeysVersionedSecrets } from '@common/modules/environments/interfaces';
 import { AppDataSource } from '@database/data-source';
+import { AdminAllowedEmail } from '@database/entities/admin/admin-allowed-email.entity';
 import { User } from '@database/entities/auth/user.entity';
+import { AiProviderApiKey } from '@database/entities/infra/ai-provider-api-key.entity';
 import { Skill } from '@database/entities/profiles/skill.entity';
-import { ActivePlatform, UserRole } from '@database/enums';
+import { ActivePlatform, AiProvider, UserRole } from '@database/enums';
+import { GcmCipher } from '@modules/ai-provider-key/crypto/aes-gcm';
 import * as bcrypt from 'bcryptjs';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -11,8 +15,16 @@ import * as path from 'path';
 // ---------------------------------------------------------------------------
 
 const ADMIN_EMAIL = 'admin-platform@ployos.com';
+const ADMIN_ALLOWED_EMAILS: readonly string[] = ['huuphuc9410@gmail.com'];
 const BCRYPT_ROUNDS = 12;
 const KEY_REGEX = /^(skill|category|industry)_[a-z0-9_]+$/;
+
+const GROQ_API_KEY = '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';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_LABEL = 'Groq Llama 3.3 70B';
+// Must match the LABEL constant inside MasterKeyCipher so the cipher can
+// decrypt this ciphertext without modification.
+const AI_KEYS_MASTER_LABEL = 'AI_KEYS_MASTER_KEY';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -108,6 +120,85 @@ async function seedAdmin(): Promise<void> {
 
   await userRepo.save(admin);
   console.log(`[admin] Seeded: ${ADMIN_EMAIL}`);
+}
+
+async function seedAdminAllowedEmails(): Promise<void> {
+  const repo = AppDataSource.getRepository(AdminAllowedEmail);
+  let inserted = 0;
+
+  for (const email of ADMIN_ALLOWED_EMAILS) {
+    const existing = await repo
+      .createQueryBuilder('ae')
+      .where('LOWER(ae.email) = LOWER(:email)', { email })
+      .getOne();
+
+    if (existing) {
+      console.log(`[admin-whitelist] Already exists: ${email}`);
+      continue;
+    }
+
+    await repo.save(repo.create({ email: email.toLowerCase(), isActive: true }));
+    inserted += 1;
+    console.log(`[admin-whitelist] Seeded: ${email}`);
+  }
+
+  console.log(
+    `[admin-whitelist] ${inserted} inserted, ${ADMIN_ALLOWED_EMAILS.length - inserted} skipped`,
+  );
+}
+
+function buildAiMasterSecrets(): IAiKeysVersionedSecrets {
+  const currentVersion = parseInt(process.env.AI_KEYS_CURRENT_MASTER_VERSION ?? '1', 10);
+  const versions: Record<number, string> = {};
+  for (const [envKey, value] of Object.entries(process.env)) {
+    const m = /^AI_KEYS_MASTER_KEY_v(\d+)$/.exec(envKey);
+    if (m && value) versions[parseInt(m[1], 10)] = value;
+  }
+  if (!versions[currentVersion]) {
+    throw new Error(`Env var AI_KEYS_MASTER_KEY_v${currentVersion} is not set`);
+  }
+  return { currentVersion, versions };
+}
+
+async function seedGroqApiKey(): Promise<void> {
+  const repo = AppDataSource.getRepository(AiProviderApiKey);
+  const userRepo = AppDataSource.getRepository(User);
+
+  // Idempotent — skip if any Groq key already exists (active or not).
+  const existing = await repo.findOne({ where: { provider: AiProvider.GROQ } });
+  if (existing) {
+    console.log('[groq-key] Already exists — skipped');
+    return;
+  }
+
+  // createdBy is a non-nullable FK — resolve the admin user seeded just before.
+  const admin = await userRepo.findOne({ where: { email: ADMIN_EMAIL } });
+  if (!admin) {
+    throw new Error('[groq-key] Admin user not found — seedAdmin() must run first');
+  }
+
+  const secrets = buildAiMasterSecrets();
+  const envelope = GcmCipher.encrypt(GROQ_API_KEY, secrets, AI_KEYS_MASTER_LABEL);
+  // Inline MasterKeyCipher.serialise() — "v<N>:<iv_b64>:<tag_b64>:<ct_b64>"
+  const keyCiphertext = `v${envelope.version}:${envelope.iv}:${envelope.tag}:${envelope.ciphertext}`;
+  const keyLast4 = GROQ_API_KEY.slice(-4).padStart(4, '*');
+
+  await repo.save(
+    repo.create({
+      provider: AiProvider.GROQ,
+      model: GROQ_MODEL,
+      label: GROQ_LABEL,
+      masterKeyVersion: envelope.version,
+      keyCiphertext,
+      keyLast4,
+      isActive: true,
+      createdBy: admin.id,
+    }),
+  );
+
+  console.log(
+    `[groq-key] Seeded: provider=groq, model=${GROQ_MODEL}, last4=${keyLast4}, active=true`,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -222,6 +313,8 @@ async function main(): Promise<void> {
   try {
     await seedSkills(dataDir, i18nDir);
     await seedAdmin();
+    await seedAdminAllowedEmails();
+    await seedGroqApiKey();
   } finally {
     await AppDataSource.destroy();
   }

@@ -1,9 +1,11 @@
-import { TaskDifficulty } from '@database/enums';
+import { MaxJsonSize } from '@common/validators/max-json-size.validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { IsEnum, IsNumberString, IsObject, IsOptional, IsString, Length } from 'class-validator';
+import { IsNumberString, IsObject, IsOptional, IsString, Length } from 'class-validator';
 
 import { ICreateDraftTaskRequest } from './interfaces/create-draft-task.request.interface';
+
+const DESCRIPTION_MAX_BYTES = 50 * 1024;
 
 export class CreateDraftTaskDto implements ICreateDraftTaskRequest {
   @Expose({ name: 'title' })
@@ -13,23 +15,19 @@ export class CreateDraftTaskDto implements ICreateDraftTaskRequest {
   public readonly title!: string;
 
   @Expose({ name: 'description' })
-  @ApiPropertyOptional({ name: 'description', type: 'object', additionalProperties: true })
+  @ApiPropertyOptional({
+    name: 'description',
+    type: 'object',
+    additionalProperties: true,
+    description: 'Tiptap doc, opaque to the BE. Capped at 50 KB.',
+  })
   @IsOptional()
   @IsObject()
+  @MaxJsonSize(DESCRIPTION_MAX_BYTES)
   public readonly description?: Record<string, unknown> | null;
 
   @Expose({ name: 'price' })
   @ApiProperty({ name: 'price', example: '500.00', description: 'Decimal string > 0' })
   @IsNumberString({ no_symbols: false })
   public readonly price!: string;
-
-  @Expose({ name: 'difficulty_level' })
-  @ApiPropertyOptional({
-    name: 'difficulty_level',
-    enum: TaskDifficulty,
-    example: TaskDifficulty.MEDIUM,
-  })
-  @IsOptional()
-  @IsEnum(TaskDifficulty)
-  public readonly difficultyLevel?: TaskDifficulty;
 }

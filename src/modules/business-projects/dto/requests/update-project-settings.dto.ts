@@ -1,3 +1,4 @@
+import { MaxJsonSize } from '@common/validators/max-json-size.validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import {
@@ -15,6 +16,7 @@ import {
 import { IUpdateProjectSettingsRequest } from './interfaces/update-project-settings.request.interface';
 
 const MAX_SKILLS = 50;
+const INTRODUCTION_MAX_BYTES = 50 * 1024;
 
 export class UpdateProjectSettingsDto implements IUpdateProjectSettingsRequest {
   @Expose({ name: 'title' })
@@ -25,9 +27,15 @@ export class UpdateProjectSettingsDto implements IUpdateProjectSettingsRequest {
   public readonly title?: string;
 
   @Expose({ name: 'introduction' })
-  @ApiPropertyOptional({ name: 'introduction', type: 'object', additionalProperties: true })
+  @ApiPropertyOptional({
+    name: 'introduction',
+    type: 'object',
+    additionalProperties: true,
+    description: 'Tiptap doc, opaque to the BE. Capped at 50 KB.',
+  })
   @IsOptional()
   @IsObject()
+  @MaxJsonSize(INTRODUCTION_MAX_BYTES)
   public readonly introduction?: Record<string, unknown> | null;
 
   @Expose({ name: 'required_skills' })

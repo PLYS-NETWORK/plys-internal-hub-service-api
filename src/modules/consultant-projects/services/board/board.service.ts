@@ -3,7 +3,8 @@ import { TranslatableException } from '@common/exceptions/translatable.exception
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { DateUtil } from '@common/utils/date';
-import { TaskDifficulty, TaskKanbanStatus } from '@database/enums';
+import { TaskKanbanStatus } from '@database/enums';
+import { BoardCacheService } from '@modules/business-projects/services/board/board-cache.service';
 import { ProjectStatusService } from '@modules/business-projects/services/projects/project-status.service';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
@@ -44,14 +45,12 @@ interface IBoardTaskRow {
   task_id: string;
   task_code: string;
   task_title: string;
-  task_difficulty: TaskDifficulty;
   task_kanban_status: TaskKanbanStatus;
   task_display_order: number;
   consultant_id: string | null;
   consultant_full_name: string | null;
   consultant_avatar_url: string | null;
-  comment_count: number;
-  evidences_count: number;
+  results_count: number;
 }
 
 @Injectable()
@@ -63,6 +62,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
     private readonly requestContext: RequestContextService,
     private readonly access: ConsultantAccessService,
     private readonly projectStatus: ProjectStatusService,
+    private readonly cache: BoardCacheService,
   ) {
     this.logger = new AppLogger(ConsultantBoardService.name, requestContext);
   }
@@ -78,19 +78,14 @@ export class ConsultantBoardService implements IConsultantBoardService {
       .select('t.id', 'task_id')
       .addSelect('t.code', 'task_code')
       .addSelect('t.title', 'task_title')
-      .addSelect('t.difficulty_level', 'task_difficulty')
       .addSelect('t.kanban_status', 'task_kanban_status')
       .addSelect('t.display_order', 'task_display_order')
       .addSelect('cp.id', 'consultant_id')
       .addSelect('cp.full_name', 'consultant_full_name')
       .addSelect('cp.avatar_url', 'consultant_avatar_url')
       .addSelect(
-        '(SELECT COUNT(*)::int FROM task_comments tc WHERE tc.task_id = t.id AND tc.is_deleted = false)',
-        'comment_count',
-      )
-      .addSelect(
-        '(SELECT COUNT(*)::int FROM task_evidences te WHERE te.task_id = t.id AND te.is_deleted = false)',
-        'evidences_count',
+        '(SELECT COUNT(*)::int FROM task_results tr WHERE tr.task_id = t.id AND tr.is_deleted = false)',
+        'results_count',
       )
       .where('t.project_id = :projectId', { projectId })
       .andWhere('t.kanban_status IN (:...nonDraft)', { nonDraft: NON_DRAFT_STATUSES })
@@ -108,7 +103,6 @@ export class ConsultantBoardService implements IConsultantBoardService {
           title: r.task_title,
           kanban_status: r.task_kanban_status,
           display_order: Number(r.task_display_order),
-          difficulty_level: r.task_difficulty,
           assignee: r.consultant_id
             ? {
                 consultant_id: r.consultant_id,
@@ -116,8 +110,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
                 avatar_url: r.consultant_avatar_url,
               }
             : null,
-          comment_count: Number(r.comment_count ?? 0),
-          evidences_count: Number(r.evidences_count ?? 0),
+          results_count: Number(r.results_count ?? 0),
         },
         { excludeExtraneousValues: true },
       ),
@@ -184,6 +177,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
       await this.projectStatus.promoteToInProgressIfPublished(tx, projectId);
     });
 
+    await this.cache.invalidateProject(projectId);
     this.logger.log(`assignSelf — complete | taskId: ${taskId}`);
   }
 
@@ -222,6 +216,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
       await tx.tasks.save(task);
     });
 
+    await this.cache.invalidateProject(projectId);
     this.logger.log(`unassignSelf — complete | taskId: ${taskId}`);
   }
 
@@ -286,9 +281,16 @@ export class ConsultantBoardService implements IConsultantBoardService {
       }
 
       task.kanbanStatus = dto.kanbanStatus;
+      // First-time entry into IN_PROGRESS stamps started_at; never reset on
+      // later round-trips through REVISION_REQUESTED so total worked time
+      // covers the full task lifetime.
+      if (dto.kanbanStatus === TaskKanbanStatus.IN_PROGRESS && task.startedAt === null) {
+        task.startedAt = DateUtil.nowDate();
+      }
       await tx.tasks.save(task);
     });
 
+    await this.cache.invalidateProject(projectId);
     this.logger.log(`changeStatus — complete | taskId: ${taskId}`);
   }
 

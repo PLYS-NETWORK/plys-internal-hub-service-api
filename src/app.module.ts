@@ -1,3 +1,4 @@
+import { BullModule } from '@nestjs/bull';
 import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -9,6 +10,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PlatformGuard } from './common/guards/platform.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { IdempotencyInterceptor } from './common/interceptors/idempotency.interceptor';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
 import { JwtContextMiddleware } from './common/middleware/jwt-context.middleware';
 import { AwsS3Module } from './common/modules/aws-s3';
@@ -26,16 +28,21 @@ import configuration from './config/configuration';
 import { resolveEnvFilePath } from './config/env-file.config';
 import { AuditSubscriber } from './database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from './database/typeorm.config';
-import { ApplicationsModule } from './modules/applications/applications.module';
+import { AdminAuthModule } from './modules/admin-auth/admin-auth.module';
+import { AiBootstrapModule } from './modules/ai-bootstrap/ai-bootstrap.module';
+import { AiProviderKeyModule } from './modules/ai-provider-key/ai-provider-key.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { BusinessProjectsModule } from './modules/business-projects/business-projects.module';
 import { ConsultantProjectsModule } from './modules/consultant-projects/consultant-projects.module';
 import { FilesModule } from './modules/files';
 import { HealthModule } from './modules/health/health.module';
+import { HousekeepingModule } from './modules/housekeeping/housekeeping.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PaymentsModule } from './modules/payments';
 import { ProfilesModule } from './modules/profiles/profiles.module';
+import { ProjectAiContextModule } from './modules/project-ai-context/project-ai-context.module';
+import { ProjectChatSessionModule } from './modules/project-chat-session/project-chat-session.module';
 import { SkillsModule } from './modules/skills/skills.module';
 import { StatisticsModule } from './modules/statistics/statistics.module';
 import { UnitOfWorkModule } from './modules/unit-of-work/unit-of-work.module';
@@ -58,6 +65,26 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     }),
     I18nModule,
     ScheduleModule.forRoot(),
+    // Bull (housekeeping queue) shares Redis with the rest of the app via the
+    // existing connection settings; Bull manages its own keyspace under the
+    // `bull:<queue>:` prefix so it doesn't collide with `RedisService` keys.
+    BullModule.forRootAsync({
+      imports: [EnvironmentsModule],
+      inject: [EnvironmentsService],
+      useFactory: (env: EnvironmentsService) => ({
+        redis: {
+          host: env.redisHost,
+          port: env.redisPort,
+          password: env.redisPassword,
+          db: env.redisDb,
+          tls: env.redisTlsEnabled ? {} : undefined,
+          // Bull's BLPOP-based wait loop needs `maxRetriesPerRequest: null`
+          // when the connection should hold a long-lived blocking call.
+          maxRetriesPerRequest: null,
+          enableReadyCheck: false,
+        },
+      }),
+    }),
     RequestContextModule,
     EmailModule,
     CopyleaksModule,
@@ -66,16 +93,21 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     UnitOfWorkModule,
     AwsS3Module,
     FileStorageModule,
-    ApplicationsModule,
+    AiBootstrapModule,
+    AiProviderKeyModule,
+    AdminAuthModule,
     AuthModule,
     BillingModule,
     BusinessProjectsModule,
     ConsultantProjectsModule,
     FilesModule,
     HealthModule,
+    HousekeepingModule,
     NotificationsModule,
     PaymentsModule,
     ProfilesModule,
+    ProjectAiContextModule,
+    ProjectChatSessionModule,
     SkillsModule,
     StatisticsModule,
     UsersModule,
@@ -83,6 +115,12 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
   ],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
+    // Order matters: IdempotencyInterceptor must run BEFORE TransformResponse
+    // so it captures (and replays) the raw controller payload, not the
+    // already-wrapped StandardizedResponse envelope. Nest applies global
+    // interceptors in registration order on the way in, reverse on the way
+    // out — first listed wraps last.
+    { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
     { provide: APP_INTERCEPTOR, useClass: TransformResponseInterceptor },
     // JwtAuthGuard is global — use @Public() on routes that don't require authentication
     { provide: APP_GUARD, useClass: JwtAuthGuard },

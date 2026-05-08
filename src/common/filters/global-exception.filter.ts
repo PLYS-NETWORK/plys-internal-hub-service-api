@@ -30,11 +30,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = this.translate('error.generic.internal_server_error', lang);
     let errorCode: ErrorCode = ERROR_CODES.GENERIC_INTERNAL_SERVER_ERROR;
+    // 4xx errors can attach machine-readable context (e.g. `offending_task_ids`)
+    // by setting `details` on TranslatableException; surfaced as `data` so
+    // clients don't have to parse the human-readable message.
+    let details: Record<string, unknown> | null = null;
 
     if (exception instanceof TranslatableException) {
       status = exception.getStatus();
       message = this.translate(exception.messageKey, lang, exception.args);
       errorCode = exception.errorCode;
+      details = exception.details ?? null;
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
@@ -117,10 +122,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     const requestId = this.requestContext.requestId;
     const deviceId = (request.headers as Record<string, string | undefined>)['x-device-id'] ?? null;
-    const body = new StandardizedResponse<null>(
+    const body = new StandardizedResponse<Record<string, unknown> | null>(
       status,
       message,
-      null,
+      details,
       request.url,
       errorCode,
       requestId,

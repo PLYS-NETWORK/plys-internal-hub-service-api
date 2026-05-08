@@ -11,15 +11,14 @@ import {
 // `?types=` value → LIKE pattern on the unioned `event_type` column.
 const TYPE_PATTERNS: Record<ActivityType, string> = {
   task: 'task\\_%',
-  application: 'application\\_%',
   member: 'member\\_%',
   project: 'project\\_%',
 };
 
 /**
  * Activity feed for a single project. Implemented as a hand-written CTE
- * because the feed unions four heterogeneous tables (task_history,
- * project_applications×2, project_members) into a single sortable+pageable
+ * because the feed unions three heterogeneous tables (task_history,
+ * project_members, project_status_history) into a single sortable+pageable
  * stream — TypeORM's query builder can't express UNION ALL cleanly so we
  * drop to raw SQL and keep it isolated here.
  *
@@ -48,7 +47,6 @@ export class ProjectActivityRepository implements IProjectActivityRepository {
       ? `WHERE EXISTS (SELECT 1 FROM unnest($2::text[]) AS p WHERE e.event_type LIKE p ESCAPE '\\\\')`
       : '';
 
-    // Page query — params: $1=projectId, [$2=patterns when filtering], then take/skip.
     const pageParams: Array<string | string[] | number> = [projectId];
     if (patterns) pageParams.push(patterns);
     const takeIdx = pageParams.length + 1;
@@ -117,55 +115,6 @@ export class ProjectActivityRepository implements IProjectActivityRepository {
         JOIN tasks t ON t.id = th.task_id
         WHERE t.project_id = $1
           AND th.previous_kanban_status IS DISTINCT FROM th.new_kanban_status
-
-        UNION ALL
-
-        -- application_received: every project_applications row at applied_at.
-        SELECT 'application_received'::text,
-               pa.id,
-               pa.applied_at,
-               NULL::uuid,
-               jsonb_build_object(
-                 'application_id',             pa.id,
-                 'consultant_id',              pa.consultant_id,
-                 'consultant_name',            cp.full_name,
-                 'has_answered_all_questions', (
-                   SELECT COALESCE((
-                     SELECT COUNT(*) FROM project_interview_questions q
-                     WHERE q.project_id = pa.project_id AND q.is_required = true
-                   ) = 0 OR (
-                     SELECT COUNT(DISTINCT ia.question_id)
-                     FROM interview_answers ia
-                     JOIN project_interview_questions q2 ON q2.id = ia.question_id
-                     WHERE ia.application_id = pa.id AND q2.is_required = true
-                   ) >= (
-                     SELECT COUNT(*) FROM project_interview_questions q3
-                     WHERE q3.project_id = pa.project_id AND q3.is_required = true
-                   ), false)
-                 )
-               )
-        FROM project_applications pa
-        JOIN consultant_profiles cp ON cp.id = pa.consultant_id
-        WHERE pa.project_id = $1
-
-        UNION ALL
-
-        -- application_approved/rejected: split by status, both keyed on reviewed_at.
-        SELECT CASE WHEN pa.status = 'accepted' THEN 'application_approved'
-                    ELSE 'application_rejected' END,
-               pa.id,
-               pa.reviewed_at,
-               pa.reviewed_by,
-               jsonb_build_object(
-                 'application_id',  pa.id,
-                 'consultant_id',   pa.consultant_id,
-                 'consultant_name', cp.full_name
-               )
-        FROM project_applications pa
-        JOIN consultant_profiles cp ON cp.id = pa.consultant_id
-        WHERE pa.project_id = $1
-          AND pa.reviewed_at IS NOT NULL
-          AND pa.status IN ('accepted', 'rejected')
 
         UNION ALL
 
