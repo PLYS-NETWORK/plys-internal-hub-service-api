@@ -29,4 +29,11 @@ export class AdminAllowedEmailRepository
       .andWhere('ae.is_active = true')
       .getOne();
   }
+
+  /** @inheritdoc */
+  public async findByEmail(email: string): Promise<AdminAllowedEmail | null> {
+    return this.createQueryBuilder('ae')
+      .where('LOWER(ae.email) = LOWER(:email)', { email })
+      .getOne();
+  }
 }

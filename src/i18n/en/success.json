@@ -42,5 +42,9 @@
   "notification": {
     "read": "Notification marked as read.",
     "read_all": "All notifications marked as read."
+  },
+  "admin": {
+    "allowed_email_invited": "Invitation sent to the admin email.",
+    "allowed_email_active_updated": "Allow-list entry updated."
   }
 }

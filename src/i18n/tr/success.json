@@ -42,5 +42,9 @@
   "notification": {
     "read": "Bildirim okundu olarak işaretlendi.",
     "read_all": "Tüm bildirimler okundu olarak işaretlendi."
+  },
+  "admin": {
+    "allowed_email_invited": "Yönetici e-postasına davet gönderildi.",
+    "allowed_email_active_updated": "İzin listesi kaydı güncellendi."
   }
 }

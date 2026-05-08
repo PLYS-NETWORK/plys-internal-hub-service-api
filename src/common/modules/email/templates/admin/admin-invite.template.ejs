@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Hub — You're Invited</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+</head>
+<body style="margin:0;padding:0;background-color:#f7f9fb;font-family:'Inter',sans-serif;">
+
+  <!-- Email Container -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f7f9fb;padding:48px 16px;">
+    <tr>
+      <td align="center">
+
+  <!-- TopAppBar -->
+  <table width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;margin:0 auto;background-color:#f7f9fb;margin-bottom:32px;">
+    <tr>
+      <td style="padding:48px 24px;text-align:center;">
+        <h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.025em;color:#00236f;font-family:'Manrope',sans-serif;">Admin Hub</h1>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Email Content Container -->
+  <table width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;margin:0 auto;background-color:#ffffff;border-radius:12px;box-shadow:0 12px 32px rgba(25,28,30,0.06);overflow:hidden;">
+
+    <!-- Main Content -->
+    <tr>
+      <td style="padding:32px 48px;">
+
+        <!-- Icon -->
+        <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+          <tr>
+            <td style="width:64px;height:64px;background-color:#f2f4f6;border-radius:50%;text-align:center;vertical-align:middle;border:1px solid rgba(197,197,211,0.15);">
+              <div style="font-size:24px;color:#00236f;line-height:64px;">✉️</div>
+            </td>
+          </tr>
+        </table>
+
+        <h2 style="font-family:'Manrope',sans-serif;font-size:24px;font-weight:700;color:#191c1e;margin:0 0 16px;letter-spacing:-0.025em;">You're invited to the Admin Hub</h2>
+
+        <p style="font-family:'Inter',sans-serif;font-size:16px;color:#444651;line-height:1.6;margin:0 0 24px;">
+          <% if (invitedByEmail) { %>
+            <strong><%= invitedByEmail %></strong> has added your email to the admin allow-list. You can now sign in to the Admin Hub using the one-time code flow.
+          <% } else { %>
+            Your email has been added to the admin allow-list. You can now sign in to the Admin Hub using the one-time code flow.
+          <% } %>
+        </p>
+
+        <!-- CTA -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 32px;">
+          <tr>
+            <td align="center">
+              <a href="<%= internalHubUrl %>" style="display:inline-block;background-color:#00236f;color:#ffffff;text-decoration:none;font-family:'Manrope',sans-serif;font-size:15px;font-weight:600;letter-spacing:-0.01em;padding:14px 28px;border-radius:8px;">Open the Admin Hub</a>
+            </td>
+          </tr>
+        </table>
+
+        <p style="font-family:'Inter',sans-serif;font-size:13px;color:#444651;line-height:1.6;margin:0 0 24px;text-align:center;word-break:break-all;">
+          Or paste this URL into your browser: <br/>
+          <a href="<%= internalHubUrl %>" style="color:#00236f;text-decoration:underline;"><%= internalHubUrl %></a>
+        </p>
+
+        <!-- Notice -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid rgba(197,197,211,0.15);padding-top:24px;">
+          <tr>
+            <td>
+              <h3 style="font-family:'Manrope',sans-serif;font-size:14px;font-weight:600;color:#191c1e;margin:0 0 8px;">Didn't expect this invitation?</h3>
+              <p style="font-family:'Inter',sans-serif;font-size:14px;color:#444651;line-height:1.5;margin:0;">
+                If you weren't expecting an Admin Hub invitation, you can safely ignore this email or contact your system administrator.
+              </p>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+
+  </table>
+
+  <!-- Footer -->
+  <table width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;margin:0 auto;margin-top:32px;">
+    <tr>
+      <td style="padding:40px 24px;text-align:center;">
+        <h2 style="font-size:18px;font-weight:700;color:#00236f;margin:0 0 16px;opacity:0.9;font-family:'Manrope',sans-serif;">Admin Hub</h2>
+        <p style="font-family:'Inter',sans-serif;font-size:12px;color:#444651;margin:0;">© <%= year %> Plys Network. All rights reserved. This email is intended only for authorised admin users.</p>
+      </td>
+    </tr>
+  </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

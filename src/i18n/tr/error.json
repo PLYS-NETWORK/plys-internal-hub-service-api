@@ -125,6 +125,10 @@
     "otp_invalid": "Doğrulama kodu geçersiz veya süresi dolmuş.",
     "otp_locked": "Çok fazla başarısız deneme nedeniyle hesabınız geçici olarak kilitlendi. Lütfen daha sonra tekrar deneyin.",
     "resend_limit": "Çok fazla kod istediniz. Yeni bir kod istemeden önce lütfen bekleyin.",
-    "email_not_allowed": "Bu e-posta yönetici platformuna erişim için yetkili değil."
+    "email_not_allowed": "Bu e-posta yönetici platformuna erişim için yetkili değil.",
+    "allowed_email_already_exists": "Bu e-posta zaten yönetici izin listesinde.",
+    "allowed_email_revoked": "Bu e-posta yönetici izin listesinde ama iptal edilmiş. Yeniden davet etmek yerine yeniden etkinleştirin.",
+    "allowed_email_not_found": "İzin listesi kaydı bulunamadı.",
+    "allowed_email_cannot_revoke_self": "Kendi yönetici izin listesi kaydınızın etkin durumunu değiştiremezsiniz."
   }
 }

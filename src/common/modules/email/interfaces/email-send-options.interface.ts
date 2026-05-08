@@ -4,6 +4,13 @@ export interface IAdminOtpEmailOptions {
   readonly expiryMinutes?: number;
 }
 
+export interface IAdminInviteEmailOptions {
+  /** URL the CTA button points to (env `INTERNAL_HUB_URL`). */
+  readonly internalHubUrl: string;
+  /** Email of the admin who issued the invite, surfaced in the email copy. */
+  readonly invitedByEmail?: string;
+}
+
 export interface IVerifyRegistrationEmailOptions {
   readonly userName: string;
   readonly verificationUrl: string;

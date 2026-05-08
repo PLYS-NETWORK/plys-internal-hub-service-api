@@ -129,6 +129,10 @@
     "otp_invalid": "The verification code is invalid or has expired.",
     "otp_locked": "Your account has been temporarily locked due to too many failed attempts. Please try again later.",
     "resend_limit": "You have requested too many codes. Please wait before requesting a new one.",
-    "email_not_allowed": "This email is not authorized to access the admin platform."
+    "email_not_allowed": "This email is not authorized to access the admin platform.",
+    "allowed_email_already_exists": "This email is already on the admin allow-list.",
+    "allowed_email_revoked": "This email is on the admin allow-list but has been revoked. Re-activate it instead of inviting again.",
+    "allowed_email_not_found": "Allow-list entry not found.",
+    "allowed_email_cannot_revoke_self": "You cannot change the active status of your own admin allow-list entry."
   }
 }
