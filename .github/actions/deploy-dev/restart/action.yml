@@ -1,5 +1,5 @@
 name: 'Restart app on VPS (dev)'
-description: 'Install prod deps, run migrations, and reload PM2 on the dev VPS'
+description: 'Install prod deps, run migrations + seeds, and reload PM2 on the dev VPS'
 
 inputs:
   host:
@@ -45,6 +45,9 @@ runs:
 
           echo "==> Running database migrations..."
           NODE_ENV=development pnpm exec typeorm migration:run -d dist/database/data-source.js
+
+          echo "==> Running database seeds..."
+          NODE_ENV=development node dist/database/seeds/seed-runner.js
 
           echo "==> Restarting PM2..."
           cd "$APP_DIR"
