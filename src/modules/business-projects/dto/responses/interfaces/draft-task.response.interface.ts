@@ -1,5 +1,7 @@
 import { TaskCreationMode } from '@database/enums';
 
+import { ITaskAttachmentResponse } from './task-attachment.response.interface';
+
 export interface IDraftTaskResponse {
   id: string;
   code: string;
@@ -11,4 +13,6 @@ export interface IDraftTaskResponse {
   creation_mode: TaskCreationMode;
   created_at: Date;
   updated_at: Date;
+  attachments_count: number;
+  attachments: ITaskAttachmentResponse[];
 }

@@ -71,6 +71,17 @@ export class BacklogsController {
     return { messageKey: 'success.ok', data };
   }
 
+  @Get(':taskId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Draft task detail with attachments' })
+  public async getTaskDetail(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+  ): Promise<ITranslatedPayload<DraftTaskResponseDto>> {
+    const data = await this.backlogsService.getTaskDetail(id, taskId);
+    return { messageKey: 'success.ok', data };
+  }
+
   @Patch(':taskId')
   @IdempotencyKey()
   @HttpCode(HttpStatus.OK)
