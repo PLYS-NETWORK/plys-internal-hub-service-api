@@ -25,7 +25,7 @@ import { IAdminAllowedEmailsService } from '../interfaces/admin-allowed-emails-s
 // Maps the public `sort_by` token to the entity column expression used in
 // ORDER BY. Whitelisted up-front so a user-supplied value never reaches SQL.
 const SORT_COLUMN_MAP: Record<AdminAllowedEmailSortable, string> = {
-  created_at: 'ae.created_at',
+  created_at: 'ae.createdAt',
   email: 'ae.email',
 };
 
