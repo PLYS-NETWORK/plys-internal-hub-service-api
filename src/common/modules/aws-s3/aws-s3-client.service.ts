@@ -68,11 +68,9 @@ export class AwsS3ClientService implements IAwsS3ClientService {
       region,
       credentials,
       endpoint,
-      // S3-compatible providers (Hetzner, MinIO, R2) require path-style URLs
-      // because they don't support virtual-hosted-style bucket subdomains.
-      // Native AWS S3 deprecated path-style access for new buckets (Sep 2020),
-      // so only enable it when a custom endpoint is configured.
       forcePathStyle: !!endpoint,
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
     });
     this.logger.log(
       `getClient — initialised | region: ${region}, credentialMode: ${credentials ? 'static' : 'default-chain'}${endpoint ? `, endpoint: ${endpoint}` : ''}, is connected: ${this.client ? 'yes' : 'no'}`,
