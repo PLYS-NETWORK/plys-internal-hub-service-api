@@ -87,29 +87,50 @@ The FE BFF decrypts `key_envelope` with the matching version of `FE_BFF_SECRET` 
 
 Mounted under `/admin/ai-provider-keys`. `@Roles(ADMIN_PLATFORM)`.
 
-### 2. List all keys (masked)
+### 2. List keys (masked, paginated)
 
 - **Endpoint:** `GET /admin/ai-provider-keys`
 - **Method:** `GET`
-- **Response 200:** [`IApiKeyAdminResponse[]`](../../../src/modules/ai-provider-key/dto/responses/interfaces/api-key-admin.response.interface.ts) — array. The plaintext is **never** in the response; `key_masked` is `<provider-prefix>***...<last4>`.
+- **Query params:** [`ListApiKeysDto`](../../../src/modules/ai-provider-key/dto/requests/list-api-keys.dto.ts) — extends the standard `PageOptionsDto`.
+  | Field | Type | Required | Default | Notes |
+  | ---------------- | -------------------------------------------------- | -------- | ------- | ----- |
+  | `page` | `number` | no | `1` | 1-indexed. Min 1. |
+  | `limit` | `number` | no | `20` | Page size. Min 1, max 100. |
+  | `sort_by` | `string` | no | — | Optional secondary column; active-first always applies first. |
+  | `order_by` | `'ASC' \| 'DESC'` | no | — | Direction for `sort_by`. |
+  | `assistant_type` | `'chat_box' \| 'interview' \| 'evaluate_answer'` | no | — | Filter to a single assistant feature. |
+  | `model` | `string` | no | — | Exact-match (max length 80). |
+  | `keywords` | `string` | no | — | Case-insensitive substring search on `label` (length 1–80). |
+- **Ordering:** active keys are always sorted ahead of inactive ones, so page 1 surfaces the keys currently in rotation at the top. Sub-order: `assistant_type ASC, created_at DESC`.
+- **Response 200:** `PageDto<IApiKeyAdminResponse>`. The plaintext is **never** in the response; `key_masked` is `<provider-prefix>***...<last4>`.
 - **Errors:** cross-cutting only.
 
 ```jsonc
-[
-  {
-    "id": "uuid",
-    "assistant_type": "chat_box",
-    "provider": "groq",
-    "model": "llama-3.3-70b-versatile",
-    "label": "groq-prod-2026-05",
-    "master_key_version": 2,
-    "key_masked": "gsk_***...8c2f",
-    "is_active": true,
-    "created_by": "uuid",
-    "created_at": "2026-05-05T01:00:00.000Z",
-    "updated_at": "2026-05-05T01:00:00.000Z",
+{
+  "data": [
+    {
+      "id": "uuid",
+      "assistant_type": "chat_box",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "label": "groq-prod-2026-05",
+      "master_key_version": 2,
+      "key_masked": "gsk_***...8c2f",
+      "is_active": true,
+      "created_by": "uuid",
+      "created_at": "2026-05-05T01:00:00.000Z",
+      "updated_at": "2026-05-05T01:00:00.000Z",
+    },
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "itemCount": 5,
+    "pageCount": 1,
+    "hasPreviousPage": false,
+    "hasNextPage": false,
   },
-]
+}
 ```
 
 ### 3. Create a new key

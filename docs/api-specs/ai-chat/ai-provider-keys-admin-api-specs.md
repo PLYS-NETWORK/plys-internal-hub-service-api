@@ -69,9 +69,11 @@ Returned by every admin endpoint that produces a body. Plaintext is never presen
 
 ## Endpoints
 
-### 1. List all keys (masked)
+### 1. List keys (masked, paginated)
 
 `GET /admin/ai-provider-keys`
+
+> **Ordering:** active keys are always sorted ahead of inactive ones, so page 1 surfaces the keys currently in rotation at the top — even when the caller doesn't filter by `assistant_type`. Within active and inactive groups, rows are sub-ordered by `assistant_type ASC` then `created_at DESC`.
 
 #### Headers
 
@@ -79,30 +81,52 @@ Returned by every admin endpoint that produces a body. Plaintext is never presen
 | --------------- | -------- | -------------- |
 | `Authorization` | Yes      | `Bearer <JWT>` |
 
+#### Query params
+
+| Field            | Type                                             | Required | Default | Notes                                                                                         |
+| ---------------- | ------------------------------------------------ | -------- | ------- | --------------------------------------------------------------------------------------------- |
+| `page`           | `number`                                         | No       | `1`     | 1-indexed page number. Min 1.                                                                 |
+| `limit`          | `number`                                         | No       | `20`    | Page size. Min 1, max 100.                                                                    |
+| `sort_by`        | `string`                                         | No       | —       | Optional secondary sort column (entity-level). Active-first ordering is always applied first. |
+| `order_by`       | `'ASC' \| 'DESC'`                                | No       | —       | Direction for `sort_by`.                                                                      |
+| `assistant_type` | `'chat_box' \| 'interview' \| 'evaluate_answer'` | No       | —       | Filter to a single assistant feature.                                                         |
+| `model`          | `string`                                         | No       | —       | Exact-match filter on the model identifier (max length 80).                                   |
+| `keywords`       | `string`                                         | No       | —       | Case-insensitive substring search on `label`. Length 1–80.                                    |
+
 #### Responses
 
-**200 OK** — array of `IApiKeyAdminResponse`. Empty array if no keys exist.
+**200 OK** — `PageDto<IApiKeyAdminResponse>`. `data` is empty if no rows match.
 
 ```json
 {
   "status_code": 200,
   "message": "OK",
   "error_code": null,
-  "data": [
-    {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
-      "assistant_type": "chat_box",
-      "provider": "groq",
-      "model": "llama-3.3-70b-versatile",
-      "label": "groq-prod-2026-05",
-      "master_key_version": 2,
-      "key_masked": "gsk_***...8c2f",
-      "is_active": true,
-      "created_by": "8e3a1f6c-5c2b-4a8e-9f1d-2c5d7e9a4b6f",
-      "created_at": "2026-05-05T01:00:00.000Z",
-      "updated_at": "2026-05-05T01:00:00.000Z"
+  "data": {
+    "data": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "assistant_type": "chat_box",
+        "provider": "groq",
+        "model": "llama-3.3-70b-versatile",
+        "label": "groq-prod-2026-05",
+        "master_key_version": 2,
+        "key_masked": "gsk_***...8c2f",
+        "is_active": true,
+        "created_by": "8e3a1f6c-5c2b-4a8e-9f1d-2c5d7e9a4b6f",
+        "created_at": "2026-05-05T01:00:00.000Z",
+        "updated_at": "2026-05-05T01:00:00.000Z"
+      }
+    ],
+    "meta": {
+      "page": 1,
+      "limit": 20,
+      "itemCount": 5,
+      "pageCount": 1,
+      "hasPreviousPage": false,
+      "hasNextPage": false
     }
-  ],
+  },
   "timestamp": "2026-05-08T12:00:00.000Z",
   "path": "/api/v1/admin/ai-provider-keys"
 }

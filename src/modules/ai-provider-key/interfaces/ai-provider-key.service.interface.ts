@@ -1,6 +1,7 @@
+import { PageDto } from '@common/dto/page.dto';
 import { AiAssistantType } from '@database/enums';
 
-import { CreateApiKeyDto, UpdateApiKeyDto } from '../dto/requests';
+import { CreateApiKeyDto, ListApiKeysDto, UpdateApiKeyDto } from '../dto/requests';
 import { ApiKeyAdminResponseDto, ApiKeyBffResponseDto } from '../dto/responses';
 
 export interface IAiProviderKeyService {
@@ -20,11 +21,15 @@ export interface IAiProviderKeyService {
   getActiveKeyEnvelope(assistantType: AiAssistantType): Promise<ApiKeyBffResponseDto>;
 
   /**
-   * Lists every key in the vault, masked. Response order: assistant_type asc,
-   * then created_at desc.
-   * @returns Masked rows for the admin list view.
+   * Lists keys in the vault, masked, paginated. Optional filters narrow by
+   * `assistant_type`, exact `model`, or a case-insensitive substring on
+   * `label` (`keywords`). Active keys are always sorted ahead of inactive
+   * ones so page 1 surfaces the rows currently in rotation; the secondary
+   * order is `assistant_type ASC, created_at DESC`.
+   * @param dto Pagination + filter options. Defaults: page 1, limit 20.
+   * @returns Page of masked rows + meta.
    */
-  list(): Promise<ApiKeyAdminResponseDto[]>;
+  list(dto: ListApiKeysDto): Promise<PageDto<ApiKeyAdminResponseDto>>;
 
   /**
    * Creates a new key and activates it in a single transaction. Plaintext

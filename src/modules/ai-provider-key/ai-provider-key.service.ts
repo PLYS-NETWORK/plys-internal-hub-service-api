@@ -1,4 +1,6 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
+import { PageDto } from '@common/dto/page.dto';
+import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
@@ -7,10 +9,11 @@ import { AiAssistantType, AiProvider } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
+import { ILike } from 'typeorm';
 
 import { BffEnvelopeCipher } from './crypto/bff-envelope.cipher';
 import { MasterKeyCipher } from './crypto/master-key.cipher';
-import { CreateApiKeyDto, UpdateApiKeyDto } from './dto/requests';
+import { CreateApiKeyDto, ListApiKeysDto, UpdateApiKeyDto } from './dto/requests';
 import { ApiKeyAdminResponseDto, ApiKeyBffResponseDto } from './dto/responses';
 import { IAiProviderKeyService } from './interfaces/ai-provider-key.service.interface';
 
@@ -99,13 +102,35 @@ export class AiProviderKeyService implements IAiProviderKeyService {
   }
 
   /** @inheritdoc */
-  public async list(): Promise<ApiKeyAdminResponseDto[]> {
-    this.logger.log(`[${this.rid}] list — start`);
-    const rows = await this.uow.aiProviderApiKeys.find({
-      order: { assistantType: 'ASC', createdAt: 'DESC' },
+  public async list(dto: ListApiKeysDto): Promise<PageDto<ApiKeyAdminResponseDto>> {
+    this.logger.log(
+      `[${this.rid}] list — start | page: ${dto.page}, limit: ${dto.limit}, ` +
+        `assistant_type: ${dto.assistantType ?? '<any>'}, model: ${dto.model ?? '<any>'}, ` +
+        `keywords: ${dto.keywords ?? '<none>'}`,
+    );
+
+    const where: Record<string, unknown> = {};
+    if (dto.assistantType) where.assistantType = dto.assistantType;
+    if (dto.model) where.model = dto.model;
+    if (dto.keywords) where.label = ILike(`%${dto.keywords}%`);
+
+    // Active keys are pinned to the top so page 1 surfaces what's currently
+    // in rotation. Within active/inactive groups, fall back to assistant_type
+    // (so the three feature keys cluster) then created_at desc (newest first).
+    const [rows, itemCount] = await this.uow.aiProviderApiKeys.findAndCount({
+      where,
+      order: { isActive: 'DESC', assistantType: 'ASC', createdAt: 'DESC' },
+      skip: dto.skip,
+      take: dto.limit,
     });
-    this.logger.log(`[${this.rid}] list — complete | count: ${rows.length}`);
-    return rows.map((row) => this.toAdminDto(row));
+
+    const data = rows.map((row) => this.toAdminDto(row));
+    const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
+
+    this.logger.log(
+      `[${this.rid}] list — complete | returned: ${data.length}, total: ${itemCount}`,
+    );
+    return new PageDto(data, meta);
   }
 
   /** @inheritdoc */
