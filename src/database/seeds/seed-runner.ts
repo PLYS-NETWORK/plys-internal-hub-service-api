@@ -13,7 +13,10 @@ import * as path from 'path';
 // Constants
 // ---------------------------------------------------------------------------
 
-const ADMIN_ALLOWED_EMAILS: readonly string[] = ['huuphuc9410@gmail.com'];
+const ADMIN_ALLOWED_EMAILS: readonly string[] = [
+  'huuphuc9410@gmail.com',
+  'ngocthinh.dev@gmail.com',
+];
 const KEY_REGEX = /^(skill|category|industry)_[a-z0-9_]+$/;
 
 const GROQ_API_KEY = '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';
