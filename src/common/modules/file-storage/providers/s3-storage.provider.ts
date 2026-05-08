@@ -5,7 +5,12 @@ import { RequestContextService } from '@common/modules/request-context/request-c
 import { FileStorageProvider } from '@database/enums';
 import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 
-import { IStorageProvider, IStoredObject, IUploadInput } from '../interfaces';
+import { IDownloadHandle, IStorageProvider, IStoredObject, IUploadInput } from '../interfaces';
+
+// Presigned URL TTL for one-shot download redirects. Kept short — the URL
+// is consumed immediately by the browser following the 302, so a wide
+// window only widens the leak surface if the URL is captured in transit.
+const DOWNLOAD_REDIRECT_TTL_SECONDS = 60;
 
 /**
  * Adapter that maps the unified `IStorageProvider` contract onto the
@@ -48,6 +53,12 @@ export class S3StorageProvider implements IStorageProvider, OnApplicationBootstr
   /** @inheritdoc */
   public async getUrl(key: string, ttlSec?: number): Promise<string> {
     return this.s3.presignGetUrl({ key, ttlSec });
+  }
+
+  /** @inheritdoc */
+  public async download(key: string): Promise<IDownloadHandle> {
+    const url = await this.s3.presignGetUrl({ key, ttlSec: DOWNLOAD_REDIRECT_TTL_SECONDS });
+    return { kind: 'redirect', url };
   }
 
   /** @inheritdoc */

@@ -139,7 +139,7 @@
     edited_at: null,
     created_at: Date,
     attachments: [
-      { id, file_id, file_name, file_url, mime_type, file_size_bytes, uploaded_at }
+      { id, file_id, file_name, mime_type, file_size_bytes, uploaded_at }
     ]
   }
   ```

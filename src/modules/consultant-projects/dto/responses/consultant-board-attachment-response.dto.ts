@@ -13,8 +13,6 @@ export class ConsultantBoardAttachmentResponseDto implements IConsultantBoardAtt
 
   @Expose() @ApiProperty({ name: 'file_name' }) public readonly file_name!: string;
 
-  @Expose() @ApiProperty({ name: 'file_url' }) public readonly file_url!: string;
-
   @Expose()
   @ApiProperty({ name: 'mime_type', nullable: true })
   public readonly mime_type!: string | null;

@@ -134,7 +134,6 @@ export class BoardResultsService implements IBoardResultsService {
           id: a.id,
           file_id: a.fileId,
           file_name: a.fileName,
-          file_url: a.fileUrl,
           mime_type: a.mimeType,
           file_size_bytes: a.fileSizeBytes === null ? null : Number(a.fileSizeBytes),
           uploaded_at: a.uploadedAt,

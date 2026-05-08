@@ -215,7 +215,6 @@ export class TaskAttachmentsService implements ITaskAttachmentsService {
         id: row.id,
         file_id: row.fileId,
         file_name: row.fileName,
-        file_url: row.fileUrl,
         mime_type: row.mimeType,
         file_size_bytes: row.fileSizeBytes === null ? null : Number(row.fileSizeBytes),
         uploaded_at: row.uploadedAt,

@@ -1,1 +1,1 @@
-export type { IFilesService } from './files.service.interface';
+export type { IFileDownloadResult, IFilesService } from './files.service.interface';

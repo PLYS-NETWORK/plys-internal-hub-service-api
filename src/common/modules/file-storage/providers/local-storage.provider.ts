@@ -5,10 +5,11 @@ import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { FileStorageProvider } from '@database/enums';
 import { HttpStatus, Injectable, OnModuleInit } from '@nestjs/common';
+import { createReadStream } from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-import { IStorageProvider, IStoredObject, IUploadInput } from '../interfaces';
+import { IDownloadHandle, IStorageProvider, IStoredObject, IUploadInput } from '../interfaces';
 
 /**
  * Filesystem-backed storage provider intended for local development and
@@ -96,6 +97,33 @@ export class LocalStorageProvider implements IStorageProvider, OnModuleInit {
     // the public root.
     void this.resolveSafePath(key);
     return this.buildPublicUrl(key);
+  }
+
+  /** @inheritdoc */
+  public async download(key: string): Promise<IDownloadHandle> {
+    const targetAbs = this.resolveSafePath(key);
+    // stat first so a missing object surfaces a typed FILE_NOT_FOUND instead
+    // of a half-opened stream emitting ENOENT mid-response.
+    try {
+      await fs.stat(targetAbs);
+    } catch (err: unknown) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT') {
+        this.logger.warn(`download — bytes missing on disk | key: ${key}`);
+        throw new TranslatableException({
+          messageKey: 'error.file.not_found',
+          errorCode: ERROR_CODES.FILE_NOT_FOUND,
+          status: HttpStatus.NOT_FOUND,
+        });
+      }
+      this.logger.error(`download — stat failed | key: ${key}, error: ${(err as Error).message}`);
+      throw new TranslatableException({
+        messageKey: 'error.file.storage_error',
+        errorCode: ERROR_CODES.FILE_STORAGE_ERROR,
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
+    }
+    return { kind: 'stream', stream: createReadStream(targetAbs) };
   }
 
   /** @inheritdoc */

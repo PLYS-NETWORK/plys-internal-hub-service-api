@@ -1,6 +1,19 @@
-import { IUploadInput } from '@common/modules/file-storage';
+import { IDownloadHandle, IUploadInput } from '@common/modules/file-storage';
 
 import { FileResponseDto } from '../dto/responses';
+
+/**
+ * Returned by `IFilesService.download` — combines the provider-specific
+ * handle (stream for local, redirect URL for cloud) with the metadata the
+ * controller needs to write Content-Type, Content-Length, and
+ * Content-Disposition headers.
+ */
+export interface IFileDownloadResult {
+  readonly handle: IDownloadHandle;
+  readonly mimeType: string;
+  readonly originalName: string;
+  readonly sizeBytes: number;
+}
 
 /**
  * Public contract for the files feature module — DB-tracked file rows
@@ -32,6 +45,20 @@ export interface IFilesService {
    * @throws TranslatableException(FILE_NOT_FOUND, 404) if missing or not owned.
    */
   getById(id: string): Promise<FileResponseDto>;
+
+  /**
+   * Resolves a file by id with ownership enforced and returns a download
+   * handle (stream for local, redirect URL for cloud) plus the metadata
+   * needed to write Content-Type / Content-Length / Content-Disposition
+   * response headers. Used by `GET /files/:id/download` to serve bytes
+   * behind authentication instead of via a public static URL.
+   *
+   * @param id File UUID.
+   * @returns Discriminated handle + display metadata.
+   * @throws TranslatableException(FILE_NOT_FOUND, 404) if missing or not owned.
+   * @throws TranslatableException(FILE_STORAGE_ERROR) on backend failure.
+   */
+  download(id: string): Promise<IFileDownloadResult>;
 
   /**
    * Soft-deletes the file row and leaves bytes in place; the daily cron
