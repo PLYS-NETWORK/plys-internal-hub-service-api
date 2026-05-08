@@ -21,7 +21,7 @@
 
 ## Endpoints
 
-### 1. Onboard (create) business profile
+### 1. Onboard business profile
 
 - **Endpoint:** `POST /business-profiles/onboard`
 - **Method:** `POST`
@@ -55,8 +55,9 @@
   ```
 
 - **Behaviour:**
-  - Reads `userId` from `RequestContextService` to bind the new profile to the authenticated user.
-  - One profile per user is enforced by `uq_business_profiles_user_id` on the DB level; a duplicate triggers `409 BUSINESS_PROFILE_ALREADY_EXISTS`.
+  - A profile stub is created automatically at registration. This endpoint populates the stub with company details and sets `is_verified = true`.
+  - Reads `userId` from `RequestContextService`; the caller can only onboard their own profile.
+  - Throws `404 BUSINESS_PROFILE_NOT_FOUND` if no stub exists for the caller (user has not completed registration).
 
 - **Response 201:** [`BusinessProfileResponseDto`](#business-profile-response-shape)
 
@@ -73,10 +74,10 @@
 
 - **Errors:**
 
-  | HTTP | error_code                        | When                                         |
-  | ---- | --------------------------------- | -------------------------------------------- |
-  | 409  | `BUSINESS_PROFILE_ALREADY_EXISTS` | A profile already exists for this user.      |
-  | 422  | `GENERIC_VALIDATION_ERROR`        | Body fails DTO validation (see table above). |
+  | HTTP | error_code                   | When                                                         |
+  | ---- | ---------------------------- | ------------------------------------------------------------ |
+  | 404  | `BUSINESS_PROFILE_NOT_FOUND` | No profile stub found — user has not completed registration. |
+  | 422  | `GENERIC_VALIDATION_ERROR`   | Body fails DTO validation (see table above).                 |
 
 ---
 
@@ -184,7 +185,7 @@ Source: [`BusinessProfileResponseDto`](../../../src/modules/profiles/business/dt
   country_code: string | null,    // ISO 3166-1 alpha-2
   phone_number: string | null,
   logo_url: string | null,
-  is_verified: boolean,           // set by admin only; always false after onboarding
+  is_verified: boolean,           // set to true on onboarding; can also be toggled by admin
   is_partner_platform: boolean,   // set by admin only; always false after onboarding
   allow_payment_credit: boolean,  // set by admin only; always false after onboarding
   account_balance: number,        // 2 decimal places; parsed from numeric DB column
@@ -201,4 +202,4 @@ Source: [`BusinessProfileResponseDto`](../../../src/modules/profiles/business/dt
 - **Service:** [BusinessProfilesService](../../../src/modules/profiles/business/business-profiles.service.ts) — owns onboarding, profile fetch, and partial update logic.
 - **Repository accessor:** `uow.businessProfiles` from [UnitOfWorkService](../../../src/modules/unit-of-work/unit-of-work.service.ts).
 - **Admin surface (separate controller):** [BusinessProfilesAdminController](../../../src/modules/profiles/business/business-profiles-admin.controller.ts) — admin-only list, detail, and flag-toggle routes.
-- **Entity:** [BusinessProfile](../../../src/database/entities/profiles/business-profile.entity.ts) — unique constraint `uq_business_profiles_user_id` enforces one profile per user.
+- **Entity:** [BusinessProfile](../../../src/database/entities/profiles/business-profile.entity.ts) — one profile stub is created per user at registration time; `uq_business_profiles_user_id` enforces the uniqueness at the DB level.
