@@ -5,9 +5,9 @@ import { HttpStatus } from '@nestjs/common';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 
 // Shared AES-256-GCM primitives used by both ciphers in the AI provider key
-// vault. Centralising the byte-level details (algorithm, IV/tag sizes, hex
-// parsing of the master key) keeps `MasterKeyCipher` and `BffEnvelopeCipher`
-// thin and identical in failure modes.
+// vault. Centralising the byte-level details (algorithm, IV/tag sizes,
+// base64 parsing of the master key) keeps `MasterKeyCipher` and
+// `BffEnvelopeCipher` thin and identical in failure modes.
 //
 // Versioning: callers always pass a full `IAiKeysVersionedSecrets` object —
 // `currentVersion` selects the encryption key, `versions[v]` selects the

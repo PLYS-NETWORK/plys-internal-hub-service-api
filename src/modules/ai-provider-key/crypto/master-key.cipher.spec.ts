@@ -7,8 +7,8 @@ import { randomBytes } from 'crypto';
 
 import { MasterKeyCipher } from './master-key.cipher';
 
-function fakeKeyHex(): string {
-  return randomBytes(32).toString('hex');
+function fakeKeyB64(): string {
+  return randomBytes(32).toString('base64');
 }
 
 function makeEnv(secrets: IAiKeysVersionedSecrets): Partial<EnvironmentsService> {
@@ -26,7 +26,7 @@ describe('MasterKeyCipher', () => {
   describe('encrypt → decrypt round-trip', () => {
     it('serialises with a v<N>: prefix and round-trips', async () => {
       // Arrange
-      const cipher = await buildCipher({ currentVersion: 1, versions: { 1: fakeKeyHex() } });
+      const cipher = await buildCipher({ currentVersion: 1, versions: { 1: fakeKeyB64() } });
       const plaintext = 'gsk_live_abcdef0123456789';
 
       // Act
@@ -42,8 +42,8 @@ describe('MasterKeyCipher', () => {
 
     it('survives a master key rotation (decrypt v1 after v2 is current)', async () => {
       // Arrange — encrypt under v1
-      const v1 = fakeKeyHex();
-      const v2 = fakeKeyHex();
+      const v1 = fakeKeyB64();
+      const v2 = fakeKeyB64();
       const v1Cipher = await buildCipher({ currentVersion: 1, versions: { 1: v1 } });
       const stored = v1Cipher.encrypt('payload').ciphertext;
 
@@ -66,7 +66,7 @@ describe('MasterKeyCipher', () => {
   describe('failure modes', () => {
     it('rejects malformed serialised ciphertext (wrong segment count)', async () => {
       // Arrange
-      const cipher = await buildCipher({ currentVersion: 1, versions: { 1: fakeKeyHex() } });
+      const cipher = await buildCipher({ currentVersion: 1, versions: { 1: fakeKeyB64() } });
 
       // Act + Assert
       expect(() => cipher.decrypt('v1:only-two-parts')).toThrow(TranslatableException);
@@ -74,7 +74,7 @@ describe('MasterKeyCipher', () => {
 
     it('rejects ciphertext with an unknown version prefix', async () => {
       // Arrange
-      const cipher = await buildCipher({ currentVersion: 1, versions: { 1: fakeKeyHex() } });
+      const cipher = await buildCipher({ currentVersion: 1, versions: { 1: fakeKeyB64() } });
       const valid = cipher.encrypt('x').ciphertext;
       // Replace `v1` with `v9` — version not configured
       const tampered = valid.replace(/^v1:/, 'v9:');
@@ -87,7 +87,7 @@ describe('MasterKeyCipher', () => {
       // Arrange
       const cipher = await buildCipher({
         currentVersion: 7,
-        versions: { 1: fakeKeyHex(), 7: fakeKeyHex() },
+        versions: { 1: fakeKeyB64(), 7: fakeKeyB64() },
       });
 
       // Act + Assert
