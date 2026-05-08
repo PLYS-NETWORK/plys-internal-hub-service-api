@@ -19,15 +19,15 @@
 ## Architectural overview
 
 ```
-┌────────────┐   bootstrap / sessions / messages    ┌──────────┐
-│  Browser   │ ───────────────────────────────────► │  Gateway │  Postgres
-│  (React)   │ ◄─────────────────────────────────── │  (Nest)  │ ─────────
-└─────┬──────┘                                       └────┬─────┘
-      │ chat tokens                                         │
-      ▼                                                     │
-┌────────────┐   GET /ai-provider-keys/active               │
-│  FE BFF    │ ──────────────────────────────────────────► (gateway)
-│ (Next.js)  │ ◄─────────────  encrypted key envelope ─────┘
+┌────────────┐   bootstrap / sessions / messages              ┌──────────┐
+│  Browser   │ ─────────────────────────────────────────────► │  Gateway │  Postgres
+│  (React)   │ ◄───────────────────────────────────────────── │  (Nest)  │ ─────────
+└─────┬──────┘                                                 └────┬─────┘
+      │ chat tokens                                                   │
+      ▼                                                               │
+┌────────────┐   GET /ai-provider-keys/active?assistant_type=…        │
+│  FE BFF    │ ────────────────────────────────────────────────────► (gateway)
+│ (Next.js)  │ ◄────────────────  encrypted key envelope ─────────────┘
 │            │   decrypt with FE_BFF_SECRET
 │            │   call provider SDK directly
 └────────────┘
@@ -35,6 +35,7 @@
 
 - **Browser ↔ FE BFF:** the streaming chat surface. The BFF is the only component that sees the plaintext model key.
 - **FE BFF ↔ Gateway:** persistence + orchestration. Browsers can talk to the gateway directly for bootstrap / sessions / ai-sync; only the model-key fetch must go through the BFF.
+- **Per-feature key fetch:** the BFF passes `assistant_type` to disambiguate which key to return — `chat_box` for the streaming chat surface, `interview` for interview flows, `evaluate_answer` for the answer-grading flow. The gateway returns whichever active key is configured for that assistant_type, regardless of which provider it talks to.
 
 ## Persistence model (recap)
 
@@ -298,9 +299,10 @@ function pickMode(status: ProjectStatus): ChatSessionMode {
 
 ### On the FE BFF (Next.js server)
 
-- **Cache the decrypted model key in process memory** until `expires_at` from `GET /ai-provider-keys/active`. Don't refetch per request.
+- **Pass `assistant_type` on every fetch.** The endpoint is `GET /ai-provider-keys/active?assistant_type=<chat_box|interview|evaluate_answer>` — the gateway looks up the active key by assistant_type, not by provider. Use the `assistant_type` that matches the feature making the call.
+- **Cache the decrypted model key in process memory per `assistant_type`** until `expires_at`. Don't refetch per request, and don't share the cache entry across assistant types — they may resolve to different keys (or different providers entirely).
 - **Never log the plaintext key.** Log `key_last4` if you need a correlation handle.
-- **Handle 404 `AI_PROVIDER_KEY_NOT_CONFIGURED`** by showing the user "AI chat unavailable — contact admin" rather than crashing the BFF.
+- **Handle 404 `AI_PROVIDER_KEY_NOT_CONFIGURED`** by showing the user "AI chat unavailable — contact admin" rather than crashing the BFF. The 404 is scoped to the `assistant_type` you queried.
 
 ### Idempotent retries
 

@@ -43,6 +43,20 @@ runs:
           echo "==> Copying environment file..."
           cp /apps/environments/dev/.env.internal-hub-be "$DEPLOY_DIR/.env.development"
 
+          # === DESTRUCTIVE: uncomment ONLY when the initial migration's DDL
+          # has been edited in place and the dev DB needs to replay it from
+          # scratch. Drops the entire `public` schema (all tables, sequences,
+          # types, AND the TypeORM `migrations` row) so the next
+          # `typeorm migration:run` re-executes from zero. Re-comment in the
+          # next commit after the deploy that needs it — otherwise every
+          # subsequent dev deploy will wipe the database.
+          echo "==> Resetting public schema (one-time replay)..."
+          set -a; source "$DEPLOY_DIR/.env.development"; set +a
+          PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -U "$DB_USERNAME" -d "$DB_DATABASE" <<'SQL'
+          DROP SCHEMA "public" CASCADE;
+          CREATE SCHEMA "public";
+          SQL
+
           echo "==> Running database migrations..."
           NODE_ENV=development pnpm exec typeorm migration:run -d dist/database/data-source.js
 

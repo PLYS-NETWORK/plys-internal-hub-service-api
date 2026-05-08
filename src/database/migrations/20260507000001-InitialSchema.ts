@@ -996,6 +996,7 @@ export class InitialSchema20260507000001 implements MigrationInterface {
     await queryRunner.query(`
       CREATE TABLE "ai_provider_api_key" (
         "id"                 UUID          NOT NULL DEFAULT gen_random_uuid(),
+        "assistant_type"     VARCHAR(20)   NOT NULL,
         "provider"           VARCHAR(20)   NOT NULL,
         "model"              VARCHAR(80)   NOT NULL,
         "label"              VARCHAR(80)   NOT NULL,
@@ -1014,10 +1015,15 @@ export class InitialSchema20260507000001 implements MigrationInterface {
     await queryRunner.query(
       `CREATE INDEX "idx_ai_provider_api_key_provider" ON "ai_provider_api_key" ("provider")`,
     );
-    // At most one active key per provider.
+    await queryRunner.query(
+      `CREATE INDEX "idx_ai_provider_api_key_assistant_type" ON "ai_provider_api_key" ("assistant_type")`,
+    );
+    // At most one active key per assistant_type. The active-key partition
+    // moved off `provider` so admins can run e.g. a Groq chat-box key and a
+    // Groq interview key concurrently — provider is now informational only.
     await queryRunner.query(`
-      CREATE UNIQUE INDEX "uq_ai_provider_api_key_active_per_provider"
-        ON "ai_provider_api_key" ("provider")
+      CREATE UNIQUE INDEX "uq_ai_provider_api_key_active_per_assistant_type"
+        ON "ai_provider_api_key" ("assistant_type")
         WHERE "is_active" = TRUE
     `);
 

@@ -1,13 +1,18 @@
-import { AiProvider } from '@database/enums';
+import { AiAssistantType } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { IsEnum } from 'class-validator';
 
-// Query params for the BFF endpoint. Only `provider` is needed; the FE BFF
-// always wants the active key for a single provider per request.
+// Query params for the BFF endpoint. The FE BFF passes the assistant feature
+// it's serving; the gateway returns whichever active key powers that feature
+// (regardless of which provider it talks to).
 export class GetActiveKeyQueryDto {
-  @Expose({ name: 'provider' })
-  @ApiProperty({ name: 'provider', enum: AiProvider, example: AiProvider.GROQ })
-  @IsEnum(AiProvider)
-  public readonly provider!: AiProvider;
+  @Expose({ name: 'assistant_type' })
+  @ApiProperty({
+    name: 'assistant_type',
+    enum: AiAssistantType,
+    example: AiAssistantType.CHAT_BOX,
+  })
+  @IsEnum(AiAssistantType)
+  public readonly assistantType!: AiAssistantType;
 }

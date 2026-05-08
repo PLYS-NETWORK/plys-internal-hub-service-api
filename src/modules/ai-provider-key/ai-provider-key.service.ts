@@ -3,7 +3,7 @@ import { TranslatableException } from '@common/exceptions/translatable.exception
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { AiProviderApiKey } from '@database/entities';
-import { AiProvider } from '@database/enums';
+import { AiAssistantType, AiProvider } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -37,15 +37,17 @@ export class AiProviderKeyService implements IAiProviderKeyService {
   }
 
   /** @inheritdoc */
-  public async getActiveKeyEnvelope(provider: AiProvider): Promise<ApiKeyBffResponseDto> {
-    this.logger.log(`[${this.rid}] getActiveKeyEnvelope — start | provider: ${provider}`);
+  public async getActiveKeyEnvelope(assistantType: AiAssistantType): Promise<ApiKeyBffResponseDto> {
+    this.logger.log(
+      `[${this.rid}] getActiveKeyEnvelope — start | assistant_type: ${assistantType}`,
+    );
 
     const row = await this.uow.aiProviderApiKeys.findOne({
-      where: { provider, isActive: true },
+      where: { assistantType, isActive: true },
     });
     if (!row) {
       this.logger.warn(
-        `[${this.rid}] getActiveKeyEnvelope — not configured | provider: ${provider}`,
+        `[${this.rid}] getActiveKeyEnvelope — not configured | assistant_type: ${assistantType}`,
       );
       throw new TranslatableException({
         messageKey: 'error.ai_provider_key.not_configured',
@@ -59,8 +61,9 @@ export class AiProviderKeyService implements IAiProviderKeyService {
       plaintext = this.masterCipher.decrypt(row.keyCiphertext);
     } catch (err) {
       this.logger.error(
-        `[${this.rid}] getActiveKeyEnvelope — failed | provider: ${provider}, ` +
-          `key_last4: ${row.keyLast4}, error: ${(err as Error).message}`,
+        `[${this.rid}] getActiveKeyEnvelope — failed | assistant_type: ${assistantType}, ` +
+          `provider: ${row.provider}, key_last4: ${row.keyLast4}, ` +
+          `error: ${(err as Error).message}`,
       );
       throw err;
     }
@@ -77,8 +80,8 @@ export class AiProviderKeyService implements IAiProviderKeyService {
 
     const expiresAt = new Date(Date.now() + BFF_ENVELOPE_TTL_MS).toISOString();
     this.logger.log(
-      `[${this.rid}] getActiveKeyEnvelope — complete | provider: ${provider}, ` +
-        `label: ${row.label}, key_last4: ${row.keyLast4}, ` +
+      `[${this.rid}] getActiveKeyEnvelope — complete | assistant_type: ${assistantType}, ` +
+        `provider: ${row.provider}, label: ${row.label}, key_last4: ${row.keyLast4}, ` +
         `master_v: ${row.masterKeyVersion}, bff_v: ${envelope.version}`,
     );
 
@@ -99,7 +102,7 @@ export class AiProviderKeyService implements IAiProviderKeyService {
   public async list(): Promise<ApiKeyAdminResponseDto[]> {
     this.logger.log(`[${this.rid}] list — start`);
     const rows = await this.uow.aiProviderApiKeys.find({
-      order: { provider: 'ASC', createdAt: 'DESC' },
+      order: { assistantType: 'ASC', createdAt: 'DESC' },
     });
     this.logger.log(`[${this.rid}] list — complete | count: ${rows.length}`);
     return rows.map((row) => this.toAdminDto(row));
@@ -108,7 +111,8 @@ export class AiProviderKeyService implements IAiProviderKeyService {
   /** @inheritdoc */
   public async create(dto: CreateApiKeyDto): Promise<ApiKeyAdminResponseDto> {
     this.logger.log(
-      `[${this.rid}] create — start | provider: ${dto.provider}, label: ${dto.label}`,
+      `[${this.rid}] create — start | assistant_type: ${dto.assistantType}, ` +
+        `provider: ${dto.provider}, label: ${dto.label}`,
     );
 
     const userId = this.requireUserId();
@@ -122,21 +126,35 @@ export class AiProviderKeyService implements IAiProviderKeyService {
       throw err;
     }
 
-    const row = await this.uow.aiProviderApiKeys.save(
-      this.uow.aiProviderApiKeys.create({
-        provider: dto.provider,
-        model: dto.model,
-        label: dto.label,
-        masterKeyVersion: encrypted.version,
-        keyCiphertext: encrypted.ciphertext,
-        keyLast4: last4,
-        isActive: false,
-        createdBy: userId,
-      }),
-    );
+    // Create-as-active: rotating a key is a one-step operation, so the new
+    // row lands `is_active = true` and any previously active key for the
+    // same assistant_type is flipped to inactive in the same transaction.
+    // The partial unique index uq_ai_provider_api_key_active_per_assistant_type
+    // would raise on a race, but doing this in the same tx keeps the
+    // window closed.
+    const row = await this.uow.withTransaction(async (tx) => {
+      await tx.aiProviderApiKeys.update(
+        { assistantType: dto.assistantType, isActive: true },
+        { isActive: false },
+      );
+      return tx.aiProviderApiKeys.save(
+        tx.aiProviderApiKeys.create({
+          assistantType: dto.assistantType,
+          provider: dto.provider,
+          model: dto.model,
+          label: dto.label,
+          masterKeyVersion: encrypted.version,
+          keyCiphertext: encrypted.ciphertext,
+          keyLast4: last4,
+          isActive: true,
+          createdBy: userId,
+        }),
+      );
+    });
 
     this.logger.log(
-      `[${this.rid}] create — complete | id: ${row.id}, provider: ${row.provider}, key_last4: ${row.keyLast4}`,
+      `[${this.rid}] create — complete | id: ${row.id}, assistant_type: ${row.assistantType}, ` +
+        `provider: ${row.provider}, key_last4: ${row.keyLast4}, is_active: true`,
     );
     return this.toAdminDto(row);
   }
@@ -169,12 +187,12 @@ export class AiProviderKeyService implements IAiProviderKeyService {
         });
       }
 
-      // Deactivate any prior active key for the same provider; partial
-      // unique index uq_ai_provider_api_key_active_per_provider would
-      // raise on a race, but doing this in the same tx keeps the window
-      // closed.
+      // Deactivate any prior active key for the same assistant_type; the
+      // partial unique index uq_ai_provider_api_key_active_per_assistant_type
+      // would raise on a race, but doing this in the same tx keeps the
+      // window closed.
       await tx.aiProviderApiKeys.update(
-        { provider: target.provider, isActive: true },
+        { assistantType: target.assistantType, isActive: true },
         { isActive: false },
       );
       target.isActive = true;
@@ -182,7 +200,8 @@ export class AiProviderKeyService implements IAiProviderKeyService {
     });
 
     this.logger.log(
-      `[${this.rid}] activate — complete | id: ${activated.id}, provider: ${activated.provider}`,
+      `[${this.rid}] activate — complete | id: ${activated.id}, ` +
+        `assistant_type: ${activated.assistantType}, provider: ${activated.provider}`,
     );
     return this.toAdminDto(activated);
   }
@@ -201,15 +220,16 @@ export class AiProviderKeyService implements IAiProviderKeyService {
           status: HttpStatus.NOT_FOUND,
         });
       }
-      // Refuse if revoking the last active key for the provider — admin
-      // must roll a replacement to keep the chat surface alive.
+      // Refuse if revoking the last active key for the assistant_type —
+      // admin must roll a replacement to keep that assistant feature alive.
       if (target.isActive) {
         const otherCount = await tx.aiProviderApiKeys.count({
-          where: { provider: target.provider, isActive: false },
+          where: { assistantType: target.assistantType, isActive: false },
         });
         if (otherCount === 0) {
           this.logger.warn(
-            `[${this.rid}] revoke — refused (no replacement) | id: ${id}, provider: ${target.provider}`,
+            `[${this.rid}] revoke — refused (no replacement) | id: ${id}, ` +
+              `assistant_type: ${target.assistantType}`,
           );
           throw new TranslatableException({
             messageKey: 'error.ai_provider_key.active_requires_replacement',
@@ -293,6 +313,7 @@ export class AiProviderKeyService implements IAiProviderKeyService {
       ApiKeyAdminResponseDto,
       {
         id: row.id,
+        assistant_type: row.assistantType,
         provider: row.provider,
         model: row.model,
         label: row.label,

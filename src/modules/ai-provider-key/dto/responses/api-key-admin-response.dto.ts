@@ -1,4 +1,4 @@
-import { AiProvider } from '@database/enums';
+import { AiAssistantType, AiProvider } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 
@@ -7,6 +7,14 @@ import { IApiKeyAdminResponse } from './interfaces/api-key-admin.response.interf
 @Exclude()
 export class ApiKeyAdminResponseDto implements IApiKeyAdminResponse {
   @Expose() @ApiProperty() public readonly id!: string;
+
+  @Expose()
+  @ApiProperty({
+    name: 'assistant_type',
+    enum: AiAssistantType,
+    example: AiAssistantType.CHAT_BOX,
+  })
+  public readonly assistant_type!: AiAssistantType;
 
   @Expose()
   @ApiProperty({ enum: AiProvider, example: AiProvider.GROQ })

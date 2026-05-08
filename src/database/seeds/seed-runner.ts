@@ -4,7 +4,7 @@ import { AdminAllowedEmail } from '@database/entities/admin/admin-allowed-email.
 import { User } from '@database/entities/auth/user.entity';
 import { AiProviderApiKey } from '@database/entities/infra/ai-provider-api-key.entity';
 import { Skill } from '@database/entities/profiles/skill.entity';
-import { ActivePlatform, AiProvider, UserRole } from '@database/enums';
+import { ActivePlatform, AiAssistantType, AiProvider, UserRole } from '@database/enums';
 import { GcmCipher } from '@modules/ai-provider-key/crypto/aes-gcm';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -156,14 +156,18 @@ function buildAiMasterSecrets(): IAiKeysVersionedSecrets {
   return { currentVersion, versions };
 }
 
-async function seedGroqApiKey(): Promise<void> {
+async function seedChatBoxAssistantKey(): Promise<void> {
   const repo = AppDataSource.getRepository(AiProviderApiKey);
   const userRepo = AppDataSource.getRepository(User);
 
-  // Idempotent — skip if any Groq key already exists (active or not).
-  const existing = await repo.findOne({ where: { provider: AiProvider.GROQ } });
+  // Idempotent — skip if a chat_box assistant key already exists (active or not).
+  // The active-key partition is on assistant_type, so this matches the unique
+  // constraint we care about.
+  const existing = await repo.findOne({
+    where: { assistantType: AiAssistantType.CHAT_BOX },
+  });
   if (existing) {
-    console.log('[groq-key] Already exists — skipped');
+    console.log('[chat-box-key] Already exists — skipped');
     return;
   }
 
@@ -178,7 +182,7 @@ async function seedGroqApiKey(): Promise<void> {
     order: { createdAt: 'ASC' },
   });
   if (!admin) {
-    throw new Error('[groq-key] No admin user found — seedAdminAllowedEmails() must run first');
+    throw new Error('[chat-box-key] No admin user found — seedAdminAllowedEmails() must run first');
   }
 
   const secrets = buildAiMasterSecrets();
@@ -189,6 +193,7 @@ async function seedGroqApiKey(): Promise<void> {
 
   await repo.save(
     repo.create({
+      assistantType: AiAssistantType.CHAT_BOX,
       provider: AiProvider.GROQ,
       model: GROQ_MODEL,
       label: GROQ_LABEL,
@@ -201,7 +206,8 @@ async function seedGroqApiKey(): Promise<void> {
   );
 
   console.log(
-    `[groq-key] Seeded: provider=groq, model=${GROQ_MODEL}, last4=${keyLast4}, active=true`,
+    `[chat-box-key] Seeded: assistant_type=chat_box, provider=groq, ` +
+      `model=${GROQ_MODEL}, last4=${keyLast4}, active=true`,
   );
 }
 
@@ -317,7 +323,7 @@ async function main(): Promise<void> {
   try {
     await seedSkills(dataDir, i18nDir);
     await seedAdminAllowedEmails();
-    await seedGroqApiKey();
+    await seedChatBoxAssistantKey();
   } finally {
     await AppDataSource.destroy();
   }
