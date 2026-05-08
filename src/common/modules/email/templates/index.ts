@@ -1,4 +1,8 @@
 // Admin Hub templates
+export {
+  buildAdminInviteEmail,
+  type IAdminInviteTemplateOptions,
+} from './admin/admin-invite.template';
 export { buildAdminOtpEmail, type IAdminOtpTemplateOptions } from './admin/admin-otp.template';
 
 // Business (Ployos) templates

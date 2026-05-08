@@ -41,26 +41,4 @@ export interface IBusinessProfilesService {
    * @throws TranslatableException (404) — profile not found for the caller.
    */
   updateProfile(dto: UpdateBusinessProfileDto): Promise<BusinessProfileResponseDto>;
-
-  /**
-   * Marks a business profile as a partner platform (admin operation).
-   *
-   * Sets `isPartnerPlatform = true` on the target profile, granting partner
-   * pricing and features.
-   *
-   * @param profileId - UUID of the business profile to mark as partner.
-   * @throws TranslatableException (404) — profile not found.
-   */
-  markAsPartner(profileId: string): Promise<void>;
-
-  /**
-   * Enables the payment-credit mode for a business profile (admin operation).
-   *
-   * Sets `allowPaymentCredit = true`, allowing the business to accrue charges
-   * and pay via invoice instead of pre-paid balance.
-   *
-   * @param profileId - UUID of the business profile to update.
-   * @throws TranslatableException (404) — profile not found.
-   */
-  allowPaymentCredit(profileId: string): Promise<void>;
 }

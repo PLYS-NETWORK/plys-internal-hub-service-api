@@ -124,6 +124,10 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.configService.getOrThrow<string>('app.payment.polar.accessToken');
   }
 
+  public get polarServer(): 'sandbox' | 'production' {
+    return this.configService.getOrThrow<'sandbox' | 'production'>('app.payment.polar.server');
+  }
+
   public get polarWebhookSecret(): string {
     return this.configService.getOrThrow<string>('app.payment.polar.webhookSecret');
   }

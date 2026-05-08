@@ -8,7 +8,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Param,
   Patch,
   Post,
   UseGuards,
@@ -63,25 +62,5 @@ export class BusinessProfilesController {
   ): Promise<ITranslatedPayload<BusinessProfileResponseDto>> {
     const data = await this.businessProfilesService.updateProfile(dto);
     return { messageKey: 'success.business_profile.updated', data };
-  }
-
-  @Patch(':id/partner')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN_PLATFORM)
-  @ApiOperation({ summary: 'Mark a business as partner platform (Admin only)' })
-  public async markAsPartner(@Param('id') id: string): Promise<ITranslatedPayload<null>> {
-    await this.businessProfilesService.markAsPartner(id);
-    return { messageKey: 'success.business_profile.partner_marked', data: null };
-  }
-
-  @Patch(':id/payment-credit')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN_PLATFORM)
-  @ApiOperation({ summary: 'Allow a business to use payment credit (Admin only)' })
-  public async allowPaymentCredit(@Param('id') id: string): Promise<ITranslatedPayload<null>> {
-    await this.businessProfilesService.allowPaymentCredit(id);
-    return { messageKey: 'success.business_profile.payment_credit_allowed', data: null };
   }
 }

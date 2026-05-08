@@ -43,7 +43,7 @@ Once the task moves to **IN_PROGRESS** (or any later status), the business surfa
 - **Behaviour:**
   - Verifies the task exists, belongs to the project, and is in DRAFT or TO_DO. Otherwise raises `TASK_NOT_FOUND` (404) or `TASK_INVALID_STATUS_TRANSITION` (422).
   - Verifies every `file_id` is present, not soft-deleted, and `owner_user_id === caller.user_id` — otherwise rejects with `TASK_ATTACHMENT_FILE_NOT_OWNED` (400).
-  - Inside one transaction: snapshots `{ file_name, file_url, mime_type, file_size_bytes }` into `task_attachments`, then calls `files.markAsAttached(fileIds, FilePurpose.TASK_ATTACHMENT)`.
+  - Inside one transaction: snapshots `{ file_name, file_url, mime_type, file_size_bytes }` into `task_attachments` (the `file_url` column is retained as an internal audit snapshot but is **not** exposed in the response — clients fetch bytes via `GET /files/:file_id/download`), then calls `files.markAsAttached(fileIds, FilePurpose.TASK_ATTACHMENT)`.
   - Storage URLs are resolved **outside** the transaction to keep storage-provider failures off long-lived locks.
   - **Cache:** the project's board cache is invalidated via `BoardCacheService.invalidateProject` only when the task is non-DRAFT (the board listing filters DRAFT out, so a DRAFT attach has nothing to invalidate).
 - **Response 201:** [`ITaskAttachmentResponse[]`](../../../src/modules/business-projects/dto/responses/interfaces/task-attachment.response.interface.ts)
@@ -53,9 +53,8 @@ Once the task moves to **IN_PROGRESS** (or any later status), the business surfa
   ```ts
   {
     id: string,
-    file_id: string | null,    // canonical files.id, kept for audit; null when source row is later removed
+    file_id: string | null,    // canonical files.id; use it to call GET /files/:file_id/download for bytes
     file_name: string,
-    file_url: string,
     mime_type: string | null,
     file_size_bytes: number | null,
     uploaded_at: string         // formatted in caller tz
@@ -78,7 +77,7 @@ Once the task moves to **IN_PROGRESS** (or any later status), the business surfa
   | Field | Type | Required | Notes |
   |-------|------|----------|-------|
   | `file_name` | `string` | yes | trimmed, 1–255 chars; display name only — the canonical storage key never changes |
-- **Behaviour:** Only the display `file_name` is mutable. The `files` row, the storage object, and `file_url` / `mime_type` / `file_size_bytes` are immutable through this endpoint. Same status gate as `POST`. Cache invalidation rule is the same — DRAFT skips it.
+- **Behaviour:** Only the display `file_name` is mutable. The `files` row, the storage object, and `mime_type` / `file_size_bytes` are immutable through this endpoint. Same status gate as `POST`. Cache invalidation rule is the same — DRAFT skips it.
 - **Response 200:** [`ITaskAttachmentResponse`](../../../src/modules/business-projects/dto/responses/interfaces/task-attachment.response.interface.ts) — same shape as create.
 - **Errors:**
   | HTTP | error_code | When |

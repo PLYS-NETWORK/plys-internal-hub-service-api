@@ -1,8 +1,9 @@
 import { TaskCreationMode } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
-import { Exclude, Expose } from 'class-transformer';
+import { Exclude, Expose, Type } from 'class-transformer';
 
 import { IDraftTaskResponse } from './interfaces/draft-task.response.interface';
+import { TaskAttachmentResponseDto } from './task-attachment-response.dto';
 
 @Exclude()
 export class DraftTaskResponseDto implements IDraftTaskResponse {
@@ -45,4 +46,13 @@ export class DraftTaskResponseDto implements IDraftTaskResponse {
   @Expose()
   @ApiProperty({ name: 'updated_at' })
   public readonly updated_at!: Date;
+
+  @Expose()
+  @ApiProperty({ name: 'attachments_count', example: 0 })
+  public readonly attachments_count!: number;
+
+  @Expose()
+  @Type(() => TaskAttachmentResponseDto)
+  @ApiProperty({ type: () => TaskAttachmentResponseDto, isArray: true })
+  public readonly attachments!: TaskAttachmentResponseDto[];
 }

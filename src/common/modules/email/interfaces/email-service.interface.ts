@@ -1,6 +1,7 @@
 import { ActivePlatform } from '@database/enums';
 
 import {
+  IAdminInviteEmailOptions,
   IAdminOtpEmailOptions,
   IForgotPasswordOtpEmailOptions,
   IMonthlyInvoiceEmailOptions,
@@ -20,6 +21,18 @@ export interface IEmailService {
    * @throws InternalServerErrorException — if the delivery provider returns an error.
    */
   sendAdminOtpEmail(to: string, options: IAdminOtpEmailOptions): Promise<void>;
+
+  /**
+   * Sends an Admin Hub invitation email to a freshly allow-listed address.
+   * The CTA points to `INTERNAL_HUB_URL`. The recipient still authenticates
+   * through the existing OTP flow — this email is informational only.
+   *
+   * @param to      - Recipient admin email address.
+   * @param options - Template variables (`internalHubUrl`, optional `invitedByEmail`).
+   * @returns Resolves when the email has been handed off to the delivery provider.
+   * @throws InternalServerErrorException — if the delivery provider returns an error.
+   */
+  sendAdminInviteEmail(to: string, options: IAdminInviteEmailOptions): Promise<void>;
   /**
    * Sends an email verification / registration confirmation email to the given address.
    *

@@ -94,7 +94,7 @@
     completed_at: string | null,                  // formatted in caller tz
     version: number,
     attachments: [
-      { id, file_id, file_name, file_url, mime_type, file_size_bytes, uploaded_at }
+      { id, file_id, file_name, mime_type, file_size_bytes, uploaded_at }
     ]
   }
   ```
@@ -177,7 +177,7 @@
     edited_at: string | null,                     // formatted in caller tz
     created_at: string,                           // formatted in caller tz
     attachments: [
-      { id, file_id, file_name, file_url, mime_type, file_size_bytes, uploaded_at }
+      { id, file_id, file_name, mime_type, file_size_bytes, uploaded_at }
     ]
   }
   ```

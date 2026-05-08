@@ -7,6 +7,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { EMAIL_PROVIDER_TOKEN } from './constants';
 import { IEmailProvider } from './interfaces/email-provider.interface';
 import {
+  IAdminInviteEmailOptions,
   IAdminOtpEmailOptions,
   IForgotPasswordOtpEmailOptions,
   IMonthlyInvoiceEmailOptions,
@@ -15,6 +16,7 @@ import {
 } from './interfaces/email-send-options.interface';
 import { IEmailService } from './interfaces/email-service.interface';
 import {
+  buildAdminInviteEmail,
   buildAdminOtpEmail,
   buildBusinessForgotPasswordOtpEmail,
   buildBusinessMonthlyInvoiceEmail,
@@ -125,6 +127,24 @@ export class EmailService implements IEmailService {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`sendAdminOtpEmail — failed | to: ${to} | error: ${message}`);
+      throw err;
+    }
+  }
+
+  /** @inheritdoc */
+  public async sendAdminInviteEmail(to: string, options: IAdminInviteEmailOptions): Promise<void> {
+    this.logger.log(`sendAdminInviteEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        from: this.env.resendPloyosEmail,
+        to,
+        subject: "You're invited to the Admin Hub",
+        html: await buildAdminInviteEmail(options),
+      });
+      this.logger.log(`sendAdminInviteEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`sendAdminInviteEmail — failed | to: ${to} | error: ${message}`);
       throw err;
     }
   }

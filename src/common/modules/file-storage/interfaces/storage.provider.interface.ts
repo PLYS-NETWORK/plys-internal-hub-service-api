@@ -1,5 +1,6 @@
 import { FileStorageProvider } from '@database/enums';
 
+import { IDownloadHandle } from './download-handle.interface';
 import { IStoredObject } from './stored-object.interface';
 import { IUploadInput } from './upload-input.interface';
 
@@ -46,4 +47,18 @@ export interface IStorageProvider {
    * @throws TranslatableException(FILE_STORAGE_ERROR) on unrecoverable backend failure.
    */
   remove(key: string): Promise<void>;
+
+  /**
+   * Returns a download handle for serving the stored object behind an
+   * authenticated, ownership-checked endpoint. Cloud providers return a
+   * `redirect` handle wrapping a short-lived presigned URL; the local
+   * provider returns a `stream` handle wrapping a Node `Readable` the
+   * caller pipes to the HTTP response.
+   *
+   * @param key Provider-internal key returned by `put`.
+   * @returns Discriminated handle describing how to serve the bytes.
+   * @throws TranslatableException(FILE_NOT_FOUND, 404) if the bytes are missing on disk (local).
+   * @throws TranslatableException(FILE_STORAGE_ERROR) on other backend failures.
+   */
+  download(key: string): Promise<IDownloadHandle>;
 }

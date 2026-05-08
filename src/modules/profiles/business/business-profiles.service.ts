@@ -70,12 +70,17 @@ export class BusinessProfilesService implements IBusinessProfilesService {
       postalCode: dto.postal_code,
       countryCode: dto.country_code,
       phoneNumber: dto.phone_number,
-      isVerified: true,
     });
     await this.uow.businessProfiles.save(profile);
 
+    // TypeORM may omit boolean columns that carry a @Column({ default }) from
+    // the INSERT, relying on the DB default (false). Use an explicit UPDATE so
+    // is_verified = true is guaranteed to be written, then reload the canonical row.
+    await this.uow.businessProfiles.update(profile.id, { isVerified: true });
+    const saved = await this.uow.businessProfiles.findByActiveId(profile.id);
+
     this.logger.log(`onboard — complete | userId: ${userId}, profileId: ${profile.id}`);
-    return this.toResponseDto(profile);
+    return this.toResponseDto(saved!);
   }
 
   /** @inheritdoc */
@@ -152,44 +157,6 @@ export class BusinessProfilesService implements IBusinessProfilesService {
 
     this.logger.log(`updateProfile — complete | userId: ${userId}, profileId: ${profile.id}`);
     return this.toResponseDto(profile);
-  }
-
-  /** @inheritdoc */
-  public async markAsPartner(profileId: string): Promise<void> {
-    this.logger.log(`markAsPartner — start | profileId: ${profileId}`);
-    const profile = await this.uow.businessProfiles.findOne({ where: { id: profileId } });
-
-    if (!profile) {
-      this.logger.warn(`markAsPartner — profile not found | profileId: ${profileId}`);
-      throw new TranslatableException({
-        messageKey: 'error.business_profile.not_found',
-        errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
-        status: HttpStatus.NOT_FOUND,
-      });
-    }
-
-    profile.isPartnerPlatform = true;
-    await this.uow.businessProfiles.save(profile);
-    this.logger.log(`markAsPartner — complete | profileId: ${profileId}`);
-  }
-
-  /** @inheritdoc */
-  public async allowPaymentCredit(profileId: string): Promise<void> {
-    this.logger.log(`allowPaymentCredit — start | profileId: ${profileId}`);
-    const profile = await this.uow.businessProfiles.findOne({ where: { id: profileId } });
-
-    if (!profile) {
-      this.logger.warn(`allowPaymentCredit — profile not found | profileId: ${profileId}`);
-      throw new TranslatableException({
-        messageKey: 'error.business_profile.not_found',
-        errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
-        status: HttpStatus.NOT_FOUND,
-      });
-    }
-
-    profile.allowPaymentCredit = true;
-    await this.uow.businessProfiles.save(profile);
-    this.logger.log(`allowPaymentCredit — complete | profileId: ${profileId}`);
   }
 
   private toResponseDto(profile: BusinessProfile): BusinessProfileResponseDto {

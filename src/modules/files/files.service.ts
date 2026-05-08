@@ -12,7 +12,7 @@ import { plainToInstance } from 'class-transformer';
 import * as crypto from 'crypto';
 
 import { FileResponseDto } from './dto/responses';
-import { IFilesService } from './interfaces';
+import { IFileDownloadResult, IFilesService } from './interfaces';
 
 @Injectable()
 export class FilesService implements IFilesService {
@@ -87,6 +87,24 @@ export class FilesService implements IFilesService {
     const file = await this.loadOwnedOrThrow(id);
     const url = await this.storage.getUrl(file.storageKey);
     return this.toResponseDto(file, url);
+  }
+
+  /** @inheritdoc */
+  public async download(id: string): Promise<IFileDownloadResult> {
+    const file = await this.loadOwnedOrThrow(id);
+    this.logger.log(`download — start | id: ${id}, provider: ${file.storageProvider}`);
+    const handle = await this.storage.download(file.storageKey);
+    this.logger.log(
+      handle.kind === 'redirect'
+        ? `download — complete | id: ${id}, kind: redirect, url: ${handle.url}`
+        : `download — complete | id: ${id}, kind: stream`,
+    );
+    return {
+      handle,
+      mimeType: file.mimeType,
+      originalName: file.originalName,
+      sizeBytes: Number(file.sizeBytes),
+    };
   }
 
   /** @inheritdoc */

@@ -5,7 +5,7 @@ import { TranslatableException } from '@common/exceptions/translatable.exception
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { Money } from '@common/utils/money';
-import { BusinessProfile, Project, Task } from '@database/entities';
+import { BusinessProfile, Project, Task, TaskAttachment } from '@database/entities';
 import {
   BusinessTransactionType,
   PaymentType,
@@ -215,7 +215,22 @@ export class BacklogsService implements IBacklogsService {
       take: dto.limit,
     });
 
-    const data = tasks.map((t) => this.toDraftTaskResponse(t));
+    const taskIds = tasks.map((t) => t.id);
+    const allAttachments =
+      taskIds.length > 0
+        ? await this.uow.taskAttachments.find({
+            where: { taskId: In(taskIds) },
+            order: { uploadedAt: 'ASC' },
+          })
+        : [];
+    const byTaskId = new Map<string, TaskAttachment[]>();
+    for (const a of allAttachments) {
+      const arr = byTaskId.get(a.taskId) ?? [];
+      arr.push(a);
+      byTaskId.set(a.taskId, arr);
+    }
+
+    const data = tasks.map((t) => this.toDraftTaskResponse(t, byTaskId.get(t.id) ?? []));
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
 
     this.logger.log(
@@ -674,7 +689,38 @@ export class BacklogsService implements IBacklogsService {
     return { projectAmount, commissionRate, commissionAmount, totalAmount, paymentType };
   }
 
-  private toDraftTaskResponse(task: Task): DraftTaskResponseDto {
+  /** @inheritdoc */
+  public async getTaskDetail(projectId: string, taskId: string): Promise<DraftTaskResponseDto> {
+    this.logger.log(`getTaskDetail — start | projectId: ${projectId}, taskId: ${taskId}`);
+    await this.access.resolveOwnedProject(projectId);
+
+    const task = await this.uow.tasks.findOne({
+      where: { id: taskId, projectId, kanbanStatus: TaskKanbanStatus.DRAFT },
+    });
+    if (!task) {
+      this.logger.warn(`getTaskDetail — not found | taskId: ${taskId}`);
+      throw new TranslatableException({
+        messageKey: 'error.task.not_found',
+        errorCode: ERROR_CODES.TASK_NOT_FOUND,
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    const attachments = await this.uow.taskAttachments.find({
+      where: { taskId },
+      order: { uploadedAt: 'ASC' },
+    });
+
+    this.logger.log(
+      `getTaskDetail — complete | taskId: ${taskId}, attachments: ${attachments.length}`,
+    );
+    return this.toDraftTaskResponse(task, attachments);
+  }
+
+  private toDraftTaskResponse(
+    task: Task,
+    attachments: TaskAttachment[] = [],
+  ): DraftTaskResponseDto {
     return plainToInstance(
       DraftTaskResponseDto,
       {
@@ -688,6 +734,15 @@ export class BacklogsService implements IBacklogsService {
         creation_mode: task.creationMode,
         created_at: task.createdAt,
         updated_at: task.updatedAt,
+        attachments_count: attachments.length,
+        attachments: attachments.map((a) => ({
+          id: a.id,
+          file_id: a.fileId,
+          file_name: a.fileName,
+          mime_type: a.mimeType,
+          file_size_bytes: a.fileSizeBytes === null ? null : Number(a.fileSizeBytes),
+          uploaded_at: a.uploadedAt,
+        })),
       },
       { excludeExtraneousValues: true },
     );

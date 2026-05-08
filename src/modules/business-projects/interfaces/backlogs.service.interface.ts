@@ -71,4 +71,10 @@ export interface IBacklogsService {
     taskId: string,
     dto: UpdateDraftTaskDto,
   ): Promise<DraftTaskResponseDto>;
+
+  /**
+   * Returns a single DRAFT task with its full attachments array.
+   * @throws TranslatableException 404 TASK_NOT_FOUND if missing or not DRAFT.
+   */
+  getTaskDetail(projectId: string, taskId: string): Promise<DraftTaskResponseDto>;
 }
