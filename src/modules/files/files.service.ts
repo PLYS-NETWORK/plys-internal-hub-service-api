@@ -94,7 +94,11 @@ export class FilesService implements IFilesService {
     const file = await this.loadOwnedOrThrow(id);
     this.logger.log(`download — start | id: ${id}, provider: ${file.storageProvider}`);
     const handle = await this.storage.download(file.storageKey);
-    this.logger.log(`download — complete | id: ${id}, kind: ${handle.kind}`);
+    this.logger.log(
+      handle.kind === 'redirect'
+        ? `download — complete | id: ${id}, kind: redirect, url: ${handle.url}`
+        : `download — complete | id: ${id}, kind: stream`,
+    );
     return {
       handle,
       mimeType: file.mimeType,
