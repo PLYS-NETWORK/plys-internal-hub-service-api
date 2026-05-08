@@ -123,12 +123,15 @@ export class SsoAuthService implements ISsoAuthService {
           email,
           platform: activePlatform,
           passwordHash: null,
-          isEmailVerified: true,
           emailVerifiedAt: new Date(),
           isActive: true,
           lastLoginAt: new Date(),
         });
         await tx.users.save(user);
+        // TypeORM may omit boolean columns with @Column({ default: false }) from the
+        // INSERT. Explicit UPDATE guarantees is_email_verified = true is written.
+        await tx.users.update(user.id, { isEmailVerified: true });
+        user = (await tx.users.findOneBy({ id: user.id }))!;
 
         await this.onboardingService.createInitialProfile(tx, user.id, {
           active_platform: activePlatform,

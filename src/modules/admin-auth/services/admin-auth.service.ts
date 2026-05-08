@@ -190,11 +190,14 @@ export class AdminAuthService implements IAdminAuthService {
       email,
       platform: ActivePlatform.ADMIN_PLATFORM,
       role: UserRole.ADMIN_PLATFORM,
-      isEmailVerified: true,
       isActive: true,
       passwordHash: null,
     });
-    return this.uow.users.save(newUser);
+    await this.uow.users.save(newUser);
+    // TypeORM may omit boolean columns with @Column({ default: false }) from the
+    // INSERT. Explicit UPDATE guarantees is_email_verified = true is written.
+    await this.uow.users.update(newUser.id, { isEmailVerified: true });
+    return (await this.uow.users.findOneBy({ id: newUser.id }))!;
   }
 
   private async assertEmailAllowed(email: string): Promise<void> {
