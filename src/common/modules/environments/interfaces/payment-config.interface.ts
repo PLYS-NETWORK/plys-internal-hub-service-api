@@ -8,6 +8,13 @@ export interface IPaymentConfig {
   /** Polar.sh API access token. Only read when `paymentProcessor === 'polar'`. */
   readonly polarAccessToken: string;
 
+  /**
+   * Polar API environment. Use `'sandbox'` for sandbox.polar.sh tokens and
+   * `'production'` for live polar.sh tokens. Must match the token's origin —
+   * mismatching causes 401 `invalid_token` from the Polar API.
+   */
+  readonly polarServer: 'sandbox' | 'production';
+
   /** Polar.sh webhook signing secret used to verify incoming webhook payloads. */
   readonly polarWebhookSecret: string;
 

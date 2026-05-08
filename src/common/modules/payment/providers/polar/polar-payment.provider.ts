@@ -42,7 +42,10 @@ export class PolarPaymentProvider implements IPaymentProvider {
   private readonly client: Polar;
 
   constructor(private readonly env: EnvironmentsService) {
-    this.client = new Polar({ accessToken: this.env.polarAccessToken });
+    this.client = new Polar({
+      accessToken: this.env.polarAccessToken,
+      server: this.env.polarServer,
+    });
   }
 
   /** @inheritdoc */

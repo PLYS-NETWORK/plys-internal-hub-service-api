@@ -68,6 +68,9 @@ export default registerAs('app', () => ({
       webhookSecret: process.env.POLAR_WEBHOOK_SECRET,
       topUpProductId: process.env.POLAR_TOP_UP_PRODUCT_ID,
       invoiceProductId: process.env.POLAR_INVOICE_PRODUCT_ID,
+      // 'sandbox' targets sandbox.polar.sh; 'production' targets polar.sh.
+      // Must match the environment the access token was issued from.
+      server: (process.env.POLAR_SERVER ?? 'sandbox') as 'sandbox' | 'production',
     },
     stripe: {
       secretKey: process.env.STRIPE_SECRET_KEY ?? '',
