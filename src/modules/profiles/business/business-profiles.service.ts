@@ -70,12 +70,17 @@ export class BusinessProfilesService implements IBusinessProfilesService {
       postalCode: dto.postal_code,
       countryCode: dto.country_code,
       phoneNumber: dto.phone_number,
-      isVerified: true,
     });
     await this.uow.businessProfiles.save(profile);
 
+    // TypeORM may omit boolean columns that carry a @Column({ default }) from
+    // the INSERT, relying on the DB default (false). Use an explicit UPDATE so
+    // is_verified = true is guaranteed to be written, then reload the canonical row.
+    await this.uow.businessProfiles.update(profile.id, { isVerified: true });
+    const saved = await this.uow.businessProfiles.findByActiveId(profile.id);
+
     this.logger.log(`onboard — complete | userId: ${userId}, profileId: ${profile.id}`);
-    return this.toResponseDto(profile);
+    return this.toResponseDto(saved!);
   }
 
   /** @inheritdoc */
