@@ -16,9 +16,9 @@ runs:
       shell: bash
       run: |
         echo "## ✅ Production Deployment Successful" >> $GITHUB_STEP_SUMMARY
-        echo "- **Project**: marketplace-ployos" >> $GITHUB_STEP_SUMMARY
+        echo "- **Project**: internal-hub-be" >> $GITHUB_STEP_SUMMARY
         echo "- **Environment**: production" >> $GITHUB_STEP_SUMMARY
         echo "- **Branch**: ${{ inputs.branch }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Triggered by**: ${{ inputs.actor }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Time**: $(date -u)" >> $GITHUB_STEP_SUMMARY
-        echo "- **URL**: https://ployos.com" >> $GITHUB_STEP_SUMMARY
+        echo "- **URL**: https://api.lona.my" >> $GITHUB_STEP_SUMMARY
