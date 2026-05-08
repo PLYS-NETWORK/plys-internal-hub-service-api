@@ -54,14 +54,8 @@ export class AdminAuthService implements IAdminAuthService {
     const maskedEmail = this.maskEmail(dto.email);
     this.logger.log(`[${this.rid}] requestOtp — start | email: ${maskedEmail}`);
 
+    await this.assertEmailAllowed(dto.email);
     await this.assertResendLimits(dto.email);
-
-    const allowed = await this.uow.adminAllowedEmails.findActiveByEmail(dto.email);
-    if (!allowed) {
-      // Silent return — prevents enumeration of the whitelist.
-      this.logger.warn(`[${this.rid}] requestOtp — email not whitelisted | email: ${maskedEmail}`);
-      return;
-    }
 
     const user = await this.findOrCreateAdminUser(dto.email);
 
@@ -106,6 +100,7 @@ export class AdminAuthService implements IAdminAuthService {
       });
     }
 
+    await this.assertEmailAllowed(dto.email);
     await this.adminOtpAttemptTracker.assertNotLocked(dto.email);
 
     const user = await this.uow.users.findUserByEmailAndPlatform(
@@ -200,6 +195,20 @@ export class AdminAuthService implements IAdminAuthService {
       passwordHash: null,
     });
     return this.uow.users.save(newUser);
+  }
+
+  private async assertEmailAllowed(email: string): Promise<void> {
+    const allowed = await this.uow.adminAllowedEmails.findActiveByEmail(email);
+    if (!allowed) {
+      this.logger.warn(
+        `[${this.rid}] assertEmailAllowed — email not whitelisted | email: ${this.maskEmail(email)}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.admin.email_not_allowed',
+        errorCode: ERROR_CODES.ADMIN_AUTH_EMAIL_NOT_ALLOWED,
+        status: HttpStatus.FORBIDDEN,
+      });
+    }
   }
 
   private async assertResendLimits(email: string): Promise<void> {

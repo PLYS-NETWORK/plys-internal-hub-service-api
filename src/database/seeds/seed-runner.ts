@@ -4,9 +4,8 @@ import { AdminAllowedEmail } from '@database/entities/admin/admin-allowed-email.
 import { User } from '@database/entities/auth/user.entity';
 import { AiProviderApiKey } from '@database/entities/infra/ai-provider-api-key.entity';
 import { Skill } from '@database/entities/profiles/skill.entity';
-import { ActivePlatform, AiProvider, UserRole } from '@database/enums';
+import { ActivePlatform, AiAssistantType, AiProvider, UserRole } from '@database/enums';
 import { GcmCipher } from '@modules/ai-provider-key/crypto/aes-gcm';
-import * as bcrypt from 'bcryptjs';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -14,9 +13,10 @@ import * as path from 'path';
 // Constants
 // ---------------------------------------------------------------------------
 
-const ADMIN_EMAIL = 'admin-platform@ployos.com';
-const ADMIN_ALLOWED_EMAILS: readonly string[] = ['huuphuc9410@gmail.com'];
-const BCRYPT_ROUNDS = 12;
+const ADMIN_ALLOWED_EMAILS: readonly string[] = [
+  'huuphuc9410@gmail.com',
+  'ngocthinh.dev@gmail.com',
+];
 const KEY_REGEX = /^(skill|category|industry)_[a-z0-9_]+$/;
 
 const GROQ_API_KEY = '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';
@@ -93,57 +93,56 @@ async function seedSkills(dataDir: string, i18nDir: string): Promise<void> {
   console.log(`[skills] Distinct categories in DB: ${distinctCategories?.count ?? 0}`);
 }
 
-async function seedAdmin(): Promise<void> {
-  const userRepo = AppDataSource.getRepository(User);
-
-  const existing = await userRepo.findOne({
-    where: { email: ADMIN_EMAIL, platform: ActivePlatform.ADMIN_PLATFORM },
-  });
-
-  if (existing) {
-    console.log(`[admin] Already exists: ${ADMIN_EMAIL}`);
-    return;
-  }
-
-  const password = process.env.ADMIN_SEED_PASSWORD ?? 'Admin@ployos2026!';
-  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-
-  const admin = userRepo.create({
-    email: ADMIN_EMAIL,
-    platform: ActivePlatform.ADMIN_PLATFORM,
-    role: UserRole.ADMIN_PLATFORM,
-    passwordHash,
-    isEmailVerified: true,
-    emailVerifiedAt: new Date(),
-    isActive: true,
-  });
-
-  await userRepo.save(admin);
-  console.log(`[admin] Seeded: ${ADMIN_EMAIL}`);
-}
-
+// Bootstraps every whitelisted email as both an `admin_allowed_emails` row and a
+// passwordless `users` row with role=ADMIN_PLATFORM. Mirrors the shape produced by
+// admin-auth.service.ts:findOrCreateAdminUser so a subsequent OTP login is a no-op.
 async function seedAdminAllowedEmails(): Promise<void> {
-  const repo = AppDataSource.getRepository(AdminAllowedEmail);
-  let inserted = 0;
+  const allowedRepo = AppDataSource.getRepository(AdminAllowedEmail);
+  const userRepo = AppDataSource.getRepository(User);
+  let whitelistInserted = 0;
+  let userInserted = 0;
 
-  for (const email of ADMIN_ALLOWED_EMAILS) {
-    const existing = await repo
+  for (const rawEmail of ADMIN_ALLOWED_EMAILS) {
+    const email = rawEmail.toLowerCase();
+
+    const existingAllowed = await allowedRepo
       .createQueryBuilder('ae')
       .where('LOWER(ae.email) = LOWER(:email)', { email })
       .getOne();
-
-    if (existing) {
+    if (existingAllowed) {
       console.log(`[admin-whitelist] Already exists: ${email}`);
-      continue;
+    } else {
+      await allowedRepo.save(allowedRepo.create({ email, isActive: true }));
+      whitelistInserted += 1;
+      console.log(`[admin-whitelist] Seeded: ${email}`);
     }
 
-    await repo.save(repo.create({ email: email.toLowerCase(), isActive: true }));
-    inserted += 1;
-    console.log(`[admin-whitelist] Seeded: ${email}`);
+    const existingUser = await userRepo
+      .createQueryBuilder('u')
+      .where('u.platform = :platform', { platform: ActivePlatform.ADMIN_PLATFORM })
+      .andWhere('LOWER(u.email) = LOWER(:email)', { email })
+      .getOne();
+    if (existingUser) {
+      console.log(`[admin-user] Already exists: ${email}`);
+    } else {
+      await userRepo.save(
+        userRepo.create({
+          email,
+          platform: ActivePlatform.ADMIN_PLATFORM,
+          role: UserRole.ADMIN_PLATFORM,
+          passwordHash: null,
+          isEmailVerified: true,
+          emailVerifiedAt: new Date(),
+          isActive: true,
+        }),
+      );
+      userInserted += 1;
+      console.log(`[admin-user] Seeded: ${email}`);
+    }
   }
 
   console.log(
-    `[admin-whitelist] ${inserted} inserted, ${ADMIN_ALLOWED_EMAILS.length - inserted} skipped`,
+    `[admin-whitelist] ${whitelistInserted} new whitelist, ${userInserted} new admin users (total whitelist: ${ADMIN_ALLOWED_EMAILS.length})`,
   );
 }
 
@@ -160,21 +159,33 @@ function buildAiMasterSecrets(): IAiKeysVersionedSecrets {
   return { currentVersion, versions };
 }
 
-async function seedGroqApiKey(): Promise<void> {
+async function seedChatBoxAssistantKey(): Promise<void> {
   const repo = AppDataSource.getRepository(AiProviderApiKey);
   const userRepo = AppDataSource.getRepository(User);
 
-  // Idempotent — skip if any Groq key already exists (active or not).
-  const existing = await repo.findOne({ where: { provider: AiProvider.GROQ } });
+  // Idempotent — skip if a chat_box assistant key already exists (active or not).
+  // The active-key partition is on assistant_type, so this matches the unique
+  // constraint we care about.
+  const existing = await repo.findOne({
+    where: { assistantType: AiAssistantType.CHAT_BOX },
+  });
   if (existing) {
-    console.log('[groq-key] Already exists — skipped');
+    console.log('[chat-box-key] Already exists — skipped');
     return;
   }
 
-  // createdBy is a non-nullable FK — resolve the admin user seeded just before.
-  const admin = await userRepo.findOne({ where: { email: ADMIN_EMAIL } });
+  // createdBy is a non-nullable FK. seedAdminAllowedEmails() runs first and seeds
+  // a passwordless ADMIN_PLATFORM user for every whitelisted email, so picking
+  // the earliest one here is deterministic and re-runs are idempotent.
+  const admin = await userRepo.findOne({
+    where: {
+      platform: ActivePlatform.ADMIN_PLATFORM,
+      role: UserRole.ADMIN_PLATFORM,
+    },
+    order: { createdAt: 'ASC' },
+  });
   if (!admin) {
-    throw new Error('[groq-key] Admin user not found — seedAdmin() must run first');
+    throw new Error('[chat-box-key] No admin user found — seedAdminAllowedEmails() must run first');
   }
 
   const secrets = buildAiMasterSecrets();
@@ -185,6 +196,7 @@ async function seedGroqApiKey(): Promise<void> {
 
   await repo.save(
     repo.create({
+      assistantType: AiAssistantType.CHAT_BOX,
       provider: AiProvider.GROQ,
       model: GROQ_MODEL,
       label: GROQ_LABEL,
@@ -197,7 +209,8 @@ async function seedGroqApiKey(): Promise<void> {
   );
 
   console.log(
-    `[groq-key] Seeded: provider=groq, model=${GROQ_MODEL}, last4=${keyLast4}, active=true`,
+    `[chat-box-key] Seeded: assistant_type=chat_box, provider=groq, ` +
+      `model=${GROQ_MODEL}, last4=${keyLast4}, active=true`,
   );
 }
 
@@ -312,9 +325,8 @@ async function main(): Promise<void> {
 
   try {
     await seedSkills(dataDir, i18nDir);
-    await seedAdmin();
     await seedAdminAllowedEmails();
-    await seedGroqApiKey();
+    await seedChatBoxAssistantKey();
   } finally {
     await AppDataSource.destroy();
   }

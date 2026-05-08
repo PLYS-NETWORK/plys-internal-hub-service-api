@@ -1,4 +1,5 @@
 import { Roles } from '@common/decorators/roles.decorator';
+import { PageDto } from '@common/dto/page.dto';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { UserRole } from '@database/enums';
 import {
@@ -12,11 +13,12 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { AiProviderKeyService } from './ai-provider-key.service';
-import { CreateApiKeyDto, UpdateApiKeyDto } from './dto/requests';
+import { CreateApiKeyDto, ListApiKeysDto, UpdateApiKeyDto } from './dto/requests';
 import { ApiKeyAdminResponseDto } from './dto/responses';
 
 // Admin CRUD for the AI provider key vault. Mounted under
@@ -32,20 +34,32 @@ export class AiProviderKeyAdminController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'List all AI provider keys (masked) (Admin only)' })
-  public async list(): Promise<ITranslatedPayload<ApiKeyAdminResponseDto[]>> {
-    const data = await this.service.list();
+  @ApiOperation({
+    summary: 'List AI provider keys (masked, paginated) (Admin only)',
+    description:
+      'Paginated. Optional filters: `assistant_type` (enum), `model` (exact match), ' +
+      'and `keywords` (case-insensitive substring search on `label`). Active keys ' +
+      'are always sorted ahead of inactive ones, so page 1 surfaces the keys ' +
+      'currently in rotation at the top.',
+  })
+  public async list(
+    @Query() dto: ListApiKeysDto,
+  ): Promise<ITranslatedPayload<PageDto<ApiKeyAdminResponseDto>>> {
+    const data = await this.service.list(dto);
     return { messageKey: 'success.ok', data };
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Create a new AI provider key (Admin only)',
+    summary: 'Create and activate a new AI provider key (Admin only)',
     description:
       'Plaintext is read once, encrypted under the current AI_KEYS_MASTER_KEY ' +
-      'version, then discarded. The new key is created `is_active = false`; ' +
-      'admins must explicitly activate it before the BFF can fetch it.',
+      'version, then discarded. The new key is created `is_active = true` and any ' +
+      'previously active key for the same `assistant_type` is auto-deactivated in ' +
+      'the same transaction — so creating a key is a one-step rotation. To bring ' +
+      'an existing inactive key back into rotation without uploading new plaintext, ' +
+      'use `PATCH /admin/ai-provider-keys/:id/activate` instead.',
   })
   public async create(
     @Body() dto: CreateApiKeyDto,
@@ -75,7 +89,13 @@ export class AiProviderKeyAdminController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Activate this key, deactivating any prior active key for the same provider (Admin only)',
+      'Activate this key, deactivating any prior active key for the same assistant_type (Admin only)',
+    description:
+      'Side effect: in a single transaction, the previously active key for the ' +
+      'same `assistant_type` (if any) is set to `is_active = false` before the ' +
+      'target row is set to `is_active = true`. The partial unique index ' +
+      '`uq_ai_provider_api_key_active_per_assistant_type` keeps the "at most one ' +
+      'active key per assistant_type" invariant safe under races.',
   })
   public async activate(
     @Param('id', ParseUUIDPipe) id: string,

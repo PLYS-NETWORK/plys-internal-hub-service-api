@@ -24,7 +24,7 @@ export class AdminAuthController {
   @ApiOperation({
     summary: 'Request an admin OTP',
     description:
-      'Always returns 200 regardless of whether the email is whitelisted — prevents enumeration.',
+      'Returns 403 (ADMIN_AUTH_EMAIL_NOT_ALLOWED) if the email is not on the active admin whitelist.',
   })
   @ApiHeader({
     name: HEADERS.X_DEVICE_ID,

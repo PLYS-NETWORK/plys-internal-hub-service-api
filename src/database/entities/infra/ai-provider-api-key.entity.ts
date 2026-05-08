@@ -1,5 +1,5 @@
 import { User } from '@database/entities/auth/user.entity';
-import { AiProvider } from '@database/enums';
+import { AiAssistantType, AiProvider } from '@database/enums';
 import {
   Column,
   CreateDateColumn,
@@ -16,15 +16,22 @@ import {
 // where `master_key_version` selects which env-supplied master key to use for
 // decryption (versioned for zero-downtime rotation).
 //
-// At most one active key per provider — enforced at the migration layer via
-// a partial unique index `uq_ai_provider_api_key_active_per_provider` on
-// `provider WHERE is_active = true`. The `@Index` decorator can't express
-// that predicate, so it lives in SQL.
+// At most one active key per assistant_type — enforced at the migration
+// layer via a partial unique index
+// `uq_ai_provider_api_key_active_per_assistant_type` on
+// `assistant_type WHERE is_active = true`. The `@Index` decorator can't
+// express that predicate, so it lives in SQL.
 @Entity('ai_provider_api_key')
 @Index('idx_ai_provider_api_key_provider', ['provider'])
+@Index('idx_ai_provider_api_key_assistant_type', ['assistantType'])
 export class AiProviderApiKey {
   @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_ai_provider_api_key' })
   public readonly id!: string;
+
+  // Which assistant feature this key powers. Acts as the active-key partition
+  // (one active row per type, regardless of provider).
+  @Column({ name: 'assistant_type', type: 'varchar', length: 20 })
+  public assistantType!: AiAssistantType;
 
   @Column({ type: 'varchar', length: 20 })
   public provider!: AiProvider;

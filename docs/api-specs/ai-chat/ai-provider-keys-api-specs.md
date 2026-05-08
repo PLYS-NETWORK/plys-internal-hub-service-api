@@ -21,16 +21,21 @@ Two AES-256-GCM key families, both **versioned**:
 Env shape:
 
 ```env
-AI_KEYS_MASTER_KEY_v1=<32-byte hex>
-AI_KEYS_MASTER_KEY_v2=<32-byte hex>      # added during rotation, decrypts old rows
+# Each value is a 32-byte secret encoded as base64 — 43 chars unpadded
+# or 44 chars with `=` padding; standard or URL-safe alphabet.
+# Generate with: `openssl rand -base64 32`
+# Example:        C4oNA0X65aQQZ1y1n3MLugsCdCCRuFnsr1RxYhuGqEQ
+
+AI_KEYS_MASTER_KEY_v1=<32-byte base64>
+AI_KEYS_MASTER_KEY_v2=<32-byte base64>     # added during rotation, decrypts old rows
 AI_KEYS_CURRENT_MASTER_VERSION=2
 
-FE_BFF_SECRET_v1=<32-byte hex>
-FE_BFF_SECRET_v2=<32-byte hex>
+FE_BFF_SECRET_v1=<32-byte base64>
+FE_BFF_SECRET_v2=<32-byte base64>
 FE_BFF_CURRENT_VERSION=2
 ```
 
-The cipher refuses to start if `currentVersion` doesn't reference a configured key.
+The cipher refuses to start if `currentVersion` doesn't reference a configured key, or if any configured value doesn't decode to exactly 32 bytes.
 
 ## Cross-cutting errors
 
@@ -42,24 +47,24 @@ The cipher refuses to start if `currentVersion` doesn't reference a configured k
 
 ## BFF endpoint (any authenticated user)
 
-### 1. Get the active key for a provider, encrypted under `FE_BFF_SECRET`
+### 1. Get the active key for an assistant type, encrypted under `FE_BFF_SECRET`
 
 - **Endpoint:** `GET /ai-provider-keys/active`
 - **Method:** `GET`
 - **Query params:** [`GetActiveKeyQueryDto`](../../../src/modules/ai-provider-key/dto/requests/get-active-key.dto.ts)
   | Field | Type | Required | Notes |
-  | ---------- | -------------------------------------------- | -------- | ----- |
-  | `provider` | `'groq' \| 'gemini' \| 'openai'` | yes | Which provider's active key to fetch. |
+  | ---------------- | -------------------------------------------------- | -------- | ----- |
+  | `assistant_type` | `'chat_box' \| 'interview' \| 'evaluate_answer'` | yes | Which assistant feature is making the call. The gateway returns whichever active key powers that feature, regardless of the provider behind it. |
 - **Behaviour:**
-  1. Loads the row where `provider = :provider AND is_active = TRUE`.
+  1. Loads the row where `assistant_type = :assistant_type AND is_active = TRUE`.
   2. Decrypts `key_ciphertext` with `AI_KEYS_MASTER_KEY_v<row.master_key_version>`.
   3. Re-encrypts the plaintext with `FE_BFF_SECRET_v<currentVersion>`.
-  4. Returns the envelope. The plaintext is best-effort overwritten in stack-locals after the call.
+  4. Returns the envelope (including the row's `provider` so the BFF picks the right SDK). The plaintext is best-effort overwritten in stack-locals after the call.
 - **Response 200:** [`IApiKeyBffResponse`](../../../src/modules/ai-provider-key/dto/responses/interfaces/api-key-bff.response.interface.ts) — see shape below.
 - **Errors:**
   | HTTP | error_code | When |
   | ---- | ---------- | ---- |
-  | 404 | `AI_PROVIDER_KEY_NOT_CONFIGURED` | No active key for `provider`. The FE BFF should surface a friendly "AI chat unavailable — contact admin" message. |
+  | 404 | `AI_PROVIDER_KEY_NOT_CONFIGURED` | No active key for `assistant_type`. The FE BFF should surface a friendly "AI chat unavailable — contact admin" message. |
 
 ```jsonc
 {
@@ -82,28 +87,50 @@ The FE BFF decrypts `key_envelope` with the matching version of `FE_BFF_SECRET` 
 
 Mounted under `/admin/ai-provider-keys`. `@Roles(ADMIN_PLATFORM)`.
 
-### 2. List all keys (masked)
+### 2. List keys (masked, paginated)
 
 - **Endpoint:** `GET /admin/ai-provider-keys`
 - **Method:** `GET`
-- **Response 200:** [`IApiKeyAdminResponse[]`](../../../src/modules/ai-provider-key/dto/responses/interfaces/api-key-admin.response.interface.ts) — array. The plaintext is **never** in the response; `key_masked` is `<provider-prefix>***...<last4>`.
+- **Query params:** [`ListApiKeysDto`](../../../src/modules/ai-provider-key/dto/requests/list-api-keys.dto.ts) — extends the standard `PageOptionsDto`.
+  | Field | Type | Required | Default | Notes |
+  | ---------------- | -------------------------------------------------- | -------- | ------- | ----- |
+  | `page` | `number` | no | `1` | 1-indexed. Min 1. |
+  | `limit` | `number` | no | `20` | Page size. Min 1, max 100. |
+  | `sort_by` | `string` | no | — | Optional secondary column; active-first always applies first. |
+  | `order_by` | `'ASC' \| 'DESC'` | no | — | Direction for `sort_by`. |
+  | `assistant_type` | `'chat_box' \| 'interview' \| 'evaluate_answer'` | no | — | Filter to a single assistant feature. |
+  | `model` | `string` | no | — | Exact-match (max length 80). |
+  | `keywords` | `string` | no | — | Case-insensitive substring search on `label` (length 1–80). |
+- **Ordering:** active keys are always sorted ahead of inactive ones, so page 1 surfaces the keys currently in rotation at the top. Sub-order: `assistant_type ASC, created_at DESC`.
+- **Response 200:** `PageDto<IApiKeyAdminResponse>`. The plaintext is **never** in the response; `key_masked` is `<provider-prefix>***...<last4>`.
 - **Errors:** cross-cutting only.
 
 ```jsonc
-[
-  {
-    "id": "uuid",
-    "provider": "groq",
-    "model": "llama-3.3-70b-versatile",
-    "label": "groq-prod-2026-05",
-    "master_key_version": 2,
-    "key_masked": "gsk_***...8c2f",
-    "is_active": true,
-    "created_by": "uuid",
-    "created_at": "2026-05-05T01:00:00.000Z",
-    "updated_at": "2026-05-05T01:00:00.000Z",
+{
+  "data": [
+    {
+      "id": "uuid",
+      "assistant_type": "chat_box",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "label": "groq-prod-2026-05",
+      "master_key_version": 2,
+      "key_masked": "gsk_***...8c2f",
+      "is_active": true,
+      "created_by": "uuid",
+      "created_at": "2026-05-05T01:00:00.000Z",
+      "updated_at": "2026-05-05T01:00:00.000Z",
+    },
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "itemCount": 5,
+    "pageCount": 1,
+    "hasPreviousPage": false,
+    "hasNextPage": false,
   },
-]
+}
 ```
 
 ### 3. Create a new key
@@ -112,13 +139,14 @@ Mounted under `/admin/ai-provider-keys`. `@Roles(ADMIN_PLATFORM)`.
 - **Method:** `POST`
 - **Request body:** [`ICreateApiKeyRequest`](../../../src/modules/ai-provider-key/dto/requests/interfaces/create-api-key.request.interface.ts)
   | Field | Type | Required | Notes |
-  | ---------- | -------------------------------------------- | -------- | ----- |
-  | `provider` | `'groq' \| 'gemini' \| 'openai'` | yes | |
+  | ---------------- | -------------------------------------------------- | -------- | ----- |
+  | `assistant_type` | `'chat_box' \| 'interview' \| 'evaluate_answer'` | yes | Which assistant feature this key powers. Acts as the active-key partition (one active row per type). |
+  | `provider` | `'groq' \| 'gemini' \| 'openai'` | yes | Informational metadata so the FE BFF picks the right SDK. |
   | `model` | `string` | yes | length 1–80; passed verbatim to the provider SDK on the FE BFF (e.g. `'llama-3.3-70b-versatile'`). |
   | `label` | `string` | yes | length 1–80; admin-readable identifier. |
   | `key` | `string` | yes | length 8–200. Plaintext API key. Read once, encrypted under the current master key, discarded. **Never echoed back.** |
-- **Behaviour:** new rows are created with `is_active = false` — admins must explicitly activate. The plaintext is overwritten on the stack after the encrypt call.
-- **Response 201:** masked `IApiKeyAdminResponse`.
+- **Behaviour (single transaction):** **the new row lands `is_active = true` and any previously active key for the same `assistant_type` is auto-deactivated.** Creating a key is therefore a one-step rotation — no follow-up activate call is required. The plaintext is overwritten on the stack after the encrypt call. To bring an _existing_ inactive key back into rotation without uploading new plaintext, use the activate endpoint (§5).
+- **Response 201:** masked `IApiKeyAdminResponse` with `is_active = true`.
 - **Errors:** cross-cutting only.
 
 ### 4. Update label / model
@@ -143,7 +171,7 @@ Mounted under `/admin/ai-provider-keys`. `@Roles(ADMIN_PLATFORM)`.
 - **Endpoint:** `PATCH /admin/ai-provider-keys/:id/activate`
 - **Method:** `PATCH`
 - **Path params:** `id` (UUID v4)
-- **Behaviour (single transaction):** deactivates any prior active key for the same provider, then sets the target row to `is_active = true`. The partial unique index `uq_ai_provider_api_key_active_per_provider` enforces "at most one active key per provider" at the DB layer in case of a race.
+- **Behaviour (single transaction):** **activating a key auto-deactivates the previously active key for the same `assistant_type`.** Both updates land in one transaction, so the BFF never sees a window with zero or two active keys for that assistant type. There is no separate "deactivate" endpoint — to swap the active key, just activate the new one. The partial unique index `uq_ai_provider_api_key_active_per_assistant_type` enforces "at most one active key per assistant_type" at the DB layer in case of a race.
 - **Response 200:** masked `IApiKeyAdminResponse`.
 - **Errors:**
   | HTTP | error_code | When |
@@ -161,7 +189,7 @@ Mounted under `/admin/ai-provider-keys`. `@Roles(ADMIN_PLATFORM)`.
   | HTTP | error_code | When |
   | ---- | ---------- | ---- |
   | 404 | `AI_PROVIDER_KEY_NOT_FOUND` | No row with that id. |
-  | 409 | `AI_PROVIDER_KEY_ACTIVE_REQUIRES_REPLACEMENT` | Target is the only active key for the provider; activate a replacement first. |
+  | 409 | `AI_PROVIDER_KEY_ACTIVE_REQUIRES_REPLACEMENT` | Target is the only active key for its assistant type; activate a replacement first. |
 
 ### 7. Re-encrypt every row to the current master key version
 

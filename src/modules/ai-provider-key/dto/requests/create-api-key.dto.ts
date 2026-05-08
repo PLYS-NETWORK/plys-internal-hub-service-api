@@ -1,4 +1,4 @@
-import { AiProvider } from '@database/enums';
+import { AiAssistantType, AiProvider } from '@database/enums';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { IsEnum, IsString, Length } from 'class-validator';
@@ -6,6 +6,18 @@ import { IsEnum, IsString, Length } from 'class-validator';
 import { ICreateApiKeyRequest } from './interfaces/create-api-key.request.interface';
 
 export class CreateApiKeyDto implements ICreateApiKeyRequest {
+  @Expose({ name: 'assistant_type' })
+  @ApiProperty({
+    name: 'assistant_type',
+    enum: AiAssistantType,
+    example: AiAssistantType.CHAT_BOX,
+    description:
+      'Which assistant feature this key powers. Acts as the active-key partition: ' +
+      'at most one row per assistant_type may be `is_active = true` at a time.',
+  })
+  @IsEnum(AiAssistantType)
+  public readonly assistantType!: AiAssistantType;
+
   @Expose({ name: 'provider' })
   @ApiProperty({ name: 'provider', enum: AiProvider, example: AiProvider.GROQ })
   @IsEnum(AiProvider)

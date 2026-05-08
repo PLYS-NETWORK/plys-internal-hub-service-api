@@ -6,8 +6,8 @@ import { randomBytes } from 'crypto';
 
 import { BffEnvelopeCipher } from './bff-envelope.cipher';
 
-function fakeKeyHex(): string {
-  return randomBytes(32).toString('hex');
+function fakeKeyB64(): string {
+  return randomBytes(32).toString('base64');
 }
 
 function makeEnv(secrets: IAiKeysVersionedSecrets): Partial<EnvironmentsService> {
@@ -26,7 +26,7 @@ describe('BffEnvelopeCipher', () => {
     // Arrange
     const secrets: IAiKeysVersionedSecrets = {
       currentVersion: 1,
-      versions: { 1: fakeKeyHex() },
+      versions: { 1: fakeKeyB64() },
     };
     const cipher = await buildCipher(secrets);
     const plaintext = 'gsk_live_abcdef0123456789';
@@ -49,7 +49,7 @@ describe('BffEnvelopeCipher', () => {
 
   it('survives a BFF secret rotation (FE BFF re-fetches before v1 retires)', async () => {
     // Arrange — gateway and FE BFF both run v1
-    const v1 = fakeKeyHex();
+    const v1 = fakeKeyB64();
     const v1Cipher = await buildCipher({ currentVersion: 1, versions: { 1: v1 } });
     const v1Envelope = v1Cipher.encrypt('payload');
 
@@ -57,7 +57,7 @@ describe('BffEnvelopeCipher', () => {
     expect(v1Cipher.decrypt(v1Envelope)).toBe('payload');
 
     // Rotation: gateway adds v2 and cuts current to v2; FE BFF still has v1 + v2
-    const v2 = fakeKeyHex();
+    const v2 = fakeKeyB64();
     const dualCipher = await buildCipher({
       currentVersion: 2,
       versions: { 1: v1, 2: v2 },

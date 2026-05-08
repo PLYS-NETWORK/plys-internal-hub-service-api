@@ -20,16 +20,18 @@ export class AiProviderKeyBffController {
   @Get('active')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get the active key for a provider, encrypted under FE_BFF_SECRET',
+    summary: 'Get the active key for an assistant type, encrypted under FE_BFF_SECRET',
     description:
-      'Called by the FE BFF before opening a chat. Returns a `key_envelope` that ' +
-      'the BFF decrypts with its FE_BFF_SECRET_v<version> to recover the plaintext ' +
-      'API key. Browsers must never see the plaintext — that stays on the FE BFF.',
+      'Called by the FE BFF before invoking an AI assistant. The query specifies ' +
+      'which assistant feature is making the call (chat_box / interview / ' +
+      'evaluate_answer). Returns a `key_envelope` that the BFF decrypts with its ' +
+      'FE_BFF_SECRET_v<version> to recover the plaintext API key. Browsers must ' +
+      'never see the plaintext — that stays on the FE BFF.',
   })
   public async getActive(
     @Query() dto: GetActiveKeyQueryDto,
   ): Promise<ITranslatedPayload<ApiKeyBffResponseDto>> {
-    const data = await this.service.getActiveKeyEnvelope(dto.provider);
+    const data = await this.service.getActiveKeyEnvelope(dto.assistantType);
     return { messageKey: 'success.ok', data };
   }
 }

@@ -5,9 +5,9 @@ import { HttpStatus } from '@nestjs/common';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 
 // Shared AES-256-GCM primitives used by both ciphers in the AI provider key
-// vault. Centralising the byte-level details (algorithm, IV/tag sizes, hex
-// parsing of the master key) keeps `MasterKeyCipher` and `BffEnvelopeCipher`
-// thin and identical in failure modes.
+// vault. Centralising the byte-level details (algorithm, IV/tag sizes,
+// base64 parsing of the master key) keeps `MasterKeyCipher` and
+// `BffEnvelopeCipher` thin and identical in failure modes.
 //
 // Versioning: callers always pass a full `IAiKeysVersionedSecrets` object —
 // `currentVersion` selects the encryption key, `versions[v]` selects the
@@ -31,19 +31,27 @@ export function failCipher(reason: string): never {
   throw exception;
 }
 
-// Decodes a 64-char hex-encoded 32-byte key. Refuses anything else so a
-// malformed env var fails loudly at first use rather than producing garbled
-// ciphertext later.
-function decodeKey(rawHex: string, label: string): Buffer {
-  if (typeof rawHex !== 'string' || rawHex.length === 0) {
+// Decodes a base64-encoded 32-byte key. Accepts standard base64 (`+`, `/`)
+// and URL-safe base64 (`-`, `_`), with or without trailing `=` padding —
+// 32 bytes is 43 base64 chars unpadded, 44 chars with one `=`. Refuses
+// anything else so a malformed env var fails loudly at first use rather
+// than producing garbled ciphertext later.
+function decodeKey(rawB64: string, label: string): Buffer {
+  if (typeof rawB64 !== 'string' || rawB64.length === 0) {
     failCipher(`${label}: missing key material`);
   }
-  if (!/^[0-9a-fA-F]{64}$/.test(rawHex)) {
-    failCipher(`${label}: must be 64 hex characters (32 bytes)`);
+  if (!/^[A-Za-z0-9+/_-]+={0,2}$/.test(rawB64)) {
+    failCipher(
+      `${label}: must be a base64-encoded 32-byte value ` +
+        `(e.g. "C4oNA0X65aQQZ1y1n3MLugsCdCCRuFnsr1RxYhuGqEQ" — 43 chars unpadded)`,
+    );
   }
-  const buf = Buffer.from(rawHex, 'hex');
+  const buf = Buffer.from(rawB64, 'base64');
   if (buf.length !== KEY_BYTES) {
-    failCipher(`${label}: decoded to ${buf.length} bytes, expected ${KEY_BYTES}`);
+    failCipher(
+      `${label}: decoded to ${buf.length} bytes, expected ${KEY_BYTES} ` +
+        `(generate with: openssl rand -base64 32)`,
+    );
   }
   return buf;
 }

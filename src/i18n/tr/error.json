@@ -124,6 +124,7 @@
   "admin": {
     "otp_invalid": "Doğrulama kodu geçersiz veya süresi dolmuş.",
     "otp_locked": "Çok fazla başarısız deneme nedeniyle hesabınız geçici olarak kilitlendi. Lütfen daha sonra tekrar deneyin.",
-    "resend_limit": "Çok fazla kod istediniz. Yeni bir kod istemeden önce lütfen bekleyin."
+    "resend_limit": "Çok fazla kod istediniz. Yeni bir kod istemeden önce lütfen bekleyin.",
+    "email_not_allowed": "Bu e-posta yönetici platformuna erişim için yetkili değil."
   }
 }

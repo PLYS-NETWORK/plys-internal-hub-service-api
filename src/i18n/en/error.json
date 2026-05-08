@@ -128,6 +128,7 @@
   "admin": {
     "otp_invalid": "The verification code is invalid or has expired.",
     "otp_locked": "Your account has been temporarily locked due to too many failed attempts. Please try again later.",
-    "resend_limit": "You have requested too many codes. Please wait before requesting a new one."
+    "resend_limit": "You have requested too many codes. Please wait before requesting a new one.",
+    "email_not_allowed": "This email is not authorized to access the admin platform."
   }
 }

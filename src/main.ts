@@ -60,6 +60,7 @@ async function bootstrap(): Promise<void> {
   // CORS
   app.enableCors({
     origin: envService.allowedOrigins,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
 

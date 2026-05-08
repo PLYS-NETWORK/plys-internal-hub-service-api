@@ -5,10 +5,11 @@ import { randomBytes } from 'crypto';
 
 import { GcmCipher, IGcmEnvelope } from './aes-gcm';
 
-// 32-byte hex strings — the same shape the env validator enforces. Generated
-// per test run so we don't accidentally snapshot a real value into a fixture.
-function fakeKeyHex(): string {
-  return randomBytes(32).toString('hex');
+// 32-byte base64 strings — the same shape the env validator enforces.
+// Generated per test run so we don't accidentally snapshot a real value into
+// a fixture.
+function fakeKeyB64(): string {
+  return randomBytes(32).toString('base64');
 }
 
 function makeSecrets(
@@ -22,7 +23,7 @@ describe('GcmCipher', () => {
   describe('encrypt → decrypt round-trip', () => {
     it('round-trips ASCII plaintext through the current version', () => {
       // Arrange
-      const v1 = fakeKeyHex();
+      const v1 = fakeKeyB64();
       const secrets = makeSecrets(1, { 1: v1 });
       const plaintext = 'gsk_live_abcdef0123456789';
 
@@ -40,7 +41,7 @@ describe('GcmCipher', () => {
 
     it('round-trips Unicode plaintext (multibyte chars)', () => {
       // Arrange
-      const secrets = makeSecrets(1, { 1: fakeKeyHex() });
+      const secrets = makeSecrets(1, { 1: fakeKeyB64() });
       const plaintext = 'tøken-üç-日本語-🔑';
 
       // Act
@@ -53,7 +54,7 @@ describe('GcmCipher', () => {
 
     it('produces distinct ciphertexts for the same plaintext (random IV)', () => {
       // Arrange
-      const secrets = makeSecrets(1, { 1: fakeKeyHex() });
+      const secrets = makeSecrets(1, { 1: fakeKeyB64() });
       const plaintext = 'same-input';
 
       // Act
@@ -71,8 +72,8 @@ describe('GcmCipher', () => {
   describe('versioned decryption', () => {
     it('decrypts old-version ciphertext when both versions are present', () => {
       // Arrange — v1 encrypts, v2 is added later, v2 is current
-      const v1 = fakeKeyHex();
-      const v2 = fakeKeyHex();
+      const v1 = fakeKeyB64();
+      const v2 = fakeKeyB64();
       const v1OnlySecrets = makeSecrets(1, { 1: v1 });
       const dualSecrets = makeSecrets(2, { 1: v1, 2: v2 });
       const plaintext = 'rotation-survivor';
@@ -92,7 +93,7 @@ describe('GcmCipher', () => {
 
     it('throws when the envelope references an unknown version', () => {
       // Arrange
-      const secrets = makeSecrets(1, { 1: fakeKeyHex() });
+      const secrets = makeSecrets(1, { 1: fakeKeyB64() });
       const fakeEnvelope: IGcmEnvelope = {
         version: 99,
         iv: 'AAAAAAAAAAAAAAAA', // 12-byte base64
@@ -108,23 +109,44 @@ describe('GcmCipher', () => {
   describe('input validation', () => {
     it('throws when currentVersion has no matching key', () => {
       // Arrange
-      const secrets = makeSecrets(2, { 1: fakeKeyHex() });
+      const secrets = makeSecrets(2, { 1: fakeKeyB64() });
 
       // Act + Assert
       expect(() => GcmCipher.encrypt('x', secrets, 'TEST')).toThrow(TranslatableException);
     });
 
-    it('throws when a key is not 64 hex chars', () => {
-      // Arrange
-      const secrets = makeSecrets(1, { 1: 'not-hex' });
+    it('throws when a key is not a 32-byte base64 string', () => {
+      // Arrange — too short to decode to 32 bytes
+      const secrets = makeSecrets(1, { 1: 'too-short' });
 
       // Act + Assert
       expect(() => GcmCipher.encrypt('x', secrets, 'TEST')).toThrow(TranslatableException);
+    });
+
+    it('throws when a key contains chars outside the base64 alphabet', () => {
+      // Arrange — `!` is not a valid base64 char
+      const secrets = makeSecrets(1, { 1: 'C4oNA0X65aQQZ1y1n3MLugsCdCCRuFnsr1RxYhuGqE!' });
+
+      // Act + Assert
+      expect(() => GcmCipher.encrypt('x', secrets, 'TEST')).toThrow(TranslatableException);
+    });
+
+    it('accepts the documented base64 example (43 chars unpadded)', () => {
+      // Arrange — exactly 32 bytes when decoded
+      const secrets = makeSecrets(1, {
+        1: 'C4oNA0X65aQQZ1y1n3MLugsCdCCRuFnsr1RxYhuGqEQ',
+      });
+
+      // Act — encryption succeeds, which means decodeKey accepted the value
+      const envelope = GcmCipher.encrypt('x', secrets, 'TEST');
+
+      // Assert
+      expect(GcmCipher.decrypt(envelope, secrets, 'TEST')).toBe('x');
     });
 
     it('throws on a tampered ciphertext (auth tag fails)', () => {
       // Arrange
-      const secrets = makeSecrets(1, { 1: fakeKeyHex() });
+      const secrets = makeSecrets(1, { 1: fakeKeyB64() });
       const envelope = GcmCipher.encrypt('payload', secrets, 'TEST');
       // Flip the first byte of the ciphertext.
       const ctBuf = Buffer.from(envelope.ciphertext, 'base64');
