@@ -21,9 +21,9 @@ import { IBusinessProfilesAdminService } from './interfaces/business-profiles-ad
 // Maps the public `sort_by` token to the entity column expression used in
 // ORDER BY. Whitelisted up-front so a user-supplied value never reaches SQL.
 const SORT_COLUMN_MAP: Record<AdminBusinessProfileSortable, string> = {
-  created_at: 'bp.created_at',
-  updated_at: 'bp.updated_at',
-  company_name: 'bp.company_name',
+  created_at: 'bp.createdAt',
+  updated_at: 'bp.updatedAt',
+  company_name: 'bp.companyName',
 };
 
 @Injectable()
