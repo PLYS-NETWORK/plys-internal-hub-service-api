@@ -21,16 +21,21 @@ Two AES-256-GCM key families, both **versioned**:
 Env shape:
 
 ```env
-AI_KEYS_MASTER_KEY_v1=<32-byte hex>
-AI_KEYS_MASTER_KEY_v2=<32-byte hex>      # added during rotation, decrypts old rows
+# Each value is a 32-byte secret encoded as base64 — 43 chars unpadded
+# or 44 chars with `=` padding; standard or URL-safe alphabet.
+# Generate with: `openssl rand -base64 32`
+# Example:        C4oNA0X65aQQZ1y1n3MLugsCdCCRuFnsr1RxYhuGqEQ
+
+AI_KEYS_MASTER_KEY_v1=<32-byte base64>
+AI_KEYS_MASTER_KEY_v2=<32-byte base64>     # added during rotation, decrypts old rows
 AI_KEYS_CURRENT_MASTER_VERSION=2
 
-FE_BFF_SECRET_v1=<32-byte hex>
-FE_BFF_SECRET_v2=<32-byte hex>
+FE_BFF_SECRET_v1=<32-byte base64>
+FE_BFF_SECRET_v2=<32-byte base64>
 FE_BFF_CURRENT_VERSION=2
 ```
 
-The cipher refuses to start if `currentVersion` doesn't reference a configured key.
+The cipher refuses to start if `currentVersion` doesn't reference a configured key, or if any configured value doesn't decode to exactly 32 bytes.
 
 ## Cross-cutting errors
 

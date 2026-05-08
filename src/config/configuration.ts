@@ -133,9 +133,11 @@ export default registerAs('app', () => ({
   aiKeys: {
     // AES-256-GCM master keys for the ai_provider_api_key.key_ciphertext column.
     // Provide as `AI_KEYS_MASTER_KEY_v1`, `AI_KEYS_MASTER_KEY_v2`, … each a
-    // 32-byte value encoded as 64 hex chars. `AI_KEYS_CURRENT_MASTER_VERSION`
-    // selects the version used for new encryptions; existing rows decrypt with
-    // whichever version they reference.
+    // 32-byte value encoded as base64 (43 chars unpadded or 44 with `=`
+    // padding; both standard and URL-safe alphabets accepted). Generate with
+    // `openssl rand -base64 32`. `AI_KEYS_CURRENT_MASTER_VERSION` selects the
+    // version used for new encryptions; existing rows decrypt with whichever
+    // version they reference.
     master: {
       currentVersion: parseInt(process.env.AI_KEYS_CURRENT_MASTER_VERSION ?? '0', 10),
       versions: collectVersionedKeys('AI_KEYS_MASTER_KEY'),
