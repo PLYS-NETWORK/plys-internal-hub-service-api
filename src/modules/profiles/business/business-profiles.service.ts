@@ -154,44 +154,6 @@ export class BusinessProfilesService implements IBusinessProfilesService {
     return this.toResponseDto(profile);
   }
 
-  /** @inheritdoc */
-  public async markAsPartner(profileId: string): Promise<void> {
-    this.logger.log(`markAsPartner — start | profileId: ${profileId}`);
-    const profile = await this.uow.businessProfiles.findOne({ where: { id: profileId } });
-
-    if (!profile) {
-      this.logger.warn(`markAsPartner — profile not found | profileId: ${profileId}`);
-      throw new TranslatableException({
-        messageKey: 'error.business_profile.not_found',
-        errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
-        status: HttpStatus.NOT_FOUND,
-      });
-    }
-
-    profile.isPartnerPlatform = true;
-    await this.uow.businessProfiles.save(profile);
-    this.logger.log(`markAsPartner — complete | profileId: ${profileId}`);
-  }
-
-  /** @inheritdoc */
-  public async allowPaymentCredit(profileId: string): Promise<void> {
-    this.logger.log(`allowPaymentCredit — start | profileId: ${profileId}`);
-    const profile = await this.uow.businessProfiles.findOne({ where: { id: profileId } });
-
-    if (!profile) {
-      this.logger.warn(`allowPaymentCredit — profile not found | profileId: ${profileId}`);
-      throw new TranslatableException({
-        messageKey: 'error.business_profile.not_found',
-        errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
-        status: HttpStatus.NOT_FOUND,
-      });
-    }
-
-    profile.allowPaymentCredit = true;
-    await this.uow.businessProfiles.save(profile);
-    this.logger.log(`allowPaymentCredit — complete | profileId: ${profileId}`);
-  }
-
   private toResponseDto(profile: BusinessProfile): BusinessProfileResponseDto {
     return plainToInstance(BusinessProfileResponseDto, profile, { excludeExtraneousValues: true });
   }

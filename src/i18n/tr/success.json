@@ -7,8 +7,8 @@
   "business_profile": {
     "created": "İşletme profili başarıyla oluşturuldu.",
     "updated": "İşletme profili başarıyla güncellendi.",
-    "partner_marked": "İşletme ortak platform olarak işaretlendi.",
-    "payment_credit_allowed": "Bu işletme için ödeme kredisi etkinleştirildi."
+    "partner_platform_updated": "Ortak platform bayrağı güncellendi.",
+    "payment_credit_updated": "Ödeme kredisi bayrağı güncellendi."
   },
   "consultant_profile": {
     "created": "Danışman profili başarıyla oluşturuldu.",
