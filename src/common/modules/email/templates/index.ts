@@ -31,6 +31,10 @@ export {
   type IBusinessProjectRepublishRefundTemplateOptions,
 } from './business/project-republish-refund.template';
 export {
+  buildTopUpCancelledEmail,
+  type ITopUpCancelledTemplateOptions,
+} from './business/top-up-cancelled.template';
+export {
   buildBusinessVerifyRegistrationEmail,
   type IBusinessVerifyRegistrationTemplateOptions,
 } from './business/verify-registration.template';
@@ -38,6 +42,10 @@ export {
   buildBusinessWelcomeEmail,
   type IBusinessWelcomeTemplateOptions,
 } from './business/welcome.template';
+export {
+  buildWithdrawCancelledEmail,
+  type IWithdrawCancelledTemplateOptions,
+} from './business/withdraw-cancelled.template';
 
 // Consultant (Lona) templates
 export {

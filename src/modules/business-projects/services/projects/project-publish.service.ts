@@ -33,6 +33,7 @@ const DEFAULT_COMMISSION_RATE = '0.25';
 interface PublishEligibility {
   canPublish: boolean;
   reasonCode: string | null;
+  taskCount: number;
   accountBalance: Money;
   projectAmount: Money;
   commissionRate: string;
@@ -115,6 +116,26 @@ export class ProjectPublishService implements IProjectPublishService {
           status: HttpStatus.UNPROCESSABLE_ENTITY,
         });
       }
+      if (preview.reasonCode === 'MINIMUM_TASKS_NOT_MET') {
+        this.logger.warn(
+          `confirmPublish — minimum tasks not met | projectId: ${projectId}, taskCount: ${preview.taskCount}`,
+        );
+        throw new TranslatableException({
+          messageKey: 'error.project.minimum_tasks_not_met',
+          errorCode: ERROR_CODES.PROJECT_MINIMUM_TASKS_NOT_MET,
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+        });
+      }
+      if (preview.reasonCode === 'MINIMUM_COST_NOT_MET') {
+        this.logger.warn(
+          `confirmPublish — minimum cost not met | projectId: ${projectId}, projectAmount: ${preview.projectAmount.toFixedString()}`,
+        );
+        throw new TranslatableException({
+          messageKey: 'error.project.minimum_cost_not_met',
+          errorCode: ERROR_CODES.PROJECT_MINIMUM_COST_NOT_MET,
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+        });
+      }
       this.logger.warn(
         `confirmPublish — cannot publish | projectId: ${projectId}, reasonCode: ${preview.reasonCode}`,
       );
@@ -159,6 +180,20 @@ export class ProjectPublishService implements IProjectPublishService {
             throw new TranslatableException({
               messageKey: 'error.project.invalid_task_price',
               errorCode: ERROR_CODES.PROJECT_INVALID_TASK_PRICE,
+              status: HttpStatus.UNPROCESSABLE_ENTITY,
+            });
+          }
+          if (lockedEligibility.reasonCode === 'MINIMUM_TASKS_NOT_MET') {
+            throw new TranslatableException({
+              messageKey: 'error.project.minimum_tasks_not_met',
+              errorCode: ERROR_CODES.PROJECT_MINIMUM_TASKS_NOT_MET,
+              status: HttpStatus.UNPROCESSABLE_ENTITY,
+            });
+          }
+          if (lockedEligibility.reasonCode === 'MINIMUM_COST_NOT_MET') {
+            throw new TranslatableException({
+              messageKey: 'error.project.minimum_cost_not_met',
+              errorCode: ERROR_CODES.PROJECT_MINIMUM_COST_NOT_MET,
               status: HttpStatus.UNPROCESSABLE_ENTITY,
             });
           }
@@ -300,6 +335,7 @@ export class ProjectPublishService implements IProjectPublishService {
     const totalAmount = projectAmount.add(commissionAmount);
 
     const baseResult = {
+      taskCount: tasks.length,
       accountBalance,
       projectAmount,
       commissionRate,
@@ -314,6 +350,14 @@ export class ProjectPublishService implements IProjectPublishService {
 
     if (tasks.length === 0 || tasks.some((t) => !Money.from(t.price).isPositive())) {
       return { ...baseResult, canPublish: false, reasonCode: 'INVALID_TASK_PRICE' };
+    }
+
+    if (tasks.length < 5) {
+      return { ...baseResult, canPublish: false, reasonCode: 'MINIMUM_TASKS_NOT_MET' };
+    }
+
+    if (projectAmount.lt(Money.from(150))) {
+      return { ...baseResult, canPublish: false, reasonCode: 'MINIMUM_COST_NOT_MET' };
     }
 
     if (paymentType === PaymentType.CREDIT) {

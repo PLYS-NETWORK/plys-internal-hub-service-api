@@ -27,8 +27,14 @@ export interface IProjectPublishService {
    * @throws TranslatableException 404 PROJECT_NOT_FOUND.
    * @throws TranslatableException 422 PROJECT_INSUFFICIENT_BALANCE
    *   (pre-paid only, locked re-check).
+   * @throws TranslatableException 422 PROJECT_INVALID_TASK_PRICE when any
+   *   task has a price of zero or less.
+   * @throws TranslatableException 422 PROJECT_MINIMUM_TASKS_NOT_MET when
+   *   the project has fewer than 5 tasks.
+   * @throws TranslatableException 422 PROJECT_MINIMUM_COST_NOT_MET when
+   *   the total project cost is below $150.
    * @throws TranslatableException 422 PROJECT_CANNOT_PUBLISH for any other
-   *   non-eligibility (zero tasks, wrong status, etc.).
+   *   non-eligibility (wrong status, etc.).
    */
   confirmPublish(projectId: string): Promise<void>;
 }

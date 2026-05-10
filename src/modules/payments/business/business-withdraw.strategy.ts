@@ -1,9 +1,11 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
 import { AppLogger } from '@common/modules/logger';
 import { PaymentService } from '@common/modules/payment/payment.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { DateUtil } from '@common/utils/date';
 import { BusinessTransactionType, Currency, TransactionStatus } from '@database/enums';
 import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-type.enum';
 import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
@@ -11,6 +13,7 @@ import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
+import { CancelWithdrawResponseDto } from '../dto/responses/cancel-withdraw-response.dto';
 import { WithdrawResponseDto } from '../dto/responses/withdraw-response.dto';
 import { IWithdrawStrategy } from '../shared/withdraw-strategy.interface';
 
@@ -24,6 +27,7 @@ export class BusinessWithdrawStrategy implements IWithdrawStrategy {
     private readonly paymentService: PaymentService,
     private readonly env: EnvironmentsService,
     private readonly notificationDispatcher: NotificationDispatcherService,
+    private readonly emailService: EmailService,
   ) {
     this.logger = new AppLogger(BusinessWithdrawStrategy.name, requestContext);
   }
@@ -176,5 +180,147 @@ export class BusinessWithdrawStrategy implements IWithdrawStrategy {
       },
       { excludeExtraneousValues: true },
     );
+  }
+
+  /** @inheritdoc */
+  public async cancelWithdraw(transactionId: string): Promise<CancelWithdrawResponseDto> {
+    const userId = this.requestContext.userId!;
+    this.logger.log(`cancelWithdraw — start | userId: ${userId}, transactionId: ${transactionId}`);
+
+    const businessProfile = await this.uow.businessProfiles.findOne({ where: { userId } });
+    if (!businessProfile) {
+      throw new TranslatableException({
+        messageKey: 'error.business_profile.not_found',
+        errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    const transaction = await this.uow.businessTransactions.findOne({
+      where: { id: transactionId },
+    });
+
+    if (!transaction) {
+      this.logger.warn(`cancelWithdraw — transaction not found | transactionId: ${transactionId}`);
+      throw new TranslatableException({
+        messageKey: 'error.payment.transaction_not_found',
+        errorCode: ERROR_CODES.PAYMENT_TRANSACTION_NOT_FOUND,
+        status: HttpStatus.NOT_FOUND,
+      });
+    }
+
+    if (transaction.businessId !== businessProfile.id) {
+      this.logger.warn(
+        `cancelWithdraw — caller does not own transaction | transactionId: ${transactionId}, callerBusinessId: ${businessProfile.id}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.payment.transaction_not_owned',
+        errorCode: ERROR_CODES.PAYMENT_TRANSACTION_NOT_OWNED,
+        status: HttpStatus.FORBIDDEN,
+      });
+    }
+
+    if (
+      transaction.type !== BusinessTransactionType.WITHDRAW ||
+      transaction.status !== TransactionStatus.PENDING
+    ) {
+      this.logger.warn(
+        `cancelWithdraw — transaction not a pending withdrawal | transactionId: ${transactionId}, type: ${transaction.type}, status: ${transaction.status}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.payment.transaction_not_pending',
+        errorCode: ERROR_CODES.PAYMENT_TRANSACTION_NOT_PENDING,
+        status: HttpStatus.CONFLICT,
+      });
+    }
+
+    const restoredAmount = transaction.totalAmount;
+
+    await this.uow.withTransaction(async (txUow) => {
+      transaction.status = TransactionStatus.FAILED;
+      transaction.note = 'Cancelled by user — payment gateway closed';
+      await txUow.businessTransactions.save(transaction);
+
+      const newBalance = (
+        parseFloat(businessProfile.accountBalance) + parseFloat(restoredAmount)
+      ).toFixed(2);
+      await txUow.businessProfiles.update(businessProfile.id, { accountBalance: newBalance });
+    });
+
+    this.logger.log(
+      `cancelWithdraw — complete | transactionId: ${transactionId}, restoredAmount: ${restoredAmount}`,
+    );
+
+    // Fire-and-forget notification
+    void this.notificationDispatcher
+      .dispatch({
+        userId,
+        type: NOTIFICATION_TYPES.WITHDRAW_REVERSED,
+        metadata: {
+          transaction_id: transaction.id,
+          transaction_number: transaction.transactionNumber,
+          amount: parseFloat(restoredAmount),
+          currency: 'USD',
+          new_balance: parseFloat(businessProfile.accountBalance) + parseFloat(restoredAmount),
+          reason: 'Cancelled by user',
+        },
+        actorId: userId,
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error(`cancelWithdraw — notification dispatch failed | error: ${msg}`);
+      });
+
+    // Fire-and-forget email
+    void this.sendCancelEmail(
+      businessProfile.userId,
+      transaction.transactionNumber,
+      restoredAmount,
+    );
+
+    return plainToInstance(
+      CancelWithdrawResponseDto,
+      {
+        transaction_id: transaction.id,
+        status: transaction.status,
+        restored_amount: restoredAmount,
+      },
+      { excludeExtraneousValues: true },
+    );
+  }
+
+  private async sendCancelEmail(
+    userId: string,
+    transactionNumber: string,
+    restoredAmount: string,
+  ): Promise<void> {
+    const user = await this.uow.users.findOne({ where: { id: userId } });
+    if (!user?.email) return;
+
+    const businessProfile = await this.uow.businessProfiles.findOne({ where: { userId } });
+
+    const cancelDate = DateUtil.format(
+      DateUtil.now(this.requestContext.timezone ?? undefined),
+      'MMMM D, YYYY',
+      this.requestContext.timezone ?? undefined,
+    );
+
+    try {
+      await this.emailService.sendWithdrawCancelledEmail(user.email, {
+        recipientName: businessProfile?.companyName ?? 'Business Owner',
+        transactionNumber,
+        cancelDate,
+        restoredAmount,
+        currency: 'USD',
+        transactionsUrl: `${this.env.ployosUrl}/billing/transactions`,
+      });
+      this.logger.log(
+        `cancelWithdraw — email sent | transactionNumber: ${transactionNumber}, email: ${user.email}`,
+      );
+    } catch (err: unknown) {
+      this.logger.error(
+        `cancelWithdraw — email failed | transactionNumber: ${transactionNumber}, error: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 }

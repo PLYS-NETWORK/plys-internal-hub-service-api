@@ -1,4 +1,5 @@
 export { ICancelTopUpResponse } from './cancel-top-up.response.interface';
+export { ICancelWithdrawResponse } from './cancel-withdraw.response.interface';
 export { IConsultantTransactionResponse } from './consultant-transaction.response.interface';
 export { ISettleInvoiceResponse } from './settle-invoice.response.interface';
 export { ITopUpResponse } from './top-up.response.interface';

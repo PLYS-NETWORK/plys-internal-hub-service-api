@@ -8,6 +8,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { BusinessWithdrawStrategy } from './business/business-withdraw.strategy';
 import { ConsultantWithdrawStrategy } from './consultant/consultant-withdraw.strategy';
 import { CreateWithdrawDto } from './dto/requests/create-withdraw.dto';
+import { CancelWithdrawResponseDto } from './dto/responses/cancel-withdraw-response.dto';
 import { WithdrawResponseDto } from './dto/responses/withdraw-response.dto';
 import { IWithdrawStrategy } from './shared/withdraw-strategy.interface';
 
@@ -30,6 +31,17 @@ export class PaymentsService {
     const result = await strategy.execute(dto.amount, dto.successUrl, dto.cancelUrl);
 
     this.logger.log(`createWithdraw — complete | is_connected: ${result.is_connected}`);
+
+    return result;
+  }
+
+  public async cancelWithdraw(transactionId: string): Promise<CancelWithdrawResponseDto> {
+    this.logger.log(`cancelWithdraw — start | transactionId: ${transactionId}`);
+
+    const strategy = this.getWithdrawStrategy();
+    const result = await strategy.cancelWithdraw(transactionId);
+
+    this.logger.log(`cancelWithdraw — complete | transactionId: ${transactionId}`);
 
     return result;
   }

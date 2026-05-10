@@ -37,7 +37,8 @@
   },
   "payment": {
     "top_up_resumed": "Top-up resumed.",
-    "top_up_cancelled": "Top-up cancelled."
+    "top_up_cancelled": "Top-up cancelled.",
+    "withdraw_cancelled": "Withdrawal successfully cancelled."
   },
   "notification": {
     "read": "Notification marked as read.",

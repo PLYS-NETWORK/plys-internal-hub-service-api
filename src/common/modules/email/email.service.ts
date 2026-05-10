@@ -38,10 +38,14 @@ import {
   buildConsultantInterviewReadyEmail,
   buildConsultantVerifyRegistrationEmail,
   buildConsultantWelcomeEmail,
+  buildTopUpCancelledEmail,
+  buildWithdrawCancelledEmail,
   type IBusinessMonthlyInvoiceTemplateOptions,
   type IBusinessProjectPublishedReceiptTemplateOptions,
   type IBusinessProjectPublishedSuccessTemplateOptions,
   type IBusinessProjectRepublishRefundTemplateOptions,
+  type ITopUpCancelledTemplateOptions,
+  type IWithdrawCancelledTemplateOptions,
 } from './templates';
 
 /**
@@ -246,6 +250,46 @@ export class EmailService implements IEmailService {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`sendProjectRepublishRefundEmail — failed | to: ${to} | error: ${message}`);
+      throw err;
+    }
+  }
+
+  public async sendTopUpCancelledEmail(
+    to: string,
+    options: ITopUpCancelledTemplateOptions,
+  ): Promise<void> {
+    this.logger.log(`sendTopUpCancelledEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        from: this.env.resendPloyosEmail,
+        to,
+        subject: 'Top-Up Cancelled — No Charge Made',
+        html: await buildTopUpCancelledEmail(options),
+      });
+      this.logger.log(`sendTopUpCancelledEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`sendTopUpCancelledEmail — failed | to: ${to} | error: ${message}`);
+      throw err;
+    }
+  }
+
+  public async sendWithdrawCancelledEmail(
+    to: string,
+    options: IWithdrawCancelledTemplateOptions,
+  ): Promise<void> {
+    this.logger.log(`sendWithdrawCancelledEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        from: this.env.resendPloyosEmail,
+        to,
+        subject: 'Withdrawal Cancelled — Amount Restored',
+        html: await buildWithdrawCancelledEmail(options),
+      });
+      this.logger.log(`sendWithdrawCancelledEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`sendWithdrawCancelledEmail — failed | to: ${to} | error: ${message}`);
       throw err;
     }
   }
