@@ -42,6 +42,8 @@
     "cannot_publish": "This project cannot be published in its current state.",
     "insufficient_balance": "Insufficient account balance to publish this project.",
     "invalid_task_price": "Project cannot be published — every task must have a price greater than zero.",
+    "minimum_tasks_not_met": "Project cannot be published — a minimum of 5 tasks is required.",
+    "minimum_cost_not_met": "Project cannot be published — the total project cost must be at least $150.",
     "recall_transaction_not_found": "Original publication transaction not found for recall refund.",
     "cannot_be_deleted": "Only draft, setting-up, or configured projects can be deleted.",
     "invalid_status_transition": "Invalid project status transition.",

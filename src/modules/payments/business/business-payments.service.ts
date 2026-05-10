@@ -2,10 +2,12 @@ import { ERROR_CODES } from '@common/constants/error-codes';
 import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
 import { AppLogger } from '@common/modules/logger';
 import { PaymentService } from '@common/modules/payment/payment.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { DateUtil } from '@common/utils/date';
 import { BusinessTransaction } from '@database/entities/finance/business-transaction.entity';
 import {
   BusinessTransactionType,
@@ -39,6 +41,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
     private readonly requestContext: RequestContextService,
     private readonly paymentService: PaymentService,
     private readonly env: EnvironmentsService,
+    private readonly emailService: EmailService,
   ) {
     this.logger = new AppLogger(BusinessPaymentsService.name, requestContext);
   }
@@ -359,6 +362,9 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
 
     this.logger.log(`cancelTopUp — complete | transactionId: ${transaction.id}`);
 
+    // Fire-and-forget email — failure must not fail the cancel response.
+    void this.sendCancelTopUpEmail(transaction.transactionNumber, transaction.totalAmount);
+
     return plainToInstance(
       CancelTopUpResponseDto,
       {
@@ -367,6 +373,38 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
       },
       { excludeExtraneousValues: true },
     );
+  }
+
+  private async sendCancelTopUpEmail(transactionNumber: string, amount: string): Promise<void> {
+    const userId = this.requestContext.userId!;
+    const user = await this.uow.users.findOne({ where: { id: userId } });
+    if (!user?.email) return;
+
+    const businessProfile = await this.uow.businessProfiles.findOne({ where: { userId } });
+
+    const cancelDate = DateUtil.format(
+      DateUtil.now(this.requestContext.timezone ?? undefined),
+      'MMMM D, YYYY',
+      this.requestContext.timezone ?? undefined,
+    );
+
+    try {
+      await this.emailService.sendTopUpCancelledEmail(user.email, {
+        recipientName: businessProfile?.companyName ?? 'Business Owner',
+        transactionNumber,
+        cancelDate,
+        amount,
+        currency: 'USD',
+        transactionsUrl: `${this.env.ployosUrl}/billing/transactions`,
+      });
+      this.logger.log(
+        `sendCancelTopUpEmail — sent | transactionNumber: ${transactionNumber}, email: ${user.email}`,
+      );
+    } catch (err: unknown) {
+      this.logger.error(
+        `sendCancelTopUpEmail — failed | transactionNumber: ${transactionNumber}, error: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   // Loads a transaction owned by the calling business, asserting it is a pending

@@ -1,3 +1,4 @@
+import { EmailModule } from '@common/modules/email';
 import { PaymentModule } from '@common/modules/payment/payment.module';
 import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
@@ -13,7 +14,7 @@ import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
 
 @Module({
-  imports: [UnitOfWorkModule, PaymentModule, NotificationsModule],
+  imports: [UnitOfWorkModule, PaymentModule, NotificationsModule, EmailModule],
   controllers: [PaymentsController, BusinessPaymentsController, ConsultantPaymentsController],
   providers: [
     PaymentsService,

@@ -56,6 +56,16 @@
 - **Scope:** `@Roles(USER)`, `@Platform(BUSINESS)`
 - **Path params:** `id` (UUID v4)
 - **Response 200:** [`IPublishValidationResponse`](../../../src/modules/business-projects/dto/responses/interfaces/publish-validation.response.interface.ts) — `{ can_publish, reason_code, account_balance, project_title, project_amount, commission_rate, commission_amount, total_amount, payment_type }`. Read-only — never throws on a publishable problem; it surfaces `can_publish=false` with a `reason_code`.
+
+  | `reason_code`           | Meaning                                            |
+  | ----------------------- | -------------------------------------------------- |
+  | `NOT_CONFIGURED`        | Project status is not `configured`.                |
+  | `INVALID_TASK_PRICE`    | One or more tasks have a price of zero or less.    |
+  | `MINIMUM_TASKS_NOT_MET` | Project has fewer than 5 tasks.                    |
+  | `MINIMUM_COST_NOT_MET`  | Total project cost is below $150.                  |
+  | `INSUFFICIENT_BALANCE`  | Pre-paid: account balance is below `total_amount`. |
+  | `null`                  | Project is eligible for publish.                   |
+
 - **Errors:** cross-cutting only.
 
 ### 4. Publish project (atomic, charges payment, promotes drafts)
@@ -77,8 +87,11 @@
   | HTTP | error_code | When |
   |------|------------|------|
   | 422 | `PROJECT_INVALID_STATUS_TRANSITION` | Project not in a publishable state (e.g., already PUBLISHED, CANCELLED). |
+  | 422 | `PROJECT_INVALID_TASK_PRICE` | One or more tasks have a price of zero or less. |
+  | 422 | `PROJECT_MINIMUM_TASKS_NOT_MET` | Project has fewer than 5 tasks. |
+  | 422 | `PROJECT_MINIMUM_COST_NOT_MET` | Total project cost is below $150. |
   | 422 | `PROJECT_INSUFFICIENT_BALANCE` | Pre-paid balance below `total_amount`. |
-  | 422 | `PROJECT_CANNOT_PUBLISH` | Validation rules in [ProjectPublishService.evaluatePublishEligibility](../../../src/modules/business-projects/services/projects/project-publish.service.ts) blocked publishing (status not `configured`, no tasks, missing skills, etc.). |
+  | 422 | `PROJECT_CANNOT_PUBLISH` | Any other blocking condition (e.g., status not `configured`). |
 
 ### 5. Soft-delete project (DRAFT / SETTING_UP / CONFIGURED only)
 

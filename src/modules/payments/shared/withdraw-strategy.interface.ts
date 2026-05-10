@@ -1,3 +1,4 @@
+import { CancelWithdrawResponseDto } from '../dto/responses/cancel-withdraw-response.dto';
 import { WithdrawResponseDto } from '../dto/responses/withdraw-response.dto';
 
 /**
@@ -26,4 +27,19 @@ export interface IWithdrawStrategy {
    * @throws TranslatableException (500) — Stripe transfer failed.
    */
   execute(amount: number, successUrl: string, cancelUrl: string): Promise<WithdrawResponseDto>;
+
+  /**
+   * Cancels a PENDING withdrawal transaction, restores the deducted balance,
+   * and notifies the user via push notification and email.
+   *
+   * Intended as a safety valve for transactions stranded in PENDING due to a
+   * server crash or gateway timeout after the balance was already deducted.
+   *
+   * @param transactionId - UUID of the pending withdrawal transaction.
+   * @returns DTO with the final transaction status and the restored balance amount.
+   * @throws TranslatableException (404) — caller profile or transaction not found.
+   * @throws TranslatableException (403) — transaction does not belong to the caller.
+   * @throws TranslatableException (409) — transaction is not a pending withdrawal.
+   */
+  cancelWithdraw(transactionId: string): Promise<CancelWithdrawResponseDto>;
 }
