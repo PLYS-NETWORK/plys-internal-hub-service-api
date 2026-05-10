@@ -134,5 +134,18 @@
     "allowed_email_revoked": "This email is on the admin allow-list but has been revoked. Re-activate it instead of inviting again.",
     "allowed_email_not_found": "Allow-list entry not found.",
     "allowed_email_cannot_revoke_self": "You cannot change the active status of your own admin allow-list entry."
+  },
+  "consultant_application": {
+    "not_found": "Consultant application not found.",
+    "blocked": "Your account is blocked from applying until {{blocked_until}}. Please try again after that date.",
+    "invalid_status": "This action is not allowed for the current application status.",
+    "already_active": "You already have an active application in progress.",
+    "interview_not_ready": "Your interview questions are not ready yet. Please wait for them to be generated.",
+    "already_submitted": "Your interview has already been submitted.",
+    "incomplete_answers": "All 30 interview questions must be answered before submitting."
+  },
+  "interview_question": {
+    "not_found": "Interview question not found.",
+    "invalid_type": "Manual questions can only be of type COMMUNICATION or SYSTEM_KNOWLEDGE."
   }
 }

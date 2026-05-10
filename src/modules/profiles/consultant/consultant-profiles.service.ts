@@ -140,25 +140,6 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
     return this.toResponseDto(updatedProfile, skills);
   }
 
-  /** @inheritdoc */
-  public async verify(profileId: string): Promise<void> {
-    this.logger.log(`verify — start | profileId: ${profileId}`);
-    const profile = await this.uow.consultantProfiles.findOne({ where: { id: profileId } });
-
-    if (!profile) {
-      this.logger.warn(`verify — profile not found | profileId: ${profileId}`);
-      throw new TranslatableException({
-        messageKey: 'error.consultant_profile.not_found',
-        errorCode: ERROR_CODES.CONSULTANT_PROFILE_NOT_FOUND,
-        status: HttpStatus.NOT_FOUND,
-      });
-    }
-
-    profile.isVerified = true;
-    await this.uow.consultantProfiles.save(profile);
-    this.logger.log(`verify — complete | profileId: ${profileId}`);
-  }
-
   private toResponseDto(
     profile: ConsultantProfile,
     skills: ConsultantSkill[],

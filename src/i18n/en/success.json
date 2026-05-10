@@ -46,5 +46,18 @@
   "admin": {
     "allowed_email_invited": "Invitation sent to the admin email.",
     "allowed_email_active_updated": "Allow-list entry updated."
+  },
+  "consultant_application": {
+    "profile_submitted": "Profile submitted. Your interview questions are being prepared.",
+    "answer_saved": "Answer saved.",
+    "interview_submitted": "Interview submitted successfully. You will be notified when your application is reviewed.",
+    "evaluation_started": "Evaluation pipeline started.",
+    "manual_evaluation_submitted": "Manual evaluation submitted.",
+    "decided": "Application decision recorded."
+  },
+  "interview_question": {
+    "created": "Interview question created.",
+    "updated": "Interview question updated.",
+    "active_updated": "Question status updated."
   }
 }

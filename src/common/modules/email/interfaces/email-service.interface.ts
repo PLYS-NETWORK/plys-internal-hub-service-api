@@ -2,8 +2,13 @@ import { ActivePlatform } from '@database/enums';
 
 import {
   IAdminInviteEmailOptions,
+  IAdminNewConsultantApplicationEmailOptions,
   IAdminOtpEmailOptions,
+  IApplicationApprovedEmailOptions,
+  IApplicationRejectedEmailOptions,
+  IApplicationSubmittedEmailOptions,
   IForgotPasswordOtpEmailOptions,
+  IInterviewReadyEmailOptions,
   IMonthlyInvoiceEmailOptions,
   IVerifyRegistrationEmailOptions,
   IWelcomeEmailOptions,
@@ -95,4 +100,51 @@ export interface IEmailService {
    * @throws InternalServerErrorException — if the delivery provider returns an error.
    */
   sendMonthlyInvoiceEmail(to: string, options: IMonthlyInvoiceEmailOptions): Promise<void>;
+
+  /**
+   * Sends an email to a consultant when their interview questions are ready.
+   * @param to      - Consultant email address.
+   * @param options - Template variables (userName, interviewUrl).
+   */
+  sendInterviewReadyEmail(to: string, options: IInterviewReadyEmailOptions): Promise<void>;
+
+  /**
+   * Sends a confirmation to a consultant after they submit their interview.
+   * @param to      - Consultant email address.
+   * @param options - Template variables (userName).
+   */
+  sendApplicationSubmittedEmail(
+    to: string,
+    options: IApplicationSubmittedEmailOptions,
+  ): Promise<void>;
+
+  /**
+   * Sends an approval notification to a consultant.
+   * @param to      - Consultant email address.
+   * @param options - Template variables (userName, dashboardUrl).
+   */
+  sendApplicationApprovedEmail(
+    to: string,
+    options: IApplicationApprovedEmailOptions,
+  ): Promise<void>;
+
+  /**
+   * Sends a rejection notification to a consultant with block duration.
+   * @param to      - Consultant email address.
+   * @param options - Template variables (userName, reason, blockedUntil).
+   */
+  sendApplicationRejectedEmail(
+    to: string,
+    options: IApplicationRejectedEmailOptions,
+  ): Promise<void>;
+
+  /**
+   * Sends a new-application notification to all active admin email addresses.
+   * @param recipients - Array of active admin email addresses.
+   * @param options    - Template variables (consultantName, consultantEmail, submittedAt, reviewUrl).
+   */
+  sendAdminNewApplicationEmail(
+    recipients: string[],
+    options: IAdminNewConsultantApplicationEmailOptions,
+  ): Promise<void>;
 }

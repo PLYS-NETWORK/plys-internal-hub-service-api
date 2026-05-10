@@ -4,6 +4,10 @@ export {
   type IAdminInviteTemplateOptions,
 } from './admin/admin-invite.template';
 export { buildAdminOtpEmail, type IAdminOtpTemplateOptions } from './admin/admin-otp.template';
+export {
+  buildAdminNewConsultantApplicationEmail,
+  type IAdminNewConsultantApplicationTemplateOptions,
+} from './admin/new-consultant-application.template';
 
 // Business (Ployos) templates
 export {
@@ -37,9 +41,25 @@ export {
 
 // Consultant (Lona) templates
 export {
+  buildConsultantApplicationApprovedEmail,
+  type IConsultantApplicationApprovedTemplateOptions,
+} from './consultant/application-approved.template';
+export {
+  buildConsultantApplicationRejectedEmail,
+  type IConsultantApplicationRejectedTemplateOptions,
+} from './consultant/application-rejected.template';
+export {
+  buildConsultantApplicationSubmittedEmail,
+  type IConsultantApplicationSubmittedTemplateOptions,
+} from './consultant/application-submitted.template';
+export {
   buildConsultantForgotPasswordOtpEmail,
   type IConsultantForgotPasswordOtpTemplateOptions,
 } from './consultant/forgot-password-otp.template';
+export {
+  buildConsultantInterviewReadyEmail,
+  type IConsultantInterviewReadyTemplateOptions,
+} from './consultant/interview-ready.template';
 export {
   buildConsultantVerifyRegistrationEmail,
   type IConsultantVerifyRegistrationTemplateOptions,

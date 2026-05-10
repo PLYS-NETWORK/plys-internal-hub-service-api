@@ -13,8 +13,12 @@ import {
   BusinessProfileRepository,
   BusinessTransactionRepository,
   ChatMessageRepository,
+  ConsultantApplicationAnswerRepository,
+  ConsultantApplicationQuestionRepository,
+  ConsultantApplicationRepository,
   ConsultantProfileRepository,
   ConsultantSkillRepository,
+  ConsultantSkillScoreRepository,
   ConsultantTransactionRepository,
   FileRepository,
   IAdminAllowedEmailRepository,
@@ -26,15 +30,21 @@ import {
   IBusinessProfileRepository,
   IBusinessTransactionRepository,
   IChatMessageRepository,
+  IConsultantApplicationAnswerRepository,
+  IConsultantApplicationQuestionRepository,
+  IConsultantApplicationRepository,
   IConsultantProfileRepository,
   IConsultantSkillRepository,
+  IConsultantSkillScoreRepository,
   IConsultantTransactionRepository,
   IdempotencyKeyRepository,
   IFileRepository,
   IIdempotencyKeyRepository,
+  IInterviewQuestionRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
   INotificationRepository,
+  InterviewQuestionRepository,
   InvoiceLineItemRepository,
   InvoiceRepository,
   IProjectActivityRepository,
@@ -120,6 +130,12 @@ class TransactionalUnitOfWork implements IUnitOfWork {
     public readonly notifications: INotificationRepository,
     public readonly idempotencyKeys: IIdempotencyKeyRepository,
     public readonly aiProviderApiKeys: IAiProviderApiKeyRepository,
+    // Domain 10 — Applications
+    public readonly consultantApplications: IConsultantApplicationRepository,
+    public readonly interviewQuestions: IInterviewQuestionRepository,
+    public readonly applicationQuestions: IConsultantApplicationQuestionRepository,
+    public readonly applicationAnswers: IConsultantApplicationAnswerRepository,
+    public readonly consultantSkillScores: IConsultantSkillScoreRepository,
   ) {}
 
   // Already inside a transaction — pass-through to avoid nested QueryRunners.
@@ -179,6 +195,12 @@ export class UnitOfWorkService implements IUnitOfWork {
     // Domain 9 — Infra (cross-cutting)
     public readonly idempotencyKeys: IdempotencyKeyRepository,
     public readonly aiProviderApiKeys: AiProviderApiKeyRepository,
+    // Domain 10 — Applications
+    public readonly consultantApplications: ConsultantApplicationRepository,
+    public readonly interviewQuestions: InterviewQuestionRepository,
+    public readonly applicationQuestions: ConsultantApplicationQuestionRepository,
+    public readonly applicationAnswers: ConsultantApplicationAnswerRepository,
+    public readonly consultantSkillScores: ConsultantSkillScoreRepository,
   ) {}
 
   public async withTransaction<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T> {
@@ -227,6 +249,11 @@ export class UnitOfWorkService implements IUnitOfWork {
         this.notifications.withManager(manager),
         this.idempotencyKeys.withManager(manager),
         this.aiProviderApiKeys.withManager(manager),
+        this.consultantApplications.withManager(manager),
+        this.interviewQuestions.withManager(manager),
+        this.applicationQuestions.withManager(manager),
+        this.applicationAnswers.withManager(manager),
+        this.consultantSkillScores.withManager(manager),
       );
 
       const result = await work(txUow);
