@@ -167,12 +167,15 @@ export class AdminAuthService implements IAdminAuthService {
 
     await this.adminOtpAttemptTracker.reset(dto.email);
 
-    const authResponse = await this.sessionService.createSession(
-      user.id,
-      user.email,
-      ActivePlatform.ADMIN_PLATFORM,
-      sessionContext,
-    );
+    const [authResponse] = await Promise.all([
+      this.sessionService.createSession(
+        user.id,
+        user.email,
+        ActivePlatform.ADMIN_PLATFORM,
+        sessionContext,
+      ),
+      this.uow.users.update(user.id, { lastLoginAt: new Date() }),
+    ]);
 
     this.logger.log(`[${this.rid}] verifyOtp — complete | email: ${maskedEmail}`);
     return authResponse;

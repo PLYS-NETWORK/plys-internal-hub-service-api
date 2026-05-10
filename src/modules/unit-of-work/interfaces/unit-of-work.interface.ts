@@ -8,11 +8,16 @@ import {
   IBusinessProfileRepository,
   IBusinessTransactionRepository,
   IChatMessageRepository,
+  IConsultantApplicationAnswerRepository,
+  IConsultantApplicationQuestionRepository,
+  IConsultantApplicationRepository,
   IConsultantProfileRepository,
   IConsultantSkillRepository,
+  IConsultantSkillScoreRepository,
   IConsultantTransactionRepository,
   IFileRepository,
   IIdempotencyKeyRepository,
+  IInterviewQuestionRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
   INotificationRepository,
@@ -99,6 +104,13 @@ export interface IUnitOfWork {
   // Domain 9 — Infra (cross-cutting)
   readonly idempotencyKeys: IIdempotencyKeyRepository;
   readonly aiProviderApiKeys: IAiProviderApiKeyRepository;
+
+  // Domain 10 — Applications
+  readonly consultantApplications: IConsultantApplicationRepository;
+  readonly interviewQuestions: IInterviewQuestionRepository;
+  readonly applicationQuestions: IConsultantApplicationQuestionRepository;
+  readonly applicationAnswers: IConsultantApplicationAnswerRepository;
+  readonly consultantSkillScores: IConsultantSkillScoreRepository;
 
   withTransaction<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T>;
 }

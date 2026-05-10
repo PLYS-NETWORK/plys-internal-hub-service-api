@@ -8,8 +8,13 @@ import { EMAIL_PROVIDER_TOKEN } from './constants';
 import { IEmailProvider } from './interfaces/email-provider.interface';
 import {
   IAdminInviteEmailOptions,
+  IAdminNewConsultantApplicationEmailOptions,
   IAdminOtpEmailOptions,
+  IApplicationApprovedEmailOptions,
+  IApplicationRejectedEmailOptions,
+  IApplicationSubmittedEmailOptions,
   IForgotPasswordOtpEmailOptions,
+  IInterviewReadyEmailOptions,
   IMonthlyInvoiceEmailOptions,
   IVerifyRegistrationEmailOptions,
   IWelcomeEmailOptions,
@@ -17,6 +22,7 @@ import {
 import { IEmailService } from './interfaces/email-service.interface';
 import {
   buildAdminInviteEmail,
+  buildAdminNewConsultantApplicationEmail,
   buildAdminOtpEmail,
   buildBusinessForgotPasswordOtpEmail,
   buildBusinessMonthlyInvoiceEmail,
@@ -25,7 +31,11 @@ import {
   buildBusinessProjectRepublishRefundEmail,
   buildBusinessVerifyRegistrationEmail,
   buildBusinessWelcomeEmail,
+  buildConsultantApplicationApprovedEmail,
+  buildConsultantApplicationRejectedEmail,
+  buildConsultantApplicationSubmittedEmail,
   buildConsultantForgotPasswordOtpEmail,
+  buildConsultantInterviewReadyEmail,
   buildConsultantVerifyRegistrationEmail,
   buildConsultantWelcomeEmail,
   type IBusinessMonthlyInvoiceTemplateOptions,
@@ -259,6 +269,116 @@ export class EmailService implements IEmailService {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`sendMonthlyInvoiceEmail — failed | to: ${to} | error: ${message}`);
+      throw err;
+    }
+  }
+
+  /** @inheritdoc */
+  public async sendInterviewReadyEmail(
+    to: string,
+    options: IInterviewReadyEmailOptions,
+  ): Promise<void> {
+    this.logger.log(`sendInterviewReadyEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        from: this.env.resendLonaEmail,
+        to,
+        subject: 'Your interview questions are ready',
+        html: await buildConsultantInterviewReadyEmail(options),
+      });
+      this.logger.log(`sendInterviewReadyEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`sendInterviewReadyEmail — failed | to: ${to} | error: ${message}`);
+      throw err;
+    }
+  }
+
+  /** @inheritdoc */
+  public async sendApplicationSubmittedEmail(
+    to: string,
+    options: IApplicationSubmittedEmailOptions,
+  ): Promise<void> {
+    this.logger.log(`sendApplicationSubmittedEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        from: this.env.resendLonaEmail,
+        to,
+        subject: 'Interview submitted — we are reviewing your application',
+        html: await buildConsultantApplicationSubmittedEmail(options),
+      });
+      this.logger.log(`sendApplicationSubmittedEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`sendApplicationSubmittedEmail — failed | to: ${to} | error: ${message}`);
+      throw err;
+    }
+  }
+
+  /** @inheritdoc */
+  public async sendApplicationApprovedEmail(
+    to: string,
+    options: IApplicationApprovedEmailOptions,
+  ): Promise<void> {
+    this.logger.log(`sendApplicationApprovedEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        from: this.env.resendLonaEmail,
+        to,
+        subject: 'Congratulations — your application has been approved!',
+        html: await buildConsultantApplicationApprovedEmail(options),
+      });
+      this.logger.log(`sendApplicationApprovedEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`sendApplicationApprovedEmail — failed | to: ${to} | error: ${message}`);
+      throw err;
+    }
+  }
+
+  /** @inheritdoc */
+  public async sendApplicationRejectedEmail(
+    to: string,
+    options: IApplicationRejectedEmailOptions,
+  ): Promise<void> {
+    this.logger.log(`sendApplicationRejectedEmail — start | to: ${to}`);
+    try {
+      await this.emailProvider.send({
+        from: this.env.resendLonaEmail,
+        to,
+        subject: 'Update on your application',
+        html: await buildConsultantApplicationRejectedEmail(options),
+      });
+      this.logger.log(`sendApplicationRejectedEmail — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`sendApplicationRejectedEmail — failed | to: ${to} | error: ${message}`);
+      throw err;
+    }
+  }
+
+  /** @inheritdoc */
+  public async sendAdminNewApplicationEmail(
+    recipients: string[],
+    options: IAdminNewConsultantApplicationEmailOptions,
+  ): Promise<void> {
+    this.logger.log(`sendAdminNewApplicationEmail — start | recipients: ${recipients.length}`);
+    try {
+      const html = await buildAdminNewConsultantApplicationEmail(options);
+      await Promise.all(
+        recipients.map((to) =>
+          this.emailProvider.send({
+            from: this.env.resendPloyosEmail,
+            to,
+            subject: `New consultant application — ${options.consultantName}`,
+            html,
+          }),
+        ),
+      );
+      this.logger.log(`sendAdminNewApplicationEmail — sent | recipients: ${recipients.length}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`sendAdminNewApplicationEmail — failed | error: ${message}`);
       throw err;
     }
   }

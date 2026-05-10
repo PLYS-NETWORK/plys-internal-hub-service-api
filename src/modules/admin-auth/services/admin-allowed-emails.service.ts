@@ -114,7 +114,7 @@ export class AdminAllowedEmailsService implements IAdminAllowedEmailsService {
           { platform: ActivePlatform.ADMIN_PLATFORM },
         );
 
-    const dataQb = buildBaseQuery().addSelect('u.last_login_at', 'last_login_at');
+    const dataQb = buildBaseQuery().addSelect('u.lastLoginAt', 'last_login_at');
     const countQb = buildBaseQuery();
 
     if (filters.isActive !== undefined) {

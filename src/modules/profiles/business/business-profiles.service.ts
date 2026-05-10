@@ -48,39 +48,33 @@ export class BusinessProfilesService implements IBusinessProfilesService {
   public async onboard(dto: OnboardBusinessProfileDto): Promise<BusinessProfileResponseDto> {
     const userId = this.requestContext.userId!;
     this.logger.log(`onboard — start | userId: ${userId}, company: ${dto.company_name}`);
-    const existing = await this.uow.businessProfiles.findByUserId(userId);
 
-    if (existing) {
-      this.logger.warn(`onboard — profile already exists | userId: ${userId}`);
+    const profile = await this.uow.businessProfiles.findByUserId(userId);
+
+    if (!profile) {
+      this.logger.warn(`onboard — profile not found | userId: ${userId}`);
       throw new TranslatableException({
-        messageKey: 'error.business_profile.already_exists',
-        errorCode: ERROR_CODES.BUSINESS_PROFILE_ALREADY_EXISTS,
-        status: HttpStatus.CONFLICT,
+        messageKey: 'error.business_profile.not_found',
+        errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
+        status: HttpStatus.NOT_FOUND,
       });
     }
 
-    const profile = this.uow.businessProfiles.create({
-      userId,
-      companyName: dto.company_name,
-      industry: dto.industry,
-      companySize: dto.company_size,
-      addressLine: dto.address_line,
-      city: dto.city,
-      stateProvince: dto.state_province,
-      postalCode: dto.postal_code,
-      countryCode: dto.country_code,
-      phoneNumber: dto.phone_number,
-    });
+    profile.companyName = dto.company_name;
+    profile.industry = dto.industry;
+    profile.companySize = dto.company_size;
+    profile.addressLine = dto.address_line;
+    profile.city = dto.city;
+    profile.stateProvince = dto.state_province;
+    profile.postalCode = dto.postal_code;
+    profile.countryCode = dto.country_code;
+    profile.phoneNumber = dto.phone_number;
+    profile.isVerified = true;
+
     await this.uow.businessProfiles.save(profile);
 
-    // TypeORM may omit boolean columns that carry a @Column({ default }) from
-    // the INSERT, relying on the DB default (false). Use an explicit UPDATE so
-    // is_verified = true is guaranteed to be written, then reload the canonical row.
-    await this.uow.businessProfiles.update(profile.id, { isVerified: true });
-    const saved = await this.uow.businessProfiles.findByActiveId(profile.id);
-
     this.logger.log(`onboard — complete | userId: ${userId}, profileId: ${profile.id}`);
-    return this.toResponseDto(saved!);
+    return this.toResponseDto(profile);
   }
 
   /** @inheritdoc */

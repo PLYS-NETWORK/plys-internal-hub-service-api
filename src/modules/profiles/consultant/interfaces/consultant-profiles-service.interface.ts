@@ -45,15 +45,4 @@ export interface IConsultantProfilesService {
    * @throws TranslatableException (404) — profile not found for the caller.
    */
   updateProfile(dto: UpdateConsultantProfileDto): Promise<ConsultantProfileResponseDto>;
-
-  /**
-   * Marks a consultant profile as verified (admin operation).
-   *
-   * Sets `isVerified = true` on the target profile. This action is
-   * irreversible through the API.
-   *
-   * @param profileId - UUID of the consultant profile to verify.
-   * @throws TranslatableException (404) — profile not found.
-   */
-  verify(profileId: string): Promise<void>;
 }

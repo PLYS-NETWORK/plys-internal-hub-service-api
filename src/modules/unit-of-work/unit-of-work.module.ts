@@ -10,11 +10,16 @@ import {
   BusinessProfileRepository,
   BusinessTransactionRepository,
   ChatMessageRepository,
+  ConsultantApplicationAnswerRepository,
+  ConsultantApplicationQuestionRepository,
+  ConsultantApplicationRepository,
   ConsultantProfileRepository,
   ConsultantSkillRepository,
+  ConsultantSkillScoreRepository,
   ConsultantTransactionRepository,
   FileRepository,
   IdempotencyKeyRepository,
+  InterviewQuestionRepository,
   InvoiceLineItemRepository,
   InvoiceRepository,
   NotificationRepository,
@@ -87,6 +92,12 @@ const repositories = [
   // Domain 9 — Infra (cross-cutting)
   IdempotencyKeyRepository,
   AiProviderApiKeyRepository,
+  // Domain 10 — Applications
+  ConsultantApplicationRepository,
+  InterviewQuestionRepository,
+  ConsultantApplicationQuestionRepository,
+  ConsultantApplicationAnswerRepository,
+  ConsultantSkillScoreRepository,
 ];
 
 @Module({

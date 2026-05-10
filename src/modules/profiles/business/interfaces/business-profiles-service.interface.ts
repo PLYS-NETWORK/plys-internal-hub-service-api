@@ -18,15 +18,17 @@ export interface IBusinessProfilesService {
   getProfile(): Promise<BusinessProfileResponseDto>;
 
   /**
-   * Creates a new business profile for the authenticated user.
+   * Completes onboarding for the authenticated user by populating the
+   * pre-created profile stub and marking it as verified.
    *
-   * Business profiles are marked `isVerified = true` immediately on creation
-   * (auto-verified). Throws if a profile already exists for the caller.
+   * A profile row is created automatically at registration time. This method
+   * fills in the company details and sets `isVerified = true`. Throws if no
+   * profile stub exists (i.e. the user has not completed registration).
    *
    * @param dto - Validated onboarding payload including company details and
    *              address information.
-   * @returns The newly created `BusinessProfileResponseDto`.
-   * @throws TranslatableException (409) — profile already exists for the caller.
+   * @returns The updated `BusinessProfileResponseDto`.
+   * @throws TranslatableException (404) — no profile found for the caller.
    */
   onboard(dto: OnboardBusinessProfileDto): Promise<BusinessProfileResponseDto>;
 

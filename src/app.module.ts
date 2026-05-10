@@ -24,16 +24,19 @@ import { appWinstonOptions } from './common/modules/logger';
 import { PaymentModule } from './common/modules/payment';
 import { RedisModule } from './common/modules/redis';
 import { RequestContextMiddleware, RequestContextModule } from './common/modules/request-context';
+import { ServerAiModule } from './common/modules/server-ai/server-ai.module';
 import configuration from './config/configuration';
 import { resolveEnvFilePath } from './config/env-file.config';
 import { AuditSubscriber } from './database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from './database/typeorm.config';
 import { AdminAuthModule } from './modules/admin-auth/admin-auth.module';
+import { AdminConsultantApplicationModule } from './modules/admin-consultant-application/admin-consultant-application.module';
 import { AiBootstrapModule } from './modules/ai-bootstrap/ai-bootstrap.module';
 import { AiProviderKeyModule } from './modules/ai-provider-key/ai-provider-key.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { BusinessProjectsModule } from './modules/business-projects/business-projects.module';
+import { ConsultantApplicationModule } from './modules/consultant-application/consultant-application.module';
 import { ConsultantProjectsModule } from './modules/consultant-projects/consultant-projects.module';
 import { FilesModule } from './modules/files';
 import { HealthModule } from './modules/health/health.module';
@@ -95,10 +98,13 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     FileStorageModule,
     AiBootstrapModule,
     AiProviderKeyModule,
+    ServerAiModule,
     AdminAuthModule,
     AuthModule,
     BillingModule,
     BusinessProjectsModule,
+    AdminConsultantApplicationModule,
+    ConsultantApplicationModule,
     ConsultantProjectsModule,
     FilesModule,
     HealthModule,

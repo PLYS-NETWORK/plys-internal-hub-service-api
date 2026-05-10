@@ -41,3 +41,30 @@ export interface IMonthlyInvoiceEmailOptions {
   readonly lineItems: ReadonlyArray<{ readonly taskName: string; readonly amount: string }>;
   readonly payInvoiceUrl: string;
 }
+
+export interface IInterviewReadyEmailOptions {
+  readonly userName: string;
+  readonly interviewUrl: string;
+}
+
+export interface IApplicationSubmittedEmailOptions {
+  readonly userName: string;
+}
+
+export interface IApplicationApprovedEmailOptions {
+  readonly userName: string;
+  readonly dashboardUrl: string;
+}
+
+export interface IApplicationRejectedEmailOptions {
+  readonly userName: string;
+  readonly reason: string;
+  readonly blockedUntil: string;
+}
+
+export interface IAdminNewConsultantApplicationEmailOptions {
+  readonly consultantName: string;
+  readonly consultantEmail: string;
+  readonly submittedAt: string;
+  readonly reviewUrl: string;
+}

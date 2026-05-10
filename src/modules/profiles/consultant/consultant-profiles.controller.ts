@@ -8,7 +8,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Param,
   Patch,
   Post,
   UseGuards,
@@ -62,15 +61,5 @@ export class ConsultantProfilesController {
   ): Promise<ITranslatedPayload<ConsultantProfileResponseDto>> {
     const data = await this.consultantProfilesService.updateProfile(dto);
     return { messageKey: 'success.consultant_profile.updated', data };
-  }
-
-  @Patch(':id/verify')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN_PLATFORM)
-  @ApiOperation({ summary: 'Verify a consultant profile (Admin only)' })
-  public async verify(@Param('id') id: string): Promise<ITranslatedPayload<null>> {
-    await this.consultantProfilesService.verify(id);
-    return { messageKey: 'success.consultant_profile.verified', data: null };
   }
 }
