@@ -395,7 +395,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
         cancelDate,
         amount,
         currency: 'USD',
-        transactionsUrl: `${this.env.ployosUrl}/billing/transactions`,
+        transactionsUrl: `${this.env.ployosUrl}/c/${businessProfile?.id}/transactions`,
       });
       this.logger.log(
         `sendCancelTopUpEmail — sent | transactionNumber: ${transactionNumber}, email: ${user.email}`,
