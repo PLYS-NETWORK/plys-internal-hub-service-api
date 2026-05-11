@@ -1,9 +1,7 @@
-import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
-import { PlatformGuard } from '@common/guards/platform.guard';
 import { RolesGuard } from '@common/guards/roles.guard';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
-import { ActivePlatform, UserRole } from '@database/enums';
+import { UserRole } from '@database/enums';
 import {
   Controller,
   Get,
@@ -29,9 +27,8 @@ import { NotificationsService } from './services/notifications.service';
 @ApiTags('Notifications')
 @ApiBearerAuth()
 @Controller('notifications')
-@UseGuards(RolesGuard, PlatformGuard)
+@UseGuards(RolesGuard)
 @Roles(UserRole.USER)
-@Platform(ActivePlatform.BUSINESS)
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
