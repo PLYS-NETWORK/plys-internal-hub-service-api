@@ -1,3 +1,5 @@
+import type { ContactTopic } from '@database/entities/contact/contact-inquiry.entity';
+
 export interface IAdminOtpEmailOptions {
   readonly otp: string;
   /** Expiry duration shown in the email copy. Defaults to 10 minutes. */
@@ -67,4 +69,19 @@ export interface IAdminNewConsultantApplicationEmailOptions {
   readonly consultantEmail: string;
   readonly submittedAt: string;
   readonly reviewUrl: string;
+}
+
+export interface IContactInquiryNotificationEmailOptions {
+  readonly name: string;
+  readonly email: string;
+  readonly company: string;
+  readonly topic: ContactTopic;
+  readonly message: string;
+  readonly submittedAt: Date;
+  readonly ipAddress: string | null;
+}
+
+export interface IContactInquiryAcknowledgementEmailOptions {
+  readonly name: string;
+  readonly topic: ContactTopic;
 }

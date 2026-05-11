@@ -7,6 +7,8 @@ import {
   IApplicationApprovedEmailOptions,
   IApplicationRejectedEmailOptions,
   IApplicationSubmittedEmailOptions,
+  IContactInquiryAcknowledgementEmailOptions,
+  IContactInquiryNotificationEmailOptions,
   IForgotPasswordOtpEmailOptions,
   IInterviewReadyEmailOptions,
   IMonthlyInvoiceEmailOptions,
@@ -146,5 +148,32 @@ export interface IEmailService {
   sendAdminNewApplicationEmail(
     recipients: string[],
     options: IAdminNewConsultantApplicationEmailOptions,
+  ): Promise<void>;
+
+  /**
+   * Sends an internal-team notification email when a new contact inquiry is submitted.
+   * Sets reply_to to the submitter's email so the team can reply directly.
+   *
+   * @param to      - Internal team email address (e.g. hello@ployos.com).
+   * @param options - Inquiry details (name, email, company, topic, message, submittedAt, ipAddress).
+   * @returns Resolves when the email has been handed off to the delivery provider.
+   * @throws InternalServerErrorException — if the delivery provider returns an error.
+   */
+  sendContactInquiryNotification(
+    to: string,
+    options: IContactInquiryNotificationEmailOptions,
+  ): Promise<void>;
+
+  /**
+   * Sends an acknowledgement email to the contact-form submitter confirming receipt.
+   *
+   * @param to      - Submitter's email address.
+   * @param options - Template variables (name, topic).
+   * @returns Resolves when the email has been handed off to the delivery provider.
+   * @throws InternalServerErrorException — if the delivery provider returns an error.
+   */
+  sendContactInquiryAcknowledgement(
+    to: string,
+    options: IContactInquiryAcknowledgementEmailOptions,
   ): Promise<void>;
 }

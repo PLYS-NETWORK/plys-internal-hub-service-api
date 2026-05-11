@@ -33,6 +33,7 @@ export class ResendEmailProvider implements IEmailProvider {
       to: message.to,
       subject: message.subject,
       html: message.html,
+      ...(message.replyTo ? { reply_to: message.replyTo } : {}),
     });
 
     if (error) {

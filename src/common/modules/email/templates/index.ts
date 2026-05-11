@@ -11,6 +11,14 @@ export {
 
 // Business (Ployos) templates
 export {
+  buildContactInquiryAcknowledgementEmail,
+  type IContactInquiryAcknowledgementTemplateOptions,
+} from './business/contact-inquiry-acknowledgement.template';
+export {
+  buildContactInquiryNotificationEmail,
+  type IContactInquiryNotificationTemplateOptions,
+} from './business/contact-inquiry-notification.template';
+export {
   buildBusinessForgotPasswordOtpEmail,
   type IBusinessForgotPasswordOtpTemplateOptions,
 } from './business/forgot-password-otp.template';

@@ -13,6 +13,8 @@ import {
   IApplicationApprovedEmailOptions,
   IApplicationRejectedEmailOptions,
   IApplicationSubmittedEmailOptions,
+  IContactInquiryAcknowledgementEmailOptions,
+  IContactInquiryNotificationEmailOptions,
   IForgotPasswordOtpEmailOptions,
   IInterviewReadyEmailOptions,
   IMonthlyInvoiceEmailOptions,
@@ -38,6 +40,8 @@ import {
   buildConsultantInterviewReadyEmail,
   buildConsultantVerifyRegistrationEmail,
   buildConsultantWelcomeEmail,
+  buildContactInquiryAcknowledgementEmail,
+  buildContactInquiryNotificationEmail,
   buildTopUpCancelledEmail,
   buildWithdrawCancelledEmail,
   type IBusinessMonthlyInvoiceTemplateOptions,
@@ -424,6 +428,81 @@ export class EmailService implements IEmailService {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`sendAdminNewApplicationEmail — failed | error: ${message}`);
       throw err;
+    }
+  }
+
+  /** @inheritdoc */
+  public async sendContactInquiryNotification(
+    to: string,
+    options: IContactInquiryNotificationEmailOptions,
+  ): Promise<void> {
+    this.logger.log(`sendContactInquiryNotification — start | to: ${to}, topic: ${options.topic}`);
+    try {
+      const html = await buildContactInquiryNotificationEmail({
+        name: options.name,
+        email: options.email,
+        company: options.company,
+        topic: options.topic,
+        topicLabel: this.topicLabel(options.topic),
+        message: options.message,
+        submittedAt: options.submittedAt,
+        ipAddress: options.ipAddress,
+      });
+      await this.emailProvider.send({
+        from: this.env.resendPloyosEmail,
+        to,
+        subject: `New ${this.topicLabel(options.topic)} inquiry from ${options.name}`,
+        html,
+        replyTo: options.email,
+      });
+      this.logger.log(`sendContactInquiryNotification — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`sendContactInquiryNotification — failed | to: ${to} | error: ${message}`);
+      throw err;
+    }
+  }
+
+  /** @inheritdoc */
+  public async sendContactInquiryAcknowledgement(
+    to: string,
+    options: IContactInquiryAcknowledgementEmailOptions,
+  ): Promise<void> {
+    this.logger.log(
+      `sendContactInquiryAcknowledgement — start | to: ${to}, topic: ${options.topic}`,
+    );
+    try {
+      const html = await buildContactInquiryAcknowledgementEmail({
+        name: options.name,
+        topic: options.topic,
+        topicLabel: this.topicLabel(options.topic),
+      });
+      await this.emailProvider.send({
+        from: this.env.resendPloyosEmail,
+        to,
+        subject: 'We received your inquiry — Ployos',
+        html,
+      });
+      this.logger.log(`sendContactInquiryAcknowledgement — sent | to: ${to}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `sendContactInquiryAcknowledgement — failed | to: ${to} | error: ${message}`,
+      );
+      throw err;
+    }
+  }
+
+  private topicLabel(topic: 'sales' | 'partnership' | 'press' | 'other'): string {
+    switch (topic) {
+      case 'sales':
+        return 'Sales / pricing';
+      case 'partnership':
+        return 'Partnership / integration';
+      case 'press':
+        return 'Press / media';
+      case 'other':
+        return 'General inquiry';
     }
   }
 }

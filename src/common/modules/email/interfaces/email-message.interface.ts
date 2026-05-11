@@ -8,4 +8,6 @@ export interface IEmailMessage {
   readonly to: string;
   readonly subject: string;
   readonly html: string;
+  /** Optional Reply-To address. Used by the contact-form notification email to route replies to the submitter. */
+  readonly replyTo?: string;
 }
