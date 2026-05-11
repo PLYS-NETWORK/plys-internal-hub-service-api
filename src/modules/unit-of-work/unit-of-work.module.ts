@@ -17,6 +17,7 @@ import {
   ConsultantSkillRepository,
   ConsultantSkillScoreRepository,
   ConsultantTransactionRepository,
+  ContactInquiryRepository,
   FileRepository,
   IdempotencyKeyRepository,
   InterviewQuestionRepository,
@@ -98,6 +99,8 @@ const repositories = [
   ConsultantApplicationQuestionRepository,
   ConsultantApplicationAnswerRepository,
   ConsultantSkillScoreRepository,
+  // Domain 11 — Contact
+  ContactInquiryRepository,
 ];
 
 @Module({
