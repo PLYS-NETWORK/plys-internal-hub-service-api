@@ -1,4 +1,5 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
+import { NOTIFICATION_EVENTS } from '@common/events';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
@@ -9,6 +10,7 @@ import { ProjectStatusService } from '@modules/business-projects/services/projec
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { plainToInstance } from 'class-transformer';
 
 import { ChangeTaskStatusDto } from '../../dto/requests';
@@ -63,6 +65,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
     private readonly access: ConsultantAccessService,
     private readonly projectStatus: ProjectStatusService,
     private readonly cache: BoardCacheService,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger = new AppLogger(ConsultantBoardService.name, requestContext);
   }
@@ -231,6 +234,10 @@ export class ConsultantBoardService implements IConsultantBoardService {
     );
     const { consultantProfile } = await this.access.resolveProjectMembership(projectId);
     const consultantId = consultantProfile.id;
+    const consultantUserId = this.requestContext.userId!;
+
+    // Capture task snapshot before mutation so the event carries correct old_status.
+    let taskSnapshot: { code: string; title: string; oldStatus: TaskKanbanStatus } | null = null;
 
     await this.uow.withTransaction(async (tx: IUnitOfWork) => {
       const task = await tx.tasks
@@ -280,6 +287,7 @@ export class ConsultantBoardService implements IConsultantBoardService {
         }
       }
 
+      taskSnapshot = { code: task.code, title: task.title, oldStatus: task.kanbanStatus };
       task.kanbanStatus = dto.kanbanStatus;
       // First-time entry into IN_PROGRESS stamps started_at; never reset on
       // later round-trips through REVISION_REQUESTED so total worked time
@@ -291,6 +299,20 @@ export class ConsultantBoardService implements IConsultantBoardService {
     });
 
     await this.cache.invalidateProject(projectId);
+
+    if (taskSnapshot) {
+      const snap = taskSnapshot as { code: string; title: string; oldStatus: TaskKanbanStatus };
+      this.eventEmitter.emit(NOTIFICATION_EVENTS.TASK_STATUS_CHANGED, {
+        task_id: taskId,
+        task_code: snap.code,
+        task_title: snap.title,
+        project_id: projectId,
+        old_status: snap.oldStatus,
+        new_status: dto.kanbanStatus,
+        consultant_user_id: consultantUserId,
+      });
+    }
+
     this.logger.log(`changeStatus — complete | taskId: ${taskId}`);
   }
 

@@ -1,6 +1,6 @@
 import { AbstractRepository } from '@common/repositories';
 import { User } from '@database/entities';
-import { ActivePlatform } from '@database/enums';
+import { ActivePlatform, UserRole } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
@@ -28,5 +28,15 @@ export class UserRepository extends AbstractRepository<User> implements IUserRep
       .where('LOWER(u.email) = LOWER(:email)', { email })
       .andWhere('u.platform = :platform', { platform })
       .getOne();
+  }
+
+  /** @inheritdoc */
+  public async findActiveAdminUserIds(): Promise<string[]> {
+    const rows = await this.createQueryBuilder('u')
+      .select('u.id')
+      .where('u.role = :role', { role: UserRole.ADMIN_PLATFORM })
+      .andWhere('u.is_active = true')
+      .getRawMany<{ u_id: string }>();
+    return rows.map((r) => r.u_id);
   }
 }

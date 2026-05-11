@@ -8,7 +8,10 @@ import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { I18nService } from 'nestjs-i18n';
 
-import { NOTIFICATION_TYPE_CONFIG } from '../config/notification-type-config';
+import {
+  NOTIFICATION_TYPE_CONFIG,
+  NotificationBaseUrlKey,
+} from '../config/notification-type-config';
 import { NotificationResponseDto } from '../dto/responses';
 import { NotificationType } from '../enums/notification-type.enum';
 import {
@@ -53,9 +56,9 @@ export class NotificationDispatcherService implements INotificationDispatcherSer
 
       const entityType = config.entityType;
       const entityId = config.getEntityId(input.metadata, input.userId);
+      const baseUrl = this.resolveBaseUrl(config.baseUrlKey);
       const redirectUrl =
-        input.redirectUrlOverride ??
-        config.getRedirectUrl(input.metadata, this.env.ployosUrl, businessId);
+        input.redirectUrlOverride ?? config.getRedirectUrl(input.metadata, baseUrl, businessId);
 
       const saved = await this.uow.withTransaction(async (uow) => {
         const row = uow.notifications.create({
@@ -105,6 +108,12 @@ export class NotificationDispatcherService implements INotificationDispatcherSer
       );
       return null;
     }
+  }
+
+  private resolveBaseUrl(key: NotificationBaseUrlKey | undefined): string {
+    if (key === 'internalHubUrl') return this.env.internalHubUrl;
+    if (key === 'lonaUrl') return this.env.lonaUrl;
+    return this.env.ployosUrl;
   }
 
   /**

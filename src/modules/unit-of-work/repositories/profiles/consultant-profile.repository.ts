@@ -25,4 +25,20 @@ export class ConsultantProfileRepository
   public async findByUserId(userId: string): Promise<ConsultantProfile | null> {
     return this.findOne({ where: { userId } });
   }
+
+  /** @inheritdoc */
+  public async findUserIdsBySkillIds(
+    skillIds: string[],
+    offset: number,
+    limit: number,
+  ): Promise<string[]> {
+    const rows = await this.createQueryBuilder('cp')
+      .select('DISTINCT cp.user_id', 'userId')
+      .innerJoin('consultant_skills', 'cs', 'cs.consultant_id = cp.id')
+      .where('cs.skill_id IN (:...skillIds)', { skillIds })
+      .offset(offset)
+      .limit(limit)
+      .getRawMany<{ userId: string }>();
+    return rows.map((r) => r.userId);
+  }
 }

@@ -1,4 +1,5 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
+import { NOTIFICATION_EVENTS } from '@common/events';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
@@ -7,10 +8,9 @@ import { PaymentService } from '@common/modules/payment/payment.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { DateUtil } from '@common/utils/date';
 import { ConsultantTransactionType, Currency, TransactionStatus } from '@database/enums';
-import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-type.enum';
-import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { plainToInstance } from 'class-transformer';
 
 import { CancelWithdrawResponseDto } from '../dto/responses/cancel-withdraw-response.dto';
@@ -26,7 +26,7 @@ export class ConsultantWithdrawStrategy implements IWithdrawStrategy {
     private readonly requestContext: RequestContextService,
     private readonly paymentService: PaymentService,
     private readonly env: EnvironmentsService,
-    private readonly notificationDispatcher: NotificationDispatcherService,
+    private readonly eventEmitter: EventEmitter2,
     private readonly emailService: EmailService,
   ) {
     this.logger = new AppLogger(ConsultantWithdrawStrategy.name, requestContext);
@@ -146,6 +146,15 @@ export class ConsultantWithdrawStrategy implements IWithdrawStrategy {
 
     this.logger.log(`execute — complete | transactionId: ${savedTransaction.id}`);
 
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.PAYMENT_WITHDRAW_COMPLETED, {
+      transaction_id: savedTransaction.id,
+      transaction_number: savedTransaction.transactionNumber,
+      user_id: userId,
+      amount,
+      currency: Currency.USD,
+      new_balance: currentBalance - amount,
+    });
+
     return plainToInstance(
       WithdrawResponseDto,
       {
@@ -227,25 +236,15 @@ export class ConsultantWithdrawStrategy implements IWithdrawStrategy {
       `cancelWithdraw — complete | transactionId: ${transactionId}, restoredAmount: ${restoredAmount}`,
     );
 
-    // Fire-and-forget notification
-    void this.notificationDispatcher
-      .dispatch({
-        userId,
-        type: NOTIFICATION_TYPES.WITHDRAW_REVERSED,
-        metadata: {
-          transaction_id: transaction.id,
-          transaction_number: transaction.transactionNumber,
-          amount: parseFloat(restoredAmount),
-          currency: 'USD',
-          new_balance: parseFloat(consultantProfile.accountBalance) + parseFloat(restoredAmount),
-          reason: 'Cancelled by user',
-        },
-        actorId: userId,
-      })
-      .catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        this.logger.error(`cancelWithdraw — notification dispatch failed | error: ${msg}`);
-      });
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.PAYMENT_WITHDRAW_REVERSED, {
+      transaction_id: transaction.id,
+      transaction_number: transaction.transactionNumber,
+      user_id: userId,
+      amount: parseFloat(restoredAmount),
+      currency: 'USD',
+      new_balance: parseFloat(consultantProfile.accountBalance) + parseFloat(restoredAmount),
+      reason: 'Cancelled by user',
+    });
 
     // Fire-and-forget email
     void this.sendCancelEmail(

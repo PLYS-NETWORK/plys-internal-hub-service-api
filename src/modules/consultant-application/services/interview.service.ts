@@ -1,4 +1,5 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
+import { NOTIFICATION_EVENTS } from '@common/events';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
@@ -8,6 +9,7 @@ import { ConsultantApplicationAnswer } from '@database/entities';
 import { ApplicationStatus } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { plainToInstance } from 'class-transformer';
 
 import { TOTAL_QUESTIONS } from '../consultant-application.constants';
@@ -24,6 +26,7 @@ export class InterviewService implements IInterviewService {
     private readonly emailService: EmailService,
     private readonly envService: EnvironmentsService,
     private readonly requestContext: RequestContextService,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger = new AppLogger(InterviewService.name, requestContext);
   }
@@ -196,6 +199,12 @@ export class InterviewService implements IInterviewService {
     this.logger.log(
       `[${this.rid}] finalizeInterview — status set INTERVIEW_SUBMITTED | userId: ${userId}`,
     );
+
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.CONSULTANT_INTERVIEW_SUBMITTED, {
+      application_id: application.id,
+      consultant_user_id: userId,
+      consultant_name: consultantName,
+    });
 
     // Send confirmation email to consultant
     void this.emailService

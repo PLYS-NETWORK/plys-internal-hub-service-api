@@ -2,8 +2,14 @@
 
 > Source: [src/modules/notifications/notifications.gateway.ts](../../../src/modules/notifications/notifications.gateway.ts)
 > Companion REST spec: [notifications-api-specs.md](./notifications-api-specs.md)
-> Audience: BUSINESS-platform frontend engineers wiring the bell drop-down,
-> toast surface, and cache-invalidation logic.
+>
+> **Role-specific event catalogs (metadata shapes, redirect URLs, cache-invalidation hints):**
+>
+> - Admin platform → [notifications-admin-events.md](./notifications-admin-events.md)
+> - Business platform → [notifications-business-events.md](./notifications-business-events.md)
+> - Consultant platform → [notifications-consultant-events.md](./notifications-consultant-events.md)
+
+---
 
 ## 1. Architecture in one paragraph
 
@@ -30,7 +36,6 @@ is not. The FE catch-up step (§3) reconciles the gap on reconnect.
 
 ```ts
 import { io, Socket } from 'socket.io-client';
-import type { NotificationPayload } from '@/types/notifications'; // see §6
 
 interface ConnectArgs {
   apiBaseUrl: string;
@@ -95,188 +100,30 @@ socket.on('disconnect', () => {
 Three outgoing events from the gateway. None of them carry the standardized
 HTTP envelope — what you see is the raw payload.
 
-| Event                       | Payload                                       | When                                                                                        |
-| --------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `notification.connected`    | `{ unread_count: number }`                    | After successful handshake.                                                                 |
-| `notification.new`          | `NotificationPayload` (typed union — see §6). | Any time the dispatcher fires for the connected user.                                       |
-| `notification.unread-count` | `{ unread_count: number }`                    | (Reserved for future server-emitted count refreshes — currently unused; treat as advisory.) |
+| Event                       | Payload                         | When                                                                                        |
+| --------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------- |
+| `notification.connected`    | `{ unread_count: number }`      | After successful handshake.                                                                 |
+| `notification.new`          | `NotificationPayload` (see §5). | Any time the dispatcher fires for the connected user.                                       |
+| `notification.unread-count` | `{ unread_count: number }`      | (Reserved for future server-emitted count refreshes — currently unused; treat as advisory.) |
 
 ```ts
 socket.on('notification.new', (n: NotificationPayload) => {
   prependToBellList(n); // dedupe by n.id
   setUnreadBadge((c) => c + 1);
   showToast(n); // optional UX: toast on important types
-  refetchAffectedQueries(n); // §5
+  refetchAffectedQueries(n); // §6
 });
 ```
 
 ---
 
-## 5. Auto-trigger / auto-refetch table
+## 5. TypeScript types (copy-paste source of truth)
 
-This is the BE→FE contract for which UI surface to refresh on each `type`.
-"Auto-refetch" here means: invalidate the named React Query / SWR / RTK Query
-cache key so the next render fetches fresh data; if you don't use a query
-cache, equivalent imperative refetch on whichever screen is currently mounted.
-
-| `type`                | UI action                                                                    | Auto-refetch                                                                       |
-| --------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `profile_updated`     | Toast "Profile updated" with the changed fields.                             | `GET /profiles/business/me`                                                        |
-| `password_changed`    | Security toast (warning style). Optional: surface "this was you?" CTA.       | (Optional) `GET /auth/sessions` once that endpoint exists.                         |
-| `project_published`   | Success toast linking to the project.                                        | `GET /projects/business`, `GET /projects/business/:id`, business overview KPIs.    |
-| `project_unpublished` | Toast — show `refund_amount` if present.                                     | Same as `project_published`, plus `GET /payments/business/transactions`.           |
-| `new_application`     | Toast with `consultant_name` + `project_title`; click opens the application. | `GET /projects/business/:id/applications`, applicant counters on the project card. |
-| `top_up_completed`    | Success toast + balance widget refresh.                                      | Wallet/balance query, `GET /payments/business/transactions`.                       |
-| `withdraw_completed`  | Success toast + balance widget refresh.                                      | Same as `top_up_completed`.                                                        |
-| `withdraw_reversed`   | Warning toast with the `reason`; balance went up by `amount`.                | Same as `top_up_completed`.                                                        |
-
-Implementation pattern (React Query example):
+Mirrors [src/modules/notifications/types/notification-metadata.types.ts](../../../src/modules/notifications/types/notification-metadata.types.ts).
+The discriminated union type lets TypeScript narrow `metadata` automatically when you `switch` on `n.type`.
 
 ```ts
-import { useQueryClient } from '@tanstack/react-query';
-
-const qc = useQueryClient();
-socket.on('notification.new', (n: NotificationPayload) => {
-  switch (n.type) {
-    case 'new_application':
-      qc.invalidateQueries({
-        queryKey: ['business', 'projects', n.metadata.project_id, 'applications'],
-      });
-      break;
-    case 'project_published':
-    case 'project_unpublished':
-      qc.invalidateQueries({ queryKey: ['business', 'projects'] });
-      qc.invalidateQueries({
-        queryKey: ['business', 'projects', n.metadata.project_id],
-      });
-      break;
-    case 'top_up_completed':
-    case 'withdraw_completed':
-    case 'withdraw_reversed':
-      qc.invalidateQueries({ queryKey: ['business', 'wallet'] });
-      qc.invalidateQueries({ queryKey: ['business', 'transactions'] });
-      break;
-    case 'profile_updated':
-      qc.invalidateQueries({ queryKey: ['business', 'profile', 'me'] });
-      break;
-    case 'password_changed':
-      // No data to invalidate — purely a security toast.
-      break;
-  }
-});
-```
-
----
-
-## 6. Redirect rules
-
-Every payload carries two redirect mechanisms; pick whichever fits your routing.
-
-1. **Pre-computed URL** — `n.redirect_url` is server-computed, deep-linked
-   into the correct tenant, and ready to navigate to.
-   ```ts
-   if (n.redirect_url) router.push(n.redirect_url);
-   ```
-2. **Generic mapping** — `(n.entity_type, n.entity_id)` pair. Use this when
-   the FE owns routing and prefers to compose URLs locally.
-   ```ts
-   const ROUTE_BY_ENTITY: Record<string, (id: string) => string> = {
-     project: (id) => `/projects/${id}`,
-     application: (id) => `/applications/${id}`,
-     transaction: (id) => `/billing/transactions`, // list view; id is in metadata
-     user: () => `/settings`,
-   };
-   const target = ROUTE_BY_ENTITY[n.entity_type]?.(n.entity_id);
-   if (target) router.push(target);
-   ```
-
-**Recommendation:** prefer `redirect_url` when present, fall back to the
-mapping when it's `null`.
-
-```ts
-function redirect(n: NotificationPayload, router: AppRouter): void {
-  router.push(n.redirect_url ?? ROUTE_BY_ENTITY[n.entity_type]?.(n.entity_id) ?? '/');
-}
-```
-
----
-
-## 7. TypeScript types (copy-paste source of truth until a shared package exists)
-
-Mirrors [src/modules/notifications/types/notification-metadata.types.ts](../../../src/modules/notifications/types/notification-metadata.types.ts):
-
-```ts
-// notification-types.ts
-
-export const NOTIFICATION_TYPES = {
-  PROFILE_UPDATED: 'profile_updated',
-  PASSWORD_CHANGED: 'password_changed',
-  PROJECT_PUBLISHED: 'project_published',
-  PROJECT_UNPUBLISHED: 'project_unpublished',
-  NEW_APPLICATION: 'new_application',
-  TOP_UP_COMPLETED: 'top_up_completed',
-  WITHDRAW_COMPLETED: 'withdraw_completed',
-  WITHDRAW_REVERSED: 'withdraw_reversed',
-} as const;
-export type NotificationType = (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
-
-export interface IProfileUpdatedMetadata {
-  updated_fields: string[];
-}
-export interface IPasswordChangedMetadata {
-  device_id: string | null;
-  ip_address: string;
-}
-export interface IProjectPublishedMetadata {
-  project_id: string;
-  project_code: string;
-  project_title: string;
-}
-export interface IProjectUnpublishedMetadata {
-  project_id: string;
-  project_code: string;
-  project_title: string;
-  refund_amount?: number;
-}
-export interface INewApplicationMetadata {
-  project_id: string;
-  project_code: string;
-  project_title: string;
-  application_id: string;
-  consultant_id: string;
-  consultant_name: string;
-}
-export interface ITopUpCompletedMetadata {
-  transaction_id: string;
-  transaction_number: string;
-  amount: number;
-  currency: string;
-  new_balance: number;
-}
-export interface IWithdrawCompletedMetadata {
-  transaction_id: string;
-  transaction_number: string;
-  amount: number;
-  currency: string;
-  new_balance: number;
-}
-export interface IWithdrawReversedMetadata extends IWithdrawCompletedMetadata {
-  reason: string;
-}
-
-export type NotificationMetadataMap = {
-  profile_updated: IProfileUpdatedMetadata;
-  password_changed: IPasswordChangedMetadata;
-  project_published: IProjectPublishedMetadata;
-  project_unpublished: IProjectUnpublishedMetadata;
-  new_application: INewApplicationMetadata;
-  top_up_completed: ITopUpCompletedMetadata;
-  withdraw_completed: IWithdrawCompletedMetadata;
-  withdraw_reversed: IWithdrawReversedMetadata;
-};
-
-// The discriminated-union the FE consumes — TS narrows `metadata` automatically
-// when you `switch (n.type)`.
+// The discriminated-union the FE consumes.
 export type NotificationPayload = {
   [K in NotificationType]: {
     id: string;
@@ -295,9 +142,48 @@ export type NotificationPayload = {
 }[NotificationType];
 ```
 
+For the full `NotificationMetadataMap` and per-type metadata interfaces, import from the shared
+type package or copy from the role-specific catalogs linked at the top of this document.
+
 ---
 
-## 8. Error handling
+## 6. Redirect rules
+
+Every payload carries two redirect mechanisms; pick whichever fits your routing.
+
+1. **Pre-computed URL** — `n.redirect_url` is server-computed, deep-linked
+   into the correct tenant, and ready to navigate to.
+   ```ts
+   if (n.redirect_url) router.push(n.redirect_url);
+   ```
+2. **Generic mapping** — `(n.entity_type, n.entity_id)` pair. Use this when
+   the FE owns routing and prefers to compose URLs locally.
+   ```ts
+   const ROUTE_BY_ENTITY: Record<string, (id: string) => string> = {
+     project: (id) => `/projects/${id}`,
+     task: (id) => `/tasks/${id}`,
+     application: (id) => `/applications/${id}`,
+     transaction: () => `/billing/transactions`,
+     user: () => `/settings`,
+   };
+   const target = ROUTE_BY_ENTITY[n.entity_type]?.(n.entity_id);
+   if (target) router.push(target);
+   ```
+
+**Recommendation:** prefer `redirect_url` when present, fall back to the
+mapping when it is `null`.
+
+```ts
+function redirect(n: NotificationPayload, router: AppRouter): void {
+  router.push(n.redirect_url ?? ROUTE_BY_ENTITY[n.entity_type]?.(n.entity_id) ?? '/');
+}
+```
+
+For the full per-type redirect URL patterns, see the role-specific catalogs linked at the top.
+
+---
+
+## 7. Error handling
 
 | Server emits                                             | What happened                                                                                | FE should…                                                                                                                                                                  |
 | -------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -323,14 +209,14 @@ socket.on('error', (payload: { code: string }) => {
 
 ---
 
-## 9. Testing checklist for FE engineers
+## 8. Testing checklist for FE engineers
 
 1. **Initial connect**
    - On login, the socket connects within 1s.
    - `notification.connected` arrives once.
    - The unread badge matches `unread_count`.
 2. **Live delivery**
-   - Trigger a profile update via REST in another tab — `notification.new` arrives in <500 ms.
+   - Trigger a notification-generating action via REST in another tab — `notification.new` arrives in <500 ms.
    - Toast renders. List prepends. Badge increments.
 3. **Read transitions**
    - Click a notification → `PATCH /me/:id/read` → row's `is_read` flips to `true` and badge decrements (also live across other tabs — each tab's socket reflects the update on its next REST refresh).
@@ -348,7 +234,7 @@ socket.on('error', (payload: { code: string }) => {
 
 ---
 
-## 10. FAQ
+## 9. FAQ
 
 **Q. Why didn't I get a `notification.new` for the row that's clearly in the DB?**
 The socket was disconnected at the moment the dispatcher published. Redis pub/sub
@@ -371,3 +257,6 @@ instances no-op cheaply.
 
 **Q. What if I lose the access token (refresh fails)?**
 Redirect to login. The socket cannot recover from an expired refresh token.
+
+**Q. Which notification types does my platform receive?**
+See the role-specific catalogs linked at the top of this document.

@@ -1,4 +1,5 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
+import { NOTIFICATION_EVENTS } from '@common/events';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { CopyleaksService } from '@common/modules/copyleaks/copyleaks.service';
 import { EmailService } from '@common/modules/email/email.service';
@@ -8,6 +9,7 @@ import { ApplicationStatus } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { InjectQueue } from '@nestjs/bull';
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Queue } from 'bull';
 
 import {
@@ -27,6 +29,7 @@ export class CopyleaksEvaluationService implements ICopyleaksEvaluationService {
     private readonly copyleaksService: CopyleaksService,
     private readonly emailService: EmailService,
     private readonly requestContext: RequestContextService,
+    private readonly eventEmitter: EventEmitter2,
     @InjectQueue(CONSULTANT_APPLICATION_QUEUE)
     private readonly queue: Queue,
   ) {
@@ -102,6 +105,12 @@ export class CopyleaksEvaluationService implements ICopyleaksEvaluationService {
         this.logger.warn(
           `[${this.rid}] runCopyleaksEvaluation — failed | applicationId: ${applicationId}, score: ${aggregateScore.toFixed(2)}`,
         );
+
+        this.eventEmitter.emit(NOTIFICATION_EVENTS.CONSULTANT_APPLICATION_AI_REJECTED, {
+          application_id: application.id,
+          consultant_user_id: application.user.id,
+          consultant_name: application.user.email,
+        });
 
         // Send rejection email
         void this.emailService
