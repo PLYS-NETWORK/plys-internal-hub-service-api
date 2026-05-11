@@ -1,4 +1,5 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
+import { NOTIFICATION_EVENTS } from '@common/events';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
@@ -7,6 +8,7 @@ import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-ty
 import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { plainToInstance } from 'class-transformer';
 
 import { OnboardBusinessProfileDto } from './dto/requests/onboard-business-profile.dto';
@@ -22,6 +24,7 @@ export class BusinessProfilesService implements IBusinessProfilesService {
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly notificationDispatcher: NotificationDispatcherService,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger = new AppLogger(BusinessProfilesService.name, requestContext);
   }
@@ -72,6 +75,12 @@ export class BusinessProfilesService implements IBusinessProfilesService {
     profile.isVerified = true;
 
     await this.uow.businessProfiles.save(profile);
+
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.BUSINESS_ONBOARDED, {
+      business_user_id: userId,
+      business_id: profile.id,
+      business_name: profile.companyName ?? '',
+    });
 
     this.logger.log(`onboard — complete | userId: ${userId}, profileId: ${profile.id}`);
     return this.toResponseDto(profile);

@@ -15,9 +15,17 @@
     "title": "Proje yayından kaldırıldı",
     "body": "\"{title}\" ({code}) projeniz tekrar yapılandırma moduna alındı."
   },
+  "task_published": {
+    "title": "Görev yayınlandı",
+    "body": "\"{title}\" ({code}) görevi yayınlandı ve danışmanlara açık."
+  },
   "top_up_completed": {
     "title": "Yükleme başarılı",
     "body": "{amount} {currency} tutarındaki yüklemeniz hesabınıza eklendi."
+  },
+  "top_up_refunded": {
+    "title": "Yükleme iade edildi",
+    "body": "{amount} {currency} tutarındaki yüklemeniz orijinal ödeme yönteminize iade edildi."
   },
   "withdraw_completed": {
     "title": "Para çekme gönderildi",
@@ -26,5 +34,41 @@
   "withdraw_reversed": {
     "title": "Para çekme iade edildi",
     "body": "{amount} {currency} tutarındaki para çekme işlemi iade edildi: {reason}. Tutar hesabınıza geri yansıtıldı."
+  },
+  "consultant_project_skill_match": {
+    "title": "Becerilerinizle eşleşen yeni proje",
+    "body": "Becerilerinizle eşleşen \"{title}\" ({code}) adlı yeni bir proje yayınlandı."
+  },
+  "consultant_project_joined": {
+    "title": "Projeye katıldınız",
+    "body": "\"{title}\" ({code}) projesine eklendi niz. Başlamak için panoya gidin."
+  },
+  "consultant_task_status_changed": {
+    "title": "Görev durumu güncellendi",
+    "body": "\"{title}\" ({code}) görevi {new_status} durumuna geçti."
+  },
+  "admin_business_onboarded": {
+    "title": "Yeni iş yeri kaydoldu",
+    "body": "{name} kayıt işlemini tamamladı ve proje yayınlamaya hazır."
+  },
+  "admin_project_published": {
+    "title": "Yeni proje yayınlandı",
+    "body": "{business}, \"{title}\" ({code}) projesini yayınladı."
+  },
+  "admin_business_top_up": {
+    "title": "İş yeri bakiye yüklemesi",
+    "body": "{business}, {amount} {currency} yükleme yaptı."
+  },
+  "admin_task_published": {
+    "title": "Görev yayınlandı",
+    "body": "{business} tarafından {project} projesindeki \"{title}\" ({code}) görevi yayınlandı."
+  },
+  "admin_consultant_interview_submitted": {
+    "title": "Mülakat gönderildi",
+    "body": "{name} mülakat yanıtlarını gönderdi ve değerlendirme bekliyor."
+  },
+  "admin_consultant_ai_rejected": {
+    "title": "Başvuru yapay zeka tarafından işaretlendi",
+    "body": "{name}'in başvurusu yapay zeka içeriği nedeniyle işaretlendi ve otomatik olarak reddedildi."
   }
 }

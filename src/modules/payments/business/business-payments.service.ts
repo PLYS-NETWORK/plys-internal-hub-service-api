@@ -1,6 +1,7 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
+import { NOTIFICATION_EVENTS } from '@common/events';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
@@ -19,6 +20,7 @@ import {
 } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable, NotImplementedException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { plainToInstance } from 'class-transformer';
 
 import { CreateTopUpDto } from '../dto/requests/create-top-up.dto';
@@ -42,6 +44,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
     private readonly paymentService: PaymentService,
     private readonly env: EnvironmentsService,
     private readonly emailService: EmailService,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger = new AppLogger(BusinessPaymentsService.name, requestContext);
   }
@@ -361,6 +364,14 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
     await this.uow.businessTransactions.save(transaction);
 
     this.logger.log(`cancelTopUp — complete | transactionId: ${transaction.id}`);
+
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.PAYMENT_TOP_UP_REFUNDED, {
+      transaction_id: transaction.id,
+      transaction_number: transaction.transactionNumber,
+      user_id: this.requestContext.userId!,
+      amount: parseFloat(transaction.totalAmount),
+      currency: Currency.USD,
+    });
 
     // Fire-and-forget email — failure must not fail the cancel response.
     void this.sendCancelTopUpEmail(transaction.transactionNumber, transaction.totalAmount);

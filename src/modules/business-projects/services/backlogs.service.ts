@@ -1,6 +1,7 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
+import { NOTIFICATION_EVENTS } from '@common/events';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
@@ -18,6 +19,7 @@ import {
 import { ProjectAiContextService } from '@modules/project-ai-context/project-ai-context.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { plainToInstance } from 'class-transformer';
 import { ILike, In } from 'typeorm';
 
@@ -84,6 +86,7 @@ export class BacklogsService implements IBacklogsService {
     private readonly access: BusinessAccessService,
     private readonly projectStatus: ProjectStatusService,
     private readonly aiContext: ProjectAiContextService,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger = new AppLogger(BacklogsService.name, requestContext);
   }
@@ -597,12 +600,30 @@ export class BacklogsService implements IBacklogsService {
         ),
       );
 
-      return { txnId: savedTxn.id, pricing };
+      return {
+        txnId: savedTxn.id,
+        pricing,
+        publishedTasks: tasks,
+        businessName: profile.companyName ?? '',
+      };
     });
 
     this.logger.log(
       `payTasks — complete | projectId: ${projectId}, txn: ${result.txnId}, paymentType: ${result.pricing.paymentType}`,
     );
+
+    const businessUserId = this.requestContext.userId!;
+    for (const task of result.publishedTasks) {
+      this.eventEmitter.emit(NOTIFICATION_EVENTS.TASK_PUBLISHED, {
+        task_id: task.id,
+        task_code: task.code,
+        task_title: task.title,
+        project_id: projectId,
+        project_code: project.code,
+        business_user_id: businessUserId,
+        business_name: result.businessName,
+      });
+    }
 
     return plainToInstance(
       PayTasksResponseDto,

@@ -1,4 +1,5 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
+import { NOTIFICATION_EVENTS } from '@common/events';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
@@ -14,10 +15,9 @@ import {
   TaskKanbanStatus,
   TransactionStatus,
 } from '@database/enums';
-import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-type.enum';
-import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Not } from 'typeorm';
 
 import { IProjectRepublishService } from '../../interfaces/project-republish.service.interface';
@@ -33,7 +33,7 @@ export class ProjectRepublishService implements IProjectRepublishService {
     private readonly access: BusinessAccessService,
     private readonly emailService: EmailService,
     private readonly env: EnvironmentsService,
-    private readonly notificationDispatcher: NotificationDispatcherService,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger = new AppLogger(ProjectRepublishService.name, requestContext);
   }
@@ -242,22 +242,14 @@ export class ProjectRepublishService implements IProjectRepublishService {
 
     // Fire-and-forget — fires for both refund and CREDIT paths so the user
     // always gets confirmation that the project is back in CONFIGURED state.
-    void this.notificationDispatcher
-      .dispatch({
-        userId: businessProfile.userId,
-        type: NOTIFICATION_TYPES.PROJECT_UNPUBLISHED,
-        metadata: {
-          project_id: project.id,
-          project_code: project.code,
-          project_title: project.title,
-          ...(hasRefund ? { refund_amount: parseFloat(totalRefundString) } : {}),
-        },
-        actorId: this.requestContext.userId ?? null,
-      })
-      .catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        this.logger.error(`republish — notification dispatch failed | error: ${msg}`);
-      });
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.PROJECT_UNPUBLISHED, {
+      project_id: project.id,
+      project_code: project.code,
+      project_title: project.title,
+      business_user_id: businessProfile.userId,
+      business_id: businessProfile.id,
+      ...(hasRefund ? { refund_amount: parseFloat(totalRefundString) } : {}),
+    });
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────

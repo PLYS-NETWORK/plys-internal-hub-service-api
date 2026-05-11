@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bull';
 import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { WinstonModule } from 'nest-winston';
@@ -88,6 +89,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
         },
       }),
     }),
+    EventEmitterModule.forRoot({ wildcard: false }),
     RequestContextModule,
     EmailModule,
     CopyleaksModule,

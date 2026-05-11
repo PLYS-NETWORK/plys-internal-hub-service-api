@@ -1,4 +1,5 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
+import { NOTIFICATION_EVENTS } from '@common/events';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
@@ -16,10 +17,9 @@ import {
   TaskKanbanStatus,
   TransactionStatus,
 } from '@database/enums';
-import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-type.enum';
-import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { plainToInstance } from 'class-transformer';
 
 import { PublishValidationResponseDto } from '../../dto/responses';
@@ -52,7 +52,7 @@ export class ProjectPublishService implements IProjectPublishService {
     private readonly access: BusinessAccessService,
     private readonly emailService: EmailService,
     private readonly env: EnvironmentsService,
-    private readonly notificationDispatcher: NotificationDispatcherService,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger = new AppLogger(ProjectPublishService.name, requestContext);
   }
@@ -294,22 +294,18 @@ export class ProjectPublishService implements IProjectPublishService {
 
     await this.sendPublishEmail(project, businessProfile, eligibility, transactionNumber);
 
-    // Fire-and-forget — never blocks the request, never throws back to the caller.
-    void this.notificationDispatcher
-      .dispatch({
-        userId: businessProfile.userId,
-        type: NOTIFICATION_TYPES.PROJECT_PUBLISHED,
-        metadata: {
-          project_id: project.id,
-          project_code: project.code,
-          project_title: project.title,
-        },
-        actorId: this.requestContext.userId ?? null,
-      })
-      .catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        this.logger.error(`confirmPublish — notification dispatch failed | error: ${msg}`);
-      });
+    const requiredSkills = await this.uow.projectRequiredSkills.find({
+      where: { projectId: project.id },
+    });
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.PROJECT_PUBLISHED, {
+      project_id: project.id,
+      project_code: project.code,
+      project_title: project.title,
+      business_user_id: businessProfile.userId,
+      business_id: businessProfile.id,
+      business_name: businessProfile.companyName ?? '',
+      required_skill_ids: requiredSkills.map((s) => s.skillId),
+    });
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────

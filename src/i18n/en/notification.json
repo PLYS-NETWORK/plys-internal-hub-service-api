@@ -15,9 +15,17 @@
     "title": "Project unpublished",
     "body": "Your project \"{title}\" ({code}) is back in configuration mode."
   },
+  "task_published": {
+    "title": "Task published",
+    "body": "Task \"{title}\" ({code}) has been published and is now open for consultants."
+  },
   "top_up_completed": {
     "title": "Top-up successful",
     "body": "Your top-up of {amount} {currency} was credited to your account."
+  },
+  "top_up_refunded": {
+    "title": "Top-up refunded",
+    "body": "Your top-up of {amount} {currency} has been refunded to your original payment method."
   },
   "withdraw_completed": {
     "title": "Withdrawal sent",
@@ -26,5 +34,41 @@
   "withdraw_reversed": {
     "title": "Withdrawal reversed",
     "body": "Your withdrawal of {amount} {currency} was reversed: {reason}. The amount has been credited back."
+  },
+  "consultant_project_skill_match": {
+    "title": "New project matching your skills",
+    "body": "A new project \"{title}\" ({code}) matching your skills has been published."
+  },
+  "consultant_project_joined": {
+    "title": "You joined a project",
+    "body": "You have been added to project \"{title}\" ({code}). Head to the board to get started."
+  },
+  "consultant_task_status_changed": {
+    "title": "Task status updated",
+    "body": "Task \"{title}\" ({code}) moved to {new_status}."
+  },
+  "admin_business_onboarded": {
+    "title": "New business registered",
+    "body": "{name} has completed onboarding and is ready to post projects."
+  },
+  "admin_project_published": {
+    "title": "New project published",
+    "body": "{business} published project \"{title}\" ({code})."
+  },
+  "admin_business_top_up": {
+    "title": "Business top-up received",
+    "body": "{business} topped up {amount} {currency}."
+  },
+  "admin_task_published": {
+    "title": "Task published",
+    "body": "Task \"{title}\" ({code}) in project {project} was published by {business}."
+  },
+  "admin_consultant_interview_submitted": {
+    "title": "Interview submitted",
+    "body": "{name} has submitted their interview answers and is awaiting review."
+  },
+  "admin_consultant_ai_rejected": {
+    "title": "Application flagged by AI",
+    "body": "{name}'s application was flagged for AI-generated content and automatically rejected."
   }
 }
