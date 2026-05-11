@@ -28,7 +28,7 @@ import { NotificationsService } from './services/notifications.service';
 @ApiBearerAuth()
 @Controller('notifications')
 @UseGuards(RolesGuard)
-@Roles(UserRole.USER)
+@Roles(UserRole.USER, UserRole.ADMIN_PLATFORM)
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
