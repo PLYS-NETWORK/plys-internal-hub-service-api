@@ -59,6 +59,10 @@ export default registerAs('app', () => ({
     apiKey: process.env.RESEND_API_KEY ?? '',
     ployosEmail: process.env.RESEND_PLOYOS_EMAIL,
     lonaEmail: process.env.RESEND_LONA_EMAIL,
+    contactInboxSales: process.env.RESEND_CONTACT_INBOX_SALES ?? 'sales@ployos.com',
+    contactInboxPartners: process.env.RESEND_CONTACT_INBOX_PARTNERS ?? 'partners@ployos.com',
+    contactInboxPress: process.env.RESEND_CONTACT_INBOX_PRESS ?? 'press@ployos.com',
+    contactInboxSupport: process.env.RESEND_CONTACT_INBOX_SUPPORT ?? 'support@ployos.com',
   },
   payment: {
     // Default to Polar.sh. Set PAYMENT_PROCESSOR=stripe to switch providers.

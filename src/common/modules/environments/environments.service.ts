@@ -116,6 +116,22 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.configService.getOrThrow<string>('app.resend.lonaEmail');
   }
 
+  public get resendContactInboxSales(): string {
+    return this.configService.getOrThrow<string>('app.resend.contactInboxSales');
+  }
+
+  public get resendContactInboxPartners(): string {
+    return this.configService.getOrThrow<string>('app.resend.contactInboxPartners');
+  }
+
+  public get resendContactInboxPress(): string {
+    return this.configService.getOrThrow<string>('app.resend.contactInboxPress');
+  }
+
+  public get resendContactInboxSupport(): string {
+    return this.configService.getOrThrow<string>('app.resend.contactInboxSupport');
+  }
+
   public get paymentProcessor(): string {
     return this.configService.getOrThrow<string>('app.payment.processor');
   }
