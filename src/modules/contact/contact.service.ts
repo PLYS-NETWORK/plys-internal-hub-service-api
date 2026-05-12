@@ -3,7 +3,7 @@ import { EnvironmentsService } from '@common/modules/environments';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import type { ContactTopic } from '@database/entities/contact/contact-inquiry.entity';
-import { ContactInquiryRepository } from '@modules/unit-of-work/repositories';
+import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable } from '@nestjs/common';
 
 import type {
@@ -17,7 +17,7 @@ export class ContactService implements IContactService {
   private readonly logger: AppLogger;
 
   constructor(
-    private readonly contactInquiryRepository: ContactInquiryRepository,
+    private readonly uow: UnitOfWorkService,
     private readonly emailService: EmailService,
     private readonly env: EnvironmentsService,
     private readonly requestContext: RequestContextService,
@@ -30,7 +30,7 @@ export class ContactService implements IContactService {
     const ipAddress = this.requestContext.ipAddress || null;
     const userAgent = this.requestContext.userAgent;
 
-    const inquiry = await this.contactInquiryRepository.insertInquiry({
+    const inquiry = await this.uow.contactInquiries.insertInquiry({
       name: input.name,
       email: input.email,
       company: input.company,
@@ -80,7 +80,7 @@ export class ContactService implements IContactService {
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : String(err);
         this.logger.error(`submit — notification email failed | id: ${id} | error: ${message}`);
-        return this.contactInquiryRepository.markEmailFailure(id, 'notification').then(() => false);
+        return this.uow.contactInquiries.markEmailFailure(id, 'notification').then(() => false);
       });
 
     const acknowledgement = this.emailService
@@ -92,15 +92,13 @@ export class ContactService implements IContactService {
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : String(err);
         this.logger.error(`submit — acknowledgement email failed | id: ${id} | error: ${message}`);
-        return this.contactInquiryRepository
-          .markEmailFailure(id, 'acknowledgement')
-          .then(() => false);
+        return this.uow.contactInquiries.markEmailFailure(id, 'acknowledgement').then(() => false);
       });
 
     // Once both have settled, if both succeeded, transition pending → sent.
     void Promise.all([notification, acknowledgement]).then(([n, a]) => {
       if (n && a) {
-        void this.contactInquiryRepository.markEmailSent(id).catch((err: unknown) => {
+        void this.uow.contactInquiries.markEmailSent(id).catch((err: unknown) => {
           const message = err instanceof Error ? err.message : String(err);
           this.logger.error(`submit — markEmailSent failed | id: ${id} | error: ${message}`);
         });

@@ -3,7 +3,7 @@ import { EnvironmentsService } from '@common/modules/environments';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import type { ContactInquiry } from '@database/entities';
 import { describe, expect, it, jest } from '@jest/globals';
-import { ContactInquiryRepository } from '@modules/unit-of-work/repositories';
+import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 
 import { ContactService } from './contact.service';
 
@@ -31,18 +31,22 @@ function buildInquiry(overrides: Partial<ContactInquiry> = {}): ContactInquiry {
 
 function makeService(
   overrides: {
-    repo?: Partial<ContactInquiryRepository>;
+    uow?: Partial<{ contactInquiries: Partial<UnitOfWorkService['contactInquiries']> }>;
     email?: Partial<EmailService>;
     env?: Partial<EnvironmentsService>;
     ctx?: Partial<RequestContextService>;
   } = {},
 ): ContactService {
-  const repo = {
+  const contactInquiries = {
     insertInquiry: jest.fn(async () => buildInquiry()),
     markEmailFailure: jest.fn(async () => undefined),
     markEmailSent: jest.fn(async () => undefined),
-    ...overrides.repo,
-  } as unknown as ContactInquiryRepository;
+    ...(overrides.uow?.contactInquiries ?? {}),
+  };
+
+  const uow = {
+    contactInquiries,
+  } as unknown as UnitOfWorkService;
 
   const email = {
     sendContactInquiryNotification: jest.fn(async () => undefined),
@@ -64,17 +68,19 @@ function makeService(
     ...overrides.ctx,
   } as unknown as RequestContextService;
 
-  return new ContactService(repo, email, env, ctx);
+  return new ContactService(uow, email, env, ctx);
 }
 
 describe('ContactService.submit', () => {
   it('persists the inquiry and returns its id', async () => {
-    const repo = {
-      insertInquiry: jest.fn(async () => buildInquiry({ id: 'new-id' })),
-      markEmailFailure: jest.fn(async () => undefined),
-      markEmailSent: jest.fn(async () => undefined),
-    } as unknown as ContactInquiryRepository;
-    const service = makeService({ repo });
+    const uow = {
+      contactInquiries: {
+        insertInquiry: jest.fn(async () => buildInquiry({ id: 'new-id' })),
+        markEmailFailure: jest.fn(async () => undefined),
+        markEmailSent: jest.fn(async () => undefined),
+      },
+    };
+    const service = makeService({ uow });
 
     const result = await service.submit({
       name: 'Ada',
@@ -85,7 +91,7 @@ describe('ContactService.submit', () => {
     });
 
     expect(result).toEqual({ id: 'new-id' });
-    expect(repo.insertInquiry).toHaveBeenCalledTimes(1);
+    expect(uow.contactInquiries.insertInquiry).toHaveBeenCalledTimes(1);
   });
 
   it('dispatches the notification email to the topic-appropriate inbox', async () => {
@@ -117,11 +123,14 @@ describe('ContactService.submit', () => {
   });
 
   it('flips email_status to failed_notification when only the notification fails', async () => {
-    const repo = {
-      insertInquiry: jest.fn(async () => buildInquiry({ id: 'x' })),
-      markEmailFailure: jest.fn(async () => undefined),
-      markEmailSent: jest.fn(async () => undefined),
-    } as unknown as ContactInquiryRepository;
+    const markEmailFailure = jest.fn(async (_id: string, _kind: string) => undefined);
+    const uow = {
+      contactInquiries: {
+        insertInquiry: jest.fn(async () => buildInquiry({ id: 'x' })),
+        markEmailFailure,
+        markEmailSent: jest.fn(async () => undefined),
+      },
+    };
 
     const email = {
       sendContactInquiryNotification: jest.fn(async () => {
@@ -130,7 +139,7 @@ describe('ContactService.submit', () => {
       sendContactInquiryAcknowledgement: jest.fn(async () => undefined),
     } as unknown as EmailService;
 
-    const service = makeService({ repo, email });
+    const service = makeService({ uow, email });
 
     await service.submit({
       name: 'A',
@@ -142,7 +151,7 @@ describe('ContactService.submit', () => {
 
     await new Promise((r) => setImmediate(r));
 
-    expect(repo.markEmailFailure).toHaveBeenCalledWith('x', 'notification');
+    expect(markEmailFailure).toHaveBeenCalledWith('x', 'notification');
   });
 
   it('returns to the caller without awaiting the email sends', async () => {

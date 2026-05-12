@@ -20,6 +20,7 @@ import {
   ConsultantSkillRepository,
   ConsultantSkillScoreRepository,
   ConsultantTransactionRepository,
+  ContactInquiryRepository,
   FileRepository,
   IAdminAllowedEmailRepository,
   IAiProviderApiKeyRepository,
@@ -37,6 +38,7 @@ import {
   IConsultantSkillRepository,
   IConsultantSkillScoreRepository,
   IConsultantTransactionRepository,
+  IContactInquiryRepository,
   IdempotencyKeyRepository,
   IFileRepository,
   IIdempotencyKeyRepository,
@@ -136,6 +138,8 @@ class TransactionalUnitOfWork implements IUnitOfWork {
     public readonly applicationQuestions: IConsultantApplicationQuestionRepository,
     public readonly applicationAnswers: IConsultantApplicationAnswerRepository,
     public readonly consultantSkillScores: IConsultantSkillScoreRepository,
+    // Domain 11 — Contact
+    public readonly contactInquiries: IContactInquiryRepository,
   ) {}
 
   // Already inside a transaction — pass-through to avoid nested QueryRunners.
@@ -201,6 +205,8 @@ export class UnitOfWorkService implements IUnitOfWork {
     public readonly applicationQuestions: ConsultantApplicationQuestionRepository,
     public readonly applicationAnswers: ConsultantApplicationAnswerRepository,
     public readonly consultantSkillScores: ConsultantSkillScoreRepository,
+    // Domain 11 — Contact
+    public readonly contactInquiries: ContactInquiryRepository,
   ) {}
 
   public async withTransaction<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T> {
@@ -254,6 +260,7 @@ export class UnitOfWorkService implements IUnitOfWork {
         this.applicationQuestions.withManager(manager),
         this.applicationAnswers.withManager(manager),
         this.consultantSkillScores.withManager(manager),
+        this.contactInquiries.withManager(manager),
       );
 
       const result = await work(txUow);

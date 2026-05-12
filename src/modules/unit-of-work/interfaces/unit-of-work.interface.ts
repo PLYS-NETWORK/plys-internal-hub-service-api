@@ -15,6 +15,7 @@ import {
   IConsultantSkillRepository,
   IConsultantSkillScoreRepository,
   IConsultantTransactionRepository,
+  IContactInquiryRepository,
   IFileRepository,
   IIdempotencyKeyRepository,
   IInterviewQuestionRepository,
@@ -111,6 +112,9 @@ export interface IUnitOfWork {
   readonly applicationQuestions: IConsultantApplicationQuestionRepository;
   readonly applicationAnswers: IConsultantApplicationAnswerRepository;
   readonly consultantSkillScores: IConsultantSkillScoreRepository;
+
+  // Domain 11 — Contact
+  readonly contactInquiries: IContactInquiryRepository;
 
   withTransaction<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T>;
 }
