@@ -7,6 +7,8 @@ export * from './files';
 export * from './finance';
 export * from './infra';
 export * from './notifications';
+export * from './onboarding';
 export * from './profiles';
 export * from './projects';
+export * from './skill-exams';
 export * from './tasks';

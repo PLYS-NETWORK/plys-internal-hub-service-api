@@ -70,19 +70,19 @@ export class BasicAuthService implements IBasicAuthService {
     await this.uow.withTransaction(async (tx) => {
       const existing = await tx.users.findUserByEmailAndPlatform(dto.email, dto.active_platform);
 
-      // For consultant re-registration, check if the user is currently blocked from applying.
-      // This surfaces the correct error immediately — before any email is sent or user row mutated.
+      // For consultant re-registration, check if the user is currently blocked from onboarding
+      // (set when a previous onboarding was REJECTED, expires after 3 months).
       if (existing && dto.active_platform === ActivePlatform.CONSULTANT) {
-        const latestApp = await tx.consultantApplications.findLatestByUserId(existing.id);
-        if (latestApp?.blockedUntil && latestApp.blockedUntil > new Date()) {
+        const latestOnboarding = await tx.consultantOnboardings.findByUserId(existing.id);
+        if (latestOnboarding?.blockedUntil && latestOnboarding.blockedUntil > new Date()) {
           this.logger.warn(
-            `register — consultant blocked | email: ${dto.email}, until: ${latestApp.blockedUntil.toISOString()}`,
+            `register — consultant blocked | email: ${dto.email}, until: ${latestOnboarding.blockedUntil.toISOString()}`,
           );
           throw new TranslatableException({
-            messageKey: 'error.consultant_application.blocked',
-            errorCode: ERROR_CODES.CONSULTANT_APPLICATION_BLOCKED,
+            messageKey: 'error.consultant_onboarding.blocked',
+            errorCode: ERROR_CODES.CONSULTANT_ONBOARDING_BLOCKED,
             status: HttpStatus.FORBIDDEN,
-            details: { blocked_until: latestApp.blockedUntil.toISOString() },
+            details: { blocked_until: latestOnboarding.blockedUntil.toISOString() },
           });
         }
       }

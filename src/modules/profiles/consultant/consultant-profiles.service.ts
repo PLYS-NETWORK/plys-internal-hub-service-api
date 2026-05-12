@@ -166,7 +166,7 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
         skills: skills.map((s) => ({
           skill_id: s.skillId,
           proficiency_level: s.proficiencyLevel,
-          years_with_skill: s.yearsWithSkill,
+          rating: s.rating,
         })),
       },
       { excludeExtraneousValues: true },

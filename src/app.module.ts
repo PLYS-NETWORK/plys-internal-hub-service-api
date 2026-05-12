@@ -31,14 +31,16 @@ import { resolveEnvFilePath } from './config/env-file.config';
 import { AuditSubscriber } from './database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from './database/typeorm.config';
 import { AdminAuthModule } from './modules/admin-auth/admin-auth.module';
-import { AdminConsultantApplicationModule } from './modules/admin-consultant-application/admin-consultant-application.module';
+import { AdminConsultantOnboardingModule } from './modules/admin-consultant-onboarding/admin-consultant-onboarding.module';
+import { AdminConsultantSkillExamModule } from './modules/admin-consultant-skill-exam/admin-consultant-skill-exam.module';
 import { AiBootstrapModule } from './modules/ai-bootstrap/ai-bootstrap.module';
 import { AiProviderKeyModule } from './modules/ai-provider-key/ai-provider-key.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { BusinessProjectsModule } from './modules/business-projects/business-projects.module';
-import { ConsultantApplicationModule } from './modules/consultant-application/consultant-application.module';
+import { ConsultantOnboardingModule } from './modules/consultant-onboarding/consultant-onboarding.module';
 import { ConsultantProjectsModule } from './modules/consultant-projects/consultant-projects.module';
+import { ConsultantSkillExamModule } from './modules/consultant-skill-exam/consultant-skill-exam.module';
 import { FilesModule } from './modules/files';
 import { HealthModule } from './modules/health/health.module';
 import { HousekeepingModule } from './modules/housekeeping/housekeeping.module';
@@ -105,8 +107,10 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     AuthModule,
     BillingModule,
     BusinessProjectsModule,
-    AdminConsultantApplicationModule,
-    ConsultantApplicationModule,
+    AdminConsultantOnboardingModule,
+    AdminConsultantSkillExamModule,
+    ConsultantOnboardingModule,
+    ConsultantSkillExamModule,
     ConsultantProjectsModule,
     FilesModule,
     HealthModule,

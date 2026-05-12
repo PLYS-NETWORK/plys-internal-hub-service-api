@@ -4,10 +4,9 @@ import { QuestionType } from '@database/enums';
 
 export interface IInterviewQuestionRepository extends AbstractRepository<InterviewQuestion> {
   /**
-   * Finds all active questions of a given type, ordered by displayOrder.
-   *
-   * @param type - The question type to filter by.
-   * @returns Array of active InterviewQuestion rows in display order.
+   * Returns N random active questions of the given type from the seed bank.
+   * @param type Question type filter.
+   * @param limit Number of rows to return.
    */
-  findActiveByType(type: QuestionType): Promise<InterviewQuestion[]>;
+  findRandomActiveByType(type: QuestionType, limit: number): Promise<InterviewQuestion[]>;
 }

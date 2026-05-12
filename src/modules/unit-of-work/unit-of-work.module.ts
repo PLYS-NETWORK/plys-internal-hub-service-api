@@ -10,10 +10,13 @@ import {
   BusinessProfileRepository,
   BusinessTransactionRepository,
   ChatMessageRepository,
-  ConsultantApplicationAnswerRepository,
-  ConsultantApplicationQuestionRepository,
-  ConsultantApplicationRepository,
+  ConsultantOnboardingAnswerRepository,
+  ConsultantOnboardingQuestionRepository,
+  ConsultantOnboardingRepository,
   ConsultantProfileRepository,
+  ConsultantSkillExamAnswerRepository,
+  ConsultantSkillExamQuestionRepository,
+  ConsultantSkillExamRepository,
   ConsultantSkillRepository,
   ConsultantSkillScoreRepository,
   ConsultantTransactionRepository,
@@ -47,19 +50,15 @@ import {
 import { UnitOfWorkService } from './unit-of-work.service';
 
 const repositories = [
-  // Domain 0 — Admin
   AdminAllowedEmailRepository,
-  // Domain 1 — Auth & Identity
   UserRepository,
   AuthTokenRepository,
   UserSsoProviderRepository,
   UserSessionRepository,
-  // Domain 2 — Profiles
   BusinessProfileRepository,
   SkillRepository,
   ConsultantProfileRepository,
   ConsultantSkillRepository,
-  // Domain 3 — Projects
   ProjectRepository,
   ProjectRequiredSkillRepository,
   ProjectActivityRepository,
@@ -68,35 +67,33 @@ const repositories = [
   ProjectChatSessionRepository,
   ChatMessageRepository,
   ProjectAiContextRepository,
-  // Domain 4 — Tasks
   TaskRepository,
   TaskAttachmentRepository,
   TaskDisputeRepository,
   TaskHistoryRepository,
   TaskResultRepository,
   TaskResultAttachmentRepository,
-  // Domain 5 — AI
   AiTaskSessionRepository,
   AiSessionMessageRepository,
-  // Domain 6 — Finance
   BillingPeriodRepository,
   InvoiceRepository,
   InvoiceLineItemRepository,
   ConsultantTransactionRepository,
   BusinessTransactionRepository,
   WebhookEventRepository,
-  // Domain 7 — Files
   FileRepository,
-  // Domain 8 — Notifications
   NotificationRepository,
-  // Domain 9 — Infra (cross-cutting)
   IdempotencyKeyRepository,
   AiProviderApiKeyRepository,
-  // Domain 10 — Applications
-  ConsultantApplicationRepository,
+  // Onboarding
+  ConsultantOnboardingRepository,
+  ConsultantOnboardingQuestionRepository,
+  ConsultantOnboardingAnswerRepository,
   InterviewQuestionRepository,
-  ConsultantApplicationQuestionRepository,
-  ConsultantApplicationAnswerRepository,
+  // Skill exams
+  ConsultantSkillExamRepository,
+  ConsultantSkillExamQuestionRepository,
+  ConsultantSkillExamAnswerRepository,
   ConsultantSkillScoreRepository,
 ];
 

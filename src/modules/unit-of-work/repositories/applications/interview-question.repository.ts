@@ -23,11 +23,16 @@ export class InterviewQuestionRepository
     return new InterviewQuestionRepository(manager) as this;
   }
 
-  /** @inheritdoc */
-  public async findActiveByType(type: QuestionType): Promise<InterviewQuestion[]> {
-    return this.find({
-      where: { type, isActive: true },
-      order: { displayOrder: 'ASC', createdAt: 'ASC' },
-    });
+  public async findRandomActiveByType(
+    type: QuestionType,
+    limit: number,
+  ): Promise<InterviewQuestion[]> {
+    return this.repository
+      .createQueryBuilder('q')
+      .where('q.type = :type', { type })
+      .andWhere('q.isActive = true')
+      .orderBy('RANDOM()')
+      .limit(limit)
+      .getMany();
   }
 }

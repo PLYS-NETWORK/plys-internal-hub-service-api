@@ -3,6 +3,8 @@ export * from './applications';
 export * from './auth';
 export * from './files';
 export * from './finance';
+export * from './onboarding';
 export * from './profiles';
 export * from './projects';
+export * from './skill-exams';
 export * from './tasks';

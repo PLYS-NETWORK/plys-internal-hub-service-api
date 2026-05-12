@@ -72,4 +72,19 @@ export class ConsultantProfile extends AuditableEntity {
     nullable: true,
   })
   public stripeConnectAccountId!: string | null;
+
+  @Column({ name: 'cv_url', type: 'text', nullable: true })
+  public cvUrl!: string | null;
+
+  @Column({ name: 'has_notification_priority', type: 'boolean', default: false })
+  public hasNotificationPriority!: boolean;
+
+  @Column({
+    name: 'avg_rating',
+    type: 'numeric',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
+  public avgRating!: string | null;
 }

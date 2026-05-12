@@ -1,27 +1,20 @@
-import { ConsultantApplication } from '@database/entities/applications/consultant-application.entity';
 import { Traceable, TraceableEntity } from '@database/entities/base/traceable.entity';
 import { ConsultantProfile } from '@database/entities/profiles/consultant-profile.entity';
 import { Skill } from '@database/entities/profiles/skill.entity';
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import { ConsultantSkillExam } from '@database/entities/skill-exams/consultant-skill-exam.entity';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 
-// Composite PK on (consultant_id, skill_id) — upserted on each successful approval.
-// Stores the latest skill-specific score for project matching.
+// Append-only audit log of every passed skill exam. One row per (consultant, exam).
+// The most recent score for a (consultant, skill) is denormalized to
+// `consultant_skills.rating` for cheap reads on project matching.
 @Traceable()
 @Entity('consultant_skill_scores')
 export class ConsultantSkillScore extends TraceableEntity {
-  @PrimaryColumn({
-    name: 'consultant_id',
-    type: 'uuid',
-    primaryKeyConstraintName: 'pk_consultant_skill_scores',
-  })
-  public consultantId!: string;
+  @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_consultant_skill_scores' })
+  public readonly id!: string;
 
-  @PrimaryColumn({
-    name: 'skill_id',
-    type: 'uuid',
-    primaryKeyConstraintName: 'pk_consultant_skill_scores',
-  })
-  public skillId!: string;
+  @Column({ name: 'consultant_id', type: 'uuid' })
+  public consultantId!: string;
 
   @ManyToOne(() => ConsultantProfile, { onDelete: 'CASCADE' })
   @JoinColumn({
@@ -30,6 +23,9 @@ export class ConsultantSkillScore extends TraceableEntity {
   })
   public consultant!: ConsultantProfile;
 
+  @Column({ name: 'skill_id', type: 'uuid' })
+  public skillId!: string;
+
   @ManyToOne(() => Skill, { onDelete: 'CASCADE' })
   @JoinColumn({
     name: 'skill_id',
@@ -37,15 +33,15 @@ export class ConsultantSkillScore extends TraceableEntity {
   })
   public skill!: Skill;
 
-  @Column({ name: 'application_id', type: 'uuid' })
-  public applicationId!: string;
+  @Column({ name: 'exam_id', type: 'uuid' })
+  public examId!: string;
 
-  @ManyToOne(() => ConsultantApplication, { onDelete: 'CASCADE' })
+  @ManyToOne(() => ConsultantSkillExam, { onDelete: 'CASCADE' })
   @JoinColumn({
-    name: 'application_id',
-    foreignKeyConstraintName: 'fk_consultant_skill_scores_to_applications',
+    name: 'exam_id',
+    foreignKeyConstraintName: 'fk_consultant_skill_scores_to_skill_exams',
   })
-  public application!: ConsultantApplication;
+  public exam!: ConsultantSkillExam;
 
   @Column({ type: 'numeric', precision: 5, scale: 2 })
   public score!: string;

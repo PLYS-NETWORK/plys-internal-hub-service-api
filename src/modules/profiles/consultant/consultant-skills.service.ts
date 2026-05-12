@@ -1,7 +1,6 @@
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ConsultantSkill } from '@database/entities';
-import { ProficiencyLevel } from '@database/enums';
 import { IUnitOfWork } from '@modules/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable } from '@nestjs/common';
@@ -40,13 +39,14 @@ export class ConsultantSkillsService implements IConsultantSkillsService {
       `createForConsultant — start | consultantId: ${consultantId}, count: ${skills.length}`,
     );
 
+    // NOTE: post-refactor, proficiencyLevel + rating are assigned by the skill-exam
+    // pipeline (not user-supplied). The legacy `s.proficiency_level` is ignored.
     const entities = skills.map((s) =>
       uow.consultantSkills.create({
         consultantId,
         skillId: s.skill_id,
-        proficiencyLevel:
-          (s.proficiency_level as ProficiencyLevel) ?? ProficiencyLevel.INTERMEDIATE,
-        yearsWithSkill: s.years_with_skill ?? null,
+        proficiencyLevel: null,
+        rating: null,
       }),
     );
     const saved = (await uow.consultantSkills.save(entities)) as ConsultantSkill[];
