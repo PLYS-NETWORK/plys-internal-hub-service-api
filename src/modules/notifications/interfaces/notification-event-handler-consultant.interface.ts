@@ -1,5 +1,10 @@
 import {
+  IConsultantAccountBannedEvent,
+  IConsultantOnboardingApprovedEvent,
   IConsultantProjectJoinedEvent,
+  IConsultantSkillExamFailedEvent,
+  IConsultantSkillExamPassedEvent,
+  IConsultantSkillExamSubmittedEvent,
   IProjectPublishedEvent,
   ITaskStatusChangedEvent,
 } from '@common/events';
@@ -27,4 +32,42 @@ export interface IConsultantNotificationEventHandlerService {
    * @param event Payload carrying old and new status values alongside task identity.
    */
   onConsultantTaskStatusChanged(event: ITaskStatusChangedEvent): Promise<void>;
+
+  /**
+   * Sends `CONSULTANT_ONBOARDING_APPROVED` to the consultant when an admin
+   * approves their onboarding application (`OnboardingStatus → APPROVED`).
+   * @param event Payload carrying the consultant's userId and the onboarding row id.
+   */
+  onConsultantOnboardingApproved(event: IConsultantOnboardingApprovedEvent): Promise<void>;
+
+  /**
+   * Sends `CONSULTANT_SKILL_EXAM_SUBMITTED` to the consultant immediately after
+   * they finalise a skill-exam attempt (`status → SUBMITTED`).
+   * @param event Payload carrying exam + skill identity for routing.
+   */
+  onConsultantSkillExamSubmitted(event: IConsultantSkillExamSubmittedEvent): Promise<void>;
+
+  /**
+   * Sends `CONSULTANT_SKILL_EXAM_FAILED` to the consultant when the skill-exam
+   * pipeline concludes in `FAILED` (AI eval < 80%) or `COPYLEAKS_FAILED`
+   * (AI-content flagged). `metadata.fail_reason` discriminates the two cases.
+   * @param event Payload carrying the score, cooldown timestamp, and strike state.
+   */
+  onConsultantSkillExamFailed(event: IConsultantSkillExamFailedEvent): Promise<void>;
+
+  /**
+   * Sends `CONSULTANT_SKILL_EXAM_PASSED` to the consultant when the skill-exam
+   * pipeline concludes in `PASSED` (AI eval ≥ 80%). Copy is keyed off
+   * `metadata.proficiency_level` (`'advanced'` vs `'expert'`).
+   * @param event Payload carrying final score and assigned proficiency.
+   */
+  onConsultantSkillExamPassed(event: IConsultantSkillExamPassedEvent): Promise<void>;
+
+  /**
+   * Sends `CONSULTANT_ACCOUNT_BANNED` to the consultant when the 3rd Copyleaks
+   * strike flips `User.isActive = false`. Fires AFTER the corresponding
+   * `CONSULTANT_SKILL_EXAM_FAILED` notification for the same exam.
+   * @param event Payload carrying the ban reason and timestamp.
+   */
+  onConsultantAccountBanned(event: IConsultantAccountBannedEvent): Promise<void>;
 }

@@ -94,6 +94,49 @@ export interface IConsultantTaskStatusChangedMetadata {
   new_status: string;
 }
 
+export interface IConsultantOnboardingApprovedMetadata {
+  onboarding_id: string;
+}
+
+export interface IConsultantSkillExamSubmittedMetadata {
+  exam_id: string;
+  skill_id: string;
+  /** i18n skill key (e.g. `skill_react`); resolved on the FE / in copy. */
+  skill_name: string;
+}
+
+export interface IConsultantSkillExamFailedMetadata {
+  exam_id: string;
+  skill_id: string;
+  skill_name: string;
+  fail_reason: 'LOW_SCORE' | 'COPYLEAKS_FAILED';
+  /** 0–100; 0 when Copyleaks fails before AI eval runs. */
+  final_score: number;
+  /** ISO-8601. */
+  cooldown_until: string;
+  /** users.ai_strike_count after this event. */
+  strike_count: number;
+  /** 3 - strike_count (floored at 0). */
+  strikes_remaining: number;
+}
+
+export interface IConsultantSkillExamPassedMetadata {
+  exam_id: string;
+  skill_id: string;
+  skill_name: string;
+  /** 0–100. */
+  final_score: number;
+  proficiency_level: 'advanced' | 'expert';
+  /** True when proficiency_level === 'expert'. */
+  has_priority_benefit: boolean;
+}
+
+export interface IConsultantAccountBannedMetadata {
+  ban_reason: 'AI_CONTENT_ABUSE';
+  /** ISO-8601. */
+  banned_at: string;
+}
+
 // ── Admin ───────────────────────────────────────────────────────────────────
 
 export interface IAdminBusinessOnboardedMetadata {
@@ -153,6 +196,11 @@ export type NotificationMetadataMap = {
   [NOTIFICATION_TYPES.CONSULTANT_PROJECT_SKILL_MATCH]: IConsultantProjectSkillMatchMetadata;
   [NOTIFICATION_TYPES.CONSULTANT_PROJECT_JOINED]: IConsultantProjectJoinedMetadata;
   [NOTIFICATION_TYPES.CONSULTANT_TASK_STATUS_CHANGED]: IConsultantTaskStatusChangedMetadata;
+  [NOTIFICATION_TYPES.CONSULTANT_ONBOARDING_APPROVED]: IConsultantOnboardingApprovedMetadata;
+  [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_SUBMITTED]: IConsultantSkillExamSubmittedMetadata;
+  [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_FAILED]: IConsultantSkillExamFailedMetadata;
+  [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_PASSED]: IConsultantSkillExamPassedMetadata;
+  [NOTIFICATION_TYPES.CONSULTANT_ACCOUNT_BANNED]: IConsultantAccountBannedMetadata;
   [NOTIFICATION_TYPES.ADMIN_BUSINESS_ONBOARDED]: IAdminBusinessOnboardedMetadata;
   [NOTIFICATION_TYPES.ADMIN_PROJECT_PUBLISHED]: IAdminProjectPublishedMetadata;
   [NOTIFICATION_TYPES.ADMIN_BUSINESS_TOP_UP]: IAdminBusinessTopUpMetadata;

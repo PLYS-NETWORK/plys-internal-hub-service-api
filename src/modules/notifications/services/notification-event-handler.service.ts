@@ -1,8 +1,13 @@
 import {
   IBusinessOnboardedEvent,
+  IConsultantAccountBannedEvent,
   IConsultantApplicationAiRejectedEvent,
   IConsultantInterviewSubmittedEvent,
+  IConsultantOnboardingApprovedEvent,
   IConsultantProjectJoinedEvent,
+  IConsultantSkillExamFailedEvent,
+  IConsultantSkillExamPassedEvent,
+  IConsultantSkillExamSubmittedEvent,
   IPaymentTopUpCompletedEvent,
   IPaymentTopUpRefundedEvent,
   IPaymentWithdrawCompletedEvent,
@@ -149,6 +154,42 @@ export class NotificationEventHandlerService implements INotificationEventHandle
   public async onTaskStatusChanged(event: ITaskStatusChangedEvent): Promise<void> {
     this.logger.log(`[${this.rid}] onTaskStatusChanged — start | taskId: ${event.task_id}`);
     await this.onConsultantTaskStatusChanged(event);
+  }
+
+  @OnEvent(NOTIFICATION_EVENTS.CONSULTANT_ONBOARDING_APPROVED, { async: true })
+  public async onOnboardingApproved(event: IConsultantOnboardingApprovedEvent): Promise<void> {
+    this.logger.log(
+      `[${this.rid}] onOnboardingApproved — start | userId: ${event.consultant_user_id}`,
+    );
+    await this.onConsultantOnboardingApproved(event);
+  }
+
+  @OnEvent(NOTIFICATION_EVENTS.CONSULTANT_SKILL_EXAM_SUBMITTED, { async: true })
+  public async onSkillExamSubmitted(event: IConsultantSkillExamSubmittedEvent): Promise<void> {
+    this.logger.log(`[${this.rid}] onSkillExamSubmitted — start | examId: ${event.exam_id}`);
+    await this.onConsultantSkillExamSubmitted(event);
+  }
+
+  @OnEvent(NOTIFICATION_EVENTS.CONSULTANT_SKILL_EXAM_FAILED, { async: true })
+  public async onSkillExamFailed(event: IConsultantSkillExamFailedEvent): Promise<void> {
+    this.logger.log(
+      `[${this.rid}] onSkillExamFailed — start | examId: ${event.exam_id} | reason: ${event.fail_reason}`,
+    );
+    await this.onConsultantSkillExamFailed(event);
+  }
+
+  @OnEvent(NOTIFICATION_EVENTS.CONSULTANT_SKILL_EXAM_PASSED, { async: true })
+  public async onSkillExamPassed(event: IConsultantSkillExamPassedEvent): Promise<void> {
+    this.logger.log(
+      `[${this.rid}] onSkillExamPassed — start | examId: ${event.exam_id} | proficiency: ${event.proficiency_level}`,
+    );
+    await this.onConsultantSkillExamPassed(event);
+  }
+
+  @OnEvent(NOTIFICATION_EVENTS.CONSULTANT_ACCOUNT_BANNED, { async: true })
+  public async onAccountBanned(event: IConsultantAccountBannedEvent): Promise<void> {
+    this.logger.log(`[${this.rid}] onAccountBanned — start | userId: ${event.consultant_user_id}`);
+    await this.onConsultantAccountBanned(event);
   }
 
   // ── Admin handlers ────────────────────────────────────────────────────────
@@ -415,6 +456,105 @@ export class NotificationEventHandlerService implements INotificationEventHandle
       .catch((err: unknown) =>
         this.logger.error(
           `[${this.rid}] onConsultantTaskStatusChanged — failed | taskId: ${event.task_id} | error: ${String(err)}`,
+        ),
+      );
+  }
+
+  /** @inheritdoc */
+  public async onConsultantOnboardingApproved(
+    event: IConsultantOnboardingApprovedEvent,
+  ): Promise<void> {
+    void this.dispatcher
+      .dispatch({
+        userId: event.consultant_user_id,
+        type: NOTIFICATION_TYPES.CONSULTANT_ONBOARDING_APPROVED,
+        metadata: { onboarding_id: event.onboarding_id },
+      })
+      .catch((err: unknown) =>
+        this.logger.error(
+          `[${this.rid}] onConsultantOnboardingApproved — failed | userId: ${event.consultant_user_id} | error: ${String(err)}`,
+        ),
+      );
+  }
+
+  /** @inheritdoc */
+  public async onConsultantSkillExamSubmitted(
+    event: IConsultantSkillExamSubmittedEvent,
+  ): Promise<void> {
+    void this.dispatcher
+      .dispatch({
+        userId: event.consultant_user_id,
+        type: NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_SUBMITTED,
+        metadata: {
+          exam_id: event.exam_id,
+          skill_id: event.skill_id,
+          skill_name: event.skill_name,
+        },
+      })
+      .catch((err: unknown) =>
+        this.logger.error(
+          `[${this.rid}] onConsultantSkillExamSubmitted — failed | examId: ${event.exam_id} | error: ${String(err)}`,
+        ),
+      );
+  }
+
+  /** @inheritdoc */
+  public async onConsultantSkillExamFailed(event: IConsultantSkillExamFailedEvent): Promise<void> {
+    void this.dispatcher
+      .dispatch({
+        userId: event.consultant_user_id,
+        type: NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_FAILED,
+        metadata: {
+          exam_id: event.exam_id,
+          skill_id: event.skill_id,
+          skill_name: event.skill_name,
+          fail_reason: event.fail_reason,
+          final_score: event.final_score,
+          cooldown_until: event.cooldown_until,
+          strike_count: event.strike_count,
+          strikes_remaining: Math.max(0, 3 - event.strike_count),
+        },
+      })
+      .catch((err: unknown) =>
+        this.logger.error(
+          `[${this.rid}] onConsultantSkillExamFailed — failed | examId: ${event.exam_id} | error: ${String(err)}`,
+        ),
+      );
+  }
+
+  /** @inheritdoc */
+  public async onConsultantSkillExamPassed(event: IConsultantSkillExamPassedEvent): Promise<void> {
+    void this.dispatcher
+      .dispatch({
+        userId: event.consultant_user_id,
+        type: NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_PASSED,
+        metadata: {
+          exam_id: event.exam_id,
+          skill_id: event.skill_id,
+          skill_name: event.skill_name,
+          final_score: event.final_score,
+          proficiency_level: event.proficiency_level,
+          has_priority_benefit: event.proficiency_level === 'expert',
+        },
+      })
+      .catch((err: unknown) =>
+        this.logger.error(
+          `[${this.rid}] onConsultantSkillExamPassed — failed | examId: ${event.exam_id} | error: ${String(err)}`,
+        ),
+      );
+  }
+
+  /** @inheritdoc */
+  public async onConsultantAccountBanned(event: IConsultantAccountBannedEvent): Promise<void> {
+    void this.dispatcher
+      .dispatch({
+        userId: event.consultant_user_id,
+        type: NOTIFICATION_TYPES.CONSULTANT_ACCOUNT_BANNED,
+        metadata: { ban_reason: event.ban_reason, banned_at: event.banned_at },
+      })
+      .catch((err: unknown) =>
+        this.logger.error(
+          `[${this.rid}] onConsultantAccountBanned — failed | userId: ${event.consultant_user_id} | error: ${String(err)}`,
         ),
       );
   }

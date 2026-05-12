@@ -23,6 +23,11 @@ export const NOTIFICATION_TYPES = {
   CONSULTANT_PROJECT_SKILL_MATCH: 'consultant_project_skill_match',
   CONSULTANT_PROJECT_JOINED: 'consultant_project_joined',
   CONSULTANT_TASK_STATUS_CHANGED: 'consultant_task_status_changed',
+  CONSULTANT_ONBOARDING_APPROVED: 'consultant_onboarding_approved',
+  CONSULTANT_SKILL_EXAM_SUBMITTED: 'consultant_skill_exam_submitted',
+  CONSULTANT_SKILL_EXAM_FAILED: 'consultant_skill_exam_failed',
+  CONSULTANT_SKILL_EXAM_PASSED: 'consultant_skill_exam_passed',
+  CONSULTANT_ACCOUNT_BANNED: 'consultant_account_banned',
 
   // ── Admin (broadcast to all active admins) ──────────────────────────────────
   ADMIN_BUSINESS_ONBOARDED: 'admin_business_onboarded',
@@ -43,6 +48,8 @@ export const NOTIFICATION_ENTITY_TYPES = {
   TASK: 'task',
   TRANSACTION: 'transaction',
   APPLICATION: 'application',
+  ONBOARDING: 'onboarding',
+  SKILL_EXAM: 'skill_exam',
 } as const;
 
 export type NotificationEntityType =

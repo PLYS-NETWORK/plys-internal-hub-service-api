@@ -16,6 +16,11 @@ export const NOTIFICATION_EVENTS = {
   CONSULTANT_INTERVIEW_SUBMITTED: 'consultant.interview.submitted',
   CONSULTANT_APPLICATION_AI_REJECTED: 'consultant.application.ai_rejected',
   CONSULTANT_PROJECT_JOINED: 'consultant.project.joined',
+  CONSULTANT_ONBOARDING_APPROVED: 'consultant.onboarding.approved',
+  CONSULTANT_SKILL_EXAM_SUBMITTED: 'consultant.skill_exam.submitted',
+  CONSULTANT_SKILL_EXAM_FAILED: 'consultant.skill_exam.failed',
+  CONSULTANT_SKILL_EXAM_PASSED: 'consultant.skill_exam.passed',
+  CONSULTANT_ACCOUNT_BANNED: 'consultant.account.banned',
   TASK_STATUS_CHANGED: 'task.status.changed',
 } as const;
 

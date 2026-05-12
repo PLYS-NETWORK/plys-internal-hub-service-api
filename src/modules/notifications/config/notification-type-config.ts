@@ -10,8 +10,13 @@ import {
   IAdminConsultantInterviewSubmittedMetadata,
   IAdminProjectPublishedMetadata,
   IAdminTaskPublishedMetadata,
+  IConsultantAccountBannedMetadata,
+  IConsultantOnboardingApprovedMetadata,
   IConsultantProjectJoinedMetadata,
   IConsultantProjectSkillMatchMetadata,
+  IConsultantSkillExamFailedMetadata,
+  IConsultantSkillExamPassedMetadata,
+  IConsultantSkillExamSubmittedMetadata,
   IConsultantTaskStatusChangedMetadata,
   IPasswordChangedMetadata,
   IProfileUpdatedMetadata,
@@ -41,6 +46,15 @@ import {
 /** Which base URL the dispatcher should pass into `getRedirectUrl`. */
 export type NotificationBaseUrlKey = 'ployosUrl' | 'internalHubUrl' | 'lonaUrl';
 
+/**
+ * i18n key resolver — either a static key or a function that picks the key
+ * based on metadata. Used by FAILED / PASSED notifications where the copy
+ * branches on `metadata.fail_reason` / `metadata.proficiency_level`.
+ */
+export type NotificationI18nKey<T extends NotificationType> =
+  | string
+  | ((metadata: NotificationMetadataMap[T]) => string);
+
 export interface INotificationTypeConfig<T extends NotificationType> {
   readonly entityType: string;
   /**
@@ -55,8 +69,8 @@ export interface INotificationTypeConfig<T extends NotificationType> {
     frontendBaseUrl: string,
     businessId: string | null,
   ) => string | null;
-  readonly titleKey: string;
-  readonly bodyKey: string;
+  readonly titleKey: NotificationI18nKey<T>;
+  readonly bodyKey: NotificationI18nKey<T>;
   readonly bodyArgs?: (metadata: NotificationMetadataMap[T]) => Record<string, string | number>;
 }
 
@@ -210,6 +224,67 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
       title: m.task_title,
       new_status: m.new_status,
     }),
+  },
+  [NOTIFICATION_TYPES.CONSULTANT_ONBOARDING_APPROVED]: {
+    entityType: NOTIFICATION_ENTITY_TYPES.ONBOARDING,
+    getEntityId: (m: IConsultantOnboardingApprovedMetadata) => m.onboarding_id,
+    getRedirectUrl: (_m, base) => `${base}/skill-exams`,
+    titleKey: 'notification.consultant_onboarding_approved.title',
+    bodyKey: 'notification.consultant_onboarding_approved.body',
+  },
+  [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_SUBMITTED]: {
+    entityType: NOTIFICATION_ENTITY_TYPES.SKILL_EXAM,
+    getEntityId: (m: IConsultantSkillExamSubmittedMetadata) => m.exam_id,
+    getRedirectUrl: (m, base) => `${base}/skill-exams/${m.exam_id}`,
+    titleKey: 'notification.consultant_skill_exam_submitted.title',
+    bodyKey: 'notification.consultant_skill_exam_submitted.body',
+    bodyArgs: (m: IConsultantSkillExamSubmittedMetadata) => ({ skill: m.skill_name }),
+  },
+  // Dynamic title/body — dispatcher resolves the function against metadata so
+  // a single notification row can render the LOW_SCORE vs COPYLEAKS_FAILED copy
+  // without splitting into two NotificationType values.
+  [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_FAILED]: {
+    entityType: NOTIFICATION_ENTITY_TYPES.SKILL_EXAM,
+    getEntityId: (m: IConsultantSkillExamFailedMetadata) => m.exam_id,
+    getRedirectUrl: (m, base) => `${base}/skill-exams/${m.exam_id}`,
+    titleKey: (m: IConsultantSkillExamFailedMetadata) =>
+      m.fail_reason === 'LOW_SCORE'
+        ? 'notification.consultant_skill_exam_failed.low_score.title'
+        : 'notification.consultant_skill_exam_failed.copyleaks.title',
+    bodyKey: (m: IConsultantSkillExamFailedMetadata) =>
+      m.fail_reason === 'LOW_SCORE'
+        ? 'notification.consultant_skill_exam_failed.low_score.body'
+        : 'notification.consultant_skill_exam_failed.copyleaks.body',
+    bodyArgs: (m: IConsultantSkillExamFailedMetadata) => ({
+      skill: m.skill_name,
+      final_score: m.final_score.toFixed(2),
+      cooldown_until: m.cooldown_until,
+      strikes_remaining: m.strikes_remaining,
+    }),
+  },
+  [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_PASSED]: {
+    entityType: NOTIFICATION_ENTITY_TYPES.SKILL_EXAM,
+    getEntityId: (m: IConsultantSkillExamPassedMetadata) => m.exam_id,
+    getRedirectUrl: (_m, base) => `${base}/skills`,
+    titleKey: (m: IConsultantSkillExamPassedMetadata) =>
+      m.proficiency_level === 'expert'
+        ? 'notification.consultant_skill_exam_passed.expert.title'
+        : 'notification.consultant_skill_exam_passed.advanced.title',
+    bodyKey: (m: IConsultantSkillExamPassedMetadata) =>
+      m.proficiency_level === 'expert'
+        ? 'notification.consultant_skill_exam_passed.expert.body'
+        : 'notification.consultant_skill_exam_passed.advanced.body',
+    bodyArgs: (m: IConsultantSkillExamPassedMetadata) => ({
+      skill: m.skill_name,
+      final_score: m.final_score.toFixed(2),
+    }),
+  },
+  [NOTIFICATION_TYPES.CONSULTANT_ACCOUNT_BANNED]: {
+    entityType: NOTIFICATION_ENTITY_TYPES.USER,
+    getEntityId: (_m: IConsultantAccountBannedMetadata, userId: string) => userId,
+    getRedirectUrl: () => null,
+    titleKey: 'notification.consultant_account_banned.title',
+    bodyKey: 'notification.consultant_account_banned.body',
   },
 
   // ── Admin ───────────────────────────────────────────────────────────────────

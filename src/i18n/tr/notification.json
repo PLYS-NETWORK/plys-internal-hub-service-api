@@ -70,5 +70,37 @@
   "admin_consultant_ai_rejected": {
     "title": "Başvuru yapay zeka tarafından işaretlendi",
     "body": "{name}'in başvurusu yapay zeka içeriği nedeniyle işaretlendi ve otomatik olarak reddedildi."
+  },
+  "consultant_onboarding_approved": {
+    "title": "Hesabınız doğrulandı",
+    "body": "Plys'e hoş geldiniz! Hesabınız doğrulandı — artık beceri kaydı yapabilir ve sınavlara girebilirsiniz."
+  },
+  "consultant_skill_exam_submitted": {
+    "title": "Beceri sınavı gönderildi",
+    "body": "{skill} sınavınız değerlendiriliyor. Sonuç hazır olduğunda sizi bilgilendireceğiz."
+  },
+  "consultant_skill_exam_failed": {
+    "low_score": {
+      "title": "Beceri sınavı sonucu: geçilemedi",
+      "body": "{skill} sınavınızda {final_score}% aldınız; geçme eşiği %80. {cooldown_until} tarihinden sonra tekrar deneyebilirsiniz."
+    },
+    "copyleaks": {
+      "title": "Beceri sınavı yapay zeka içeriği nedeniyle işaretlendi",
+      "body": "{skill} cevaplarınız işaretlendi. {cooldown_until} tarihinden sonra tekrar deneyebilirsiniz. Hesabınız kalıcı olarak devre dışı bırakılmadan önce {strikes_remaining} deneme hakkınız kaldı."
+    }
+  },
+  "consultant_skill_exam_passed": {
+    "advanced": {
+      "title": "Beceri sınavını geçtiniz!",
+      "body": "Tebrikler — {skill} sınavını {final_score}% ile ileri seviyede geçtiniz."
+    },
+    "expert": {
+      "title": "Beceri sınavını uzman seviyesinde geçtiniz!",
+      "body": "Olağanüstü — {skill} sınavını {final_score}% ile uzman seviyesinde geçtiniz. Eşleşen projeler yayınlandığında öncelikli bildirim alacaksınız."
+    }
+  },
+  "consultant_account_banned": {
+    "title": "Hesap kalıcı olarak devre dışı bırakıldı",
+    "body": "Tekrarlanan yapay zeka içeriği ihlalleri nedeniyle hesabınız kalıcı olarak devre dışı bırakıldı. Bunun bir hata olduğunu düşünüyorsanız destek ekibiyle iletişime geçin."
   }
 }
