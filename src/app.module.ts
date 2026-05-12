@@ -39,6 +39,7 @@ import { BillingModule } from './modules/billing/billing.module';
 import { BusinessProjectsModule } from './modules/business-projects/business-projects.module';
 import { ConsultantApplicationModule } from './modules/consultant-application/consultant-application.module';
 import { ConsultantProjectsModule } from './modules/consultant-projects/consultant-projects.module';
+import { ContactModule } from './modules/contact/contact.module';
 import { FilesModule } from './modules/files';
 import { HealthModule } from './modules/health/health.module';
 import { HousekeepingModule } from './modules/housekeeping/housekeeping.module';
@@ -108,6 +109,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     AdminConsultantApplicationModule,
     ConsultantApplicationModule,
     ConsultantProjectsModule,
+    ContactModule,
     FilesModule,
     HealthModule,
     HousekeepingModule,

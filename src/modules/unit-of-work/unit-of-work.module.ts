@@ -105,6 +105,6 @@ const repositories = [
 
 @Module({
   providers: [UnitOfWorkService, TransactionNumberService, TaskCodeService, ...repositories],
-  exports: [UnitOfWorkService, TransactionNumberService, TaskCodeService],
+  exports: [UnitOfWorkService, TransactionNumberService, TaskCodeService, ContactInquiryRepository],
 })
 export class UnitOfWorkModule {}
