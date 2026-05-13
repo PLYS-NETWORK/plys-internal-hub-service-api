@@ -330,11 +330,41 @@ export class BasicAuthService implements IBasicAuthService {
       });
     }
 
+    // Consultant-only: a REJECTED onboarding sets `blocked_until = now + 3 months`.
+    // While that window is open the consultant must NOT be allowed back in (admin
+    // already emailed them the rejection reason). After the window expires login is
+    // allowed again and the consultant can re-onboard.
+    await this.assertConsultantNotBlocked(user.id, dto.active_platform);
+
     user.lastLoginAt = new Date();
     await this.uow.users.save(user);
 
     this.logger.log(`login — complete | userId: ${user.id}`);
     return this.sessionService.createSession(user.id, user.email, dto.active_platform, context);
+  }
+
+  /**
+   * For CONSULTANT logins: if the user has an onboarding row with an active
+   * block (`blocked_until > now` from a prior admin REJECT), refuse login with
+   * `CONSULTANT_ONBOARDING_BLOCKED`. No-op for other platforms.
+   */
+  private async assertConsultantNotBlocked(
+    userId: string,
+    activePlatform: ActivePlatform,
+  ): Promise<void> {
+    if (activePlatform !== ActivePlatform.CONSULTANT) return;
+    const onboarding = await this.uow.consultantOnboardings.findByUserId(userId);
+    if (onboarding?.blockedUntil && onboarding.blockedUntil > new Date()) {
+      this.logger.warn(
+        `login — consultant blocked | userId: ${userId} | until: ${onboarding.blockedUntil.toISOString()}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.consultant_onboarding.blocked',
+        errorCode: ERROR_CODES.CONSULTANT_ONBOARDING_BLOCKED,
+        status: HttpStatus.FORBIDDEN,
+        details: { blocked_until: onboarding.blockedUntil.toISOString() },
+      });
+    }
   }
 
   // ─── Change Password ─────────────────────────────────────────────────────

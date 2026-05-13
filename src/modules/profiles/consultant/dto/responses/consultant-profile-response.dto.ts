@@ -26,10 +26,6 @@ export class ConsultantProfileResponseDto implements IConsultantProfileResponse 
   @ApiProperty({ name: 'years_of_experience', nullable: true, example: 5 })
   public readonly years_of_experience!: number | null;
 
-  @Expose()
-  @ApiProperty({ nullable: true, example: 'full_time' })
-  public readonly availability!: string | null;
-
   @Expose({ name: 'avatarUrl' })
   @ApiProperty({ name: 'avatar_url', nullable: true })
   public readonly avatar_url!: string | null;

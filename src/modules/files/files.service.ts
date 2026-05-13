@@ -5,7 +5,7 @@ import { IStorageProvider, IUploadInput, STORAGE_PROVIDER } from '@common/module
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { FileEntity } from '@database/entities';
-import { FileStorageProvider, UserRole } from '@database/enums';
+import { FilePurpose, FileStorageProvider, UserRole } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -28,10 +28,10 @@ export class FilesService implements IFilesService {
   }
 
   /** @inheritdoc */
-  public async upload(input: IUploadInput): Promise<FileResponseDto> {
+  public async upload(input: IUploadInput, purpose?: FilePurpose): Promise<FileResponseDto> {
     const ownerUserId = this.requireUserId();
     this.logger.log(
-      `upload — start | userId: ${ownerUserId}, size: ${input.size}, mime: ${input.mimeType}`,
+      `upload — start | userId: ${ownerUserId}, size: ${input.size}, mime: ${input.mimeType}, purpose: ${purpose ?? 'none'}`,
     );
 
     if (this.storage.name === FileStorageProvider.LOCAL) {
@@ -40,11 +40,17 @@ export class FilesService implements IFilesService {
 
     // Server-generated key — never derived from the client filename. Sharded
     // by yyyy/mm to avoid huge flat directories on the local provider.
+    // CONSULTANT_CV uploads land under `consultant-CVs/<env>/<yyyy>/<mm>/<uuid>`
+    // so the legal/admin teams can spot them easily in the storage browser.
     const now = new Date();
     const yyyy = String(now.getUTCFullYear());
     const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
     const uuid = crypto.randomUUID();
-    const keyHint = `${yyyy}/${mm}/${uuid}.${input.extension}`;
+    const baseName = `${yyyy}/${mm}/${uuid}.${input.extension}`;
+    const keyHint =
+      purpose === FilePurpose.CONSULTANT_CV
+        ? `consultant-CVs/${this.env.nodeEnv}/${baseName}`
+        : baseName;
 
     const sha256 = crypto.createHash('sha256').update(input.buffer).digest('hex');
 
@@ -64,8 +70,9 @@ export class FilesService implements IFilesService {
           });
     }
 
-    // `purpose` always starts NULL — server sets it via markAsAttached when
-    // the file is later referenced by a comment / evidence.
+    // CONSULTANT_CV uploads carry their purpose immediately so the consultant
+    // can reference the URL on POST /consultant/onboarding/profile. Other
+    // purposes still start NULL and get stamped later via markAsAttached.
     const row = this.uow.files.create({
       ownerUserId,
       storageProvider: this.storage.name,
@@ -74,7 +81,7 @@ export class FilesService implements IFilesService {
       mimeType: input.mimeType,
       sizeBytes: input.size,
       sha256,
-      purpose: null,
+      purpose: purpose === FilePurpose.CONSULTANT_CV ? FilePurpose.CONSULTANT_CV : null,
     });
     const saved = (await this.uow.files.save(row)) as FileEntity;
 

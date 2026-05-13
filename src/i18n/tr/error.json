@@ -135,8 +135,16 @@
     "not_found": "Danışman onboarding kaydı bulunamadı.",
     "blocked": "Hesabınız onboarding için {{blocked_until}} tarihine kadar engellendi. Lütfen bu tarihten sonra tekrar deneyin.",
     "invalid_status": "Bu işlem mevcut onboarding durumunda izin verilmiyor.",
-    "incomplete_answers": "Göndermeden önce 10 onboarding sorusunun tamamı yanıtlanmalı.",
-    "not_approved": "Onboarding'iniz henüz onaylanmadı. Beceri sınavlarına kayıt olamazsınız."
+    "incomplete_answers": "Göndermeden önce tüm onboarding sorularının yanıtlanması gerekir.",
+    "not_approved": "Onboarding'iniz henüz onaylanmadı. Beceri sınavlarına kayıt olamazsınız.",
+    "answers_coverage": "Gönderilen cevaplar, her aktif onboarding sorusunu tam olarak bir kez kapsamalıdır.",
+    "invalid_answer": "Bir cevap, soru türü için beklenen biçime uymuyor."
+  },
+  "onboarding_question": {
+    "not_found": "Onboarding sorusu bulunamadı.",
+    "invalid_options": "Soru seçenekleri tür için geçersiz. TEXT seçenek almaz; RADIO ve CHECKBOX en az iki benzersiz seçenek gerektirir.",
+    "type_change_forbidden": "Soru türü değiştirilemez.",
+    "reorder_set_mismatch": "Sıralama listesi her aktif soruyu tam olarak bir kez içermelidir. Pasif veya silinmiş id kabul edilmez."
   },
   "skill_exam": {
     "not_found": "Beceri sınavı bulunamadı.",

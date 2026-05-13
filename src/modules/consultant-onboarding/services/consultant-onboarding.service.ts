@@ -2,8 +2,8 @@ import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { ConsultantOnboarding, InterviewQuestion } from '@database/entities';
-import { OnboardingStatus, QuestionType } from '@database/enums';
+import { ConsultantOnboarding } from '@database/entities';
+import { OnboardingStatus } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -11,9 +11,6 @@ import { plainToInstance } from 'class-transformer';
 import { SubmitOnboardingProfileDto } from '../dto/requests/submit-onboarding-profile.dto';
 import { OnboardingStatusResponseDto } from '../dto/responses/onboarding-status-response.dto';
 import { IConsultantOnboardingService } from '../interfaces/consultant-onboarding.service.interface';
-
-const COMMUNICATION_QUESTION_COUNT = 5;
-const SYSTEM_KNOWLEDGE_QUESTION_COUNT = 5;
 
 @Injectable()
 export class ConsultantOnboardingService implements IConsultantOnboardingService {
@@ -52,7 +49,7 @@ export class ConsultantOnboardingService implements IConsultantOnboardingService
     this.logger.log(`[${this.rid}] submitProfile — start | userId: ${userId}`);
 
     return this.uow.withTransaction(async (tx) => {
-      // 1. Block check + status guard
+      // 1. Block check + status guard.
       const existing = await tx.consultantOnboardings.findByUserId(userId);
       if (existing?.blockedUntil && existing.blockedUntil > new Date()) {
         this.logger.warn(
@@ -97,7 +94,10 @@ export class ConsultantOnboardingService implements IConsultantOnboardingService
       if (dto.cv_url !== undefined) profile.cvUrl = dto.cv_url;
       await tx.consultantProfiles.save(profile);
 
-      // 3. Upsert the onboarding row in IN_INTERVIEW state.
+      // 3. Upsert the onboarding row into IN_INTERVIEW.
+      // Questions are NO LONGER pre-assigned: the consultant sees the global active
+      // question set when they fetch /consultant/onboarding/questions, and submits
+      // every answer at once via /consultant/onboarding/interview/submit.
       const now = new Date();
       const onboarding =
         existing ??
@@ -108,42 +108,6 @@ export class ConsultantOnboardingService implements IConsultantOnboardingService
       onboarding.status = OnboardingStatus.IN_INTERVIEW;
       onboarding.profileSubmittedAt = now;
       const saved = (await tx.consultantOnboardings.save(onboarding)) as ConsultantOnboarding;
-
-      // 4. Assign 5 COMMUNICATION + 5 SYSTEM_KNOWLEDGE questions from the seed bank.
-      const [communication, systemKnowledge] = await Promise.all([
-        tx.interviewQuestions.findRandomActiveByType(
-          QuestionType.COMMUNICATION,
-          COMMUNICATION_QUESTION_COUNT,
-        ),
-        tx.interviewQuestions.findRandomActiveByType(
-          QuestionType.SYSTEM_KNOWLEDGE,
-          SYSTEM_KNOWLEDGE_QUESTION_COUNT,
-        ),
-      ]);
-      if (
-        communication.length < COMMUNICATION_QUESTION_COUNT ||
-        systemKnowledge.length < SYSTEM_KNOWLEDGE_QUESTION_COUNT
-      ) {
-        this.logger.error(
-          `[${this.rid}] submitProfile — seed bank insufficient | comm: ${communication.length}, sys: ${systemKnowledge.length}`,
-        );
-        throw new TranslatableException({
-          messageKey: 'error.interview_question.not_found',
-          errorCode: ERROR_CODES.INTERVIEW_QUESTION_NOT_FOUND,
-          status: HttpStatus.INTERNAL_SERVER_ERROR,
-        });
-      }
-      const ordered: InterviewQuestion[] = [...communication, ...systemKnowledge];
-      const questionRows = ordered.map((q, idx) =>
-        tx.consultantOnboardingQuestions.create({
-          onboardingId: saved.id,
-          interviewQuestionId: q.id,
-          type: q.type,
-          contentSnapshot: q.content,
-          questionOrder: idx + 1,
-        }),
-      );
-      await tx.consultantOnboardingQuestions.save(questionRows);
 
       this.logger.log(
         `[${this.rid}] submitProfile — complete | onboardingId: ${saved.id} | userId: ${userId}`,

@@ -1,22 +1,26 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
-import { NOTIFICATION_EVENTS } from '@common/events';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import { ConsultantOnboarding } from '@database/entities';
-import { OnboardingStatus } from '@database/enums';
+import {
+  ConsultantOnboarding,
+  IOnboardingQuestionSnapshot,
+  OnboardingAnswerValue,
+  OnboardingQuestion,
+} from '@database/entities';
+import { OnboardingQuestionType, OnboardingStatus } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { plainToInstance } from 'class-transformer';
 
-import { SubmitOnboardingAnswerDto } from '../dto/requests/submit-onboarding-answer.dto';
+import {
+  SubmitOnboardingAnswerItemDto,
+  SubmitOnboardingAnswersDto,
+} from '../dto/requests/submit-onboarding-answers.dto';
 import { OnboardingQuestionResponseDto } from '../dto/responses/onboarding-question-response.dto';
 import { IOnboardingInterviewService } from '../interfaces/onboarding-interview.service.interface';
-
-const TOTAL_ONBOARDING_QUESTIONS = 10;
 
 @Injectable()
 export class OnboardingInterviewService implements IOnboardingInterviewService {
@@ -31,8 +35,6 @@ export class OnboardingInterviewService implements IOnboardingInterviewService {
     private readonly requestContext: RequestContextService,
     private readonly emailService: EmailService,
     private readonly env: EnvironmentsService,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger = new AppLogger(OnboardingInterviewService.name, requestContext);
   }
@@ -45,84 +47,19 @@ export class OnboardingInterviewService implements IOnboardingInterviewService {
     const onboarding = await this.loadOnboarding(userId);
     this.assertInInterview(onboarding.status);
 
-    const questions = await this.uow.consultantOnboardingQuestions.findByOnboardingId(
-      onboarding.id,
+    const questions = await this.uow.onboardingQuestions.findAllActiveOrdered();
+    this.logger.log(
+      `[${this.rid}] getQuestions — complete | userId: ${userId} | count: ${questions.length}`,
     );
-    const answers = await this.uow.consultantOnboardingAnswers.findByOnboardingId(onboarding.id);
-    const answerByQuestionId = new Map(answers.map((a) => [a.onboardingQuestionId, a.answerText]));
-
-    return questions.map((q) =>
-      plainToInstance(
-        OnboardingQuestionResponseDto,
-        {
-          id: q.id,
-          onboarding_question_id: q.id,
-          question_order: q.questionOrder,
-          type: q.type,
-          content: q.contentSnapshot,
-          answer_text: answerByQuestionId.get(q.id) ?? null,
-        },
-        { excludeExtraneousValues: true },
-      ),
-    );
+    return questions.map((q) => this.toQuestionResponseDto(q));
   }
 
   /** @inheritdoc */
-  public async submitAnswer(dto: SubmitOnboardingAnswerDto): Promise<void> {
+  public async submitAnswers(dto: SubmitOnboardingAnswersDto): Promise<void> {
     const userId = this.requestContext.userId!;
     this.logger.log(
-      `[${this.rid}] submitAnswer — start | userId: ${userId} | questionId: ${dto.onboarding_question_id}`,
+      `[${this.rid}] submitAnswers — start | userId: ${userId} | answers: ${dto.answers.length}`,
     );
-
-    await this.uow.withTransaction(async (tx) => {
-      const onboarding = await tx.consultantOnboardings.findByUserId(userId);
-      if (!onboarding) {
-        throw new TranslatableException({
-          messageKey: 'error.consultant_onboarding.not_found',
-          errorCode: ERROR_CODES.CONSULTANT_ONBOARDING_NOT_FOUND,
-          status: HttpStatus.NOT_FOUND,
-        });
-      }
-      this.assertInInterview(onboarding.status);
-
-      // Verify the question belongs to this onboarding before upserting the answer.
-      const question = await tx.consultantOnboardingQuestions.findById(dto.onboarding_question_id);
-      if (!question || question.onboardingId !== onboarding.id) {
-        this.logger.warn(
-          `[${this.rid}] submitAnswer — question not found or foreign | questionId: ${dto.onboarding_question_id}`,
-        );
-        throw new TranslatableException({
-          messageKey: 'error.consultant_onboarding.not_found',
-          errorCode: ERROR_CODES.CONSULTANT_ONBOARDING_NOT_FOUND,
-          status: HttpStatus.NOT_FOUND,
-        });
-      }
-
-      const existing = await tx.consultantOnboardingAnswers.findOne({
-        where: { onboardingQuestionId: dto.onboarding_question_id },
-      });
-      const now = new Date();
-      if (existing) {
-        existing.answerText = dto.answer_text;
-        existing.submittedAt = now;
-        await tx.consultantOnboardingAnswers.save(existing);
-      } else {
-        const row = tx.consultantOnboardingAnswers.create({
-          onboardingQuestionId: dto.onboarding_question_id,
-          answerText: dto.answer_text,
-          submittedAt: now,
-        });
-        await tx.consultantOnboardingAnswers.save(row);
-      }
-    });
-
-    this.logger.log(`[${this.rid}] submitAnswer — complete | userId: ${userId}`);
-  }
-
-  /** @inheritdoc */
-  public async submit(): Promise<void> {
-    const userId = this.requestContext.userId!;
-    this.logger.log(`[${this.rid}] submit — start | userId: ${userId}`);
 
     const result = await this.uow.withTransaction(async (tx) => {
       const onboarding = await tx.consultantOnboardings.findByUserId(userId);
@@ -135,21 +72,49 @@ export class OnboardingInterviewService implements IOnboardingInterviewService {
       }
       this.assertInInterview(onboarding.status);
 
-      const answers = await tx.consultantOnboardingAnswers.findByOnboardingId(onboarding.id);
-      if (answers.length < TOTAL_ONBOARDING_QUESTIONS) {
+      const activeQuestions = await tx.onboardingQuestions.findAllActiveOrdered();
+      const questionsById = new Map(activeQuestions.map((q) => [q.id, q]));
+
+      // Coverage: every active question answered exactly once, no foreign ids.
+      const answeredIds = new Set<string>();
+      for (const a of dto.answers) {
+        if (answeredIds.has(a.onboardingQuestionId) || !questionsById.has(a.onboardingQuestionId)) {
+          this.logger.warn(
+            `[${this.rid}] submitAnswers — coverage mismatch (dup or foreign) | id: ${a.onboardingQuestionId}`,
+          );
+          throw this.coverageError();
+        }
+        answeredIds.add(a.onboardingQuestionId);
+      }
+      if (answeredIds.size !== activeQuestions.length) {
         this.logger.warn(
-          `[${this.rid}] submit — incomplete answers | onboardingId: ${onboarding.id} | answered: ${answers.length}`,
+          `[${this.rid}] submitAnswers — coverage mismatch (size) | expected: ${activeQuestions.length} | got: ${answeredIds.size}`,
         );
-        throw new TranslatableException({
-          messageKey: 'error.consultant_onboarding.incomplete_answers',
-          errorCode: ERROR_CODES.CONSULTANT_ONBOARDING_INCOMPLETE_ANSWERS,
-          status: HttpStatus.UNPROCESSABLE_ENTITY,
-          details: { answered: answers.length, required: TOTAL_ONBOARDING_QUESTIONS },
-        });
+        throw this.coverageError();
       }
 
+      // Per-item shape validation + row construction with snapshot.
+      const now = new Date();
+      const rows = dto.answers.map((a) => {
+        const q = questionsById.get(a.onboardingQuestionId)!;
+        const value = this.normaliseAndValidateAnswerValue(q, a);
+        const snapshot: IOnboardingQuestionSnapshot = {
+          type: q.type,
+          question: q.question,
+          options: q.options ?? null,
+        };
+        return tx.consultantOnboardingAnswers.create({
+          onboardingId: onboarding.id,
+          onboardingQuestionId: q.id,
+          questionSnapshot: snapshot,
+          answerValue: value,
+          submittedAt: now,
+        });
+      });
+      await tx.consultantOnboardingAnswers.save(rows);
+
       onboarding.status = OnboardingStatus.INTERVIEW_SUBMITTED;
-      onboarding.interviewSubmittedAt = new Date();
+      onboarding.interviewSubmittedAt = now;
       await tx.consultantOnboardings.save(onboarding);
 
       const profile = await tx.consultantProfiles.findByUserId(userId);
@@ -161,13 +126,14 @@ export class OnboardingInterviewService implements IOnboardingInterviewService {
       };
     });
 
-    // Email + admin broadcast happen outside the transaction (best-effort, non-blocking).
     await this.notifyConsultantAndAdmins(result);
 
     this.logger.log(
-      `[${this.rid}] submit — complete | onboardingId: ${result.onboardingId} | userId: ${userId}`,
+      `[${this.rid}] submitAnswers — complete | onboardingId: ${result.onboardingId} | userId: ${userId}`,
     );
   }
+
+  // ─── Private helpers ──────────────────────────────────────────────────────
 
   private assertInInterview(status: OnboardingStatus): void {
     if (status !== OnboardingStatus.IN_INTERVIEW) {
@@ -191,12 +157,81 @@ export class OnboardingInterviewService implements IOnboardingInterviewService {
     return onboarding;
   }
 
+  private coverageError(): TranslatableException {
+    return new TranslatableException({
+      messageKey: 'error.consultant_onboarding.answers_coverage',
+      errorCode: ERROR_CODES.CONSULTANT_ONBOARDING_ANSWERS_COVERAGE,
+      status: HttpStatus.UNPROCESSABLE_ENTITY,
+    });
+  }
+
+  private invalidAnswerError(): TranslatableException {
+    return new TranslatableException({
+      messageKey: 'error.consultant_onboarding.invalid_answer',
+      errorCode: ERROR_CODES.CONSULTANT_ONBOARDING_INVALID_ANSWER,
+      status: HttpStatus.UNPROCESSABLE_ENTITY,
+    });
+  }
+
+  // Validates the incoming answer_value against the question type & options, and
+  // returns a normalised value object stored verbatim in jsonb.
+  private normaliseAndValidateAnswerValue(
+    question: OnboardingQuestion,
+    item: SubmitOnboardingAnswerItemDto,
+  ): OnboardingAnswerValue {
+    const raw = item.answerValue;
+    if (question.type === OnboardingQuestionType.TEXT) {
+      const text = (raw as { text?: unknown }).text;
+      if (typeof text !== 'string' || text.trim().length === 0) {
+        throw this.invalidAnswerError();
+      }
+      return { text };
+    }
+
+    if (question.type === OnboardingQuestionType.RADIO) {
+      const value = (raw as { value?: unknown }).value;
+      const known = new Set((question.options ?? []).map((o) => o.value));
+      if (typeof value !== 'string' || !known.has(value)) {
+        throw this.invalidAnswerError();
+      }
+      return { value };
+    }
+
+    // CHECKBOX
+    const values = (raw as { values?: unknown }).values;
+    if (!Array.isArray(values) || values.length === 0) {
+      throw this.invalidAnswerError();
+    }
+    const known = new Set((question.options ?? []).map((o) => o.value));
+    const unique = new Set<string>();
+    for (const v of values) {
+      if (typeof v !== 'string' || !known.has(v) || unique.has(v)) {
+        throw this.invalidAnswerError();
+      }
+      unique.add(v);
+    }
+    return { values: [...unique] };
+  }
+
+  private toQuestionResponseDto(q: OnboardingQuestion): OnboardingQuestionResponseDto {
+    return plainToInstance(
+      OnboardingQuestionResponseDto,
+      {
+        id: q.id,
+        type: q.type,
+        question: q.question,
+        options: q.options ?? null,
+        position: q.position ?? 0,
+      },
+      { excludeExtraneousValues: true },
+    );
+  }
+
   private async notifyConsultantAndAdmins(result: {
     onboardingId: string;
     consultantName: string;
     consultantEmail: string | null;
   }): Promise<void> {
-    // Consultant "we received your submission" email.
     if (result.consultantEmail) {
       try {
         await this.emailService.sendApplicationSubmittedEmail(result.consultantEmail, {
@@ -208,7 +243,6 @@ export class OnboardingInterviewService implements IOnboardingInterviewService {
       }
     }
 
-    // Admin broadcast (first admin TO, rest CC — handled inside email service).
     try {
       const adminUserIds = await this.uow.users.findActiveAdminUserIds();
       if (adminUserIds.length === 0) {
@@ -231,11 +265,5 @@ export class OnboardingInterviewService implements IOnboardingInterviewService {
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.error(`[${this.rid}] notify admins — failed | error: ${msg}`);
     }
-
-    // NOTE: in-app notification for the consultant on INTERVIEW_SUBMITTED is
-    // intentionally NOT emitted — the user's notification plan covers ONBOARDING_APPROVED
-    // (the admin's eventual decision), not the submitted state. Add a CONSULTANT_INTERVIEW_SUBMITTED
-    // event here if that requirement evolves.
-    void NOTIFICATION_EVENTS; // referenced for type import path stability
   }
 }

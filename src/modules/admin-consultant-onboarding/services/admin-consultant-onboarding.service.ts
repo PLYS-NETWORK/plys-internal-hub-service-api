@@ -5,12 +5,7 @@ import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
-import {
-  ConsultantOnboarding,
-  ConsultantOnboardingAnswer,
-  ConsultantOnboardingQuestion,
-  User,
-} from '@database/entities';
+import { ConsultantOnboarding, User } from '@database/entities';
 import { OnboardingDecision, OnboardingStatus } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
@@ -54,9 +49,17 @@ export class AdminConsultantOnboardingService implements IAdminConsultantOnboard
   public async list(dto: ListOnboardingsDto): Promise<PaginatedOnboardingsResponseDto> {
     const page = dto.page ?? 1;
     const take = dto.take ?? 20;
-    this.logger.log(`[${this.rid}] list — start | status: ${dto.status ?? 'any'} | page: ${page}`);
+    // Default "pending review" filter when caller omits status. Set to an empty
+    // string explicitly to disable the filter.
+    const status = dto.status === undefined ? OnboardingStatus.INTERVIEW_SUBMITTED : dto.status;
+    this.logger.log(
+      `[${this.rid}] list — start | status: ${status || 'any'} | userId: ${dto.userId ?? 'any'} | page: ${page}`,
+    );
 
-    const where = dto.status ? { status: dto.status as OnboardingStatus } : {};
+    const where: { status?: OnboardingStatus; userId?: string } = {};
+    if (status) where.status = status as OnboardingStatus;
+    if (dto.userId) where.userId = dto.userId;
+
     const [rows, total] = await this.uow.consultantOnboardings.findAndCount({
       where,
       order: { createdAt: 'DESC' },
@@ -64,7 +67,6 @@ export class AdminConsultantOnboardingService implements IAdminConsultantOnboard
       take,
     });
 
-    // Eagerly hydrate users + profiles for the listed onboardings.
     const userIds = Array.from(new Set(rows.map((r) => r.userId)));
     const users = await Promise.all(userIds.map((id) => this.uow.users.findById(id)));
     const profiles = await Promise.all(
@@ -191,7 +193,6 @@ export class AdminConsultantOnboardingService implements IAdminConsultantOnboard
       };
     });
 
-    // Side-effects (email + event) outside the transaction.
     await this.fireDecisionSideEffects(result, dto);
 
     return this.buildDetail(result.onboarding);
@@ -209,7 +210,6 @@ export class AdminConsultantOnboardingService implements IAdminConsultantOnboard
     const userEmail = result.user?.email;
 
     if (dto.decision === 'APPROVED') {
-      // In-app notification — fan-out via the notification dispatcher.
       const payload: IConsultantOnboardingApprovedEvent = {
         consultant_user_id: result.onboarding.userId,
         onboarding_id: result.onboarding.id,
@@ -230,7 +230,6 @@ export class AdminConsultantOnboardingService implements IAdminConsultantOnboard
       return;
     }
 
-    // REJECTED branch.
     if (userEmail && result.blockedUntilIso) {
       try {
         await this.emailService.sendApplicationRejectedEmail(userEmail, {
@@ -248,32 +247,25 @@ export class AdminConsultantOnboardingService implements IAdminConsultantOnboard
   private async buildDetail(
     onboarding: ConsultantOnboarding,
   ): Promise<OnboardingDetailResponseDto> {
-    const [user, profile, questions, answers] = await Promise.all([
+    const [user, profile, answers] = await Promise.all([
       this.uow.users.findById(onboarding.userId),
       this.uow.consultantProfiles.findByUserId(onboarding.userId),
-      this.uow.consultantOnboardingQuestions.findByOnboardingId(onboarding.id),
       this.uow.consultantOnboardingAnswers.findByOnboardingId(onboarding.id),
     ]);
 
-    const answerByQuestionId = new Map<string, ConsultantOnboardingAnswer>(
-      answers.map((a) => [a.onboardingQuestionId, a]),
-    );
-
-    const answerViews = questions.map((q: ConsultantOnboardingQuestion) => {
-      const a = answerByQuestionId.get(q.id);
-      return plainToInstance(
+    const answerViews = answers.map((a) =>
+      plainToInstance(
         OnboardingAnswerViewDto,
         {
-          onboarding_question_id: q.id,
-          question_order: q.questionOrder,
-          type: q.type,
-          content: q.contentSnapshot,
-          answer_text: a?.answerText ?? null,
-          submitted_at: a?.submittedAt ? a.submittedAt.toISOString() : null,
+          id: a.id,
+          onboarding_question_id: a.onboardingQuestionId,
+          question_snapshot: a.questionSnapshot,
+          answer_value: a.answerValue,
+          submitted_at: a.submittedAt.toISOString(),
         },
         { excludeExtraneousValues: true },
-      );
-    });
+      ),
+    );
 
     return plainToInstance(
       OnboardingDetailResponseDto,

@@ -1,10 +1,11 @@
+import { IOnboardingQuestionSnapshot, OnboardingAnswerValue } from '@database/entities';
+
 export interface IOnboardingAnswerView {
+  readonly id: string;
   readonly onboarding_question_id: string;
-  readonly question_order: number;
-  readonly type: string;
-  readonly content: string;
-  readonly answer_text: string | null;
-  readonly submitted_at: string | null;
+  readonly question_snapshot: IOnboardingQuestionSnapshot;
+  readonly answer_value: OnboardingAnswerValue;
+  readonly submitted_at: string;
 }
 
 export interface IOnboardingDetailResponse {

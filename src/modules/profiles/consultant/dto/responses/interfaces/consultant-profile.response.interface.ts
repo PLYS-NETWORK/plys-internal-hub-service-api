@@ -11,8 +11,6 @@ export interface IConsultantProfileResponse {
   readonly bio: string | null;
   /** Total years of professional experience; `null` when not provided. */
   readonly years_of_experience: number | null;
-  /** Availability description (e.g. `"full_time"`, `"part_time"`); `null` when not set. */
-  readonly availability: string | null;
   /** CDN URL of the profile avatar image; `null` when no avatar has been uploaded. */
   readonly avatar_url: string | null;
   /** Street-level address line; `null` when not provided. */

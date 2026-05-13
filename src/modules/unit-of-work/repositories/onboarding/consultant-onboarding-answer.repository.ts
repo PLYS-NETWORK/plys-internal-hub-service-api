@@ -20,10 +20,9 @@ export class ConsultantOnboardingAnswerRepository
   }
 
   public async findByOnboardingId(onboardingId: string): Promise<ConsultantOnboardingAnswer[]> {
-    return this.repository
-      .createQueryBuilder('a')
-      .innerJoin('a.onboardingQuestion', 'q')
-      .where('q.onboardingId = :onboardingId', { onboardingId })
-      .getMany();
+    return this.repository.find({
+      where: { onboardingId },
+      order: { submittedAt: 'ASC' },
+    });
   }
 }

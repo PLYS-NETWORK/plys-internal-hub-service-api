@@ -1,3 +1,4 @@
+import { IOnboardingQuestionSnapshot, OnboardingAnswerValue } from '@database/entities';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 
@@ -8,18 +9,30 @@ import {
 
 @Exclude()
 export class OnboardingAnswerViewDto implements IOnboardingAnswerView {
+  @Expose() @ApiProperty() public readonly id!: string;
+
   @Expose()
   @ApiProperty({ name: 'onboarding_question_id' })
   public readonly onboarding_question_id!: string;
-  @Expose() @ApiProperty({ name: 'question_order' }) public readonly question_order!: number;
-  @Expose() @ApiProperty() public readonly type!: string;
-  @Expose() @ApiProperty() public readonly content!: string;
+
+  // Frozen at submission time. Includes type, question text, and (for RADIO/CHECKBOX) the options.
   @Expose()
-  @ApiPropertyOptional({ name: 'answer_text', nullable: true })
-  public readonly answer_text!: string | null;
+  @ApiProperty({
+    name: 'question_snapshot',
+    type: 'object',
+    description: '{ type, question, options? } captured at submission',
+  })
+  public readonly question_snapshot!: IOnboardingQuestionSnapshot;
+
   @Expose()
-  @ApiPropertyOptional({ name: 'submitted_at', nullable: true })
-  public readonly submitted_at!: string | null;
+  @ApiProperty({
+    name: 'answer_value',
+    type: 'object',
+    description: 'TEXT: { text } — RADIO: { value } — CHECKBOX: { values: [...] }',
+  })
+  public readonly answer_value!: OnboardingAnswerValue;
+
+  @Expose() @ApiProperty({ name: 'submitted_at' }) public readonly submitted_at!: string;
 }
 
 @Exclude()

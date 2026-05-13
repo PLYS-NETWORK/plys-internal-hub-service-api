@@ -150,8 +150,16 @@
     "not_found": "Consultant onboarding not found.",
     "blocked": "Your account is blocked from onboarding until {{blocked_until}}. Please try again after that date.",
     "invalid_status": "This action is not allowed for the current onboarding status.",
-    "incomplete_answers": "All 10 onboarding questions must be answered before submitting.",
-    "not_approved": "Your onboarding has not been approved yet. You cannot register skill exams."
+    "incomplete_answers": "All onboarding questions must be answered before submitting.",
+    "not_approved": "Your onboarding has not been approved yet. You cannot register skill exams.",
+    "answers_coverage": "Submitted answers must cover every active onboarding question exactly once.",
+    "invalid_answer": "An answer does not match the expected shape for its question type."
+  },
+  "onboarding_question": {
+    "not_found": "Onboarding question not found.",
+    "invalid_options": "Question options are invalid for the chosen type. TEXT must have no options; RADIO and CHECKBOX need at least two options with unique values.",
+    "type_change_forbidden": "Question type cannot be changed.",
+    "reorder_set_mismatch": "Reorder list must contain every active question exactly once. Inactive or soft-deleted ids are not allowed."
   },
   "skill_exam": {
     "not_found": "Skill exam not found.",
@@ -163,9 +171,5 @@
     "invalid_status": "This action is not allowed for the current skill exam status.",
     "incomplete_answers": "All 20 skill exam questions must be answered before submitting.",
     "not_ready": "Skill exam questions are not ready yet."
-  },
-  "interview_question": {
-    "not_found": "Interview question not found.",
-    "invalid_type": "Manual questions can only be of type COMMUNICATION or SYSTEM_KNOWLEDGE."
   }
 }

@@ -98,6 +98,9 @@ export class SsoAuthService implements ISsoAuthService {
         });
       }
 
+      // Consultant-only: refuse SSO sign-in while the onboarding rejection block is active.
+      await this.assertConsultantNotBlocked(user.id, activePlatform);
+
       // Update SSO tokens
       existingLink.accessToken = userData.accessToken;
       existingLink.refreshToken = userData.refreshToken ?? null;
@@ -150,6 +153,10 @@ export class SsoAuthService implements ISsoAuthService {
             status: HttpStatus.FORBIDDEN,
           });
         }
+
+        // A consultant whose latest onboarding was REJECTED must not be allowed
+        // back in through SSO during the 3-month block window.
+        await this.assertConsultantNotBlocked(user.id, activePlatform, tx);
 
         // Auto-verify email if not already verified (SSO confirms ownership)
         if (!user.isEmailVerified) {
@@ -238,5 +245,35 @@ export class SsoAuthService implements ISsoAuthService {
     const result = await provider.verifyToken(idToken);
     this.logger.log(`verifyProviderToken — complete | provider: ${providerName}`);
     return result;
+  }
+
+  /**
+   * For CONSULTANT SSO logins: if the user has an onboarding row with an
+   * active block (`blocked_until > now` from a prior admin REJECT), refuse
+   * sign-in with `CONSULTANT_ONBOARDING_BLOCKED`. No-op for other platforms.
+   *
+   * `tx` is passed when the check happens inside the SSO-link transaction so
+   * the read joins the same query runner; for already-linked users the
+   * top-level UoW is used.
+   */
+  private async assertConsultantNotBlocked(
+    userId: string,
+    activePlatform: ActivePlatform,
+    tx?: { consultantOnboardings: UnitOfWorkService['consultantOnboardings'] },
+  ): Promise<void> {
+    if (activePlatform !== ActivePlatform.CONSULTANT) return;
+    const repo = (tx ?? this.uow).consultantOnboardings;
+    const onboarding = await repo.findByUserId(userId);
+    if (onboarding?.blockedUntil && onboarding.blockedUntil > new Date()) {
+      this.logger.warn(
+        `ssoLogin — consultant blocked | userId: ${userId} | until: ${onboarding.blockedUntil.toISOString()}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.consultant_onboarding.blocked',
+        errorCode: ERROR_CODES.CONSULTANT_ONBOARDING_BLOCKED,
+        status: HttpStatus.FORBIDDEN,
+        details: { blocked_until: onboarding.blockedUntil.toISOString() },
+      });
+    }
   }
 }

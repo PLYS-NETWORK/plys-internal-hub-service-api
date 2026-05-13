@@ -33,6 +33,7 @@ import { getTypeOrmConfig } from './database/typeorm.config';
 import { AdminAuthModule } from './modules/admin-auth/admin-auth.module';
 import { AdminConsultantOnboardingModule } from './modules/admin-consultant-onboarding/admin-consultant-onboarding.module';
 import { AdminConsultantSkillExamModule } from './modules/admin-consultant-skill-exam/admin-consultant-skill-exam.module';
+import { AdminOnboardingQuestionsModule } from './modules/admin-onboarding-questions/admin-onboarding-questions.module';
 import { AiBootstrapModule } from './modules/ai-bootstrap/ai-bootstrap.module';
 import { AiProviderKeyModule } from './modules/ai-provider-key/ai-provider-key.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -109,6 +110,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     BusinessProjectsModule,
     AdminConsultantOnboardingModule,
     AdminConsultantSkillExamModule,
+    AdminOnboardingQuestionsModule,
     ConsultantOnboardingModule,
     ConsultantSkillExamModule,
     ConsultantProjectsModule,

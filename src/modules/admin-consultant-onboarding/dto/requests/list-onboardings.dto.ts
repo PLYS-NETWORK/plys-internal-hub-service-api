@@ -1,16 +1,29 @@
 import { OnboardingStatus } from '@database/enums';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 
 import { IListOnboardingsRequest } from './interfaces/list-onboardings.request.interface';
 
 export class ListOnboardingsDto implements IListOnboardingsRequest {
   @Expose()
-  @ApiPropertyOptional({ enum: OnboardingStatus })
+  @ApiPropertyOptional({
+    enum: OnboardingStatus,
+    description:
+      'When omitted, defaults to INTERVIEW_SUBMITTED (the queue of onboardings pending admin review).',
+  })
   @IsOptional()
   @IsEnum(OnboardingStatus)
   public readonly status?: string;
+
+  @Expose({ name: 'user_id' })
+  @ApiPropertyOptional({
+    name: 'user_id',
+    description: 'Filter onboardings for a single consultant user id.',
+  })
+  @IsOptional()
+  @IsUUID('4')
+  public readonly userId?: string;
 
   @Expose()
   @ApiPropertyOptional({ example: 1, default: 1 })

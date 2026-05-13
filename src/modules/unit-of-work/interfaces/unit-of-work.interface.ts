@@ -9,7 +9,6 @@ import {
   IBusinessTransactionRepository,
   IChatMessageRepository,
   IConsultantOnboardingAnswerRepository,
-  IConsultantOnboardingQuestionRepository,
   IConsultantOnboardingRepository,
   IConsultantProfileRepository,
   IConsultantSkillExamAnswerRepository,
@@ -20,10 +19,10 @@ import {
   IConsultantTransactionRepository,
   IFileRepository,
   IIdempotencyKeyRepository,
-  IInterviewQuestionRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
   INotificationRepository,
+  IOnboardingQuestionRepository,
   IProjectActivityRepository,
   IProjectAiContextRepository,
   IProjectChatSessionRepository,
@@ -106,9 +105,8 @@ export interface IUnitOfWork {
 
   // Domain 10 — Onboarding (consultant signup gate)
   readonly consultantOnboardings: IConsultantOnboardingRepository;
-  readonly consultantOnboardingQuestions: IConsultantOnboardingQuestionRepository;
   readonly consultantOnboardingAnswers: IConsultantOnboardingAnswerRepository;
-  readonly interviewQuestions: IInterviewQuestionRepository;
+  readonly onboardingQuestions: IOnboardingQuestionRepository;
 
   // Domain 11 — Skill exams (per-skill, multiple per consultant)
   readonly consultantSkillExams: IConsultantSkillExamRepository;

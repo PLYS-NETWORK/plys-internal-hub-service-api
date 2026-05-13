@@ -7,7 +7,7 @@ import { ActivePlatform, UserRole } from '@database/enums';
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { SubmitOnboardingAnswerDto } from '../dto/requests/submit-onboarding-answer.dto';
+import { SubmitOnboardingAnswersDto } from '../dto/requests/submit-onboarding-answers.dto';
 import { SubmitOnboardingProfileDto } from '../dto/requests/submit-onboarding-profile.dto';
 import { OnboardingQuestionResponseDto } from '../dto/responses/onboarding-question-response.dto';
 import { OnboardingStatusResponseDto } from '../dto/responses/onboarding-status-response.dto';
@@ -37,7 +37,7 @@ export class ConsultantOnboardingController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary:
-      'Submit basic onboarding profile; advances to IN_INTERVIEW and assigns 10 questions (5 COMMUNICATION + 5 SYSTEM_KNOWLEDGE).',
+      'Step 1 — submit basic profile (+ optional cv_url from a prior /files upload). Transitions onboarding to IN_INTERVIEW.',
   })
   public async submitProfile(
     @Body() dto: SubmitOnboardingProfileDto,
@@ -46,32 +46,25 @@ export class ConsultantOnboardingController {
     return { messageKey: 'success.consultant_onboarding.profile_submitted', data };
   }
 
-  @Get('interview')
-  @ApiOperation({ summary: 'List the 10 onboarding questions with any saved answers' })
-  public async getInterviewQuestions(): Promise<
-    ITranslatedPayload<OnboardingQuestionResponseDto[]>
-  > {
+  @Get('questions')
+  @ApiOperation({
+    summary: 'Step 2 — list the current set of active onboarding questions, ordered by position.',
+  })
+  public async getQuestions(): Promise<ITranslatedPayload<OnboardingQuestionResponseDto[]>> {
     const data = await this.interviewService.getQuestions();
     return { messageKey: 'success.ok', data };
-  }
-
-  @Post('interview/answers')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Upsert a single onboarding answer (idempotent)' })
-  public async submitAnswer(
-    @Body() dto: SubmitOnboardingAnswerDto,
-  ): Promise<ITranslatedPayload<null>> {
-    await this.interviewService.submitAnswer(dto);
-    return { messageKey: 'success.consultant_onboarding.answer_saved', data: null };
   }
 
   @Post('interview/submit')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Finalise the onboarding interview (requires all 10 answers). Notifies admins.',
+    summary:
+      'Step 2 — submit ALL answers in one shot. Body must contain one entry per active question. Notifies admins on success.',
   })
-  public async submitInterview(): Promise<ITranslatedPayload<null>> {
-    await this.interviewService.submit();
+  public async submitInterview(
+    @Body() dto: SubmitOnboardingAnswersDto,
+  ): Promise<ITranslatedPayload<null>> {
+    await this.interviewService.submitAnswers(dto);
     return { messageKey: 'success.consultant_onboarding.interview_submitted', data: null };
   }
 }
