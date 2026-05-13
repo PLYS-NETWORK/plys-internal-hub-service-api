@@ -271,6 +271,9 @@ export class BasicAuthService implements IBasicAuthService {
         messageKey: 'error.auth.account_inactive',
         errorCode: ERROR_CODES.AUTH_ACCOUNT_INACTIVE,
         status: HttpStatus.FORBIDDEN,
+        // Expose ban_reason so the client can render the specific cause
+        // ("Account banned for AI content abuse") instead of a generic message.
+        details: user.banReason ? { ban_reason: user.banReason } : undefined,
       });
     }
 

@@ -98,6 +98,14 @@ export interface IConsultantOnboardingApprovedMetadata {
   onboarding_id: string;
 }
 
+export interface IConsultantOnboardingRejectedMetadata {
+  onboarding_id: string;
+  /** ISO-8601 — when the 3-month re-onboarding block lifts. */
+  blocked_until: string;
+  /** Admin's plain-text reason; null when omitted. */
+  rejection_note: string | null;
+}
+
 export interface IConsultantSkillExamSubmittedMetadata {
   exam_id: string;
   skill_id: string;
@@ -109,15 +117,17 @@ export interface IConsultantSkillExamFailedMetadata {
   exam_id: string;
   skill_id: string;
   skill_name: string;
-  fail_reason: 'LOW_SCORE' | 'COPYLEAKS_FAILED';
-  /** 0–100; 0 when Copyleaks fails before AI eval runs. */
+  fail_reason: 'LOW_SCORE' | 'COPYLEAKS_FAILED' | 'EXPIRED';
+  /** 0–100; 0 when Copyleaks fails before AI eval runs or when the exam EXPIRED. */
   final_score: number;
-  /** ISO-8601. */
-  cooldown_until: string;
+  /** ISO-8601. Null for EXPIRED (no per-skill cooldown). */
+  cooldown_until: string | null;
   /** users.ai_strike_count after this event. */
   strike_count: number;
   /** 3 - strike_count (floored at 0). */
   strikes_remaining: number;
+  /** Score-band level when fail_reason='LOW_SCORE'; null for COPYLEAKS_FAILED/EXPIRED. */
+  assigned_proficiency: 'beginner' | 'intermediate' | null;
 }
 
 export interface IConsultantSkillExamPassedMetadata {
@@ -126,8 +136,8 @@ export interface IConsultantSkillExamPassedMetadata {
   skill_name: string;
   /** 0–100. */
   final_score: number;
-  proficiency_level: 'advanced' | 'expert';
-  /** True when proficiency_level === 'expert'. */
+  proficiency_level: 'senior' | 'expert';
+  /** True when avgRating ≥ 90 (drives email/notification priority on new projects). */
   has_priority_benefit: boolean;
 }
 
@@ -170,14 +180,40 @@ export interface IAdminTaskPublishedMetadata {
   business_name: string;
 }
 
-export interface IAdminConsultantInterviewSubmittedMetadata {
-  application_id: string;
+export interface IAdminConsultantOnboardingSubmittedMetadata {
+  onboarding_id: string;
+  consultant_user_id: string;
   consultant_name: string;
 }
 
-export interface IAdminConsultantAiRejectedMetadata {
-  application_id: string;
+export interface IAdminSkillExamResultMetadata {
+  /** Terminal outcome the admin should review. */
+  outcome: 'PASSED' | 'LOW_SCORE' | 'COPYLEAKS_FAILED' | 'EXPIRED';
+  exam_id: string;
+  consultant_user_id: string;
   consultant_name: string;
+  skill_id: string;
+  skill_name: string;
+  /** 0–100. 0 when CopyLeaks fails before AI eval or when the exam EXPIRED. */
+  final_score: number;
+  /** Set on PASSED only. */
+  proficiency_level?: 'senior' | 'expert';
+  /** Set on LOW_SCORE fails; null/absent for COPYLEAKS_FAILED + EXPIRED. */
+  assigned_proficiency?: 'beginner' | 'intermediate' | null;
+  /** ISO-8601 per-skill cooldown. Null for EXPIRED (no per-skill cooldown). */
+  cooldown_until?: string | null;
+  /** users.ai_strike_count after this event. */
+  strike_count?: number;
+}
+
+export interface IAdminConsultantBannedMetadata {
+  consultant_user_id: string;
+  consultant_name: string;
+  ban_reason: 'AI_CONTENT_ABUSE';
+  /** ISO-8601. */
+  banned_at: string;
+  /** Final strike count that triggered the ban (typically 3). */
+  ai_strike_count: number;
 }
 
 // Mapped type binding each discriminator value to its metadata shape.
@@ -197,6 +233,7 @@ export type NotificationMetadataMap = {
   [NOTIFICATION_TYPES.CONSULTANT_PROJECT_JOINED]: IConsultantProjectJoinedMetadata;
   [NOTIFICATION_TYPES.CONSULTANT_TASK_STATUS_CHANGED]: IConsultantTaskStatusChangedMetadata;
   [NOTIFICATION_TYPES.CONSULTANT_ONBOARDING_APPROVED]: IConsultantOnboardingApprovedMetadata;
+  [NOTIFICATION_TYPES.CONSULTANT_ONBOARDING_REJECTED]: IConsultantOnboardingRejectedMetadata;
   [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_SUBMITTED]: IConsultantSkillExamSubmittedMetadata;
   [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_FAILED]: IConsultantSkillExamFailedMetadata;
   [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_PASSED]: IConsultantSkillExamPassedMetadata;
@@ -205,8 +242,9 @@ export type NotificationMetadataMap = {
   [NOTIFICATION_TYPES.ADMIN_PROJECT_PUBLISHED]: IAdminProjectPublishedMetadata;
   [NOTIFICATION_TYPES.ADMIN_BUSINESS_TOP_UP]: IAdminBusinessTopUpMetadata;
   [NOTIFICATION_TYPES.ADMIN_TASK_PUBLISHED]: IAdminTaskPublishedMetadata;
-  [NOTIFICATION_TYPES.ADMIN_CONSULTANT_INTERVIEW_SUBMITTED]: IAdminConsultantInterviewSubmittedMetadata;
-  [NOTIFICATION_TYPES.ADMIN_CONSULTANT_AI_REJECTED]: IAdminConsultantAiRejectedMetadata;
+  [NOTIFICATION_TYPES.ADMIN_CONSULTANT_ONBOARDING_SUBMITTED]: IAdminConsultantOnboardingSubmittedMetadata;
+  [NOTIFICATION_TYPES.ADMIN_SKILL_EXAM_RESULT]: IAdminSkillExamResultMetadata;
+  [NOTIFICATION_TYPES.ADMIN_CONSULTANT_BANNED]: IAdminConsultantBannedMetadata;
 };
 
 // The discriminated-union the FE consumes — TS narrows `metadata` automatically

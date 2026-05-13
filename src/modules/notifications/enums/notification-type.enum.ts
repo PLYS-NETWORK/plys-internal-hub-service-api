@@ -24,6 +24,8 @@ export const NOTIFICATION_TYPES = {
   CONSULTANT_PROJECT_JOINED: 'consultant_project_joined',
   CONSULTANT_TASK_STATUS_CHANGED: 'consultant_task_status_changed',
   CONSULTANT_ONBOARDING_APPROVED: 'consultant_onboarding_approved',
+  // Onboarding rejected — paired with the rejection email; 3-month block in effect.
+  CONSULTANT_ONBOARDING_REJECTED: 'consultant_onboarding_rejected',
   CONSULTANT_SKILL_EXAM_SUBMITTED: 'consultant_skill_exam_submitted',
   CONSULTANT_SKILL_EXAM_FAILED: 'consultant_skill_exam_failed',
   CONSULTANT_SKILL_EXAM_PASSED: 'consultant_skill_exam_passed',
@@ -34,8 +36,12 @@ export const NOTIFICATION_TYPES = {
   ADMIN_PROJECT_PUBLISHED: 'admin_project_published',
   ADMIN_BUSINESS_TOP_UP: 'admin_business_top_up',
   ADMIN_TASK_PUBLISHED: 'admin_task_published',
-  ADMIN_CONSULTANT_INTERVIEW_SUBMITTED: 'admin_consultant_interview_submitted',
-  ADMIN_CONSULTANT_AI_REJECTED: 'admin_consultant_ai_rejected',
+  // Fan-out when a consultant finalises the onboarding interview — admin review queue.
+  ADMIN_CONSULTANT_ONBOARDING_SUBMITTED: 'admin_consultant_onboarding_submitted',
+  // Fan-out for every terminal skill-exam transition (PASSED / FAILED / EXPIRED / COPYLEAKS_FAILED).
+  ADMIN_SKILL_EXAM_RESULT: 'admin_skill_exam_result',
+  // Fan-out when a consultant hits the 3-strike CopyLeaks ban.
+  ADMIN_CONSULTANT_BANNED: 'admin_consultant_banned',
 } as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];

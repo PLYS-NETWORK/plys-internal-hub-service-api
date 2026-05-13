@@ -1,6 +1,7 @@
 import {
   IConsultantAccountBannedEvent,
   IConsultantOnboardingApprovedEvent,
+  IConsultantOnboardingRejectedEvent,
   IConsultantProjectJoinedEvent,
   IConsultantSkillExamFailedEvent,
   IConsultantSkillExamPassedEvent,
@@ -41,6 +42,14 @@ export interface IConsultantNotificationEventHandlerService {
   onConsultantOnboardingApproved(event: IConsultantOnboardingApprovedEvent): Promise<void>;
 
   /**
+   * Sends `CONSULTANT_ONBOARDING_REJECTED` to the consultant when an admin
+   * rejects their onboarding (`OnboardingStatus → REJECTED`). Pair with the
+   * rejection email; the consultant is also blocked from re-onboarding for 3 months.
+   * @param event Payload carrying the rejection note + when the 3-month block lifts.
+   */
+  onConsultantOnboardingRejected(event: IConsultantOnboardingRejectedEvent): Promise<void>;
+
+  /**
    * Sends `CONSULTANT_SKILL_EXAM_SUBMITTED` to the consultant immediately after
    * they finalise a skill-exam attempt (`status → SUBMITTED`).
    * @param event Payload carrying exam + skill identity for routing.
@@ -49,8 +58,9 @@ export interface IConsultantNotificationEventHandlerService {
 
   /**
    * Sends `CONSULTANT_SKILL_EXAM_FAILED` to the consultant when the skill-exam
-   * pipeline concludes in `FAILED` (AI eval < 80%) or `COPYLEAKS_FAILED`
-   * (AI-content flagged). `metadata.fail_reason` discriminates the two cases.
+   * pipeline concludes in `FAILED` (AI eval < 80%), `COPYLEAKS_FAILED`
+   * (AI-content flagged), or `EXPIRED` (60-min deadline elapsed).
+   * `metadata.fail_reason` discriminates the three cases.
    * @param event Payload carrying the score, cooldown timestamp, and strike state.
    */
   onConsultantSkillExamFailed(event: IConsultantSkillExamFailedEvent): Promise<void>;
@@ -58,7 +68,7 @@ export interface IConsultantNotificationEventHandlerService {
   /**
    * Sends `CONSULTANT_SKILL_EXAM_PASSED` to the consultant when the skill-exam
    * pipeline concludes in `PASSED` (AI eval ≥ 80%). Copy is keyed off
-   * `metadata.proficiency_level` (`'advanced'` vs `'expert'`).
+   * `metadata.proficiency_level` (`'senior'` vs `'expert'`).
    * @param event Payload carrying final score and assigned proficiency.
    */
   onConsultantSkillExamPassed(event: IConsultantSkillExamPassedEvent): Promise<void>;

@@ -15,7 +15,7 @@ import { Queue } from 'bull';
 
 import {
   BAN_STRIKE_THRESHOLD,
-  COOLDOWN_DAYS,
+  COPYLEAKS_COOLDOWN_DAYS,
   COPYLEAKS_PASS_MAX_AI_SCORE,
   ISkillExamJobPayload,
   SKILL_EXAM_JOBS,
@@ -85,7 +85,7 @@ export class SkillExamCopyleaksService implements ISkillExamCopyleaksService {
 
     // AI-content detected — strike, fail, ban-on-3.
     const cooldownUntil = new Date();
-    cooldownUntil.setDate(cooldownUntil.getDate() + COOLDOWN_DAYS);
+    cooldownUntil.setDate(cooldownUntil.getDate() + COPYLEAKS_COOLDOWN_DAYS);
     exam.status = SkillExamStatus.COPYLEAKS_FAILED;
     exam.failReason = SkillExamFailReason.COPYLEAKS_FAILED;
     exam.cooldownUntil = cooldownUntil;
@@ -103,6 +103,10 @@ export class SkillExamCopyleaksService implements ISkillExamCopyleaksService {
         user.isActive = false;
         user.bannedAt = new Date();
         user.banReason = BanReason.AI_CONTENT_ABUSE;
+        // Revoke every active session so the stale JWT is instantly useless —
+        // any device hits the isActive=false gate on the next request and gets
+        // AUTH_ACCOUNT_INACTIVE. Same pattern as password reset (basic-auth).
+        await tx.userSessions.delete({ userId: user.id });
       }
       await tx.users.save(user);
       const skill = await tx.skills.findById(exam.skillId);
@@ -131,6 +135,7 @@ export class SkillExamCopyleaksService implements ISkillExamCopyleaksService {
       final_score: 0,
       cooldown_until: result2.cooldownUntilIso,
       strike_count: result2.strikeCount,
+      assigned_proficiency: null,
     };
     this.eventEmitter.emit(NOTIFICATION_EVENTS.CONSULTANT_SKILL_EXAM_FAILED, failedPayload);
 

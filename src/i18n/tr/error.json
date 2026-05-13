@@ -152,9 +152,11 @@
     "already_passed": "Bu beceri sınavını zaten geçtiniz.",
     "already_in_progress": "Bu beceri için zaten devam eden bir sınavınız var.",
     "cooldown_active": "Tekrar sınava giriş bekleme süreniz {{cooldown_until}} tarihine kadar aktif.",
-    "parallel_limit_reached": "Aynı anda en fazla 2 beceri sınavınız devam edebilir.",
+    "parallel_limit_reached": "Aynı anda yalnızca bir beceri sınavınız devam edebilir.",
     "invalid_status": "Bu işlem mevcut beceri sınavı durumunda izin verilmiyor.",
     "incomplete_answers": "Göndermeden önce 20 beceri sınavı sorusunun tamamı yanıtlanmalı.",
-    "not_ready": "Beceri sınavı soruları henüz hazır değil."
+    "not_ready": "Beceri sınavı soruları henüz hazır değil.",
+    "expired": "Bu beceri sınavının süresi doldu. 60 dakikalık pencere gönderim yapılmadan sona erdi.",
+    "taking_blocked": "{{blocked_until}} tarihinden sonra yeni sınav başlatabilirsiniz. 3 süresi dolmuş deneme nedeniyle 2 günlük duraklama uygulandı."
   }
 }

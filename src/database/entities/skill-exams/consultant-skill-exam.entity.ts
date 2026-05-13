@@ -45,6 +45,12 @@ export class ConsultantSkillExam extends AuditableEntity {
   @Column({ name: 'started_at', type: 'timestamptz', nullable: true })
   public startedAt!: Date | null;
 
+  // 60-minute deadline. Set when status transitions to IN_PROGRESS; null in
+  // GENERATING_QUESTIONS and in every terminal status. After this instant the
+  // exam is auto-expired (lazy on next consultant call, or by the 5-min sweep).
+  @Column({ name: 'expires_at', type: 'timestamptz', nullable: true })
+  public expiresAt!: Date | null;
+
   @Column({ name: 'submitted_at', type: 'timestamptz', nullable: true })
   public submittedAt!: Date | null;
 

@@ -19,9 +19,12 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import {
   ANSWER_CORRECTNESS_THRESHOLD,
-  COOLDOWN_DAYS,
+  AVG_RATING_PRIORITY_THRESHOLD,
+  BEGINNER_MAX,
+  EXAM_DURATION_MIN,
   EXPERT_THRESHOLD,
-  PASS_THRESHOLD,
+  INTERMEDIATE_MAX,
+  LOW_SCORE_COOLDOWN_DAYS,
   TOTAL_SKILL_EXAM_QUESTIONS,
 } from '../consultant-skill-exam.constants';
 import { ISkillExamAiEvaluationService } from '../interfaces/skill-exam-ai-evaluation.service.interface';
@@ -77,9 +80,13 @@ export class SkillExamAiEvaluationService implements ISkillExamAiEvaluationServi
       return;
     }
 
+    // Prompt is intentionally domain-agnostic — skills can come from any field,
+    // not just technical ones (design, finance, language, etc.). The AI must
+    // produce 20 questions appropriate for the named skill regardless.
     const systemPrompt =
-      `You are a senior technical interviewer. Produce exactly ${TOTAL_SKILL_EXAM_QUESTIONS} diverse, ` +
-      `non-trivial interview questions for the skill below. Return STRICT JSON: ` +
+      `You are a senior interviewer. Produce exactly ${TOTAL_SKILL_EXAM_QUESTIONS} diverse, ` +
+      `non-trivial interview questions for the skill below — adapt the content to the skill's field ` +
+      `(technical, creative, business, language, etc.). Return STRICT JSON: ` +
       `{"questions":[{"question_order":1,"content":"..."},...]} with question_order 1..${TOTAL_SKILL_EXAM_QUESTIONS}.`;
     const userPrompt = `Skill key (i18n): ${skill.name}\nCategory key: ${skill.category ?? 'general'}`;
 
@@ -112,8 +119,13 @@ export class SkillExamAiEvaluationService implements ISkillExamAiEvaluationServi
         }),
       );
       await tx.consultantSkillExamQuestions.save(rows);
+
+      // Timer starts the moment the consultant has questions in hand.
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + EXAM_DURATION_MIN * 60_000);
       exam.status = SkillExamStatus.IN_PROGRESS;
-      exam.startedAt = new Date();
+      exam.startedAt = now;
+      exam.expiresAt = expiresAt;
       await tx.consultantSkillExams.save(exam);
     });
 
@@ -191,21 +203,28 @@ export class SkillExamAiEvaluationService implements ISkillExamAiEvaluationServi
       await this.uow.consultantSkillExamAnswers.save(answer);
     }
 
-    const passed = overallScore >= PASS_THRESHOLD;
+    // 4-tier proficiency band — assigned on every result, not just on pass.
+    //   < BEGINNER_MAX (40)     → BEGINNER     (fail, 30d cooldown)
+    //   < INTERMEDIATE_MAX (80) → INTERMEDIATE (fail, 30d cooldown)
+    //   < EXPERT_THRESHOLD (90) → SENIOR       (pass)
+    //   >= EXPERT_THRESHOLD     → EXPERT       (pass)
+    const proficiency = this.scoreToProficiency(overallScore);
+    const passed = overallScore >= INTERMEDIATE_MAX;
 
     const txResult = await this.uow.withTransaction(async (tx) => {
-      const cooldownUntil = new Date();
-      cooldownUntil.setDate(cooldownUntil.getDate() + COOLDOWN_DAYS);
-
       exam.aiEvalScore = overallScore.toFixed(2);
       exam.aiEvalCompletedAt = new Date();
       exam.correctCount = correctCount;
       exam.concludedAt = new Date();
+      exam.assignedProficiency = proficiency;
 
       const profile = await tx.consultantProfiles.findById(exam.consultantId);
       if (!profile) return null;
 
       if (!passed) {
+        const cooldownUntil = new Date();
+        cooldownUntil.setDate(cooldownUntil.getDate() + LOW_SCORE_COOLDOWN_DAYS);
+
         exam.status = SkillExamStatus.FAILED;
         exam.failReason = SkillExamFailReason.LOW_SCORE;
         exam.cooldownUntil = cooldownUntil;
@@ -213,16 +232,13 @@ export class SkillExamAiEvaluationService implements ISkillExamAiEvaluationServi
         return {
           passed: false as const,
           consultantUserId: profile.userId,
+          proficiency,
           cooldownUntilIso: cooldownUntil.toISOString(),
         };
       }
 
-      // PASSED — assign proficiency, upsert ConsultantSkill + ConsultantSkillScore,
-      // recompute avgRating, flip hasNotificationPriority on expert.
-      const proficiency =
-        overallScore >= EXPERT_THRESHOLD ? ProficiencyLevel.EXPERT : ProficiencyLevel.ADVANCED;
-      exam.assignedProficiency = proficiency;
       exam.status = SkillExamStatus.PASSED;
+      exam.cooldownUntil = null;
       await tx.consultantSkillExams.save(exam);
 
       const existingLink = await tx.consultantSkills.findOne({
@@ -252,7 +268,8 @@ export class SkillExamAiEvaluationService implements ISkillExamAiEvaluationServi
       }) as ConsultantSkillScore;
       await tx.consultantSkillScores.save(scoreRow);
 
-      // Recompute avg rating from all current ConsultantSkill rows for this consultant.
+      // Recompute avgRating across every ConsultantSkill row, then key
+      // hasNotificationPriority off avgRating (not the individual exam).
       const allLinks = await tx.consultantSkills.findBy({ consultantId: profile.id });
       const ratings = allLinks
         .map((l) => (l.rating ? parseFloat(l.rating) : null))
@@ -260,16 +277,23 @@ export class SkillExamAiEvaluationService implements ISkillExamAiEvaluationServi
       const newAvg =
         ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
       profile.avgRating = newAvg !== null ? newAvg.toFixed(2) : null;
-      if (proficiency === ProficiencyLevel.EXPERT) {
-        profile.hasNotificationPriority = true;
-      }
+      profile.hasNotificationPriority = newAvg !== null && newAvg >= AVG_RATING_PRIORITY_THRESHOLD;
       await tx.consultantProfiles.save(profile);
+
+      // A pass proves the consultant can finish an exam — reset the platform-wide
+      // expired-attempt counter so the 2-day pause doesn't linger.
+      const user = await tx.users.findById(profile.userId);
+      if (user && (user.examExpiredCount > 0 || user.examTakingBlockedUntil)) {
+        user.examExpiredCount = 0;
+        user.examTakingBlockedUntil = null;
+        await tx.users.save(user);
+      }
 
       return {
         passed: true as const,
         consultantUserId: profile.userId,
         proficiency,
-        cooldownUntilIso: cooldownUntil.toISOString(),
+        cooldownUntilIso: null,
       };
     });
 
@@ -285,7 +309,7 @@ export class SkillExamAiEvaluationService implements ISkillExamAiEvaluationServi
         skill_id: exam.skillId,
         skill_name: skill.name,
         final_score: overallScore,
-        proficiency_level: txResult.proficiency === ProficiencyLevel.EXPERT ? 'expert' : 'advanced',
+        proficiency_level: txResult.proficiency === ProficiencyLevel.EXPERT ? 'expert' : 'senior',
       };
       this.eventEmitter.emit(NOTIFICATION_EVENTS.CONSULTANT_SKILL_EXAM_PASSED, payload);
     } else {
@@ -299,13 +323,24 @@ export class SkillExamAiEvaluationService implements ISkillExamAiEvaluationServi
         final_score: overallScore,
         cooldown_until: txResult.cooldownUntilIso,
         strike_count: user?.aiStrikeCount ?? 0,
+        assigned_proficiency:
+          txResult.proficiency === ProficiencyLevel.BEGINNER ? 'beginner' : 'intermediate',
       };
       this.eventEmitter.emit(NOTIFICATION_EVENTS.CONSULTANT_SKILL_EXAM_FAILED, payload);
     }
 
     this.logger.log(
-      `[${this.rid}] run — complete | examId: ${examId} | passed: ${txResult.passed} | score: ${overallScore}`,
+      `[${this.rid}] run — complete | examId: ${examId} | passed: ${txResult.passed} | proficiency: ${txResult.proficiency} | score: ${overallScore}`,
     );
+  }
+
+  // Score band → proficiency. Boundaries: < 40 BEGINNER, < 80 INTERMEDIATE,
+  // < 90 SENIOR, >= 90 EXPERT. Kept as a pure function so admin/tests can reuse.
+  private scoreToProficiency(score: number): ProficiencyLevel {
+    if (score < BEGINNER_MAX) return ProficiencyLevel.BEGINNER;
+    if (score < INTERMEDIATE_MAX) return ProficiencyLevel.INTERMEDIATE;
+    if (score < EXPERT_THRESHOLD) return ProficiencyLevel.SENIOR;
+    return ProficiencyLevel.EXPERT;
   }
 
   /** Trims any leading/trailing fences and prose so JSON.parse can chew the body. */

@@ -1,5 +1,9 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
-import { IConsultantOnboardingApprovedEvent, NOTIFICATION_EVENTS } from '@common/events';
+import {
+  IConsultantOnboardingApprovedEvent,
+  IConsultantOnboardingRejectedEvent,
+  NOTIFICATION_EVENTS,
+} from '@common/events';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
@@ -228,6 +232,17 @@ export class AdminConsultantOnboardingService implements IAdminConsultantOnboard
         }
       }
       return;
+    }
+
+    // REJECTED branch.
+    if (result.blockedUntilIso) {
+      const rejectedPayload: IConsultantOnboardingRejectedEvent = {
+        consultant_user_id: result.onboarding.userId,
+        onboarding_id: result.onboarding.id,
+        blocked_until: result.blockedUntilIso,
+        rejection_note: dto.rejection_note ?? null,
+      };
+      this.eventEmitter.emit(NOTIFICATION_EVENTS.CONSULTANT_ONBOARDING_REJECTED, rejectedPayload);
     }
 
     if (userEmail && result.blockedUntilIso) {

@@ -6,12 +6,14 @@ import {
 import {
   IAdminBusinessOnboardedMetadata,
   IAdminBusinessTopUpMetadata,
-  IAdminConsultantAiRejectedMetadata,
-  IAdminConsultantInterviewSubmittedMetadata,
+  IAdminConsultantBannedMetadata,
+  IAdminConsultantOnboardingSubmittedMetadata,
   IAdminProjectPublishedMetadata,
+  IAdminSkillExamResultMetadata,
   IAdminTaskPublishedMetadata,
   IConsultantAccountBannedMetadata,
   IConsultantOnboardingApprovedMetadata,
+  IConsultantOnboardingRejectedMetadata,
   IConsultantProjectJoinedMetadata,
   IConsultantProjectSkillMatchMetadata,
   IConsultantSkillExamFailedMetadata,
@@ -232,6 +234,19 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
     titleKey: 'notification.consultant_onboarding_approved.title',
     bodyKey: 'notification.consultant_onboarding_approved.body',
   },
+  [NOTIFICATION_TYPES.CONSULTANT_ONBOARDING_REJECTED]: {
+    entityType: NOTIFICATION_ENTITY_TYPES.ONBOARDING,
+    getEntityId: (m: IConsultantOnboardingRejectedMetadata) => m.onboarding_id,
+    // Rejected consultants cannot log back in for 3 months — `redirect_url` points to the public
+    // landing page where they can re-onboard once the block lifts.
+    getRedirectUrl: (_m, base) => `${base}/onboarding/blocked`,
+    titleKey: 'notification.consultant_onboarding_rejected.title',
+    bodyKey: 'notification.consultant_onboarding_rejected.body',
+    bodyArgs: (m: IConsultantOnboardingRejectedMetadata) => ({
+      blocked_until: m.blocked_until,
+      reason: m.rejection_note ?? '',
+    }),
+  },
   [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_SUBMITTED]: {
     entityType: NOTIFICATION_ENTITY_TYPES.SKILL_EXAM,
     getEntityId: (m: IConsultantSkillExamSubmittedMetadata) => m.exam_id,
@@ -241,24 +256,31 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
     bodyArgs: (m: IConsultantSkillExamSubmittedMetadata) => ({ skill: m.skill_name }),
   },
   // Dynamic title/body — dispatcher resolves the function against metadata so
-  // a single notification row can render the LOW_SCORE vs COPYLEAKS_FAILED copy
-  // without splitting into two NotificationType values.
+  // a single notification row renders LOW_SCORE / COPYLEAKS_FAILED / EXPIRED copy
+  // without splitting into separate NotificationType values.
   [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_FAILED]: {
     entityType: NOTIFICATION_ENTITY_TYPES.SKILL_EXAM,
     getEntityId: (m: IConsultantSkillExamFailedMetadata) => m.exam_id,
     getRedirectUrl: (m, base) => `${base}/skill-exams/${m.exam_id}`,
-    titleKey: (m: IConsultantSkillExamFailedMetadata) =>
-      m.fail_reason === 'LOW_SCORE'
-        ? 'notification.consultant_skill_exam_failed.low_score.title'
-        : 'notification.consultant_skill_exam_failed.copyleaks.title',
-    bodyKey: (m: IConsultantSkillExamFailedMetadata) =>
-      m.fail_reason === 'LOW_SCORE'
-        ? 'notification.consultant_skill_exam_failed.low_score.body'
-        : 'notification.consultant_skill_exam_failed.copyleaks.body',
+    titleKey: (m: IConsultantSkillExamFailedMetadata) => {
+      if (m.fail_reason === 'EXPIRED')
+        return 'notification.consultant_skill_exam_failed.expired.title';
+      if (m.fail_reason === 'COPYLEAKS_FAILED')
+        return 'notification.consultant_skill_exam_failed.copyleaks.title';
+      return 'notification.consultant_skill_exam_failed.low_score.title';
+    },
+    bodyKey: (m: IConsultantSkillExamFailedMetadata) => {
+      if (m.fail_reason === 'EXPIRED')
+        return 'notification.consultant_skill_exam_failed.expired.body';
+      if (m.fail_reason === 'COPYLEAKS_FAILED')
+        return 'notification.consultant_skill_exam_failed.copyleaks.body';
+      return 'notification.consultant_skill_exam_failed.low_score.body';
+    },
     bodyArgs: (m: IConsultantSkillExamFailedMetadata) => ({
       skill: m.skill_name,
       final_score: m.final_score.toFixed(2),
-      cooldown_until: m.cooldown_until,
+      // i18n cannot interpolate null — render an empty placeholder for EXPIRED.
+      cooldown_until: m.cooldown_until ?? '',
       strikes_remaining: m.strikes_remaining,
     }),
   },
@@ -269,11 +291,11 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
     titleKey: (m: IConsultantSkillExamPassedMetadata) =>
       m.proficiency_level === 'expert'
         ? 'notification.consultant_skill_exam_passed.expert.title'
-        : 'notification.consultant_skill_exam_passed.advanced.title',
+        : 'notification.consultant_skill_exam_passed.senior.title',
     bodyKey: (m: IConsultantSkillExamPassedMetadata) =>
       m.proficiency_level === 'expert'
         ? 'notification.consultant_skill_exam_passed.expert.body'
-        : 'notification.consultant_skill_exam_passed.advanced.body',
+        : 'notification.consultant_skill_exam_passed.senior.body',
     bodyArgs: (m: IConsultantSkillExamPassedMetadata) => ({
       skill: m.skill_name,
       final_score: m.final_score.toFixed(2),
@@ -339,26 +361,50 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
       business: m.business_name,
     }),
   },
-  [NOTIFICATION_TYPES.ADMIN_CONSULTANT_INTERVIEW_SUBMITTED]: {
-    entityType: NOTIFICATION_ENTITY_TYPES.APPLICATION,
+  [NOTIFICATION_TYPES.ADMIN_CONSULTANT_ONBOARDING_SUBMITTED]: {
+    entityType: NOTIFICATION_ENTITY_TYPES.ONBOARDING,
     baseUrlKey: 'internalHubUrl',
-    getEntityId: (m: IAdminConsultantInterviewSubmittedMetadata) => m.application_id,
-    getRedirectUrl: (m, base) => `${base}/consultant-applications/${m.application_id}`,
-    titleKey: 'notification.admin_consultant_interview_submitted.title',
-    bodyKey: 'notification.admin_consultant_interview_submitted.body',
-    bodyArgs: (m: IAdminConsultantInterviewSubmittedMetadata) => ({
+    getEntityId: (m: IAdminConsultantOnboardingSubmittedMetadata) => m.onboarding_id,
+    // Deep-links to the admin review screen for this consultant's pending interview.
+    getRedirectUrl: (m, base) => `${base}/consultant-onboardings/${m.onboarding_id}`,
+    titleKey: 'notification.admin_consultant_onboarding_submitted.title',
+    bodyKey: 'notification.admin_consultant_onboarding_submitted.body',
+    bodyArgs: (m: IAdminConsultantOnboardingSubmittedMetadata) => ({
       name: m.consultant_name,
     }),
   },
-  [NOTIFICATION_TYPES.ADMIN_CONSULTANT_AI_REJECTED]: {
-    entityType: NOTIFICATION_ENTITY_TYPES.APPLICATION,
+  [NOTIFICATION_TYPES.ADMIN_SKILL_EXAM_RESULT]: {
+    entityType: NOTIFICATION_ENTITY_TYPES.SKILL_EXAM,
     baseUrlKey: 'internalHubUrl',
-    getEntityId: (m: IAdminConsultantAiRejectedMetadata) => m.application_id,
-    getRedirectUrl: (m, base) => `${base}/consultant-applications/${m.application_id}`,
-    titleKey: 'notification.admin_consultant_ai_rejected.title',
-    bodyKey: 'notification.admin_consultant_ai_rejected.body',
-    bodyArgs: (m: IAdminConsultantAiRejectedMetadata) => ({
-      name: m.consultant_name,
+    getEntityId: (m: IAdminSkillExamResultMetadata) => m.exam_id,
+    getRedirectUrl: (m, base) => `${base}/skill-exams/${m.exam_id}`,
+    // PASSED vs FAILED variants pick different copy so admin inboxes read like a verdict log.
+    titleKey: (m: IAdminSkillExamResultMetadata) =>
+      m.outcome === 'PASSED'
+        ? 'notification.admin_skill_exam_result.passed.title'
+        : `notification.admin_skill_exam_result.failed.title`,
+    bodyKey: (m: IAdminSkillExamResultMetadata) =>
+      m.outcome === 'PASSED'
+        ? 'notification.admin_skill_exam_result.passed.body'
+        : `notification.admin_skill_exam_result.failed.body`,
+    bodyArgs: (m: IAdminSkillExamResultMetadata) => ({
+      consultant: m.consultant_name,
+      skill: m.skill_name,
+      score: m.final_score.toFixed(2),
+      outcome: m.outcome,
+    }),
+  },
+  [NOTIFICATION_TYPES.ADMIN_CONSULTANT_BANNED]: {
+    entityType: NOTIFICATION_ENTITY_TYPES.USER,
+    baseUrlKey: 'internalHubUrl',
+    getEntityId: (m: IAdminConsultantBannedMetadata) => m.consultant_user_id,
+    getRedirectUrl: (m, base) => `${base}/users/${m.consultant_user_id}`,
+    titleKey: 'notification.admin_consultant_banned.title',
+    bodyKey: 'notification.admin_consultant_banned.body',
+    bodyArgs: (m: IAdminConsultantBannedMetadata) => ({
+      consultant: m.consultant_name,
+      reason: m.ban_reason,
+      strikes: m.ai_strike_count,
     }),
   },
 }) as ConfigMap;

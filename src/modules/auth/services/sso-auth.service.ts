@@ -95,6 +95,7 @@ export class SsoAuthService implements ISsoAuthService {
           messageKey: 'error.auth.account_inactive',
           errorCode: ERROR_CODES.AUTH_ACCOUNT_INACTIVE,
           status: HttpStatus.FORBIDDEN,
+          details: user.banReason ? { ban_reason: user.banReason } : undefined,
         });
       }
 
@@ -151,6 +152,7 @@ export class SsoAuthService implements ISsoAuthService {
             messageKey: 'error.auth.account_inactive',
             errorCode: ERROR_CODES.AUTH_ACCOUNT_INACTIVE,
             status: HttpStatus.FORBIDDEN,
+            details: user.banReason ? { ban_reason: user.banReason } : undefined,
           });
         }
 

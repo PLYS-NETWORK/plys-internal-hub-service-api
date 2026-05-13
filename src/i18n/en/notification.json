@@ -63,17 +63,17 @@
     "title": "Task published",
     "body": "Task \"{title}\" ({code}) in project {project} was published by {business}."
   },
-  "admin_consultant_interview_submitted": {
-    "title": "Interview submitted",
-    "body": "{name} has submitted their interview answers and is awaiting review."
-  },
-  "admin_consultant_ai_rejected": {
-    "title": "Application flagged by AI",
-    "body": "{name}'s application was flagged for AI-generated content and automatically rejected."
+  "admin_consultant_onboarding_submitted": {
+    "title": "Onboarding submitted: {name}",
+    "body": "{name} has submitted their onboarding interview and is awaiting review."
   },
   "consultant_onboarding_approved": {
     "title": "Your account has been verified",
     "body": "Welcome to Plys! Your account is verified — you can now register skills and take exams."
+  },
+  "consultant_onboarding_rejected": {
+    "title": "Onboarding decision: not approved",
+    "body": "Your onboarding was not approved. You can re-apply after {blocked_until}. Reason: {reason}"
   },
   "consultant_skill_exam_submitted": {
     "title": "Skill exam submitted",
@@ -87,20 +87,38 @@
     "copyleaks": {
       "title": "Skill exam flagged for AI-generated content",
       "body": "Your {skill} answers were flagged. You may retake after {cooldown_until}. {strikes_remaining} attempt(s) remain before your account is permanently disabled."
+    },
+    "expired": {
+      "title": "Skill exam expired",
+      "body": "Your {skill} exam timer ran out before you submitted. After 3 expired attempts you will be paused from taking exams for 2 days."
     }
   },
   "consultant_skill_exam_passed": {
-    "advanced": {
-      "title": "Skill exam passed!",
-      "body": "Congratulations — you passed {skill} with {final_score}% as advanced."
+    "senior": {
+      "title": "Skill exam passed — senior!",
+      "body": "Nice work — you passed {skill} with {final_score}% as senior."
     },
     "expert": {
       "title": "Skill exam passed — expert!",
-      "body": "Outstanding — you passed {skill} with {final_score}% as expert. You'll now receive priority notifications when matching projects are published."
+      "body": "Outstanding — you passed {skill} with {final_score}% as expert."
     }
   },
   "consultant_account_banned": {
     "title": "Account permanently disabled",
     "body": "Your account has been permanently disabled after repeated AI-generated content violations. If you believe this is in error, contact support."
+  },
+  "admin_skill_exam_result": {
+    "passed": {
+      "title": "Skill exam passed: {consultant}",
+      "body": "{consultant} passed the {skill} exam ({score}%)."
+    },
+    "failed": {
+      "title": "Skill exam {outcome}: {consultant}",
+      "body": "{consultant} did not pass the {skill} exam ({score}%) — outcome: {outcome}."
+    }
+  },
+  "admin_consultant_banned": {
+    "title": "Consultant banned: {consultant}",
+    "body": "{consultant} was banned after {strikes} CopyLeaks strikes ({reason})."
   }
 }

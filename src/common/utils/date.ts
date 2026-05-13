@@ -107,6 +107,23 @@ export const DateUtil = {
     return toDayjs(input, tz).toISOString();
   },
 
+  /**
+   * ISO 8601 string rendered in the caller's timezone with the UTC offset preserved.
+   * Example: `2026-05-14T17:11:00.000+07:00` when tz='Asia/Ho_Chi_Minh'.
+   *
+   * Null-safe: returns null for null/undefined input so DTO mappers can chain
+   * the helper without conditional spreads. When `tz` is omitted, falls back
+   * to the request-context's current timezone (or UTC if none).
+   *
+   * Used by skill-exam DTOs so every datetime sent to the consultant matches
+   * their wall-clock without forcing the client to know the offset upfront.
+   */
+  toZonedIso(input: DateInput | null | undefined, tz?: string | null): string | null {
+    if (input === null || input === undefined) return null;
+    const zone = tz ?? 'UTC';
+    return toDayjs(input, zone).format('YYYY-MM-DDTHH:mm:ss.SSSZ');
+  },
+
   /** Native JS Date. */
   toDate(input: DateInput, tz?: string): Date {
     return toDayjs(input, tz).toDate();

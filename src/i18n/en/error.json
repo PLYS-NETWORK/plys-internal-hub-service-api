@@ -167,9 +167,11 @@
     "already_passed": "You have already passed this skill exam.",
     "already_in_progress": "You already have an in-progress exam for this skill.",
     "cooldown_active": "Your retake cooldown is active until {{cooldown_until}}.",
-    "parallel_limit_reached": "You may have at most 2 skill exams in progress at a time.",
+    "parallel_limit_reached": "You may have only one skill exam in progress at a time.",
     "invalid_status": "This action is not allowed for the current skill exam status.",
     "incomplete_answers": "All 20 skill exam questions must be answered before submitting.",
-    "not_ready": "Skill exam questions are not ready yet."
+    "not_ready": "Skill exam questions are not ready yet.",
+    "expired": "This skill exam has expired. The 60-minute window elapsed before submission.",
+    "taking_blocked": "You can take another exam after {{blocked_until}}. The 2-day pause is triggered by 3 expired attempts."
   }
 }

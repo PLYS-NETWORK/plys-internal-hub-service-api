@@ -1,9 +1,9 @@
 import { AbstractRepository } from '@common/repositories';
 import { ConsultantSkillExam } from '@database/entities';
-import { SKILL_EXAM_IN_PROGRESS_STATUSES } from '@database/enums';
+import { SKILL_EXAM_IN_PROGRESS_STATUSES, SkillExamStatus } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager, In } from 'typeorm';
+import { EntityManager, In, LessThan } from 'typeorm';
 
 import { IConsultantSkillExamRepository } from './interfaces';
 
@@ -51,5 +51,26 @@ export class ConsultantSkillExamRepository
     skillId: string,
   ): Promise<number> {
     return this.repository.count({ where: { consultantId, skillId } });
+  }
+
+  public async findCurrentByConsultant(consultantId: string): Promise<ConsultantSkillExam | null> {
+    return this.repository.findOne({
+      where: {
+        consultantId,
+        status: In([...SKILL_EXAM_IN_PROGRESS_STATUSES]),
+      },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  public async findExpiredInProgress(limit: number): Promise<ConsultantSkillExam[]> {
+    return this.repository.find({
+      where: {
+        status: SkillExamStatus.IN_PROGRESS,
+        expiresAt: LessThan(new Date()),
+      },
+      order: { expiresAt: 'ASC' },
+      take: limit,
+    });
   }
 }

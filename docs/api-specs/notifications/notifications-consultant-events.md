@@ -64,7 +64,8 @@ interface IWithdrawCompletedMetadata {
 
 **Trigger:** A new project is published whose required skills intersect the consultant's registered skills.
 This notification is dispatched via an async Bull queue fan-out — it may arrive seconds after the
-project goes live, not instantly.
+project goes live, not instantly. Consultants with `consultant_profiles.has_notification_priority = true`
+(driven by `avgRating ≥ 90`) are surfaced first in the matching pipeline.
 
 | Field          | Value                                 |
 | -------------- | ------------------------------------- |
@@ -149,8 +150,8 @@ interface IConsultantTaskStatusChangedMetadata {
 
 ## 5. `consultant_onboarding_approved`
 
-**Trigger:** An admin approves the consultant's onboarding application (`OnboardingStatus → APPROVED`).
-Emitted from the admin-onboarding service after the DB transaction that sets the approval + `ConsultantProfile.isVerified = true`.
+**Trigger:** An admin approves the consultant's onboarding (`OnboardingStatus → APPROVED`).
+Emitted from `AdminConsultantOnboardingService.decide` AFTER the DB transaction that records the approval and flips `ConsultantProfile.isVerified = true`.
 
 | Field          | Value                            |
 | -------------- | -------------------------------- |
@@ -185,9 +186,58 @@ interface IConsultantOnboardingApprovedMetadata {
 
 ---
 
-## 6. `consultant_skill_exam_submitted`
+## 6. `consultant_onboarding_rejected`
 
-**Trigger:** Consultant finalises a skill exam attempt (`status → SUBMITTED`). Confirms that the evaluation pipeline (Copyleaks → AI eval) has been kicked off — the consultant should not expect terminal status for a few minutes.
+**Trigger:** An admin rejects the consultant's onboarding (`OnboardingStatus → REJECTED`).
+Emitted from `AdminConsultantOnboardingService.decide` together with the rejection email.
+The consultant is **blocked from re-onboarding for 3 months** — login, register, and profile-submit
+all return `403 CONSULTANT_ONBOARDING_BLOCKED` while the block is active. See
+[auth/consultant.md](../auth/consultant.md) for the auth gate.
+
+| Field          | Value                                                   |
+| -------------- | ------------------------------------------------------- |
+| `type`         | `consultant_onboarding_rejected`                        |
+| `entity_type`  | `onboarding`                                            |
+| `entity_id`    | `metadata.onboarding_id`                                |
+| `redirect_url` | `https://<lona>/onboarding/blocked` (rejection landing) |
+
+**Metadata:**
+
+```ts
+interface IConsultantOnboardingRejectedMetadata {
+  onboarding_id: string;
+  /** ISO-8601 — when the 3-month re-onboarding block lifts. */
+  blocked_until: string;
+  /** Admin's plain-text reason; null when omitted. */
+  rejection_note: string | null;
+}
+```
+
+**Sample payload:**
+
+```json
+{
+  "type": "consultant_onboarding_rejected",
+  "title": "Onboarding decision: not approved",
+  "body": "Your onboarding was not approved. You can re-apply after 2026-08-14T10:11:00.000Z. Reason: Answers were too shallow — please re-apply with more concrete examples.",
+  "metadata": {
+    "onboarding_id": "550e8400-e29b-41d4-a716-446655440000",
+    "blocked_until": "2026-08-14T10:11:00.000Z",
+    "rejection_note": "Answers were too shallow — please re-apply with more concrete examples."
+  },
+  "entity_type": "onboarding",
+  "entity_id": "550e8400-e29b-41d4-a716-446655440000",
+  "redirect_url": "https://lona.plys.dev/onboarding/blocked"
+}
+```
+
+**Cache invalidation hint:** Reload `GET /consultant/onboarding/status`. Expect any in-flight session to start hitting `403 CONSULTANT_ONBOARDING_BLOCKED` on `/auth/login` for the next 3 months — clear local auth state and route to the blocked-onboarding landing.
+
+---
+
+## 7. `consultant_skill_exam_submitted`
+
+**Trigger:** Consultant finalises a skill exam attempt (`status → SUBMITTED`). Confirms that the evaluation pipeline (Copyleaks → AI eval) has been kicked off — the consultant should not expect terminal status for a few minutes. The Lona UI surfaces this as the `PENDING_REVIEW` `consultant_view_status` returned by the skill-exam endpoints.
 
 | Field          | Value                                 |
 | -------------- | ------------------------------------- |
@@ -207,31 +257,15 @@ interface IConsultantSkillExamSubmittedMetadata {
 }
 ```
 
-**Sample payload:**
-
-```json
-{
-  "type": "consultant_skill_exam_submitted",
-  "title": "Skill exam submitted",
-  "body": "Your skill_react exam is being evaluated. We'll notify you when it's done.",
-  "metadata": {
-    "exam_id": "11111111-1111-1111-1111-111111111111",
-    "skill_id": "22222222-2222-2222-2222-222222222222",
-    "skill_name": "skill_react"
-  },
-  "entity_type": "skill_exam",
-  "entity_id": "11111111-1111-1111-1111-111111111111",
-  "redirect_url": "https://lona.plys.dev/skill-exams/11111111-1111-1111-1111-111111111111"
-}
-```
-
-**Cache invalidation hint:** Reload `GET /consultant/skill-exams` and the exam detail for `exam_id`.
+**Cache invalidation hint:** Reload `GET /consultant/skill-exams/current` and the exam detail for `exam_id`.
 
 ---
 
-## 7. `consultant_skill_exam_passed`
+## 8. `consultant_skill_exam_passed`
 
-**Trigger:** AI evaluation scores the exam ≥ 80% (`status → PASSED`). Emitted from `SkillExamAiEvaluationService` AFTER the transaction that upserts `ConsultantSkill { proficiencyLevel, rating }`, appends a `ConsultantSkillScore` row, and recomputes `ConsultantProfile.avgRating`. The copy variant is keyed off `metadata.proficiency_level` (`advanced` for 80–89, `expert` for ≥ 90). The `expert` variant explicitly mentions the priority-promotion benefit.
+**Trigger:** AI evaluation scores the exam ≥ 80% (`status → PASSED`). Emitted from `SkillExamAiEvaluationService` AFTER the transaction that upserts `ConsultantSkill { proficiencyLevel, rating }`, appends a `ConsultantSkillScore` row, recomputes `ConsultantProfile.avgRating`, and resets the platform-wide expired-attempt counter. Copy is keyed off `metadata.proficiency_level` (`senior` for 80–89, `expert` for ≥ 90).
+
+`metadata.has_priority_benefit` is **driven by `avgRating ≥ 90`**, not the individual exam tier — so a SENIOR-level pass that pushes the consultant's avg over 90 still flips the flag to `true`, and an EXPERT pass that drags the avg below 90 (rare) leaves it at `false`.
 
 | Field          | Value                          |
 | -------------- | ------------------------------ |
@@ -249,37 +283,37 @@ interface IConsultantSkillExamPassedMetadata {
   skill_name: string;
   /** 0–100. */
   final_score: number;
-  proficiency_level: 'advanced' | 'expert';
-  /** True iff proficiency_level === 'expert'. */
+  proficiency_level: 'senior' | 'expert';
+  /** True when avgRating ≥ 90 (drives priority emails + push on new projects). */
   has_priority_benefit: boolean;
 }
 ```
 
-**Sample payload — advanced (80 ≤ score < 90):**
+**Sample payload — senior (80 ≤ score < 90):**
 
 ```json
 {
   "type": "consultant_skill_exam_passed",
-  "title": "Skill exam passed!",
-  "body": "Congratulations — you passed skill_react with 85.00% as advanced.",
+  "title": "Skill exam passed — senior!",
+  "body": "Nice work — you passed skill_react with 85.00% as senior.",
   "metadata": {
     "exam_id": "11111111-1111-1111-1111-111111111111",
     "skill_id": "22222222-2222-2222-2222-222222222222",
     "skill_name": "skill_react",
     "final_score": 85,
-    "proficiency_level": "advanced",
+    "proficiency_level": "senior",
     "has_priority_benefit": false
   }
 }
 ```
 
-**Sample payload — expert (≥ 90):**
+**Sample payload — expert (≥ 90, drives avgRating ≥ 90):**
 
 ```json
 {
   "type": "consultant_skill_exam_passed",
   "title": "Skill exam passed — expert!",
-  "body": "Outstanding — you passed skill_react with 92.50% as expert. You'll now receive priority notifications when matching projects are published.",
+  "body": "Outstanding — you passed skill_react with 92.50% as expert.",
   "metadata": {
     "exam_id": "11111111-1111-1111-1111-111111111111",
     "skill_id": "22222222-2222-2222-2222-222222222222",
@@ -295,14 +329,15 @@ interface IConsultantSkillExamPassedMetadata {
 
 ---
 
-## 8. `consultant_skill_exam_failed`
+## 9. `consultant_skill_exam_failed`
 
-**Trigger:** Either path concludes the exam without passing:
+**Trigger:** Any one of three terminal failures:
 
-- `LOW_SCORE` — AI eval scored < 80%. Emitted from `SkillExamAiEvaluationService` after the `FAILED` transition.
-- `COPYLEAKS_FAILED` — Copyleaks flagged the answers as AI-generated. Emitted from `SkillExamCopyleaksService` after the `COPYLEAKS_FAILED` transition and the strike-count increment. Pair this notification with `consultant_account_banned` (section 9) on the 3rd strike.
+- `LOW_SCORE` — AI eval scored < 80%. Emitted from `SkillExamAiEvaluationService` after the `FAILED` transition. `metadata.assigned_proficiency` is `'beginner'` (score < 40) or `'intermediate'` (40 ≤ score < 80). Per-skill cool-down is **30 days**.
+- `COPYLEAKS_FAILED` — Copyleaks flagged the answers as AI-generated. Emitted from `SkillExamCopyleaksService` after the `COPYLEAKS_FAILED` transition and the strike-count increment. Per-skill cool-down is **7 days**. Pair with `consultant_account_banned` (section 11) on the 3rd strike.
+- `EXPIRED` — the 60-minute exam timer ran out without a final submit. Emitted from `ConsultantSkillExamService.expireExam` (lazy or sweep). No per-skill cool-down; instead increments `users.exam_expired_count` and (on the 3rd expiration) sets a platform-wide 2-day pause.
 
-`metadata.fail_reason` discriminates the two cases — title and body copy are picked from the reason. `metadata.cooldown_until` is the earliest retake timestamp (current behaviour: +7 days from the failure event, unless the account was just banned).
+`metadata.fail_reason` discriminates the three cases — title and body copy are picked from the reason. `metadata.cooldown_until` is `null` for the EXPIRED branch (no per-skill cooldown) and a non-null ISO timestamp for the other two.
 
 | Field          | Value                                 |
 | -------------- | ------------------------------------- |
@@ -318,34 +353,37 @@ interface IConsultantSkillExamFailedMetadata {
   exam_id: string;
   skill_id: string;
   skill_name: string;
-  fail_reason: 'LOW_SCORE' | 'COPYLEAKS_FAILED';
-  /** 0–100; 0 when Copyleaks fails before AI eval runs. */
+  fail_reason: 'LOW_SCORE' | 'COPYLEAKS_FAILED' | 'EXPIRED';
+  /** 0–100; 0 when Copyleaks fails before AI eval or when the exam EXPIRED. */
   final_score: number;
-  /** ISO-8601 — earliest retake timestamp. */
-  cooldown_until: string;
+  /** ISO-8601 per-skill retake cooldown. Null for EXPIRED (no per-skill cool-down). */
+  cooldown_until: string | null;
   /** users.ai_strike_count after this event. */
   strike_count: number;
   /** 3 - strike_count, floored at 0. */
   strikes_remaining: number;
+  /** Score-band level on LOW_SCORE fails. Null for COPYLEAKS_FAILED + EXPIRED. */
+  assigned_proficiency: 'beginner' | 'intermediate' | null;
 }
 ```
 
-**Sample payload — `LOW_SCORE`:**
+**Sample payload — `LOW_SCORE` (BEGINNER):**
 
 ```json
 {
   "type": "consultant_skill_exam_failed",
   "title": "Skill exam result: did not pass",
-  "body": "Your skill_react exam scored 65.00%, below the 80% pass threshold. You can retake after 2026-05-19T11:35:00.000Z.",
+  "body": "Your skill_react exam scored 35.00%, below the 80% pass threshold. You can retake after 2026-06-12T11:35:00.000Z.",
   "metadata": {
     "exam_id": "11111111-1111-1111-1111-111111111111",
     "skill_id": "22222222-2222-2222-2222-222222222222",
     "skill_name": "skill_react",
     "fail_reason": "LOW_SCORE",
-    "final_score": 65,
-    "cooldown_until": "2026-05-19T11:35:00.000Z",
+    "final_score": 35,
+    "cooldown_until": "2026-06-12T11:35:00.000Z",
     "strike_count": 0,
-    "strikes_remaining": 3
+    "strikes_remaining": 3,
+    "assigned_proficiency": "beginner"
   }
 }
 ```
@@ -365,40 +403,42 @@ interface IConsultantSkillExamFailedMetadata {
     "final_score": 0,
     "cooldown_until": "2026-05-19T11:35:00.000Z",
     "strike_count": 1,
-    "strikes_remaining": 2
+    "strikes_remaining": 2,
+    "assigned_proficiency": null
   }
 }
 ```
 
-**Sample payload — `COPYLEAKS_FAILED` (3rd strike — paired with `consultant_account_banned`):**
+**Sample payload — `EXPIRED`:**
 
 ```json
 {
   "type": "consultant_skill_exam_failed",
-  "title": "Skill exam flagged for AI-generated content",
-  "body": "Your skill_react answers were flagged. You may retake after 2026-05-19T11:35:00.000Z. 0 attempt(s) remain before your account is permanently disabled.",
+  "title": "Skill exam expired",
+  "body": "Your skill_react exam timer ran out before you submitted. After 3 expired attempts you will be paused from taking exams for 2 days.",
   "metadata": {
     "exam_id": "11111111-1111-1111-1111-111111111111",
     "skill_id": "22222222-2222-2222-2222-222222222222",
     "skill_name": "skill_react",
-    "fail_reason": "COPYLEAKS_FAILED",
+    "fail_reason": "EXPIRED",
     "final_score": 0,
-    "cooldown_until": "2026-05-19T11:35:00.000Z",
-    "strike_count": 3,
-    "strikes_remaining": 0
+    "cooldown_until": null,
+    "strike_count": 0,
+    "strikes_remaining": 3,
+    "assigned_proficiency": null
   }
 }
 ```
 
-**Cache invalidation hint:** Reload the exam detail; if `fail_reason === 'COPYLEAKS_FAILED'` also reload the user profile so the new strike count surfaces. If `strikes_remaining === 0`, expect a `consultant_account_banned` event to arrive immediately after.
+**Cache invalidation hint:** Reload the exam detail. If `fail_reason === 'COPYLEAKS_FAILED'`, reload the profile so the new strike count surfaces. If `fail_reason === 'EXPIRED'`, also reload `GET /consultant/skill-exams/eligibility` — the platform-wide block may have just activated. If `strikes_remaining === 0`, expect a `consultant_account_banned` event to arrive immediately after.
 
 ---
 
-## 9. `consultant_account_banned`
+## 10. `consultant_account_banned`
 
-**Trigger:** The 3rd Copyleaks strike just landed and the system has set `User.isActive = false`, `User.bannedAt = now`, `User.banReason = 'AI_CONTENT_ABUSE'`. Emitted AFTER the corresponding `consultant_skill_exam_failed` event for the same exam — render the timeline as **failed → banned**.
+**Trigger:** The 3rd Copyleaks strike just landed. The system has set `User.isActive = false`, `User.bannedAt = now`, `User.banReason = 'AI_CONTENT_ABUSE'`, **and revoked every active `user_sessions` row** in the same transaction. Emitted AFTER the corresponding `consultant_skill_exam_failed` event for the same exam — render the timeline as **failed → banned**.
 
-After this event lands, subsequent API calls from this user return `403 AUTH_ACCOUNT_INACTIVE`; the FE should sign the session out and route to a static "account disabled" page.
+After this event lands, subsequent API calls from this user return `403 AUTH_ACCOUNT_INACTIVE` with `details.ban_reason`. The FE should sign the session out and route to a static "account disabled" page.
 
 | Field          | Value                              |
 | -------------- | ---------------------------------- |
@@ -447,7 +487,6 @@ socket.on('notification.new', (n: NotificationPayload) => {
       qc.invalidateQueries({ queryKey: ['consultant', 'transactions'] });
       break;
     case 'consultant_project_skill_match':
-      // Optional: badge the project discovery feed
       qc.invalidateQueries({ queryKey: ['consultant', 'projects', 'discovery'] });
       break;
     case 'consultant_project_joined':
@@ -468,8 +507,13 @@ socket.on('notification.new', (n: NotificationPayload) => {
       qc.invalidateQueries({ queryKey: ['consultant', 'onboarding', 'status'] });
       qc.invalidateQueries({ queryKey: ['consultant', 'profile'] });
       break;
+    case 'consultant_onboarding_rejected':
+      qc.clear();
+      authStore.signOut();
+      router.replace('/onboarding/blocked');
+      break;
     case 'consultant_skill_exam_submitted':
-      qc.invalidateQueries({ queryKey: ['consultant', 'skill-exams'] });
+      qc.invalidateQueries({ queryKey: ['consultant', 'skill-exams', 'current'] });
       qc.invalidateQueries({
         queryKey: ['consultant', 'skill-exams', n.metadata.exam_id],
       });
@@ -480,17 +524,20 @@ socket.on('notification.new', (n: NotificationPayload) => {
       qc.invalidateQueries({
         queryKey: ['consultant', 'skill-exams', n.metadata.exam_id],
       });
+      qc.invalidateQueries({ queryKey: ['consultant', 'skill-exams', 'eligibility'] });
       break;
     case 'consultant_skill_exam_failed':
       qc.invalidateQueries({
         queryKey: ['consultant', 'skill-exams', n.metadata.exam_id],
       });
+      qc.invalidateQueries({ queryKey: ['consultant', 'skill-exams', 'current'] });
+      qc.invalidateQueries({ queryKey: ['consultant', 'skill-exams', 'eligibility'] });
       if (n.metadata.fail_reason === 'COPYLEAKS_FAILED') {
         qc.invalidateQueries({ queryKey: ['consultant', 'profile'] }); // strike count surface
       }
       break;
     case 'consultant_account_banned':
-      qc.clear(); // wipe all consultant-scoped caches
+      qc.clear();
       authStore.signOut();
       router.replace('/account-disabled');
       break;

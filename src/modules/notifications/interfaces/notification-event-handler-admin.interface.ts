@@ -1,7 +1,6 @@
 import {
   IBusinessOnboardedEvent,
-  IConsultantApplicationAiRejectedEvent,
-  IConsultantInterviewSubmittedEvent,
+  IConsultantOnboardingSubmittedEvent,
   IPaymentTopUpCompletedEvent,
   IProjectPublishedEvent,
   ITaskPublishedEvent,
@@ -37,16 +36,10 @@ export interface IAdminNotificationEventHandlerService {
   onAdminTaskPublished(event: ITaskPublishedEvent): Promise<void>;
 
   /**
-   * Fan-out `ADMIN_CONSULTANT_INTERVIEW_SUBMITTED` to all active admins when
-   * a consultant submits their interview answers.
-   * @param event Payload carrying application ID and consultant display name.
+   * Fan-out `ADMIN_CONSULTANT_ONBOARDING_SUBMITTED` to all active admins when
+   * a consultant finalises their onboarding interview answers. The admins
+   * use this signal to pull the new onboarding into their review queue.
+   * @param event Payload carrying onboarding id + consultant display name.
    */
-  onConsultantInterviewSubmitted(event: IConsultantInterviewSubmittedEvent): Promise<void>;
-
-  /**
-   * Fan-out `ADMIN_CONSULTANT_AI_REJECTED` to all active admins when the AI
-   * evaluation flags a consultant's answers as AI-generated.
-   * @param event Payload carrying application ID and consultant display name.
-   */
-  onConsultantApplicationAiRejected(event: IConsultantApplicationAiRejectedEvent): Promise<void>;
+  onConsultantOnboardingSubmitted(event: IConsultantOnboardingSubmittedEvent): Promise<void>;
 }

@@ -173,6 +173,10 @@ export const ERROR_CODES = {
   SKILL_EXAM_INVALID_STATUS: 'SKILL_EXAM_INVALID_STATUS',
   SKILL_EXAM_INCOMPLETE_ANSWERS: 'SKILL_EXAM_INCOMPLETE_ANSWERS',
   SKILL_EXAM_NOT_READY: 'SKILL_EXAM_NOT_READY',
+  // 60-min deadline elapsed before the consultant submitted.
+  SKILL_EXAM_EXPIRED: 'SKILL_EXAM_EXPIRED',
+  // Platform-wide 2-day block after 3rd EXPIRED attempt.
+  SKILL_EXAM_TAKING_BLOCKED: 'SKILL_EXAM_TAKING_BLOCKED',
 } as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

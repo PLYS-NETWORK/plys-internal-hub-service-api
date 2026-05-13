@@ -20,6 +20,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { StartSkillExamDto } from '../dto/requests/start-skill-exam.dto';
 import { SubmitSkillExamAnswerDto } from '../dto/requests/submit-skill-exam-answer.dto';
 import { SkillExamDetailResponseDto } from '../dto/responses/skill-exam-detail-response.dto';
+import { SkillExamEligibilityResponseDto } from '../dto/responses/skill-exam-eligibility-response.dto';
 import { SkillExamSummaryResponseDto } from '../dto/responses/skill-exam-summary-response.dto';
 import { NotBannedGuard } from '../guards/not-banned.guard';
 import { OnboardingApprovedGuard } from '../guards/onboarding-approved.guard';
@@ -34,10 +35,23 @@ import { ConsultantSkillExamService } from '../services/consultant-skill-exam.se
 export class ConsultantSkillExamController {
   constructor(private readonly service: ConsultantSkillExamService) {}
 
-  @Get()
-  @ApiOperation({ summary: 'List the caller’s skill exams (all attempts, newest first)' })
-  public async listMine(): Promise<ITranslatedPayload<SkillExamSummaryResponseDto[]>> {
-    const data = await this.service.listMine();
+  @Get('current')
+  @ApiOperation({
+    summary:
+      'Return the consultant’s currently active exam (any non-terminal status, or null when none).',
+  })
+  public async getCurrent(): Promise<ITranslatedPayload<SkillExamSummaryResponseDto | null>> {
+    const data = await this.service.getCurrent();
+    return { messageKey: 'success.ok', data };
+  }
+
+  @Get('eligibility')
+  @ApiOperation({
+    summary:
+      'Single source of truth for the "Start exam" button: whether the consultant may register a new exam right now.',
+  })
+  public async getEligibility(): Promise<ITranslatedPayload<SkillExamEligibilityResponseDto>> {
+    const data = await this.service.getEligibility();
     return { messageKey: 'success.ok', data };
   }
 

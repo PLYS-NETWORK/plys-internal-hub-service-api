@@ -22,6 +22,30 @@ The Consultant platform layers an extra gate on top of the standard auth flow. A
 
 Permanent bans (e.g. repeat AI-content violations from skill exams) take a different path: they set `users.is_active = false` and return `403 AUTH_ACCOUNT_INACTIVE` instead. The two error codes are distinct so the client can tell "come back after 2026-08-14" apart from "your account is permanently disabled".
 
+## Permanent ban — `AUTH_ACCOUNT_INACTIVE` (CopyLeaks 3-strike)
+
+A separate, **permanent** ban path fires from skill-exam CopyLeaks abuse. When the consultant submits a skill exam that CopyLeaks flags as AI-generated for the 3rd time (lifetime counter — never resets):
+
+1. `users.is_active = false`, `users.banned_at = now`, `users.ban_reason = 'AI_CONTENT_ABUSE'`.
+2. **Every active `user_sessions` row for this user is deleted in the same transaction.** Any device's cached JWT becomes immediately useless — the next request hits the `is_active = false` gate and is rejected with `403 AUTH_ACCOUNT_INACTIVE`.
+3. The consultant receives the `consultant_account_banned` in-app notification; admin platform receives an `admin_consultant_banned` fan-out so every reviewer sees the strike.
+
+Subsequent calls to `POST /auth/login`, `POST /auth/sso/exchange`, `POST /auth/sso/google/token` return `403 AUTH_ACCOUNT_INACTIVE` with `details.ban_reason` set to the reason code:
+
+```json
+{
+  "status_code": 403,
+  "message": "Your account is permanently disabled.",
+  "error_code": "AUTH_ACCOUNT_INACTIVE",
+  "data": null,
+  "details": { "ban_reason": "AI_CONTENT_ABUSE" },
+  "timestamp": "2026-05-14T10:11:00.000Z",
+  "path": "/api/v1/auth/login"
+}
+```
+
+This is **distinct** from the time-boxed `CONSULTANT_ONBOARDING_BLOCKED` — the two errors carry different codes so the client can tell "come back after 2026-08-14" apart from "your account is permanently disabled; contact support to appeal".
+
 ---
 
 ## Endpoints

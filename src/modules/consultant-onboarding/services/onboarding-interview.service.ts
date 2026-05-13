@@ -1,4 +1,5 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
+import { IConsultantOnboardingSubmittedEvent, NOTIFICATION_EVENTS } from '@common/events';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
@@ -13,6 +14,7 @@ import {
 import { OnboardingQuestionType, OnboardingStatus } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { plainToInstance } from 'class-transformer';
 
 import {
@@ -35,6 +37,7 @@ export class OnboardingInterviewService implements IOnboardingInterviewService {
     private readonly requestContext: RequestContextService,
     private readonly emailService: EmailService,
     private readonly env: EnvironmentsService,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger = new AppLogger(OnboardingInterviewService.name, requestContext);
   }
@@ -127,6 +130,17 @@ export class OnboardingInterviewService implements IOnboardingInterviewService {
     });
 
     await this.notifyConsultantAndAdmins(result);
+
+    // Fan out an in-app admin notification too — the email broadcast above is
+    // best-effort/async, but admins should also see the new pending review in
+    // their notification feed instantly. See ADMIN_CONSULTANT_ONBOARDING_SUBMITTED
+    // wired in notification-event-handler.service.ts.
+    const submittedPayload: IConsultantOnboardingSubmittedEvent = {
+      consultant_user_id: userId,
+      consultant_name: result.consultantName,
+      onboarding_id: result.onboardingId,
+    };
+    this.eventEmitter.emit(NOTIFICATION_EVENTS.CONSULTANT_ONBOARDING_SUBMITTED, submittedPayload);
 
     this.logger.log(
       `[${this.rid}] submitAnswers — complete | onboardingId: ${result.onboardingId} | userId: ${userId}`,
