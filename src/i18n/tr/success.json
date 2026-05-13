@@ -46,5 +46,17 @@
   "admin": {
     "allowed_email_invited": "Yönetici e-postasına davet gönderildi.",
     "allowed_email_active_updated": "İzin listesi kaydı güncellendi."
+  },
+  "consultant_onboarding": {
+    "profile_submitted": "Onboarding profili gönderildi. Lütfen 10 mülakat sorusunu yanıtlayın.",
+    "answer_saved": "Cevap kaydedildi.",
+    "interview_submitted": "Onboarding gönderildi. Bir yönetici incelediğinde bilgilendirileceksiniz.",
+    "approved": "Onboarding onaylandı.",
+    "rejected": "Onboarding reddedildi."
+  },
+  "skill_exam": {
+    "started": "Beceri sınavı başlatıldı. Sorular hazırlanıyor.",
+    "answer_saved": "Cevap kaydedildi.",
+    "submitted": "Beceri sınavı gönderildi. Değerlendirme tamamlandığında bilgilendirileceksiniz."
   }
 }

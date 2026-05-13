@@ -130,5 +130,23 @@
     "allowed_email_revoked": "Bu e-posta yönetici izin listesinde ama iptal edilmiş. Yeniden davet etmek yerine yeniden etkinleştirin.",
     "allowed_email_not_found": "İzin listesi kaydı bulunamadı.",
     "allowed_email_cannot_revoke_self": "Kendi yönetici izin listesi kaydınızın etkin durumunu değiştiremezsiniz."
+  },
+  "consultant_onboarding": {
+    "not_found": "Danışman onboarding kaydı bulunamadı.",
+    "blocked": "Hesabınız onboarding için {{blocked_until}} tarihine kadar engellendi. Lütfen bu tarihten sonra tekrar deneyin.",
+    "invalid_status": "Bu işlem mevcut onboarding durumunda izin verilmiyor.",
+    "incomplete_answers": "Göndermeden önce 10 onboarding sorusunun tamamı yanıtlanmalı.",
+    "not_approved": "Onboarding'iniz henüz onaylanmadı. Beceri sınavlarına kayıt olamazsınız."
+  },
+  "skill_exam": {
+    "not_found": "Beceri sınavı bulunamadı.",
+    "user_banned": "Hesabınız tekrarlanan yapay zeka içeriği ihlalleri nedeniyle kalıcı olarak devre dışı bırakıldı.",
+    "already_passed": "Bu beceri sınavını zaten geçtiniz.",
+    "already_in_progress": "Bu beceri için zaten devam eden bir sınavınız var.",
+    "cooldown_active": "Tekrar sınava giriş bekleme süreniz {{cooldown_until}} tarihine kadar aktif.",
+    "parallel_limit_reached": "Aynı anda en fazla 2 beceri sınavınız devam edebilir.",
+    "invalid_status": "Bu işlem mevcut beceri sınavı durumunda izin verilmiyor.",
+    "incomplete_answers": "Göndermeden önce 20 beceri sınavı sorusunun tamamı yanıtlanmalı.",
+    "not_ready": "Beceri sınavı soruları henüz hazır değil."
   }
 }

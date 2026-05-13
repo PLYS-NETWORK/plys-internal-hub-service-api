@@ -146,6 +146,24 @@
     "already_submitted": "Your interview has already been submitted.",
     "incomplete_answers": "All 30 interview questions must be answered before submitting."
   },
+  "consultant_onboarding": {
+    "not_found": "Consultant onboarding not found.",
+    "blocked": "Your account is blocked from onboarding until {{blocked_until}}. Please try again after that date.",
+    "invalid_status": "This action is not allowed for the current onboarding status.",
+    "incomplete_answers": "All 10 onboarding questions must be answered before submitting.",
+    "not_approved": "Your onboarding has not been approved yet. You cannot register skill exams."
+  },
+  "skill_exam": {
+    "not_found": "Skill exam not found.",
+    "user_banned": "Your account has been permanently disabled due to repeated AI-generated content violations.",
+    "already_passed": "You have already passed this skill exam.",
+    "already_in_progress": "You already have an in-progress exam for this skill.",
+    "cooldown_active": "Your retake cooldown is active until {{cooldown_until}}.",
+    "parallel_limit_reached": "You may have at most 2 skill exams in progress at a time.",
+    "invalid_status": "This action is not allowed for the current skill exam status.",
+    "incomplete_answers": "All 20 skill exam questions must be answered before submitting.",
+    "not_ready": "Skill exam questions are not ready yet."
+  },
   "interview_question": {
     "not_found": "Interview question not found.",
     "invalid_type": "Manual questions can only be of type COMMUNICATION or SYSTEM_KNOWLEDGE."

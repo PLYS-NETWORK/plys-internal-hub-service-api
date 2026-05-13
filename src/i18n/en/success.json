@@ -56,6 +56,18 @@
     "manual_evaluation_submitted": "Manual evaluation submitted.",
     "decided": "Application decision recorded."
   },
+  "consultant_onboarding": {
+    "profile_submitted": "Onboarding profile submitted. Please answer the 10 interview questions.",
+    "answer_saved": "Answer saved.",
+    "interview_submitted": "Onboarding submitted. We will notify you once an admin reviews it.",
+    "approved": "Onboarding approved.",
+    "rejected": "Onboarding rejected."
+  },
+  "skill_exam": {
+    "started": "Skill exam started. Questions are being generated.",
+    "answer_saved": "Answer saved.",
+    "submitted": "Skill exam submitted. You will be notified once evaluation is complete."
+  },
   "interview_question": {
     "created": "Interview question created.",
     "updated": "Interview question updated.",
