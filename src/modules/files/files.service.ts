@@ -41,7 +41,8 @@ export class FilesService implements IFilesService {
     // Server-generated key — never derived from the client filename. Sharded
     // by yyyy/mm to avoid huge flat directories on the local provider.
     // CONSULTANT_CV uploads land under `consultant-CVs/<env>/<yyyy>/<mm>/<uuid>`
-    // so the legal/admin teams can spot them easily in the storage browser.
+    // and AVATAR uploads under `avatars/<env>/<yyyy>/<mm>/<uuid>` so they live
+    // in their own top-level folders for easy auditing.
     const now = new Date();
     const yyyy = String(now.getUTCFullYear());
     const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
@@ -50,7 +51,9 @@ export class FilesService implements IFilesService {
     const keyHint =
       purpose === FilePurpose.CONSULTANT_CV
         ? `consultant-CVs/${this.env.nodeEnv}/${baseName}`
-        : baseName;
+        : purpose === FilePurpose.AVATAR
+          ? `avatars/${this.env.nodeEnv}/${baseName}`
+          : baseName;
 
     const sha256 = crypto.createHash('sha256').update(input.buffer).digest('hex');
 
@@ -70,9 +73,12 @@ export class FilesService implements IFilesService {
           });
     }
 
-    // CONSULTANT_CV uploads carry their purpose immediately so the consultant
-    // can reference the URL on POST /consultant/onboarding/profile. Other
-    // purposes still start NULL and get stamped later via markAsAttached.
+    // CONSULTANT_CV and AVATAR uploads carry their purpose immediately so the
+    // consultant can reference the URL on POST /consultant/onboarding/profile
+    // and the row escapes the orphan sweep. Other purposes still start NULL
+    // and get stamped later via markAsAttached.
+    const stampedPurpose =
+      purpose === FilePurpose.CONSULTANT_CV || purpose === FilePurpose.AVATAR ? purpose : null;
     const row = this.uow.files.create({
       ownerUserId,
       storageProvider: this.storage.name,
@@ -81,7 +87,7 @@ export class FilesService implements IFilesService {
       mimeType: input.mimeType,
       sizeBytes: input.size,
       sha256,
-      purpose: purpose === FilePurpose.CONSULTANT_CV ? FilePurpose.CONSULTANT_CV : null,
+      purpose: stampedPurpose,
     });
     const saved = (await this.uow.files.save(row)) as FileEntity;
 

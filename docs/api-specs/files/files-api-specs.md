@@ -48,18 +48,21 @@ Callers that don't satisfy either receive `404 FILE_NOT_FOUND` (never `403`) so 
 
 ```
    POST /files                                              POST /files?purpose=consultant_cv
-   (no purpose param — default flow)                        (CV upload — stamped at create time)
+   (no purpose param — default flow)                        POST /files?purpose=avatar
+                                                            (CV / avatar upload — stamped at create time)
         │                                                          │
         ▼                                                          ▼
-   row.purpose = NULL                                       row.purpose = 'consultant_cv'
+   row.purpose = NULL                                       row.purpose = 'consultant_cv' | 'avatar'
    key: <yyyy>/<mm>/<uuid>.<ext>                            key: consultant-CVs/<NODE_ENV>/<yyyy>/<mm>/<uuid>.<ext>
+                                                            key: avatars/<NODE_ENV>/<yyyy>/<mm>/<uuid>.<ext>
         │                                                          │
    orphan grace window (FILES_ORPHAN_GRACE_HOURS)                  │
    Mon 03:00 UTC sweep → soft-deleted                              │
         │                                                          │
         ▼                                                          ▼
    attached by another surface                              consultant passes the returned `url`
-   (e.g. POST /projects/.../attachments)                    as cv_url to POST /consultant/onboarding/profile.
+   (e.g. POST /projects/.../attachments)                    as cv_url / avatar_url to
+                                                            POST /consultant/onboarding/profile.
    row.purpose = '<task_attachment | task_comment | task_result>'
         │
         ▼
@@ -72,15 +75,20 @@ Callers that don't satisfy either receive `404 FILE_NOT_FOUND` (never `403`) so 
 
 The cron is implemented in [FilesCleanupService](../../../src/modules/files/files-cleanup.service.ts).
 
-### `?purpose=consultant_cv` — special case for CV upload
+### `?purpose=consultant_cv` / `?purpose=avatar` — special cases stamped at upload time
 
-The optional `purpose` query parameter is normally ignored at upload time (the owning surface stamps `purpose` later via `markAsAttached`). **One value is honoured immediately**: `?purpose=consultant_cv`. When the consultant passes it:
+The optional `purpose` query parameter is normally ignored at upload time (the owning surface stamps `purpose` later via `markAsAttached`). **Two values are honoured immediately**: `?purpose=consultant_cv` and `?purpose=avatar`. When the consultant passes either:
 
-1. The storage key is prefixed `consultant-CVs/<NODE_ENV>/<yyyy>/<mm>/<uuid>.<ext>` instead of the default sharded `<yyyy>/<mm>/<uuid>.<ext>`. Same provider routing applies (`local` vs `s3`); just the prefix differs.
-2. The `files.purpose` column is stamped with `consultant_cv` immediately (no `markAsAttached` round-trip), so the orphan-cleanup sweep ignores the row.
-3. The response `url` is what the consultant passes as `cv_url` to `POST /consultant/onboarding/profile` (Step 1 of the onboarding flow).
+1. The storage key is prefixed:
+   - `consultant_cv` → `consultant-CVs/<NODE_ENV>/<yyyy>/<mm>/<uuid>.<ext>`
+   - `avatar` → `avatars/<NODE_ENV>/<yyyy>/<mm>/<uuid>.<ext>`
 
-Any other value of `purpose` is silently ignored — every legacy / non-CV caller keeps working unchanged. The endpoint is shared, so size limits, MIME validation, and per-user quotas all apply identically.
+   instead of the default sharded `<yyyy>/<mm>/<uuid>.<ext>`. Same provider routing applies (`local` vs `s3`); just the prefix differs.
+
+2. The `files.purpose` column is stamped with the matching value immediately (no `markAsAttached` round-trip), so the orphan-cleanup sweep ignores the row.
+3. The response `url` is what the consultant passes as `cv_url` / `avatar_url` to `POST /consultant/onboarding/profile` (Step 1 of the onboarding flow).
+
+Any other value of `purpose` is silently ignored — every legacy / non-stamped caller keeps working unchanged. The endpoint is shared, so size limits, MIME validation, and per-user quotas all apply identically.
 
 ## Endpoints
 

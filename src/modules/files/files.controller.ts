@@ -44,18 +44,21 @@ export class FilesController {
     description:
       'Stores an uploaded file. By default `purpose = NULL` and the surface that ' +
       'later references it sets the purpose via markAsAttached. The optional ' +
-      '`?purpose=consultant_cv` query param is the only purpose accepted at upload ' +
-      'time; passing it stores the file at `consultant-CVs/<env>/...` and stamps the ' +
-      'row with `purpose = consultant_cv`. Other purpose values are ignored (server ' +
-      'treats the upload as purpose-less). Free uploads that are never attached are ' +
-      'reclaimed by the weekly orphan-cleanup cron after the configured grace window.',
+      '`?purpose=consultant_cv` or `?purpose=avatar` query params are the only ' +
+      'purposes accepted at upload time; passing them stores the file at ' +
+      '`consultant-CVs/<env>/...` or `avatars/<env>/...` respectively and stamps ' +
+      'the row with the matching purpose. Other purpose values are ignored ' +
+      '(server treats the upload as purpose-less). Free uploads that are never ' +
+      'attached are reclaimed by the weekly orphan-cleanup cron after the ' +
+      'configured grace window.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiQuery({
     name: 'purpose',
     required: false,
     enum: FilePurpose,
-    description: 'Optional upload-time purpose marker. Only `consultant_cv` is honoured.',
+    description:
+      'Optional upload-time purpose marker. Only `consultant_cv` and `avatar` are honoured.',
   })
   @ApiBody({
     schema: {
@@ -96,10 +99,15 @@ export class FilesController {
     }
 
     const input = await this.validator.validate(buffer, part.filename);
-    // Only CONSULTANT_CV is honoured at upload time — every other value is silently
-    // dropped so existing callers that already send unrelated `purpose` strings keep working.
+    // Only CONSULTANT_CV and AVATAR are honoured at upload time — every other
+    // value is silently dropped so existing callers that already send unrelated
+    // `purpose` strings keep working.
     const acceptedPurpose =
-      purpose === FilePurpose.CONSULTANT_CV ? FilePurpose.CONSULTANT_CV : undefined;
+      purpose === FilePurpose.CONSULTANT_CV
+        ? FilePurpose.CONSULTANT_CV
+        : purpose === FilePurpose.AVATAR
+          ? FilePurpose.AVATAR
+          : undefined;
     const data = await this.filesService.upload(input, acceptedPurpose);
     return { messageKey: 'success.created', data };
   }

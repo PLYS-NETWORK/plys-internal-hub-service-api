@@ -32,12 +32,14 @@ export interface IFilesService {
    * the storage key follows the default `yyyy/mm/uuid` shard.
    *
    * When `purpose === FilePurpose.CONSULTANT_CV`, the storage key is prefixed
-   * with `consultant-CVs/<env>/...` so consultant CVs live in their own
-   * top-level folder. All other purposes remain NULL at upload time — they
-   * are attached later via `IFileRepository.markAsAttached`.
+   * with `consultant-CVs/<env>/...`. When `purpose === FilePurpose.AVATAR`,
+   * the storage key is prefixed with `avatars/<env>/...`. Both purposes are
+   * stamped on the row immediately so the orphan-cleanup cron skips them.
+   * All other purposes remain NULL at upload time — they are attached later
+   * via `IFileRepository.markAsAttached`.
    *
    * @param input Validated upload payload.
-   * @param purpose Optional upload-time purpose marker; only `CONSULTANT_CV` is honoured here.
+   * @param purpose Optional upload-time purpose marker; only `CONSULTANT_CV` and `AVATAR` are honoured here.
    * @returns Snake_case DTO with id + fresh URL.
    * @throws TranslatableException(FILE_QUOTA_EXCEEDED) when the user is over quota.
    * @throws TranslatableException(FILE_UPLOAD_FAILED)  on unexpected failure.

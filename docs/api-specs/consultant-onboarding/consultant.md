@@ -44,17 +44,20 @@
 
 ---
 
-### 2. Upload a CV (pre-step for Step 1)
+### 2. Upload a CV or avatar (pre-step for Step 1)
 
-CV upload reuses the shared `/files` endpoint. It is not part of the onboarding controller — repeated here so the Lona app has a single reference.
+CV and avatar uploads reuse the shared `/files` endpoint. They are not part of the onboarding controller — repeated here so the Lona app has a single reference.
 
-- **Endpoint:** `POST /files?purpose=consultant_cv`
+- **Endpoint:** `POST /files?purpose=consultant_cv` (CV) or `POST /files?purpose=avatar` (avatar)
 - **Content-Type:** `multipart/form-data`
 - **Body (multipart):**
-  - `file`: the CV bytes (PDF / DOCX / etc.)
+  - `file`: the file bytes (PDF / DOCX for CV; PNG / JPEG for avatar)
 - **Query params:**
-  - `purpose` (optional): when equal to `consultant_cv`, the file is stored under `consultant-CVs/<NODE_ENV>/...` and stamped with `purpose=consultant_cv`. Any other value is silently ignored (file is treated as purpose-less).
-- **Response 201:** [`FileResponseDto`](../../../src/modules/files/dto/responses/file-response.dto.ts) — keep the `url` and pass it as `cv_url` to the profile submission below.
+  - `purpose` (optional):
+    - `consultant_cv` → file is stored under `consultant-CVs/<NODE_ENV>/...` and stamped with `purpose=consultant_cv`.
+    - `avatar` → file is stored under `avatars/<NODE_ENV>/...` and stamped with `purpose=avatar`.
+    - Any other value is silently ignored (file is treated as purpose-less and will be reclaimed by the weekly orphan sweep if never attached).
+- **Response 201:** [`FileResponseDto`](../../../src/modules/files/dto/responses/file-response.dto.ts) — keep the `url` and pass it as `cv_url` or `avatar_url` to the profile submission below.
 
   ```json
   {
@@ -69,12 +72,28 @@ CV upload reuses the shared `/files` endpoint. It is not part of the onboarding 
   }
   ```
 
+  Avatar response (illustrative):
+
+  ```json
+  {
+    "id": "8c2a91b7-...",
+    "owner_user_id": "550e8400-...",
+    "mime_type": "image/jpeg",
+    "size_bytes": 48210,
+    "original_name": "jane.jpg",
+    "purpose": "avatar",
+    "url": "https://cdn.plysnetwork.com/avatars/production/2026/05/xyz...jpg",
+    "created_at": "2026-05-12T10:09:55.000Z"
+  }
+  ```
+
 - **Errors:**
   | HTTP | error_code | When |
   |------|------------|------|
   | 400 | `FILE_UPLOAD_FAILED` | No file part in the request. |
   | 413 | `FILE_SIZE_EXCEEDED` | File exceeds the per-request size limit. |
   | 413 | `FILE_QUOTA_EXCEEDED` | Per-user quota or count cap reached. |
+  | 415 | `FILE_INVALID_TYPE` | Sniffed MIME not in the allow-list (avatar uploads must be PNG/JPEG). |
 
 ---
 
@@ -97,15 +116,15 @@ Writes the basic profile fields onto `ConsultantProfile` and advances the onboar
   }
   ```
 
-  | Field                 | Type   | Required | Constraints                                               |
-  | --------------------- | ------ | -------- | --------------------------------------------------------- |
-  | `full_name`           | string | yes      | 1–255 chars                                               |
-  | `bio`                 | string | yes      | 1–5000 chars                                              |
-  | `years_of_experience` | number | yes      | integer, 0–50                                             |
-  | `phone_number`        | string | yes      | 5–30 chars                                                |
-  | `country_code`        | string | yes      | ISO 3166-1 alpha-2 (uppercase, exactly 2 chars)           |
-  | `avatar_url`          | string | no       | absolute URL with protocol                                |
-  | `cv_url`              | string | no       | absolute URL with protocol — typically from `POST /files` |
+  | Field                 | Type   | Required | Constraints                                                                     |
+  | --------------------- | ------ | -------- | ------------------------------------------------------------------------------- |
+  | `full_name`           | string | yes      | 1–255 chars                                                                     |
+  | `bio`                 | string | yes      | 1–5000 chars                                                                    |
+  | `years_of_experience` | number | yes      | integer, 0–50                                                                   |
+  | `phone_number`        | string | yes      | 5–30 chars                                                                      |
+  | `country_code`        | string | yes      | ISO 3166-1 alpha-2 (uppercase, exactly 2 chars)                                 |
+  | `avatar_url`          | string | no       | absolute URL with protocol — typically from `POST /files?purpose=avatar`        |
+  | `cv_url`              | string | no       | absolute URL with protocol — typically from `POST /files?purpose=consultant_cv` |
 
 - **Response 201:** `OnboardingStatusResponseDto` — same shape as endpoint 1, with `status = IN_INTERVIEW` and `profile_submitted_at` populated.
 - **Errors:**
