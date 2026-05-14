@@ -1,8 +1,12 @@
 import { PageDto } from '@common/dto/page.dto';
 
-import { CreateProjectDto, ListProjectsDto } from '../dto/requests';
+import { CreateProjectDto, ListProjectsDto, SearchProjectsDto } from '../dto/requests';
 import { TransitionProjectStatusDto } from '../dto/requests/transition-project-status.dto';
-import { ProjectListItemResponseDto, ProjectSummaryResponseDto } from '../dto/responses';
+import {
+  ProjectListItemResponseDto,
+  ProjectSearchItemResponseDto,
+  ProjectSummaryResponseDto,
+} from '../dto/responses';
 
 /**
  * Core CRUD operations for business projects on the main controller surface
@@ -32,6 +36,19 @@ export interface IBusinessProjectsService {
    * @throws TranslatableException 403 BUSINESS_PROFILE_NOT_FOUND.
    */
   listMyProjects(dto: ListProjectsDto): Promise<PageDto<ProjectListItemResponseDto>>;
+
+  /**
+   * Lightweight search of the calling business's projects, intended for
+   * project-picker / workspace-switcher dropdowns. Filters by case-insensitive
+   * substring on either `title` OR `code`, paginated, returns the minimal
+   * `{ id, code, title }` shape only.
+   *
+   * @param dto Pagination + optional `keywords` filter (2–200 chars, trimmed).
+   * @returns Paged list of lightweight project items ordered by `created_at DESC`.
+   * @throws TranslatableException 403 BUSINESS_PROFILE_NOT_FOUND when the
+   *   caller has no business profile.
+   */
+  searchMyProjects(dto: SearchProjectsDto): Promise<PageDto<ProjectSearchItemResponseDto>>;
 
   /**
    * Soft-deletes a project owned by the calling business. Only allowed while

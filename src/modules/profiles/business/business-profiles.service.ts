@@ -70,6 +70,10 @@ export class BusinessProfilesService implements IBusinessProfilesService {
       profile.companyName = dto.company_name;
       updatedFields.push('company_name');
     }
+    if (dto.owner_name !== undefined) {
+      profile.ownerName = dto.owner_name;
+      updatedFields.push('owner_name');
+    }
     if (dto.industry !== undefined) {
       profile.industry = dto.industry;
       updatedFields.push('industry');

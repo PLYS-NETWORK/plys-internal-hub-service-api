@@ -54,10 +54,16 @@ export class RegisterDto implements IRegisterRequest {
   @IsNotEmpty()
   public readonly company_name?: string;
 
-  // Required only when registering on the Consultant platform.
+  // Required when registering on the Business or Consultant platform.
+  // For BUSINESS, this value is stored as the business owner's name on the
+  // initial profile stub (`business_profiles.owner_name`).
   @Expose()
   @ApiPropertyOptional({ name: 'full_name', example: 'John Doe' })
-  @ValidateIf((o: RegisterDto) => o.active_platform === ActivePlatform.CONSULTANT)
+  @ValidateIf(
+    (o: RegisterDto) =>
+      o.active_platform === ActivePlatform.BUSINESS ||
+      o.active_platform === ActivePlatform.CONSULTANT,
+  )
   @IsString()
   @IsNotEmpty()
   public readonly full_name?: string;

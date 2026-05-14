@@ -5,6 +5,8 @@ export interface IBusinessProfileResponse {
   readonly user_id: string;
   /** Registered company name. */
   readonly company_name: string;
+  /** Full name of the business owner captured at registration; `null` for legacy profiles. */
+  readonly owner_name: string | null;
   /** Tax identification number paired with `country_code`; `null` for legacy profiles pre-onboarding. */
   readonly tax_id: string | null;
   /** Industry sector the company operates in; `null` when not provided. */

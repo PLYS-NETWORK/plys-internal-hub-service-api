@@ -16,7 +16,7 @@ import { IUserOnboardingService } from '../interfaces/auth-service.interface';
 export class UserOnboardingService implements IUserOnboardingService {
   /**
    * Creates the minimum-viable profile row for the user's platform.
-   * - BUSINESS   → business_profiles with company_name
+   * - BUSINESS   → business_profiles with company_name + owner_name (from full_name)
    * - CONSULTANT → consultant_profiles with full_name
    * - ADMIN      → no profile row (admins have no consumer-facing profile)
    *
@@ -32,6 +32,7 @@ export class UserOnboardingService implements IUserOnboardingService {
       const profile = tx.businessProfiles.create({
         userId,
         companyName,
+        ownerName: dto.full_name!,
         isVerified: false,
       });
       await tx.businessProfiles.save(profile);

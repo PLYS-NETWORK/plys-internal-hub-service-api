@@ -49,6 +49,21 @@
 - **Response 200:** `PageDto<`[`IProjectListItemResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-list-item.response.interface.ts)`>` — items: `{ id, code, title, status, payment_type, created_at, published_at, required_consultants, total_tasks, total_completed_tasks, total_active_members, total_pending_applications }`. `total_tasks` counts all non-soft-deleted tasks (DRAFT included); `total_completed_tasks` is the subset with `kanban_status = DONE`. `payment_type` is `per_task | per_month`. Meta: `{ page, take, item_count, page_count, has_previous_page, has_next_page }`.
 - **Errors:** cross-cutting only.
 
+### 2.1 Search own projects (lightweight)
+
+- **Endpoint:** `GET /projects/business/search`
+- **Method:** `GET`
+- **Scope:** `@Roles(USER)`, `@Platform(BUSINESS)`
+- **Query params:** [`SearchProjectsDto`](../../../src/modules/business-projects/dto/requests/search-projects.dto.ts) (extends `PageOptionsDto`)
+  | Field | Type | Required | Notes |
+  |------------|----------|----------|-------|
+  | `page` | `number` | no | default 1 |
+  | `take` | `number` | no | default 20, max 100 |
+  | `keywords` | `string` | no | 2–200 chars, trimmed. Case-insensitive substring match on **title OR code**. |
+- **Response 200:** `PageDto<`[`IProjectSearchItemResponse`](../../../src/modules/business-projects/dto/responses/interfaces/project-search-item.response.interface.ts)`>` — items: `{ id, code, title }`. Meta: `{ page, take, item_count, page_count, has_previous_page, has_next_page }`.
+- **Behaviour:** Intended for project-picker dropdowns / workspace switchers — the payload deliberately omits status, counts, and timestamps to keep the wire small. Returns every non-soft-deleted project owned by the calling business profile (any `status`), ordered by `created_at DESC`. Filtering uses `(title ILIKE %kw% OR code ILIKE %kw%)`. Unlike §2's list endpoint (which only searches title), this endpoint matches against both columns.
+- **Errors:** cross-cutting only.
+
 ### 3. Pre-flight publish validation
 
 - **Endpoint:** `GET /projects/business/:id/publish-validation`

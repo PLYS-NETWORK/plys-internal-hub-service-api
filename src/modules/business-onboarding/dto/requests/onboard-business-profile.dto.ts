@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { IsString, IsUppercase, Length, Matches } from 'class-validator';
+import { IsNotEmpty, IsString, IsUppercase, Length, Matches } from 'class-validator';
 
 import { IOnboardBusinessProfileRequest } from './interfaces/onboard-business-profile.request.interface';
 
@@ -9,6 +9,12 @@ export class OnboardBusinessProfileDto implements IOnboardBusinessProfileRequest
   @ApiProperty({ name: 'company_name', example: 'Acme Corp' })
   @IsString()
   public readonly company_name!: string;
+
+  @Expose()
+  @ApiProperty({ name: 'owner_name', example: 'John Doe' })
+  @IsString()
+  @IsNotEmpty()
+  public readonly owner_name!: string;
 
   @Expose()
   @ApiProperty({

@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class InitialSchema20260507000001 implements MigrationInterface {
-  public readonly name = 'InitialSchema20260507000001';
+export class InitialSchema20260514000001 implements MigrationInterface {
+  public readonly name = 'InitialSchema20260514000001';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // ─── users ────────────────────────────────────────────────────────────────
@@ -16,6 +16,9 @@ export class InitialSchema20260507000001 implements MigrationInterface {
         "is_active"         BOOLEAN       NOT NULL DEFAULT TRUE,
         "last_login_at"     TIMESTAMPTZ,
         "role"              VARCHAR(20)   NOT NULL DEFAULT 'USER',
+        "ai_strike_count"   SMALLINT      NOT NULL DEFAULT 0,
+        "banned_at"         TIMESTAMPTZ,
+        "ban_reason"        VARCHAR(30),
         "created_at"        TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
         "updated_at"        TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
         "deleted_at"        TIMESTAMPTZ,
@@ -147,8 +150,8 @@ export class InitialSchema20260507000001 implements MigrationInterface {
         "full_name"                 VARCHAR(255)  NOT NULL,
         "bio"                       TEXT,
         "years_of_experience"       SMALLINT,
-        "availability"              VARCHAR(20),
         "avatar_url"                TEXT,
+        "cv_url"                    TEXT,
         "address_line"              VARCHAR(255),
         "city"                      VARCHAR(100),
         "state_province"            VARCHAR(100),
@@ -156,6 +159,8 @@ export class InitialSchema20260507000001 implements MigrationInterface {
         "country_code"              CHAR(2),
         "phone_number"              VARCHAR(30),
         "is_verified"               BOOLEAN       NOT NULL DEFAULT FALSE,
+        "has_notification_priority" BOOLEAN       NOT NULL DEFAULT FALSE,
+        "avg_rating"                NUMERIC(5,2),
         "account_balance"           NUMERIC(15,2) NOT NULL DEFAULT 0,
         "stripe_connect_account_id" VARCHAR(255),
         "created_at"                TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
@@ -177,6 +182,8 @@ export class InitialSchema20260507000001 implements MigrationInterface {
         "id"                        UUID          NOT NULL DEFAULT gen_random_uuid(),
         "user_id"                   UUID          NOT NULL,
         "company_name"              VARCHAR(255)  NOT NULL,
+        "owner_name"                VARCHAR(255),
+        "tax_id"                    VARCHAR(32),
         "industry"                  VARCHAR(100),
         "company_size"              VARCHAR(50),
         "website_url"               VARCHAR(500),
@@ -206,6 +213,14 @@ export class InitialSchema20260507000001 implements MigrationInterface {
           FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE
       )
     `);
+    // The (tax_id, country_code) pair is not globally unique — uniqueness is
+    // scoped to active users on the same platform and enforced in the
+    // application layer (see BusinessProfileRepository.existsTaxIdConflict).
+    // This index just keeps that scan cheap.
+    await queryRunner.query(
+      `CREATE INDEX "idx_business_profiles_tax_id_country"
+         ON "business_profiles" ("tax_id", "country_code")`,
+    );
 
     // ─── files ────────────────────────────────────────────────────────────────
     await queryRunner.query(`
@@ -244,8 +259,8 @@ export class InitialSchema20260507000001 implements MigrationInterface {
       CREATE TABLE "consultant_skills" (
         "consultant_id"     UUID          NOT NULL,
         "skill_id"          UUID          NOT NULL,
-        "proficiency_level" VARCHAR(20)   NOT NULL DEFAULT 'intermediate',
-        "years_with_skill"  SMALLINT,
+        "proficiency_level" VARCHAR(20),
+        "rating"            NUMERIC(5,2),
         "created_at"        TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
         "created_by"        UUID,
         CONSTRAINT "pk_consultant_skills" PRIMARY KEY ("consultant_id", "skill_id"),
@@ -1043,9 +1058,217 @@ export class InitialSchema20260507000001 implements MigrationInterface {
     await queryRunner.query(
       `CREATE INDEX "idx_admin_allowed_emails_email" ON "admin_allowed_emails" ("email")`,
     );
+
+    // ─── consultant_onboardings ───────────────────────────────────────────────
+    await queryRunner.query(`
+      CREATE TABLE "consultant_onboardings" (
+        "id"                     UUID         NOT NULL DEFAULT gen_random_uuid(),
+        "user_id"                UUID         NOT NULL,
+        "status"                 VARCHAR(30)  NOT NULL DEFAULT 'PENDING_BASIC_INFO',
+        "profile_submitted_at"   TIMESTAMPTZ,
+        "interview_submitted_at" TIMESTAMPTZ,
+        "reviewed_by"            UUID,
+        "reviewed_at"            TIMESTAMPTZ,
+        "decision"               VARCHAR(20),
+        "rejection_note"         TEXT,
+        "blocked_until"          TIMESTAMPTZ,
+        "created_at"             TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "updated_at"             TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "deleted_at"             TIMESTAMPTZ,
+        "created_by"             UUID,
+        "updated_by"             UUID,
+        "deleted_by"             UUID,
+        CONSTRAINT "pk_consultant_onboardings" PRIMARY KEY ("id"),
+        CONSTRAINT "uq_consultant_onboardings_user_id" UNIQUE ("user_id"),
+        CONSTRAINT "fk_consultant_onboardings_to_users"
+          FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE,
+        CONSTRAINT "fk_consultant_onboardings_reviewed_by_user"
+          FOREIGN KEY ("reviewed_by") REFERENCES "users" ("id") ON DELETE SET NULL
+      )
+    `);
+    await queryRunner.query(
+      `CREATE INDEX "idx_consultant_onboardings_status"      ON "consultant_onboardings" ("status")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "idx_consultant_onboardings_user_status" ON "consultant_onboardings" ("user_id", "status")`,
+    );
+
+    // ─── onboarding_questions ─────────────────────────────────────────────────
+    // Admin-managed bank of onboarding questions referenced by consultant_onboarding_answers.
+    await queryRunner.query(`
+      CREATE TABLE "onboarding_questions" (
+        "id"           UUID         NOT NULL DEFAULT gen_random_uuid(),
+        "type"         VARCHAR(16)  NOT NULL,
+        "question"     TEXT         NOT NULL,
+        "options"      JSONB,
+        "position"     SMALLINT,
+        "is_active"    BOOLEAN      NOT NULL DEFAULT TRUE,
+        "created_at"   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "updated_at"   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "deleted_at"   TIMESTAMPTZ,
+        "created_by"   UUID,
+        "updated_by"   UUID,
+        "deleted_by"   UUID,
+        CONSTRAINT "pk_onboarding_questions" PRIMARY KEY ("id")
+      )
+    `);
+    await queryRunner.query(
+      `CREATE INDEX "idx_onboarding_questions_is_active" ON "onboarding_questions" ("is_active")`,
+    );
+    // Partial unique index — guarantees positions 1..N are unique among the live active set
+    // while letting inactive / soft-deleted rows hold position=NULL freely.
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX "uq_onboarding_questions_active_position"
+         ON "onboarding_questions" ("position")
+         WHERE "is_active" = TRUE AND "deleted_at" IS NULL`,
+    );
+
+    // ─── consultant_onboarding_answers ────────────────────────────────────────
+    await queryRunner.query(`
+      CREATE TABLE "consultant_onboarding_answers" (
+        "id"                     UUID         NOT NULL DEFAULT gen_random_uuid(),
+        "onboarding_id"          UUID         NOT NULL,
+        "onboarding_question_id" UUID         NOT NULL,
+        "question_snapshot"      JSONB        NOT NULL,
+        "answer_value"           JSONB        NOT NULL,
+        "submitted_at"           TIMESTAMPTZ  NOT NULL,
+        "created_at"             TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "updated_at"             TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "deleted_at"             TIMESTAMPTZ,
+        "created_by"             UUID,
+        "updated_by"             UUID,
+        "deleted_by"             UUID,
+        CONSTRAINT "pk_consultant_onboarding_answers" PRIMARY KEY ("id"),
+        CONSTRAINT "uq_consultant_onboarding_answers_onboarding_question"
+          UNIQUE ("onboarding_id", "onboarding_question_id"),
+        CONSTRAINT "fk_consultant_onboarding_answers_to_onboardings"
+          FOREIGN KEY ("onboarding_id")
+          REFERENCES "consultant_onboardings" ("id") ON DELETE CASCADE,
+        CONSTRAINT "fk_consultant_onboarding_answers_to_questions"
+          FOREIGN KEY ("onboarding_question_id")
+          REFERENCES "onboarding_questions" ("id") ON DELETE RESTRICT
+      )
+    `);
+
+    // ─── consultant_skill_exams ───────────────────────────────────────────────
+    await queryRunner.query(`
+      CREATE TABLE "consultant_skill_exams" (
+        "id"                        UUID         NOT NULL DEFAULT gen_random_uuid(),
+        "consultant_id"             UUID         NOT NULL,
+        "skill_id"                  UUID         NOT NULL,
+        "status"                    VARCHAR(30)  NOT NULL DEFAULT 'GENERATING_QUESTIONS',
+        "attempt_number"            SMALLINT     NOT NULL DEFAULT 1,
+        "started_at"                TIMESTAMPTZ,
+        "submitted_at"              TIMESTAMPTZ,
+        "copyleaks_checked_at"      TIMESTAMPTZ,
+        "ai_eval_completed_at"      TIMESTAMPTZ,
+        "concluded_at"              TIMESTAMPTZ,
+        "copyleaks_aggregate_score" NUMERIC(5,2),
+        "ai_eval_score"             NUMERIC(5,2),
+        "correct_count"             SMALLINT,
+        "assigned_proficiency"      VARCHAR(20),
+        "cooldown_until"            TIMESTAMPTZ,
+        "fail_reason"               VARCHAR(30),
+        "created_at"                TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "updated_at"                TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "deleted_at"                TIMESTAMPTZ,
+        "created_by"                UUID,
+        "updated_by"                UUID,
+        "deleted_by"                UUID,
+        CONSTRAINT "pk_consultant_skill_exams" PRIMARY KEY ("id"),
+        CONSTRAINT "fk_consultant_skill_exams_to_consultant_profiles"
+          FOREIGN KEY ("consultant_id") REFERENCES "consultant_profiles" ("id") ON DELETE CASCADE,
+        CONSTRAINT "fk_consultant_skill_exams_to_skills"
+          FOREIGN KEY ("skill_id") REFERENCES "skills" ("id") ON DELETE CASCADE
+      )
+    `);
+    await queryRunner.query(
+      `CREATE INDEX "idx_consultant_skill_exams_consultant_status"
+         ON "consultant_skill_exams" ("consultant_id", "status")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "idx_consultant_skill_exams_consultant_skill"
+         ON "consultant_skill_exams" ("consultant_id", "skill_id")`,
+    );
+
+    // ─── consultant_skill_exam_questions ──────────────────────────────────────
+    await queryRunner.query(`
+      CREATE TABLE "consultant_skill_exam_questions" (
+        "id"                    UUID         NOT NULL DEFAULT gen_random_uuid(),
+        "exam_id"               UUID         NOT NULL,
+        "question_order"        SMALLINT     NOT NULL,
+        "content"               TEXT         NOT NULL,
+        "expected_answer_hints" JSONB,
+        "created_at"            TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "created_by"            UUID,
+        CONSTRAINT "pk_consultant_skill_exam_questions" PRIMARY KEY ("id"),
+        CONSTRAINT "uq_consultant_skill_exam_questions_order"
+          UNIQUE ("exam_id", "question_order"),
+        CONSTRAINT "fk_consultant_skill_exam_questions_to_exams"
+          FOREIGN KEY ("exam_id") REFERENCES "consultant_skill_exams" ("id") ON DELETE CASCADE
+      )
+    `);
+
+    // ─── consultant_skill_exam_answers ────────────────────────────────────────
+    await queryRunner.query(`
+      CREATE TABLE "consultant_skill_exam_answers" (
+        "id"                  UUID         NOT NULL DEFAULT gen_random_uuid(),
+        "exam_question_id"    UUID         NOT NULL,
+        "answer_text"         TEXT         NOT NULL,
+        "submitted_at"        TIMESTAMPTZ  NOT NULL,
+        "copyleaks_ai_score"  NUMERIC(5,2),
+        "ai_eval_score"       NUMERIC(5,2),
+        "is_correct"          BOOLEAN,
+        "ai_feedback"         TEXT,
+        "created_at"          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "updated_at"          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "deleted_at"          TIMESTAMPTZ,
+        "created_by"          UUID,
+        "updated_by"          UUID,
+        "deleted_by"          UUID,
+        CONSTRAINT "pk_consultant_skill_exam_answers" PRIMARY KEY ("id"),
+        CONSTRAINT "uq_consultant_skill_exam_answers_question"
+          UNIQUE ("exam_question_id"),
+        CONSTRAINT "fk_consultant_skill_exam_answers_to_questions"
+          FOREIGN KEY ("exam_question_id")
+          REFERENCES "consultant_skill_exam_questions" ("id") ON DELETE CASCADE
+      )
+    `);
+
+    // ─── consultant_skill_scores ──────────────────────────────────────────────
+    await queryRunner.query(`
+      CREATE TABLE "consultant_skill_scores" (
+        "id"            UUID         NOT NULL DEFAULT gen_random_uuid(),
+        "consultant_id" UUID         NOT NULL,
+        "skill_id"      UUID         NOT NULL,
+        "exam_id"       UUID         NOT NULL,
+        "score"         NUMERIC(5,2) NOT NULL,
+        "calculated_at" TIMESTAMPTZ  NOT NULL,
+        "created_at"    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "created_by"    UUID,
+        CONSTRAINT "pk_consultant_skill_scores" PRIMARY KEY ("id"),
+        CONSTRAINT "fk_consultant_skill_scores_to_consultant_profiles"
+          FOREIGN KEY ("consultant_id") REFERENCES "consultant_profiles" ("id") ON DELETE CASCADE,
+        CONSTRAINT "fk_consultant_skill_scores_to_skills"
+          FOREIGN KEY ("skill_id") REFERENCES "skills" ("id") ON DELETE CASCADE,
+        CONSTRAINT "fk_consultant_skill_scores_to_skill_exams"
+          FOREIGN KEY ("exam_id") REFERENCES "consultant_skill_exams" ("id") ON DELETE CASCADE
+      )
+    `);
+    await queryRunner.query(
+      `CREATE INDEX "idx_consultant_skill_scores_consultant_skill"
+         ON "consultant_skill_scores" ("consultant_id", "skill_id")`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`DROP TABLE IF EXISTS "consultant_skill_scores" CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "consultant_skill_exam_answers" CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "consultant_skill_exam_questions" CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "consultant_skill_exams" CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "consultant_onboarding_answers" CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "onboarding_questions" CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "consultant_onboardings" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "admin_allowed_emails" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "ai_provider_api_key" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "idempotency_key" CASCADE`);
@@ -1067,9 +1290,9 @@ export class InitialSchema20260507000001 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS "ai_task_sessions" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "tasks" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "billing_periods" CASCADE`);
-    await queryRunner.query(`DROP TABLE IF EXISTS "project_status_history" CASCADE`);
     await queryRunner.query(`DROP TRIGGER  IF EXISTS trg_log_project_status_change ON projects`);
     await queryRunner.query(`DROP FUNCTION IF EXISTS trg_log_project_status_change()`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "project_status_history" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "project_members" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "project_required_skills" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "projects" CASCADE`);

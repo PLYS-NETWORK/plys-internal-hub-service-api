@@ -31,6 +31,7 @@
   | Field            | Type     | Required | Constraints                                                                  |
   | ---------------- | -------- | -------- | ---------------------------------------------------------------------------- |
   | `company_name`   | `string` | **yes**  | —                                                                            |
+  | `owner_name`     | `string` | **yes**  | Full name of the business owner.                                             |
   | `tax_id`         | `string` | **yes**  | Length 5–32; regex `^[A-Z0-9-]+$` (case-insensitive). Uniqueness rule below. |
   | `industry`       | `string` | **yes**  | —                                                                            |
   | `company_size`   | `string` | **yes**  | —                                                                            |
@@ -44,6 +45,7 @@
   ```json
   {
     "company_name": "Acme Corp",
+    "owner_name": "John Doe",
     "tax_id": "1234567890",
     "industry": "Technology",
     "company_size": "11-50",

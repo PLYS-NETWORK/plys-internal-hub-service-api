@@ -6,6 +6,7 @@
  */
 export interface IOnboardBusinessProfileRequest {
   readonly company_name: string;
+  readonly owner_name: string;
   readonly tax_id: string;
   readonly industry: string;
   readonly company_size: string;

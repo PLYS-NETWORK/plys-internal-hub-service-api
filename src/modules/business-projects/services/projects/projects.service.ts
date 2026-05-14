@@ -15,9 +15,13 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { ILike } from 'typeorm';
 
-import { CreateProjectDto, ListProjectsDto } from '../../dto/requests';
+import { CreateProjectDto, ListProjectsDto, SearchProjectsDto } from '../../dto/requests';
 import { TransitionProjectStatusDto } from '../../dto/requests/transition-project-status.dto';
-import { ProjectListItemResponseDto, ProjectSummaryResponseDto } from '../../dto/responses';
+import {
+  ProjectListItemResponseDto,
+  ProjectSearchItemResponseDto,
+  ProjectSummaryResponseDto,
+} from '../../dto/responses';
 import { IBusinessProjectsService } from '../../interfaces/projects.service.interface';
 import { BusinessAccessService } from '../business-access.service';
 
@@ -120,6 +124,45 @@ export class BusinessProjectsService implements IBusinessProjectsService {
 
     const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
     this.logger.log(`listMyProjects — complete | returned: ${data.length}, total: ${itemCount}`);
+    return new PageDto(data, meta);
+  }
+
+  /** @inheritdoc */
+  public async searchMyProjects(
+    dto: SearchProjectsDto,
+  ): Promise<PageDto<ProjectSearchItemResponseDto>> {
+    const { id: businessId } = await this.access.resolveBusinessProfile();
+    this.logger.log(
+      `searchMyProjects — start | businessId: ${businessId}, page: ${dto.page}, limit: ${dto.limit}, keywords: ${dto.keywords ?? '<none>'}`,
+    );
+
+    // Query builder (not findAndCount) so we can OR across title + code in a
+    // single ILIKE clause — see board.service.ts for the same pattern. The
+    // explicit `deleted_at IS NULL` mirrors TypeORM's soft-delete auto-filter
+    // that find* methods apply but the builder does not.
+    const qb = this.uow.projects
+      .createQueryBuilder('p')
+      .where('p.business_id = :businessId', { businessId })
+      .andWhere('p.deleted_at IS NULL');
+
+    if (dto.keywords) {
+      qb.andWhere('(p.title ILIKE :kw OR p.code ILIKE :kw)', { kw: `%${dto.keywords}%` });
+    }
+
+    qb.orderBy('p.created_at', 'DESC').skip(dto.skip).take(dto.limit);
+
+    const [projects, itemCount] = await qb.getManyAndCount();
+
+    const data = projects.map((p) =>
+      plainToInstance(
+        ProjectSearchItemResponseDto,
+        { id: p.id, code: p.code, title: p.title },
+        { excludeExtraneousValues: true },
+      ),
+    );
+
+    const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
+    this.logger.log(`searchMyProjects — complete | returned: ${data.length}, total: ${itemCount}`);
     return new PageDto(data, meta);
   }
 

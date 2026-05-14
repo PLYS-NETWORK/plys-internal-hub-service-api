@@ -67,6 +67,7 @@ export class BusinessOnboardingService implements IBusinessOnboardingService {
     }
 
     profile.companyName = dto.company_name;
+    profile.ownerName = dto.owner_name;
     profile.taxId = dto.tax_id;
     profile.industry = dto.industry;
     profile.companySize = dto.company_size;

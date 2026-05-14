@@ -17,6 +17,10 @@ export class BusinessProfileResponseDto implements IBusinessProfileResponse {
   @ApiProperty({ name: 'company_name', example: 'Acme Corp' })
   public readonly company_name!: string;
 
+  @Expose({ name: 'ownerName' })
+  @ApiProperty({ name: 'owner_name', example: 'John Doe', nullable: true })
+  public readonly owner_name!: string | null;
+
   @Expose({ name: 'taxId' })
   @ApiProperty({ name: 'tax_id', example: '1234567890', nullable: true })
   public readonly tax_id!: string | null;

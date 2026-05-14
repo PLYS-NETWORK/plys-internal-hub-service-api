@@ -37,6 +37,12 @@ export class BusinessProfile extends AuditableEntity {
   @Column({ name: 'company_name', type: 'varchar', length: 255 })
   public companyName!: string;
 
+  // Captured from `full_name` at registration. Required at the API layer for
+  // new sign-ups; nullable in the DB so legacy rows (pre-introduction) remain
+  // valid until they re-onboard.
+  @Column({ name: 'owner_name', type: 'varchar', length: 255, nullable: true })
+  public ownerName!: string | null;
+
   // Required at the API layer for new onboardings; nullable in the DB so
   // legacy rows (pre-introduction) remain valid until they re-onboard.
   // Uniqueness is enforced in BusinessProfileRepository.existsTaxIdConflict —

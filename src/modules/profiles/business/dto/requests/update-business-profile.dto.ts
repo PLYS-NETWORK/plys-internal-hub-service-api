@@ -12,6 +12,12 @@ export class UpdateBusinessProfileDto implements IUpdateBusinessProfileRequest {
   public readonly company_name?: string;
 
   @Expose()
+  @ApiPropertyOptional({ name: 'owner_name', example: 'John Doe' })
+  @IsOptional()
+  @IsString()
+  public readonly owner_name?: string;
+
+  @Expose()
   @ApiPropertyOptional({
     name: 'tax_id',
     example: '1234567890',

@@ -63,6 +63,7 @@
   | Field            | Type     | Required | Constraints                                                                  |
   | ---------------- | -------- | -------- | ---------------------------------------------------------------------------- |
   | `company_name`   | `string` | no       | —                                                                            |
+  | `owner_name`     | `string` | no       | Full name of the business owner.                                             |
   | `tax_id`         | `string` | no       | Length 5–32; regex `^[A-Z0-9-]+$` (case-insensitive). Uniqueness rule below. |
   | `industry`       | `string` | no       | —                                                                            |
   | `company_size`   | `string` | no       | —                                                                            |
@@ -120,6 +121,7 @@ Source: [`BusinessProfileResponseDto`](../../../src/modules/profiles/business/dt
   id: string,                     // UUID — business_profiles.id
   user_id: string,                // UUID — auth account (business_profiles.user_id)
   company_name: string,
+  owner_name: string | null,      // null for legacy profiles created before owner_name was introduced
   tax_id: string | null,          // null for legacy profiles created before tax_id was introduced
   industry: string | null,
   company_size: string | null,
