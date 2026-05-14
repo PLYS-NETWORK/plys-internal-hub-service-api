@@ -1,8 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
-import { IsNumber, IsUrl, Min } from 'class-validator';
+import { Expose, Type } from 'class-transformer';
+import { IsNumber, IsUrl, Min, ValidateNested } from 'class-validator';
 
 import { ICreateTopUpRequest } from './interfaces/create-top-up.request.interface';
+import { PayerInfoDto } from './payer-info.dto';
 
 export class CreateTopUpDto implements ICreateTopUpRequest {
   @Expose()
@@ -28,4 +29,10 @@ export class CreateTopUpDto implements ICreateTopUpRequest {
   })
   @IsUrl({ require_tld: false })
   public readonly cancelUrl!: string;
+
+  @Expose({ name: 'payer_info' })
+  @ApiProperty({ name: 'payer_info', type: PayerInfoDto })
+  @ValidateNested()
+  @Type(() => PayerInfoDto)
+  public readonly payerInfo!: PayerInfoDto;
 }

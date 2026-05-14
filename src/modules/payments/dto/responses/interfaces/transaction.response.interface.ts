@@ -1,5 +1,7 @@
 import { BusinessTransactionType, TransactionStatus } from '@database/enums';
 
+import { IPayerInfoResponse } from './payer-info.response.interface';
+
 export interface ITransactionResponse {
   /** UUID of the business transaction record. */
   id: string;
@@ -17,6 +19,16 @@ export interface ITransactionResponse {
   status: TransactionStatus;
   /** Optional human-readable note attached to the transaction; `null` when absent. */
   note: string | null;
-  /** Timestamp when the transaction record was created. */
-  created_at: Date;
+  /**
+   * Payer information snapshot captured at checkout creation; `null` for
+   * transactions that were not initiated via Polar checkout (e.g. internal
+   * project_published / task_added ledger entries).
+   */
+  payer_info: IPayerInfoResponse | null;
+  /**
+   * ISO 8601 timestamp rendered in the caller's resolved timezone
+   * (business_profile.timezone → x-timezone header → UTC).
+   * Includes the offset (e.g. `2026-04-20T19:00:00.000+07:00`).
+   */
+  created_at: string;
 }

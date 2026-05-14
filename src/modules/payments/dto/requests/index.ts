@@ -1,6 +1,9 @@
+export { BillingAddressDto } from './billing-address.dto';
 export { CreateTopUpDto } from './create-top-up.dto';
 export { CreateWithdrawDto } from './create-withdraw.dto';
 export * from './interfaces';
 export { ListBusinessTransactionsDto } from './list-business-transactions.dto';
 export { ListConsultantTransactionsDto } from './list-consultant-transactions.dto';
+export { PayerInfoDto } from './payer-info.dto';
+export { SettleInvoiceDto } from './settle-invoice.dto';
 export { TransactionIdParamDto } from './transaction-id-param.dto';

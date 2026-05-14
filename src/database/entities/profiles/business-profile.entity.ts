@@ -80,6 +80,12 @@ export class BusinessProfile extends AuditableEntity {
   @Column({ name: 'phone_number', type: 'varchar', length: 30, nullable: true })
   public phoneNumber!: string | null;
 
+  // IANA timezone (e.g. 'Asia/Bangkok'). Set on onboarding from the
+  // x-timezone header; mutable via update-profile API. Falls back to the
+  // request header (then 'UTC') when null.
+  @Column({ name: 'timezone', type: 'varchar', length: 64, nullable: true })
+  public timezone!: string | null;
+
   @Column({ name: 'logo_url', type: 'text', nullable: true })
   public logoUrl!: string | null;
 

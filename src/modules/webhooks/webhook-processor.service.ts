@@ -5,6 +5,7 @@ import { PaymentService } from '@common/modules/payment/payment.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { BusinessTransaction } from '@database/entities/finance/business-transaction.entity';
 import { ConsultantTransaction } from '@database/entities/finance/consultant-transaction.entity';
+import { IPayerInfo } from '@database/entities/finance/interfaces/payer-info.interface';
 import {
   CheckoutPaymentType,
   PaymentProcessor,
@@ -211,6 +212,12 @@ export class WebhookProcessorService {
       const processorInvoiceId =
         (data['checkoutId'] as string | undefined) ?? (data['id'] as string | undefined) ?? '';
 
+      // Mirror the top-up path: if the user edited their billing address on
+      // the hosted page, the order payload carries the corrected values. We
+      // update the linked MONTHLY_BILLING transaction's payer_info before
+      // delegating to the billing service, which finalises the invoice.
+      await this.applyPolarPayerSync(transactionId, data);
+
       await this.billingInvoiceService.completeInvoicePayment(
         invoiceId,
         transactionId,
@@ -242,7 +249,15 @@ export class WebhookProcessorService {
       return;
     }
 
-    // Update transaction status
+    // Merge any billing-address edits the user made on the Polar hosted page
+    // back onto our stored snapshot. Name/email are kept from the request —
+    // Polar's order.paid does not return them reliably.
+    const mergedPayer = this.mergePayerFromPolarOrder(transaction.payerInfo, data);
+    if (mergedPayer) {
+      transaction.payerInfo = mergedPayer;
+    }
+
+    // Update transaction status (status flip + payer sync persist together).
     transaction.status = TransactionStatus.COMPLETED;
     await this.uow.businessTransactions.save(transaction);
 
@@ -498,5 +513,74 @@ export class WebhookProcessorService {
     this.logger.log(
       `handleStripeAccountUpdated — account ready for linking | accountId: ${accountId}`,
     );
+  }
+
+  // Loads the MONTHLY_BILLING transaction by ID and merges any edited Polar
+  // billing-address values onto its payer_info. Failures (missing transaction,
+  // empty payload) are logged but never throw — the invoice settlement flow
+  // must still proceed.
+  private async applyPolarPayerSync(
+    transactionId: string,
+    data: Record<string, unknown>,
+  ): Promise<void> {
+    const transaction = await this.uow.businessTransactions.findOne({
+      where: { id: transactionId },
+    });
+    if (!transaction) {
+      this.logger.warn(
+        `applyPolarPayerSync — transaction not found | transactionId: ${transactionId}`,
+      );
+      return;
+    }
+
+    const merged = this.mergePayerFromPolarOrder(transaction.payerInfo, data);
+    if (merged) {
+      transaction.payerInfo = merged;
+      await this.uow.businessTransactions.save(transaction);
+    }
+  }
+
+  // Returns a merged IPayerInfo when Polar's order payload carries billing
+  // fields, or null when there's nothing to merge. We do NOT clear existing
+  // values when the payload is empty — that would silently drop the request-
+  // time snapshot. Polar's wire format mixes camelCase + snake_case; we accept
+  // both so a minor SDK shape change does not cause silent data loss.
+  private mergePayerFromPolarOrder(
+    existing: IPayerInfo | null,
+    data: Record<string, unknown>,
+  ): IPayerInfo | null {
+    const rawAddress = (data['billing_address'] ?? data['billingAddress']) as
+      | Record<string, unknown>
+      | undefined
+      | null;
+    if (!rawAddress) return null;
+
+    const line1 = (rawAddress['line1'] as string | undefined) ?? '';
+    const country = (rawAddress['country'] as string | undefined) ?? '';
+    if (!line1 || !country) {
+      this.logger.warn(
+        `mergePayerFromPolarOrder — webhook payload missing line1 or country, skipping merge`,
+      );
+      return null;
+    }
+
+    const postalCode =
+      (rawAddress['postal_code'] as string | undefined) ??
+      (rawAddress['postalCode'] as string | undefined) ??
+      '';
+
+    return {
+      // Preserve request-time name/email — Polar's order.paid does not return them.
+      name: existing?.name ?? '',
+      email: existing?.email ?? '',
+      billingAddress: {
+        line1,
+        line2: (rawAddress['line2'] as string | null | undefined) ?? null,
+        city: (rawAddress['city'] as string | undefined) ?? '',
+        state: (rawAddress['state'] as string | null | undefined) ?? null,
+        postalCode,
+        country,
+      },
+    };
   }
 }

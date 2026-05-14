@@ -87,6 +87,21 @@ export const DateUtil = {
     return dayjs(input).isValid();
   },
 
+  /**
+   * True iff the value is a valid IANA timezone identifier. `Intl.DateTimeFormat`
+   * throws `RangeError` for unrecognised zones; we treat anything that throws
+   * (or is non-string) as invalid.
+   */
+  isValidTimezone(value: unknown): value is string {
+    if (typeof value !== 'string' || !value.trim()) return false;
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: value });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
   /** Parse to a dayjs instance in `tz` (or UTC if omitted). */
   parse(input: DateInput, tz?: string): dayjs.Dayjs {
     return toDayjs(input, tz);

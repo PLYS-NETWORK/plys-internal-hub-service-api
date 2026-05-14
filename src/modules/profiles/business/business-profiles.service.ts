@@ -2,6 +2,7 @@ import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { DateUtil } from '@common/utils/date';
 import { BusinessProfile } from '@database/entities';
 import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-type.enum';
 import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
@@ -105,6 +106,20 @@ export class BusinessProfilesService implements IBusinessProfilesService {
     if (dto.phone_number !== undefined) {
       profile.phoneNumber = dto.phone_number;
       updatedFields.push('phone_number');
+    }
+    if (dto.timezone !== undefined) {
+      if (!DateUtil.isValidTimezone(dto.timezone)) {
+        this.logger.warn(
+          `[${this.rid}] updateProfile — invalid timezone | userId: ${userId}, value: ${dto.timezone}`,
+        );
+        throw new TranslatableException({
+          messageKey: 'error.business_profile.invalid_timezone',
+          errorCode: ERROR_CODES.BUSINESS_PROFILE_INVALID_TIMEZONE,
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+        });
+      }
+      profile.timezone = dto.timezone;
+      updatedFields.push('timezone');
     }
 
     if (dto.tax_id !== undefined && dto.tax_id !== profile.taxId) {

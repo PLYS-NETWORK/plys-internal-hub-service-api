@@ -1,8 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
-import { IsUrl, IsUUID } from 'class-validator';
+import { Expose, Type } from 'class-transformer';
+import { IsUrl, IsUUID, ValidateNested } from 'class-validator';
 
 import { ISettleInvoiceRequest } from './interfaces/settle-invoice.request.interface';
+import { PayerInfoDto } from './payer-info.dto';
 
 export class SettleInvoiceDto implements ISettleInvoiceRequest {
   @Expose({ name: 'invoice_id' })
@@ -31,4 +32,10 @@ export class SettleInvoiceDto implements ISettleInvoiceRequest {
   })
   @IsUrl()
   public readonly cancelUrl!: string;
+
+  @Expose({ name: 'payer_info' })
+  @ApiProperty({ name: 'payer_info', type: PayerInfoDto })
+  @ValidateNested()
+  @Type(() => PayerInfoDto)
+  public readonly payerInfo!: PayerInfoDto;
 }

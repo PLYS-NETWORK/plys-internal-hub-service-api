@@ -22,6 +22,14 @@ import {
 import { Polar } from '@polar-sh/sdk';
 import { Webhook, WebhookVerificationError } from 'standardwebhooks';
 
+// Reach into the Polar SDK's CheckoutCreate input type to grab the closed
+// country enum without a deep submodule import (the SDK ships subpath
+// `exports` but the project uses classical TS module resolution, which can't
+// see them — see polar-sh/sdk package.json `exports` field).
+type PolarCheckoutCreateInput = Parameters<Polar['checkouts']['create']>[0];
+type PolarBillingAddressInput = NonNullable<PolarCheckoutCreateInput['customerBillingAddress']>;
+type PolarCountryAlpha2 = PolarBillingAddressInput['country'];
+
 /**
  * Concrete Strategy: delivers payment operations via the Polar.sh API.
  *
@@ -64,6 +72,24 @@ export class PolarPaymentProvider implements IPaymentProvider {
         amount: params.amount,
         successUrl: params.successUrl,
         metadata: { invoiceId: params.invoiceId, ...params.metadata },
+        // Pre-fill Polar's hosted checkout from the request's payer info. The
+        // user can still edit these fields on the page; if they do, the
+        // `order.paid` webhook returns the corrected billing address.
+        ...(params.payer && {
+          customerName: params.payer.name,
+          customerEmail: params.payer.email,
+          customerBillingAddress: {
+            line1: params.payer.billingAddress.line1,
+            line2: params.payer.billingAddress.line2 ?? undefined,
+            city: params.payer.billingAddress.city,
+            state: params.payer.billingAddress.state ?? undefined,
+            postalCode: params.payer.billingAddress.postalCode,
+            // Polar types `country` as a closed ISO 3166-1 alpha-2 enum. The
+            // value is already validated by `@IsISO31661Alpha2` on the DTO, so
+            // we cast through the SDK's enum type rather than re-deriving it.
+            country: params.payer.billingAddress.country as PolarCountryAlpha2,
+          },
+        }),
       });
 
       this.logger.log(`Polar checkout created: ${checkout.id} for invoice ${params.invoiceId}`);

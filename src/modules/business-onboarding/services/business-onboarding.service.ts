@@ -3,6 +3,7 @@ import { NOTIFICATION_EVENTS } from '@common/events';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
+import { DateUtil } from '@common/utils/date';
 import { BusinessProfile } from '@database/entities';
 import { BusinessProfileResponseDto } from '@modules/profiles/business/dto/responses/business-profile-response.dto';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
@@ -77,6 +78,13 @@ export class BusinessOnboardingService implements IBusinessOnboardingService {
     profile.postalCode = dto.postal_code;
     profile.countryCode = dto.country_code;
     profile.phoneNumber = dto.phone_number;
+    // Persist client-supplied tz when valid; otherwise fall back to the
+    // request-context value (already validated against Intl.DateTimeFormat by
+    // RequestContextMiddleware.resolveTimezone). Null when neither is present.
+    profile.timezone =
+      dto.timezone && DateUtil.isValidTimezone(dto.timezone)
+        ? dto.timezone
+        : this.requestContext.timezone;
     profile.isVerified = true;
 
     await this.uow.businessProfiles.save(profile);

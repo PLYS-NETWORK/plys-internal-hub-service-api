@@ -13,6 +13,7 @@ import {
   Unique,
 } from 'typeorm';
 
+import { IPayerInfo } from './interfaces/payer-info.interface';
 import { Invoice } from './invoice.entity';
 
 @Traceable()
@@ -107,4 +108,7 @@ export class BusinessTransaction extends TraceableEntity {
 
   @Column({ type: 'text', nullable: true })
   public note!: string | null;
+
+  @Column({ name: 'payer_info', type: 'jsonb', nullable: true })
+  public payerInfo!: IPayerInfo | null;
 }

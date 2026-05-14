@@ -29,6 +29,8 @@ export interface IBusinessProfileResponse {
   readonly country_code: string | null;
   /** Contact phone number in E.164 format; `null` when not provided. */
   readonly phone_number: string | null;
+  /** IANA timezone identifier (e.g. `"Asia/Bangkok"`). Used to format transaction timestamps. `null` when never supplied. */
+  readonly timezone: string | null;
   /** CDN URL of the company logo image; `null` when no logo has been uploaded. */
   readonly logo_url: string | null;
   /** `true` when an admin has verified the business; `false` otherwise. */
