@@ -1,5 +1,20 @@
 import { AbstractRepository } from '@common/repositories';
 import { BusinessProfile } from '@database/entities';
+import { ActivePlatform } from '@database/enums';
+
+/**
+ * Parameters for {@link IBusinessProfileRepository.existsTaxIdConflict}.
+ */
+export interface IExistsTaxIdConflictParams {
+  /** Tax identifier to check (case-sensitive — onboarding accepts mixed case). */
+  readonly taxId: string;
+  /** ISO 3166-1 alpha-2 country code paired with the tax_id. */
+  readonly countryCode: string;
+  /** Platform of the caller — uniqueness is scoped per-platform. */
+  readonly platform: ActivePlatform;
+  /** When set, this user's own profile is excluded (PATCH /me re-checks). */
+  readonly excludeUserId?: string;
+}
 
 export interface IBusinessProfileRepository extends AbstractRepository<BusinessProfile> {
   /**
@@ -31,4 +46,18 @@ export interface IBusinessProfileRepository extends AbstractRepository<BusinessP
    * @returns The matching BusinessProfile, or null when either id is wrong.
    */
   findOneByUserAndId(userId: string, businessId: string): Promise<BusinessProfile | null>;
+
+  /**
+   * Checks whether another active account on the same platform already owns a
+   * business profile with this `(tax_id, country_code)` pair. The query joins
+   * `business_profiles` to `users` and filters by `users.platform`,
+   * `users.is_active = true`, and `users.banned_at IS NULL` so de-activated /
+   * banned accounts never block a new onboarding.
+   *
+   * @param params - Tax id + country code to check, plus the caller's
+   *                 platform and an optional `excludeUserId` (skip the
+   *                 caller's own profile during a PATCH).
+   * @returns `true` when a conflicting active profile exists, `false` otherwise.
+   */
+  existsTaxIdConflict(params: IExistsTaxIdConflictParams): Promise<boolean>;
 }

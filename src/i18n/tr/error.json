@@ -25,7 +25,8 @@
   },
   "business_profile": {
     "not_found": "İşletme profili bulunamadı.",
-    "already_exists": "Bu kullanıcı için zaten bir işletme profili mevcut."
+    "already_exists": "Bu kullanıcı için zaten bir işletme profili mevcut.",
+    "tax_id_already_exists": "Bu vergi numarasına sahip bir işletme profili seçilen ülke için zaten mevcut."
   },
   "consultant_profile": {
     "not_found": "Danışman profili bulunamadı.",

@@ -10,6 +10,7 @@ export interface IAdminBusinessProfileListItemResponse {
   readonly id: string;
   readonly user_id: string;
   readonly company_name: string;
+  readonly tax_id: string | null;
   readonly email: string;
   readonly phone_number: string | null;
   readonly address_line: string | null;

@@ -1,5 +1,4 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
-import { NOTIFICATION_EVENTS } from '@common/events';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
@@ -8,10 +7,8 @@ import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-ty
 import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { plainToInstance } from 'class-transformer';
 
-import { OnboardBusinessProfileDto } from './dto/requests/onboard-business-profile.dto';
 import { UpdateBusinessProfileDto } from './dto/requests/update-business-profile.dto';
 import { BusinessProfileResponseDto } from './dto/responses/business-profile-response.dto';
 import { IBusinessProfilesService } from './interfaces/business-profiles-service.interface';
@@ -20,11 +17,14 @@ import { IBusinessProfilesService } from './interfaces/business-profiles-service
 export class BusinessProfilesService implements IBusinessProfilesService {
   private readonly logger: AppLogger;
 
+  private get rid(): string {
+    return this.requestContext.requestId;
+  }
+
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly notificationDispatcher: NotificationDispatcherService,
-    private readonly eventEmitter: EventEmitter2,
   ) {
     this.logger = new AppLogger(BusinessProfilesService.name, requestContext);
   }
@@ -32,11 +32,11 @@ export class BusinessProfilesService implements IBusinessProfilesService {
   /** @inheritdoc */
   public async getProfile(): Promise<BusinessProfileResponseDto> {
     const userId = this.requestContext.userId!;
-    this.logger.log(`getProfile — start | userId: ${userId}`);
+    this.logger.log(`[${this.rid}] getProfile — start | userId: ${userId}`);
     const profile = await this.uow.businessProfiles.findByUserId(userId);
 
     if (!profile) {
-      this.logger.warn(`getProfile — profile not found | userId: ${userId}`);
+      this.logger.warn(`[${this.rid}] getProfile — profile not found | userId: ${userId}`);
       throw new TranslatableException({
         messageKey: 'error.business_profile.not_found',
         errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
@@ -44,56 +44,18 @@ export class BusinessProfilesService implements IBusinessProfilesService {
       });
     }
 
-    return this.toResponseDto(profile);
-  }
-
-  /** @inheritdoc */
-  public async onboard(dto: OnboardBusinessProfileDto): Promise<BusinessProfileResponseDto> {
-    const userId = this.requestContext.userId!;
-    this.logger.log(`onboard — start | userId: ${userId}, company: ${dto.company_name}`);
-
-    const profile = await this.uow.businessProfiles.findByUserId(userId);
-
-    if (!profile) {
-      this.logger.warn(`onboard — profile not found | userId: ${userId}`);
-      throw new TranslatableException({
-        messageKey: 'error.business_profile.not_found',
-        errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
-        status: HttpStatus.NOT_FOUND,
-      });
-    }
-
-    profile.companyName = dto.company_name;
-    profile.industry = dto.industry;
-    profile.companySize = dto.company_size;
-    profile.addressLine = dto.address_line;
-    profile.city = dto.city;
-    profile.stateProvince = dto.state_province;
-    profile.postalCode = dto.postal_code;
-    profile.countryCode = dto.country_code;
-    profile.phoneNumber = dto.phone_number;
-    profile.isVerified = true;
-
-    await this.uow.businessProfiles.save(profile);
-
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.BUSINESS_ONBOARDED, {
-      business_user_id: userId,
-      business_id: profile.id,
-      business_name: profile.companyName ?? '',
-    });
-
-    this.logger.log(`onboard — complete | userId: ${userId}, profileId: ${profile.id}`);
     return this.toResponseDto(profile);
   }
 
   /** @inheritdoc */
   public async updateProfile(dto: UpdateBusinessProfileDto): Promise<BusinessProfileResponseDto> {
     const userId = this.requestContext.userId!;
-    this.logger.log(`updateProfile — start | userId: ${userId}`);
+    const platform = this.requestContext.activePlatform!;
+    this.logger.log(`[${this.rid}] updateProfile — start | userId: ${userId}`);
     const profile = await this.uow.businessProfiles.findByUserId(userId);
 
     if (!profile) {
-      this.logger.warn(`updateProfile — profile not found | userId: ${userId}`);
+      this.logger.warn(`[${this.rid}] updateProfile — profile not found | userId: ${userId}`);
       throw new TranslatableException({
         messageKey: 'error.business_profile.not_found',
         errorCode: ERROR_CODES.BUSINESS_PROFILE_NOT_FOUND,
@@ -101,8 +63,8 @@ export class BusinessProfilesService implements IBusinessProfilesService {
       });
     }
 
-    // Only update fields that are explicitly present in the payload — also
-    // collected as a `updated_fields` list for the notification metadata.
+    // Apply country_code first because the tax_id uniqueness check pairs the
+    // new tax_id with whatever country the profile will end up at.
     const updatedFields: string[] = [];
     if (dto.company_name !== undefined) {
       profile.companyName = dto.company_name;
@@ -141,6 +103,39 @@ export class BusinessProfilesService implements IBusinessProfilesService {
       updatedFields.push('phone_number');
     }
 
+    if (dto.tax_id !== undefined && dto.tax_id !== profile.taxId) {
+      // `profile.countryCode` already reflects the requested change above, so
+      // the conflict scan pairs the new tax_id with the *new* country.
+      if (!profile.countryCode) {
+        this.logger.warn(
+          `[${this.rid}] updateProfile — tax_id supplied without country | userId: ${userId}`,
+        );
+        throw new TranslatableException({
+          messageKey: 'error.business_profile.tax_id_already_exists',
+          errorCode: ERROR_CODES.BUSINESS_PROFILE_TAX_ID_ALREADY_EXISTS,
+          status: HttpStatus.CONFLICT,
+        });
+      }
+      const conflict = await this.uow.businessProfiles.existsTaxIdConflict({
+        taxId: dto.tax_id,
+        countryCode: profile.countryCode,
+        platform,
+        excludeUserId: userId,
+      });
+      if (conflict) {
+        this.logger.warn(
+          `[${this.rid}] updateProfile — tax_id conflict | userId: ${userId}, country: ${profile.countryCode}`,
+        );
+        throw new TranslatableException({
+          messageKey: 'error.business_profile.tax_id_already_exists',
+          errorCode: ERROR_CODES.BUSINESS_PROFILE_TAX_ID_ALREADY_EXISTS,
+          status: HttpStatus.CONFLICT,
+        });
+      }
+      profile.taxId = dto.tax_id;
+      updatedFields.push('tax_id');
+    }
+
     await this.uow.businessProfiles.save(profile);
 
     // Fire-and-forget — never blocks the request, never throws back to the caller.
@@ -154,11 +149,15 @@ export class BusinessProfilesService implements IBusinessProfilesService {
         })
         .catch((err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
-          this.logger.error(`updateProfile — notification dispatch failed | error: ${msg}`);
+          this.logger.error(
+            `[${this.rid}] updateProfile — notification dispatch failed | error: ${msg}`,
+          );
         });
     }
 
-    this.logger.log(`updateProfile — complete | userId: ${userId}, profileId: ${profile.id}`);
+    this.logger.log(
+      `[${this.rid}] updateProfile — complete | userId: ${userId}, profileId: ${profile.id}`,
+    );
     return this.toResponseDto(profile);
   }
 

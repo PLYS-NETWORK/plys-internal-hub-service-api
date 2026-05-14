@@ -5,6 +5,8 @@ export interface IBusinessProfileResponse {
   readonly user_id: string;
   /** Registered company name. */
   readonly company_name: string;
+  /** Tax identification number paired with `country_code`; `null` for legacy profiles pre-onboarding. */
+  readonly tax_id: string | null;
   /** Industry sector the company operates in; `null` when not provided. */
   readonly industry: string | null;
   /** Company size band (e.g. `"1-10"`, `"50-200"`); `null` when not provided. */

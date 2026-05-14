@@ -11,9 +11,6 @@ import { ConsultantProfilesService } from './consultant-profiles.service';
 import { UpdateConsultantProfileDto } from './dto/requests';
 import { ConsultantProfileResponseDto } from './dto/responses';
 
-// The legacy POST /consultant-profiles/onboard endpoint was removed: the
-// consultant profile is created at registration time, and onboarding basic-info
-// submission happens through POST /consultant/onboarding/profile.
 @ApiTags('Consultant Profiles')
 @ApiBearerAuth()
 @Controller('consultant-profiles')

@@ -38,6 +38,7 @@ import { AiBootstrapModule } from './modules/ai-bootstrap/ai-bootstrap.module';
 import { AiProviderKeyModule } from './modules/ai-provider-key/ai-provider-key.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { BusinessOnboardingModule } from './modules/business-onboarding/business-onboarding.module';
 import { BusinessProjectsModule } from './modules/business-projects/business-projects.module';
 import { ConsultantOnboardingModule } from './modules/consultant-onboarding/consultant-onboarding.module';
 import { ConsultantProjectsModule } from './modules/consultant-projects/consultant-projects.module';
@@ -107,6 +108,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     AdminAuthModule,
     AuthModule,
     BillingModule,
+    BusinessOnboardingModule,
     BusinessProjectsModule,
     AdminConsultantOnboardingModule,
     AdminConsultantSkillExamModule,

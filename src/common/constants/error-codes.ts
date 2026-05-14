@@ -40,6 +40,7 @@ export const ERROR_CODES = {
   // ─── Business Profile ────────────────────────────────────────────────────
   BUSINESS_PROFILE_ALREADY_EXISTS: 'BUSINESS_PROFILE_ALREADY_EXISTS',
   BUSINESS_PROFILE_NOT_FOUND: 'BUSINESS_PROFILE_NOT_FOUND',
+  BUSINESS_PROFILE_TAX_ID_ALREADY_EXISTS: 'BUSINESS_PROFILE_TAX_ID_ALREADY_EXISTS',
 
   // ─── Consultant Profile ──────────────────────────────────────────────────
   CONSULTANT_PROFILE_ALREADY_EXISTS: 'CONSULTANT_PROFILE_ALREADY_EXISTS',

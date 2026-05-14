@@ -1,6 +1,14 @@
 import { User } from '@database/entities/auth/user.entity';
 import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
-import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  OneToOne,
+  PrimaryGeneratedColumn,
+  Unique,
+} from 'typeorm';
 
 // One business profile per user. The creating user is automatically the
 // `owner` in business_members — that table is the authoritative source for
@@ -8,6 +16,10 @@ import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, Unique } 
 @Auditable()
 @Entity('business_profiles')
 @Unique('uq_business_profiles_user_id', ['userId'])
+// Tax-ID uniqueness is per-platform + country, enforced at the app layer (the
+// users.platform + users.is_active filters live outside this table). This is
+// just a lookup index to keep that check cheap.
+@Index('idx_business_profiles_tax_id_country', ['taxId', 'countryCode'])
 export class BusinessProfile extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_business_profiles' })
   public readonly id!: string;
@@ -24,6 +36,13 @@ export class BusinessProfile extends AuditableEntity {
 
   @Column({ name: 'company_name', type: 'varchar', length: 255 })
   public companyName!: string;
+
+  // Required at the API layer for new onboardings; nullable in the DB so
+  // legacy rows (pre-introduction) remain valid until they re-onboard.
+  // Uniqueness is enforced in BusinessProfileRepository.existsTaxIdConflict —
+  // see idx_business_profiles_tax_id_country above.
+  @Column({ name: 'tax_id', type: 'varchar', length: 32, nullable: true })
+  public taxId!: string | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   public industry!: string | null;

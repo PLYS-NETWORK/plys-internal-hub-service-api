@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { IsString, IsUppercase, Length } from 'class-validator';
+import { IsString, IsUppercase, Length, Matches } from 'class-validator';
 
 import { IOnboardBusinessProfileRequest } from './interfaces/onboard-business-profile.request.interface';
 
@@ -9,6 +9,19 @@ export class OnboardBusinessProfileDto implements IOnboardBusinessProfileRequest
   @ApiProperty({ name: 'company_name', example: 'Acme Corp' })
   @IsString()
   public readonly company_name!: string;
+
+  @Expose()
+  @ApiProperty({
+    name: 'tax_id',
+    example: '1234567890',
+    description: 'Tax identification number; alphanumeric with optional dashes, 5–32 chars.',
+  })
+  @IsString()
+  @Length(5, 32)
+  @Matches(/^[A-Z0-9-]+$/i, {
+    message: 'tax_id must be alphanumeric with optional dashes',
+  })
+  public readonly tax_id!: string;
 
   @Expose()
   @ApiProperty({ name: 'industry', example: 'Technology' })

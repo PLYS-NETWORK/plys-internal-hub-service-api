@@ -1,4 +1,3 @@
-import { OnboardBusinessProfileDto } from '../dto/requests/onboard-business-profile.dto';
 import { UpdateBusinessProfileDto } from '../dto/requests/update-business-profile.dto';
 import { BusinessProfileResponseDto } from '../dto/responses/business-profile-response.dto';
 
@@ -7,6 +6,9 @@ import { BusinessProfileResponseDto } from '../dto/responses/business-profile-re
  *
  * Caller identity is resolved internally via `RequestContextService` on every
  * user-scoped method — no `userId` is accepted as a parameter.
+ *
+ * The onboarding endpoint lives in its own module
+ * (`@modules/business-onboarding`) — see `IBusinessOnboardingService.onboard`.
  */
 export interface IBusinessProfilesService {
   /**
@@ -18,29 +20,20 @@ export interface IBusinessProfilesService {
   getProfile(): Promise<BusinessProfileResponseDto>;
 
   /**
-   * Completes onboarding for the authenticated user by populating the
-   * pre-created profile stub and marking it as verified.
-   *
-   * A profile row is created automatically at registration time. This method
-   * fills in the company details and sets `isVerified = true`. Throws if no
-   * profile stub exists (i.e. the user has not completed registration).
-   *
-   * @param dto - Validated onboarding payload including company details and
-   *              address information.
-   * @returns The updated `BusinessProfileResponseDto`.
-   * @throws TranslatableException (404) — no profile found for the caller.
-   */
-  onboard(dto: OnboardBusinessProfileDto): Promise<BusinessProfileResponseDto>;
-
-  /**
    * Applies a partial update to the authenticated business user's profile.
    *
    * Only fields explicitly present in `dto` are updated; absent fields are
-   * left unchanged.
+   * left unchanged. When `tax_id` is changed, the same per-platform +
+   * country uniqueness check used during onboarding is applied (the caller's
+   * own profile is excluded so no-op updates pass).
    *
    * @param dto - Fields to update; all properties are optional.
    * @returns The updated `BusinessProfileResponseDto`.
-   * @throws TranslatableException (404) — profile not found for the caller.
+   * @throws TranslatableException (404, BUSINESS_PROFILE_NOT_FOUND) — profile
+   *   not found for the caller.
+   * @throws TranslatableException (409, BUSINESS_PROFILE_TAX_ID_ALREADY_EXISTS) —
+   *   the new `tax_id` collides with another active account on the same
+   *   platform for the same `country_code`.
    */
   updateProfile(dto: UpdateBusinessProfileDto): Promise<BusinessProfileResponseDto>;
 }

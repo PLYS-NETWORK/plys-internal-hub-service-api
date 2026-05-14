@@ -29,7 +29,8 @@
   },
   "business_profile": {
     "not_found": "Business profile not found.",
-    "already_exists": "A business profile already exists for this user."
+    "already_exists": "A business profile already exists for this user.",
+    "tax_id_already_exists": "A business profile with this tax ID already exists for the selected country."
   },
   "consultant_profile": {
     "not_found": "Consultant profile not found.",
