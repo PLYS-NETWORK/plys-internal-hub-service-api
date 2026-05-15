@@ -198,7 +198,7 @@ export class SsoAuthService implements ISsoAuthService {
             });
 
             if (businessProfile) {
-              dashboardUrl += `/c/${businessProfile.id}/overview`;
+              dashboardUrl += `/overview`;
             } else {
               dashboardUrl += '/dashboard';
             }

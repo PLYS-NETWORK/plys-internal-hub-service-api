@@ -389,7 +389,7 @@ export class ProjectPublishService implements IProjectPublishService {
     if (!user?.email) return;
 
     try {
-      const projectUrl = `${this.env.ployosUrl}/c/${businessProfile.id}/projects/${project.id}`;
+      const projectUrl = `${this.env.ployosUrl}/projects/${project.id}`;
 
       if (eligibility.paymentType === PaymentType.PRE_PAID) {
         if (!transactionNumber) {
