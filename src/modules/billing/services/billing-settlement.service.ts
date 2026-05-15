@@ -229,7 +229,7 @@ export class BillingSettlementService {
           taskName: item.task?.title ?? 'Task settlement',
           amount: item.amount,
         })),
-        payInvoiceUrl: `${this.env.ployosUrl}/c/${businessProfile.id}/transactions`,
+        payInvoiceUrl: `${this.env.ployosUrl}/transactions`,
       });
 
       // Stamp notifiedAt so this invoice is skipped in future dispatch runs

@@ -266,7 +266,7 @@ export class ProjectRepublishService implements IProjectRepublishService {
     try {
       const tz = this.requestContext.timezone ?? undefined;
       const refundDate = DateUtil.format(DateUtil.now(tz), 'MMMM D, YYYY', tz);
-      const projectDashboardUrl = `${this.env.ployosUrl}/c/${businessProfile.id}/projects/${project.id}`;
+      const projectDashboardUrl = `${this.env.ployosUrl}/projects/${project.id}`;
 
       await this.emailService.sendProjectRepublishRefundEmail(user.email, {
         businessName: businessProfile.companyName || 'Business Owner',

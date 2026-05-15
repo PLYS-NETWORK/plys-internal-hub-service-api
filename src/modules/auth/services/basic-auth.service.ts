@@ -218,7 +218,7 @@ export class BasicAuthService implements IBasicAuthService {
           });
 
           if (businessProfile) {
-            dashboardUrl += `/c/${businessProfile.id}/overview`;
+            dashboardUrl += `/overview`;
           } else {
             // Fallback to generic dashboard if business profile not found
             dashboardUrl += '/dashboard';
