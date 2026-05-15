@@ -1,3 +1,6 @@
+export { IAdminBusinessTransactionResponse } from './admin-business-transaction.response.interface';
+export { IAdminConsultantTransactionResponse } from './admin-consultant-transaction.response.interface';
+export { IAdminTransactionOwnerResponse } from './admin-transaction-owner.response.interface';
 export { ICancelTopUpResponse } from './cancel-top-up.response.interface';
 export { ICancelWithdrawResponse } from './cancel-withdraw.response.interface';
 export { IConsultantTransactionResponse } from './consultant-transaction.response.interface';

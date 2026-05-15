@@ -1,3 +1,5 @@
+export { AdminListBusinessTransactionsDto } from './admin-list-business-transactions.dto';
+export { AdminListConsultantTransactionsDto } from './admin-list-consultant-transactions.dto';
 export { BillingAddressDto } from './billing-address.dto';
 export { CreateTopUpDto } from './create-top-up.dto';
 export { CreateWithdrawDto } from './create-withdraw.dto';
