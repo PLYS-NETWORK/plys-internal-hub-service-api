@@ -16,6 +16,7 @@ import * as path from 'path';
 const ADMIN_ALLOWED_EMAILS: readonly string[] = [
   'huuphuc9410@gmail.com',
   'ngocthinh.dev@gmail.com',
+  'yildsez@gmail.com',
 ];
 const KEY_REGEX = /^(skill|category|industry)_[a-z0-9_]+$/;
 
@@ -105,16 +106,22 @@ async function seedAdminAllowedEmails(): Promise<void> {
   for (const rawEmail of ADMIN_ALLOWED_EMAILS) {
     const email = rawEmail.toLowerCase();
 
-    const existingAllowed = await allowedRepo
-      .createQueryBuilder('ae')
-      .where('LOWER(ae.email) = LOWER(:email)', { email })
-      .getOne();
-    if (existingAllowed) {
-      console.log(`[admin-whitelist] Already exists: ${email}`);
-    } else {
-      await allowedRepo.save(allowedRepo.create({ email, isActive: true }));
+    // Atomic insert-if-not-exists: relies on uq_admin_allowed_emails_email.
+    // Postgres' ON CONFLICT DO NOTHING avoids the SELECT-then-INSERT race and
+    // returns the inserted row in `raw` only when a new row was written.
+    const allowedInsert = await allowedRepo
+      .createQueryBuilder()
+      .insert()
+      .into(AdminAllowedEmail)
+      .values({ email, isActive: true })
+      .orIgnore()
+      .returning(['id'])
+      .execute();
+    if (Array.isArray(allowedInsert.raw) && allowedInsert.raw.length > 0) {
       whitelistInserted += 1;
       console.log(`[admin-whitelist] Seeded: ${email}`);
+    } else {
+      console.log(`[admin-whitelist] Already exists: ${email}`);
     }
 
     const existingUser = await userRepo
