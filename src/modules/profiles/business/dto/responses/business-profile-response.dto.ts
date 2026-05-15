@@ -65,10 +65,6 @@ export class BusinessProfileResponseDto implements IBusinessProfileResponse {
   @ApiProperty({ name: 'phone_number', nullable: true })
   public readonly phone_number!: string | null;
 
-  @Expose()
-  @ApiProperty({ name: 'timezone', example: 'Asia/Bangkok', nullable: true })
-  public readonly timezone!: string | null;
-
   @Expose({ name: 'logoUrl' })
   @ApiProperty({ name: 'logo_url', nullable: true })
   public readonly logo_url!: string | null;

@@ -98,7 +98,6 @@
     postal_code: string | null,
     country_code: string | null,
     phone_number: string | null,
-    timezone: string | null,         // IANA identifier (e.g. "Asia/Bangkok"); used to format transaction timestamps. null when never supplied.
     logo_url: string | null,
     is_verified: boolean,
     is_partner_platform: boolean,

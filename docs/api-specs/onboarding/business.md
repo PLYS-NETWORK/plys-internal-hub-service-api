@@ -28,20 +28,19 @@
 - **Status on success:** `201 Created`
 - **Request body:** [`OnboardBusinessProfileDto`](../../../src/modules/business-onboarding/dto/requests/onboard-business-profile.dto.ts)
 
-  | Field            | Type     | Required | Constraints                                                                                                                                 |
-  | ---------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `company_name`   | `string` | **yes**  | —                                                                                                                                           |
-  | `owner_name`     | `string` | **yes**  | Full name of the business owner.                                                                                                            |
-  | `tax_id`         | `string` | **yes**  | Length 5–32; regex `^[A-Z0-9-]+$` (case-insensitive). Uniqueness rule below.                                                                |
-  | `industry`       | `string` | **yes**  | —                                                                                                                                           |
-  | `company_size`   | `string` | **yes**  | —                                                                                                                                           |
-  | `address_line`   | `string` | **yes**  | —                                                                                                                                           |
-  | `city`           | `string` | **yes**  | —                                                                                                                                           |
-  | `state_province` | `string` | **yes**  | —                                                                                                                                           |
-  | `postal_code`    | `string` | **yes**  | —                                                                                                                                           |
-  | `country_code`   | `string` | **yes**  | ISO 3166-1 alpha-2; exactly 2 chars, uppercase.                                                                                             |
-  | `phone_number`   | `string` | **yes**  | —                                                                                                                                           |
-  | `timezone`       | `string` | no       | IANA timezone (e.g. `Asia/Bangkok`); ≤64 chars. Defaults to the `x-timezone` request header when omitted, or `null` if neither is provided. |
+  | Field            | Type     | Required | Constraints                                                                  |
+  | ---------------- | -------- | -------- | ---------------------------------------------------------------------------- |
+  | `company_name`   | `string` | **yes**  | —                                                                            |
+  | `owner_name`     | `string` | **yes**  | Full name of the business owner.                                             |
+  | `tax_id`         | `string` | **yes**  | Length 5–32; regex `^[A-Z0-9-]+$` (case-insensitive). Uniqueness rule below. |
+  | `industry`       | `string` | **yes**  | —                                                                            |
+  | `company_size`   | `string` | **yes**  | —                                                                            |
+  | `address_line`   | `string` | **yes**  | —                                                                            |
+  | `city`           | `string` | **yes**  | —                                                                            |
+  | `state_province` | `string` | **yes**  | —                                                                            |
+  | `postal_code`    | `string` | **yes**  | —                                                                            |
+  | `country_code`   | `string` | **yes**  | ISO 3166-1 alpha-2; exactly 2 chars, uppercase.                              |
+  | `phone_number`   | `string` | **yes**  | —                                                                            |
 
   ```json
   {
@@ -55,15 +54,13 @@
     "state_province": "California",
     "postal_code": "94105",
     "country_code": "US",
-    "phone_number": "+14155552671",
-    "timezone": "Asia/Bangkok"
+    "phone_number": "+14155552671"
   }
   ```
 
 - **Behaviour:**
   - A profile stub is created automatically at registration. This endpoint populates the stub with company details and `tax_id`, then sets `is_verified = true`.
   - Reads `userId` and `activePlatform` from `RequestContextService`; the caller can only onboard their own profile.
-  - **Timezone resolution:** if `timezone` is present in the body and valid (verified via `Intl.DateTimeFormat`), it is persisted to `business_profiles.timezone`. Otherwise the validated `x-timezone` request header value is used. If neither is supplied, the column is left `null`. This value is later used to render timestamps in transaction-list responses.
   - **Tax-ID uniqueness:** `(tax_id, country_code)` must not collide with any other **active** account on the same platform. The lookup ignores soft-deleted profiles, inactive users (`is_active = false`), and banned users (`banned_at IS NOT NULL`).
   - Emits the `business.onboarded` event so downstream listeners (notifications, analytics) react.
   - Throws `404 BUSINESS_PROFILE_NOT_FOUND` if no stub exists (user has not completed registration).

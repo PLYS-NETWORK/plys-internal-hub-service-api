@@ -110,4 +110,21 @@ export class RequestContextService {
       store.businessId = businessId;
     }
   }
+
+  /**
+   * Overrides the request timezone with the value stored on the active
+   * `user_sessions` row, called by `JwtContextMiddleware` once the session has
+   * been loaded and verified. The session timezone (captured at login time
+   * from the `x-timezone` header or login DTO) is the authoritative source
+   * for an authenticated request — it persists across header omissions on
+   * follow-up calls. No-op when the session has no timezone stored, so the
+   * header value (or `null`) survives.
+   */
+  public setSessionTimezone(timezone: string | null): void {
+    if (!timezone) return;
+    const store = RequestContextService.storage.getStore();
+    if (store) {
+      store.timezone = timezone;
+    }
+  }
 }
