@@ -8,7 +8,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import { ConsultantSkillsService } from './consultant-skills.service';
-import { OnboardConsultantProfileDto, UpdateConsultantProfileDto } from './dto/requests';
+import { UpdateConsultantProfileDto } from './dto/requests';
 import { ConsultantProfileResponseDto } from './dto/responses';
 import { IConsultantProfilesService } from './interfaces/consultant-profiles-service.interface';
 
@@ -45,51 +45,6 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
   }
 
   /** @inheritdoc */
-  public async onboard(dto: OnboardConsultantProfileDto): Promise<ConsultantProfileResponseDto> {
-    const userId = this.requestContext.userId!;
-    this.logger.log(`onboard — start | userId: ${userId}, fullName: ${dto.full_name}`);
-    const existing = await this.uow.consultantProfiles.findByUserId(userId);
-
-    if (existing) {
-      this.logger.warn(`onboard — profile already exists | userId: ${userId}`);
-      throw new TranslatableException({
-        messageKey: 'error.consultant_profile.already_exists',
-        errorCode: ERROR_CODES.CONSULTANT_PROFILE_ALREADY_EXISTS,
-        status: HttpStatus.CONFLICT,
-      });
-    }
-
-    const [profile, skills] = await this.uow.withTransaction(async (txUow) => {
-      const newProfile = txUow.consultantProfiles.create({
-        userId,
-        fullName: dto.full_name,
-        bio: dto.bio ?? null,
-        yearsOfExperience: dto.years_of_experience ?? null,
-        availability: (dto.availability as ConsultantProfile['availability']) ?? null,
-        addressLine: dto.address_line ?? null,
-        city: dto.city ?? null,
-        stateProvince: dto.state_province ?? null,
-        postalCode: dto.postal_code ?? null,
-        countryCode: dto.country_code ?? null,
-        phoneNumber: dto.phone_number ?? null,
-        isVerified: false,
-      });
-      const savedProfile = await txUow.consultantProfiles.save(newProfile);
-      const savedSkills = await this.consultantSkillsService.createForConsultant(
-        savedProfile.id,
-        dto.skills ?? [],
-        txUow,
-      );
-      return [savedProfile, savedSkills] as const;
-    });
-
-    this.logger.log(
-      `onboard — complete | userId: ${userId}, profileId: ${profile.id}, skills: ${skills.length}`,
-    );
-    return this.toResponseDto(profile, skills);
-  }
-
-  /** @inheritdoc */
   public async updateProfile(
     dto: UpdateConsultantProfileDto,
   ): Promise<ConsultantProfileResponseDto> {
@@ -111,8 +66,6 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
       if (dto.bio !== undefined) profile.bio = dto.bio;
       if (dto.years_of_experience !== undefined)
         profile.yearsOfExperience = dto.years_of_experience;
-      if (dto.availability !== undefined)
-        profile.availability = dto.availability as ConsultantProfile['availability'];
       if (dto.address_line !== undefined) profile.addressLine = dto.address_line;
       if (dto.city !== undefined) profile.city = dto.city;
       if (dto.state_province !== undefined) profile.stateProvince = dto.state_province;
@@ -152,7 +105,6 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
         fullName: profile.fullName,
         bio: profile.bio,
         yearsOfExperience: profile.yearsOfExperience,
-        availability: profile.availability,
         avatarUrl: profile.avatarUrl,
         addressLine: profile.addressLine,
         city: profile.city,
@@ -166,7 +118,7 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
         skills: skills.map((s) => ({
           skill_id: s.skillId,
           proficiency_level: s.proficiencyLevel,
-          years_with_skill: s.yearsWithSkill,
+          rating: s.rating,
         })),
       },
       { excludeExtraneousValues: true },

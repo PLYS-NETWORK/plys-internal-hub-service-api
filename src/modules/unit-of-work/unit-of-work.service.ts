@@ -13,10 +13,12 @@ import {
   BusinessProfileRepository,
   BusinessTransactionRepository,
   ChatMessageRepository,
-  ConsultantApplicationAnswerRepository,
-  ConsultantApplicationQuestionRepository,
-  ConsultantApplicationRepository,
+  ConsultantOnboardingAnswerRepository,
+  ConsultantOnboardingRepository,
   ConsultantProfileRepository,
+  ConsultantSkillExamAnswerRepository,
+  ConsultantSkillExamQuestionRepository,
+  ConsultantSkillExamRepository,
   ConsultantSkillRepository,
   ConsultantSkillScoreRepository,
   ConsultantTransactionRepository,
@@ -30,23 +32,24 @@ import {
   IBusinessProfileRepository,
   IBusinessTransactionRepository,
   IChatMessageRepository,
-  IConsultantApplicationAnswerRepository,
-  IConsultantApplicationQuestionRepository,
-  IConsultantApplicationRepository,
+  IConsultantOnboardingAnswerRepository,
+  IConsultantOnboardingRepository,
   IConsultantProfileRepository,
+  IConsultantSkillExamAnswerRepository,
+  IConsultantSkillExamQuestionRepository,
+  IConsultantSkillExamRepository,
   IConsultantSkillRepository,
   IConsultantSkillScoreRepository,
   IConsultantTransactionRepository,
   IdempotencyKeyRepository,
   IFileRepository,
   IIdempotencyKeyRepository,
-  IInterviewQuestionRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
   INotificationRepository,
-  InterviewQuestionRepository,
   InvoiceLineItemRepository,
   InvoiceRepository,
+  IOnboardingQuestionRepository,
   IProjectActivityRepository,
   IProjectAiContextRepository,
   IProjectChatSessionRepository,
@@ -67,6 +70,7 @@ import {
   IUserSsoProviderRepository,
   IWebhookEventRepository,
   NotificationRepository,
+  OnboardingQuestionRepository,
   ProjectActivityRepository,
   ProjectAiContextRepository,
   ProjectChatSessionRepository,
@@ -89,8 +93,6 @@ import {
   WebhookEventRepository,
 } from './repositories';
 
-// Holds pre-built transactional repository clones for one QueryRunner lifetime.
-// All reads/writes inside `withTransaction` callback share the same manager.
 class TransactionalUnitOfWork implements IUnitOfWork {
   constructor(
     public readonly adminAllowedEmails: IAdminAllowedEmailRepository,
@@ -130,15 +132,17 @@ class TransactionalUnitOfWork implements IUnitOfWork {
     public readonly notifications: INotificationRepository,
     public readonly idempotencyKeys: IIdempotencyKeyRepository,
     public readonly aiProviderApiKeys: IAiProviderApiKeyRepository,
-    // Domain 10 — Applications
-    public readonly consultantApplications: IConsultantApplicationRepository,
-    public readonly interviewQuestions: IInterviewQuestionRepository,
-    public readonly applicationQuestions: IConsultantApplicationQuestionRepository,
-    public readonly applicationAnswers: IConsultantApplicationAnswerRepository,
+    // Domain 10 — Onboarding
+    public readonly consultantOnboardings: IConsultantOnboardingRepository,
+    public readonly consultantOnboardingAnswers: IConsultantOnboardingAnswerRepository,
+    public readonly onboardingQuestions: IOnboardingQuestionRepository,
+    // Domain 11 — Skill exams
+    public readonly consultantSkillExams: IConsultantSkillExamRepository,
+    public readonly consultantSkillExamQuestions: IConsultantSkillExamQuestionRepository,
+    public readonly consultantSkillExamAnswers: IConsultantSkillExamAnswerRepository,
     public readonly consultantSkillScores: IConsultantSkillScoreRepository,
   ) {}
 
-  // Already inside a transaction — pass-through to avoid nested QueryRunners.
   public async withTransaction<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T> {
     return work(this);
   }
@@ -148,19 +152,15 @@ class TransactionalUnitOfWork implements IUnitOfWork {
 export class UnitOfWorkService implements IUnitOfWork {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
-    // Domain 0 — Admin
     public readonly adminAllowedEmails: AdminAllowedEmailRepository,
-    // Domain 1 — Auth & Identity
     public readonly users: UserRepository,
     public readonly authTokens: AuthTokenRepository,
     public readonly userSsoProviders: UserSsoProviderRepository,
     public readonly userSessions: UserSessionRepository,
-    // Domain 2 — Profiles
     public readonly businessProfiles: BusinessProfileRepository,
     public readonly skills: SkillRepository,
     public readonly consultantProfiles: ConsultantProfileRepository,
     public readonly consultantSkills: ConsultantSkillRepository,
-    // Domain 3 — Projects
     public readonly projects: ProjectRepository,
     public readonly projectRequiredSkills: ProjectRequiredSkillRepository,
     public readonly projectActivity: ProjectActivityRepository,
@@ -170,17 +170,14 @@ export class UnitOfWorkService implements IUnitOfWork {
     public readonly projectChatSessions: ProjectChatSessionRepository,
     public readonly chatMessages: ChatMessageRepository,
     public readonly projectAiContexts: ProjectAiContextRepository,
-    // Domain 4 — Tasks
     public readonly tasks: TaskRepository,
     public readonly taskAttachments: TaskAttachmentRepository,
     public readonly taskDisputes: TaskDisputeRepository,
     public readonly taskHistory: TaskHistoryRepository,
     public readonly taskResults: TaskResultRepository,
     public readonly taskResultAttachments: TaskResultAttachmentRepository,
-    // Domain 5 — AI
     public readonly aiTaskSessions: AiTaskSessionRepository,
     public readonly aiSessionMessages: AiSessionMessageRepository,
-    // Domain 6 — Finance
     public readonly billingPeriods: BillingPeriodRepository,
     public readonly invoices: InvoiceRepository,
     public readonly invoiceLineItems: InvoiceLineItemRepository,
@@ -188,18 +185,18 @@ export class UnitOfWorkService implements IUnitOfWork {
     public readonly businessTransactions: BusinessTransactionRepository,
     public readonly transactionNumbers: TransactionNumberService,
     public readonly webhookEvents: WebhookEventRepository,
-    // Domain 7 — Files
     public readonly files: FileRepository,
-    // Domain 8 — Notifications
     public readonly notifications: NotificationRepository,
-    // Domain 9 — Infra (cross-cutting)
     public readonly idempotencyKeys: IdempotencyKeyRepository,
     public readonly aiProviderApiKeys: AiProviderApiKeyRepository,
-    // Domain 10 — Applications
-    public readonly consultantApplications: ConsultantApplicationRepository,
-    public readonly interviewQuestions: InterviewQuestionRepository,
-    public readonly applicationQuestions: ConsultantApplicationQuestionRepository,
-    public readonly applicationAnswers: ConsultantApplicationAnswerRepository,
+    // Domain 10 — Onboarding
+    public readonly consultantOnboardings: ConsultantOnboardingRepository,
+    public readonly consultantOnboardingAnswers: ConsultantOnboardingAnswerRepository,
+    public readonly onboardingQuestions: OnboardingQuestionRepository,
+    // Domain 11 — Skill exams
+    public readonly consultantSkillExams: ConsultantSkillExamRepository,
+    public readonly consultantSkillExamQuestions: ConsultantSkillExamQuestionRepository,
+    public readonly consultantSkillExamAnswers: ConsultantSkillExamAnswerRepository,
     public readonly consultantSkillScores: ConsultantSkillScoreRepository,
   ) {}
 
@@ -249,10 +246,12 @@ export class UnitOfWorkService implements IUnitOfWork {
         this.notifications.withManager(manager),
         this.idempotencyKeys.withManager(manager),
         this.aiProviderApiKeys.withManager(manager),
-        this.consultantApplications.withManager(manager),
-        this.interviewQuestions.withManager(manager),
-        this.applicationQuestions.withManager(manager),
-        this.applicationAnswers.withManager(manager),
+        this.consultantOnboardings.withManager(manager),
+        this.consultantOnboardingAnswers.withManager(manager),
+        this.onboardingQuestions.withManager(manager),
+        this.consultantSkillExams.withManager(manager),
+        this.consultantSkillExamQuestions.withManager(manager),
+        this.consultantSkillExamAnswers.withManager(manager),
         this.consultantSkillScores.withManager(manager),
       );
 

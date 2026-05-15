@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
 
 import { IConsultantSkillResponse } from './interfaces/consultant-skill.response.interface';
@@ -10,10 +10,19 @@ export class ConsultantSkillResponseDto implements IConsultantSkillResponse {
   public readonly skill_id!: string;
 
   @Expose()
-  @ApiProperty({ name: 'proficiency_level', example: 'intermediate' })
-  public readonly proficiency_level!: string;
+  @ApiPropertyOptional({
+    name: 'proficiency_level',
+    nullable: true,
+    example: 'advanced',
+    description: 'System-assigned from latest passed skill exam; null if no passed exam.',
+  })
+  public readonly proficiency_level!: string | null;
 
   @Expose()
-  @ApiProperty({ name: 'years_with_skill', nullable: true, example: 3 })
-  public readonly years_with_skill!: number | null;
+  @ApiPropertyOptional({
+    nullable: true,
+    example: '92.50',
+    description: '0–100 % score from the latest passed skill exam.',
+  })
+  public readonly rating!: string | null;
 }

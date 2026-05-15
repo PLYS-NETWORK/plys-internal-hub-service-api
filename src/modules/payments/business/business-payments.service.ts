@@ -10,6 +10,7 @@ import { PaymentService } from '@common/modules/payment/payment.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { DateUtil } from '@common/utils/date';
 import { BusinessTransaction } from '@database/entities/finance/business-transaction.entity';
+import { IPayerInfo } from '@database/entities/finance/interfaces/payer-info.interface';
 import {
   BusinessTransactionType,
   CheckoutPaymentType,
@@ -25,6 +26,7 @@ import { plainToInstance } from 'class-transformer';
 
 import { CreateTopUpDto } from '../dto/requests/create-top-up.dto';
 import { ListBusinessTransactionsDto } from '../dto/requests/list-business-transactions.dto';
+import { PayerInfoDto } from '../dto/requests/payer-info.dto';
 import { SettleInvoiceDto } from '../dto/requests/settle-invoice.dto';
 import {
   CancelTopUpResponseDto,
@@ -66,6 +68,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
     // Create pending transaction. Wrapped in `withTransaction` so the
     // transaction-number advisory lock has an active xact to attach to.
     const amountStr = dto.amount.toFixed(2);
+    const payerInfo = this.toPayerInfoEntity(dto.payerInfo);
     const savedTransaction = await this.uow.withTransaction(async (txUow) => {
       const transactionNumber = await txUow.transactionNumbers.next(
         'PLS',
@@ -79,6 +82,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
         totalAmount: amountStr,
         status: TransactionStatus.PENDING,
         note: 'Top-up via payment checkout',
+        payerInfo,
       });
       return txUow.businessTransactions.save(transaction);
     });
@@ -96,6 +100,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
           businessId: businessProfile.id,
           type: CheckoutPaymentType.TOP_UP,
         },
+        payer: payerInfo,
       });
 
       savedTransaction.processorEventId = checkoutSession.processorInvoiceId;
@@ -188,6 +193,8 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
       });
     }
 
+    const payerInfo = this.toPayerInfoEntity(dto.payerInfo);
+
     try {
       const checkoutSession = await this.paymentService.createCheckoutSession({
         invoiceId: invoice.id,
@@ -202,6 +209,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
           invoiceId: invoice.id,
           type: CheckoutPaymentType.INVOICE_PAYMENT,
         },
+        payer: payerInfo,
       });
 
       // Save processor IDs on invoice for tracking
@@ -211,8 +219,9 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
       invoice.processorPaymentUrl = checkoutSession.processorPaymentUrl;
       await this.uow.invoices.save(invoice);
 
-      // Save processor event ID on business transaction
+      // Save processor event ID + payer info on business transaction
       businessTxn.processorEventId = checkoutSession.processorInvoiceId;
+      businessTxn.payerInfo = payerInfo;
       await this.uow.businessTransactions.save(businessTxn);
 
       this.logger.log(
@@ -269,6 +278,12 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
       take: dto.limit,
     });
 
+    // Resolve the timezone to render timestamps in: caller's profile setting
+    // wins, then the x-timezone header (already validated by middleware), then
+    // UTC. The list-wide tz lets a frontend display every row's created_at
+    // with the user's wall-clock without a per-row lookup.
+    const tz = businessProfile.timezone ?? this.requestContext.timezone ?? 'UTC';
+
     const data = transactions.map((tx) =>
       plainToInstance(
         TransactionResponseDto,
@@ -281,7 +296,8 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
           total_amount: tx.totalAmount,
           status: tx.status,
           note: tx.note,
-          created_at: tx.createdAt,
+          payer_info: this.toPayerInfoResponse(tx.payerInfo),
+          created_at: DateUtil.toZonedIso(tx.createdAt, tz),
         },
         { excludeExtraneousValues: true },
       ),
@@ -416,6 +432,54 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
         `sendCancelTopUpEmail — failed | transactionNumber: ${transactionNumber}, error: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
+  }
+
+  // Maps the request-side PayerInfoDto (camelCase post-transform) into the
+  // entity column shape. Centralised so createTopUp and settleInvoice persist
+  // the same structure; the webhook later overwrites billingAddress in place.
+  private toPayerInfoEntity(dto: PayerInfoDto): IPayerInfo {
+    return {
+      name: dto.name,
+      email: dto.email,
+      billingAddress: {
+        line1: dto.billingAddress.line1,
+        line2: dto.billingAddress.line2 ?? null,
+        city: dto.billingAddress.city,
+        state: dto.billingAddress.state ?? null,
+        postalCode: dto.billingAddress.postalCode,
+        country: dto.billingAddress.country,
+      },
+    };
+  }
+
+  // Maps the entity column shape to the snake_case response payload. Returns
+  // null when the row has no payer info (e.g. internal ledger entries that
+  // never go through a Polar checkout).
+  private toPayerInfoResponse(payerInfo: IPayerInfo | null): {
+    name: string;
+    email: string;
+    billing_address: {
+      line1: string;
+      line2: string | null;
+      city: string;
+      state: string | null;
+      postal_code: string;
+      country: string;
+    };
+  } | null {
+    if (!payerInfo) return null;
+    return {
+      name: payerInfo.name,
+      email: payerInfo.email,
+      billing_address: {
+        line1: payerInfo.billingAddress.line1,
+        line2: payerInfo.billingAddress.line2,
+        city: payerInfo.billingAddress.city,
+        state: payerInfo.billingAddress.state,
+        postal_code: payerInfo.billingAddress.postalCode,
+        country: payerInfo.billingAddress.country,
+      },
+    };
   }
 
   // Loads a transaction owned by the calling business, asserting it is a pending

@@ -45,6 +45,7 @@
         id: string,                  // UUID — business_profiles.id
         user_id: string,             // UUID — auth account
         company_name: string,
+        tax_id: string | null,       // null for legacy profiles created before tax_id was introduced
         email: string,               // users.email (joined)
         phone_number: string | null,
         address_line: string | null,
@@ -86,6 +87,7 @@
     id: string,
     user_id: string,
     company_name: string,
+    tax_id: string | null,     // null for legacy profiles created before tax_id was introduced
     industry: string | null,
     company_size: string | null,
     website_url: string | null,
@@ -96,6 +98,7 @@
     postal_code: string | null,
     country_code: string | null,
     phone_number: string | null,
+    timezone: string | null,         // IANA identifier (e.g. "Asia/Bangkok"); used to format transaction timestamps. null when never supplied.
     logo_url: string | null,
     is_verified: boolean,
     is_partner_platform: boolean,
@@ -169,6 +172,6 @@ The legacy i18n keys `success.business_profile.partner_marked` and `success.busi
 
 - **Service:** [BusinessProfilesAdminService](../../../src/modules/profiles/business/business-profiles-admin.service.ts) — owns the QueryBuilder for the join, the `SORT_COLUMN_MAP` whitelist, and the bidirectional setters.
 - **Repository accessor:** `uow.businessProfiles` from [UnitOfWorkService](../../../src/modules/unit-of-work/unit-of-work.service.ts).
-- **User-scoped surface (separate controller):** [`BusinessProfilesController`](../../../src/modules/profiles/business/business-profiles.controller.ts) — the `/business-profiles` routes used by business owners (onboard, get/update own profile).
+- **User-scoped surface (separate controller):** [`BusinessProfilesController`](../../../src/modules/profiles/business/business-profiles.controller.ts) — the `/business-profiles` routes used by business owners (get/update own profile). Onboarding moved to [`BusinessOnboardingController`](../../../src/modules/business-onboarding/controllers/business-onboarding.controller.ts) — see [`../onboarding/business.md`](../onboarding/business.md).
 - **Pagination utilities:** [`PageOptionsDto`](../../../src/common/dto/page-options.dto.ts), [`PageDto`](../../../src/common/dto/page.dto.ts), [`PageMetaDto`](../../../src/common/dto/page-meta.dto.ts).
 - **Admin controller convention precedent:** [`AiProviderKeyAdminController`](../../../src/modules/ai-provider-key/ai-provider-key-admin.controller.ts) — same shape (`@Controller('admin/...')`, class-level `@Roles(UserRole.ADMIN_PLATFORM)`, no `@Platform`).

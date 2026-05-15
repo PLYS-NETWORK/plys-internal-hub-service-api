@@ -17,6 +17,14 @@ export class BusinessProfileResponseDto implements IBusinessProfileResponse {
   @ApiProperty({ name: 'company_name', example: 'Acme Corp' })
   public readonly company_name!: string;
 
+  @Expose({ name: 'ownerName' })
+  @ApiProperty({ name: 'owner_name', example: 'John Doe', nullable: true })
+  public readonly owner_name!: string | null;
+
+  @Expose({ name: 'taxId' })
+  @ApiProperty({ name: 'tax_id', example: '1234567890', nullable: true })
+  public readonly tax_id!: string | null;
+
   @Expose()
   @ApiProperty({ example: 'Technology', nullable: true })
   public readonly industry!: string | null;
@@ -56,6 +64,10 @@ export class BusinessProfileResponseDto implements IBusinessProfileResponse {
   @Expose({ name: 'phoneNumber' })
   @ApiProperty({ name: 'phone_number', nullable: true })
   public readonly phone_number!: string | null;
+
+  @Expose()
+  @ApiProperty({ name: 'timezone', example: 'Asia/Bangkok', nullable: true })
+  public readonly timezone!: string | null;
 
   @Expose({ name: 'logoUrl' })
   @ApiProperty({ name: 'logo_url', nullable: true })

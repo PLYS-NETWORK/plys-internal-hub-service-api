@@ -243,6 +243,9 @@ export class SessionService implements ISessionService {
       fingerprint: context.fingerprint,
       ipAddress: context.ipAddress || null,
       userAgent: context.userAgent,
+      // Captured from the x-timezone header at login time so analytics + audit
+      // can recover the consultant's wall-clock without trusting the live header.
+      timezone: this.requestContext.timezone,
       expiresAt,
       usedAt: null,
     });

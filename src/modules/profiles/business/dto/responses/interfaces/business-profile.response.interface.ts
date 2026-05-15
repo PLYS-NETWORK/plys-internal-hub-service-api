@@ -5,6 +5,10 @@ export interface IBusinessProfileResponse {
   readonly user_id: string;
   /** Registered company name. */
   readonly company_name: string;
+  /** Full name of the business owner captured at registration; `null` for legacy profiles. */
+  readonly owner_name: string | null;
+  /** Tax identification number paired with `country_code`; `null` for legacy profiles pre-onboarding. */
+  readonly tax_id: string | null;
   /** Industry sector the company operates in; `null` when not provided. */
   readonly industry: string | null;
   /** Company size band (e.g. `"1-10"`, `"50-200"`); `null` when not provided. */
@@ -25,6 +29,8 @@ export interface IBusinessProfileResponse {
   readonly country_code: string | null;
   /** Contact phone number in E.164 format; `null` when not provided. */
   readonly phone_number: string | null;
+  /** IANA timezone identifier (e.g. `"Asia/Bangkok"`). Used to format transaction timestamps. `null` when never supplied. */
+  readonly timezone: string | null;
   /** CDN URL of the company logo image; `null` when no logo has been uploaded. */
   readonly logo_url: string | null;
   /** `true` when an admin has verified the business; `false` otherwise. */

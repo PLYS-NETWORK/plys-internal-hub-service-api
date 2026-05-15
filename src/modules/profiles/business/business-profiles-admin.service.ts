@@ -141,6 +141,7 @@ export class BusinessProfilesAdminService implements IBusinessProfilesAdminServi
         id: profile.id,
         user_id: profile.userId,
         company_name: profile.companyName,
+        tax_id: profile.taxId,
         email: profile.user.email,
         phone_number: profile.phoneNumber,
         address_line: profile.addressLine,

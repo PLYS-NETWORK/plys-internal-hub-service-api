@@ -47,22 +47,48 @@ Callers that don't satisfy either receive `404 FILE_NOT_FOUND` (never `403`) so 
 ## File lifecycle
 
 ```
-   POST /files            (purpose IS NULL)
-        │
-        ▼
-   row.purpose = NULL ─────── orphan grace window (FILES_ORPHAN_GRACE_HOURS) ─────► soft-deleted
-        │                       Mon 03:00 UTC sweep                                       │
-        │                                                                                 │
-        ▼                                                                                 ▼
-   attached by another surface (e.g. POST /projects/.../attachments)             daily 03:00 UTC
-   row.purpose = '<task_attachment | task_comment | task_result>'                cron purges bytes + row
-        │                                                                       after FILES_PURGE_AFTER_DAYS
+   POST /files                                              POST /files?purpose=consultant_cv
+   (no purpose param — default flow)                        POST /files?purpose=avatar
+                                                            (CV / avatar upload — stamped at create time)
+        │                                                          │
+        ▼                                                          ▼
+   row.purpose = NULL                                       row.purpose = 'consultant_cv' | 'avatar'
+   key: <yyyy>/<mm>/<uuid>.<ext>                            key: consultant-CVs/<NODE_ENV>/<yyyy>/<mm>/<uuid>.<ext>
+                                                            key: avatars/<NODE_ENV>/<yyyy>/<mm>/<uuid>.<ext>
+        │                                                          │
+   orphan grace window (FILES_ORPHAN_GRACE_HOURS)                  │
+   Mon 03:00 UTC sweep → soft-deleted                              │
+        │                                                          │
+        ▼                                                          ▼
+   attached by another surface                              consultant passes the returned `url`
+   (e.g. POST /projects/.../attachments)                    as cv_url / avatar_url to
+                                                            POST /consultant/onboarding/profile.
+   row.purpose = '<task_attachment | task_comment | task_result>'
         │
         ▼
    detached / DELETE /files/:id  →  soft-delete (deleted_at NOT NULL)
+        │
+        ▼
+   daily 03:00 UTC cron purges bytes + row
+   after FILES_PURGE_AFTER_DAYS
 ```
 
 The cron is implemented in [FilesCleanupService](../../../src/modules/files/files-cleanup.service.ts).
+
+### `?purpose=consultant_cv` / `?purpose=avatar` — special cases stamped at upload time
+
+The optional `purpose` query parameter is normally ignored at upload time (the owning surface stamps `purpose` later via `markAsAttached`). **Two values are honoured immediately**: `?purpose=consultant_cv` and `?purpose=avatar`. When the consultant passes either:
+
+1. The storage key is prefixed:
+   - `consultant_cv` → `consultant-CVs/<NODE_ENV>/<yyyy>/<mm>/<uuid>.<ext>`
+   - `avatar` → `avatars/<NODE_ENV>/<yyyy>/<mm>/<uuid>.<ext>`
+
+   instead of the default sharded `<yyyy>/<mm>/<uuid>.<ext>`. Same provider routing applies (`local` vs `s3`); just the prefix differs.
+
+2. The `files.purpose` column is stamped with the matching value immediately (no `markAsAttached` round-trip), so the orphan-cleanup sweep ignores the row.
+3. The response `url` is what the consultant passes as `cv_url` / `avatar_url` to `POST /consultant/onboarding/profile` (Step 1 of the onboarding flow).
+
+Any other value of `purpose` is silently ignored — every legacy / non-stamped caller keeps working unchanged. The endpoint is shared, so size limits, MIME validation, and per-user quotas all apply identically.
 
 ## Endpoints
 

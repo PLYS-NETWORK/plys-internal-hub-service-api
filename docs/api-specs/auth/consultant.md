@@ -7,6 +7,47 @@ Authentication endpoints for the Consultant platform.
 
 ---
 
+## Onboarding-rejection block (read first)
+
+The Consultant platform layers an extra gate on top of the standard auth flow. After an admin **rejects** a consultant's onboarding (`POST /admin/onboardings/:id/decide` with `decision = REJECTED`):
+
+1. The server records `consultant_onboardings.blocked_until = now + 3 months` on the rejected row.
+2. The consultant receives a rejection email (`sendApplicationRejectedEmail`) explaining the decision and the date the block lifts.
+3. While `blocked_until > now`, **every** of the following calls returns **`403 CONSULTANT_ONBOARDING_BLOCKED`** with `details.blocked_until` (ISO timestamp):
+   - `POST /auth/register` (re-registration attempts on the same email + platform)
+   - `POST /auth/login` (email/password sign-in)
+   - `POST /auth/sso/exchange` and `POST /auth/sso/google/token` (Google SSO sign-in)
+   - `POST /consultant/onboarding/profile` (defence-in-depth — the consultant cannot reach this without a session anyway)
+4. `user.is_active` is **not** touched by a rejection — the block is time-boxed, not a permanent ban. Once `blocked_until` passes (still 3 months later by default), every endpoint above returns to normal and the consultant may re-onboard.
+
+Permanent bans (e.g. repeat AI-content violations from skill exams) take a different path: they set `users.is_active = false` and return `403 AUTH_ACCOUNT_INACTIVE` instead. The two error codes are distinct so the client can tell "come back after 2026-08-14" apart from "your account is permanently disabled".
+
+## Permanent ban — `AUTH_ACCOUNT_INACTIVE` (CopyLeaks 3-strike)
+
+A separate, **permanent** ban path fires from skill-exam CopyLeaks abuse. When the consultant submits a skill exam that CopyLeaks flags as AI-generated for the 3rd time (lifetime counter — never resets):
+
+1. `users.is_active = false`, `users.banned_at = now`, `users.ban_reason = 'AI_CONTENT_ABUSE'`.
+2. **Every active `user_sessions` row for this user is deleted in the same transaction.** Any device's cached JWT becomes immediately useless — the next request hits the `is_active = false` gate and is rejected with `403 AUTH_ACCOUNT_INACTIVE`.
+3. The consultant receives the `consultant_account_banned` in-app notification; admin platform receives an `admin_consultant_banned` fan-out so every reviewer sees the strike.
+
+Subsequent calls to `POST /auth/login`, `POST /auth/sso/exchange`, `POST /auth/sso/google/token` return `403 AUTH_ACCOUNT_INACTIVE` with `details.ban_reason` set to the reason code:
+
+```json
+{
+  "status_code": 403,
+  "message": "Your account is permanently disabled.",
+  "error_code": "AUTH_ACCOUNT_INACTIVE",
+  "data": null,
+  "details": { "ban_reason": "AI_CONTENT_ABUSE" },
+  "timestamp": "2026-05-14T10:11:00.000Z",
+  "path": "/api/v1/auth/login"
+}
+```
+
+This is **distinct** from the time-boxed `CONSULTANT_ONBOARDING_BLOCKED` — the two errors carry different codes so the client can tell "come back after 2026-08-14" apart from "your account is permanently disabled; contact support to appeal".
+
+---
+
 ## Endpoints
 
 ### POST /auth/register
@@ -54,6 +95,20 @@ Register a new consultant account. Sends a verification email on success.
 ```
 
 **409 Conflict** — email already registered (`AUTH_EMAIL_ALREADY_EXISTS`)
+
+**403 Forbidden** — re-registration blocked while an admin rejection is in force (`CONSULTANT_ONBOARDING_BLOCKED`). Body includes `details.blocked_until` (ISO timestamp the block lifts).
+
+```json
+{
+  "status_code": 403,
+  "message": "Your account is blocked from onboarding until 2026-08-14T10:11:00.000Z. Please try again after that date.",
+  "error_code": "CONSULTANT_ONBOARDING_BLOCKED",
+  "data": null,
+  "details": { "blocked_until": "2026-08-14T10:11:00.000Z" },
+  "timestamp": "2026-05-14T10:11:00.000Z",
+  "path": "/api/v1/auth/register"
+}
+```
 
 **422 Unprocessable Entity** — validation error (`GENERIC_VALIDATION_ERROR`)
 
@@ -137,7 +192,23 @@ Login with email and password.
 
 **401 Unauthorized** — wrong email or password (`AUTH_INVALID_CREDENTIALS`)
 
-**403 Forbidden** — account is inactive (`GENERIC_FORBIDDEN`)
+**403 Forbidden** — credentials are valid but the account is unverified (`AUTH_EMAIL_NOT_VERIFIED`); server re-issues a verification email best-effort.
+
+**403 Forbidden** — account is permanently disabled (`AUTH_ACCOUNT_INACTIVE`). Distinct from a time-boxed onboarding block.
+
+**403 Forbidden** — admin rejected the consultant's onboarding and the 3-month block window is still active (`CONSULTANT_ONBOARDING_BLOCKED`). Body includes `details.blocked_until` so the client can show "Try again after &lt;date&gt;".
+
+```json
+{
+  "status_code": 403,
+  "message": "Your account is blocked from onboarding until 2026-08-14T10:11:00.000Z. Please try again after that date.",
+  "error_code": "CONSULTANT_ONBOARDING_BLOCKED",
+  "data": null,
+  "details": { "blocked_until": "2026-08-14T10:11:00.000Z" },
+  "timestamp": "2026-05-14T10:11:00.000Z",
+  "path": "/api/v1/auth/login"
+}
+```
 
 **422 Unprocessable Entity** — validation error
 
@@ -274,6 +345,10 @@ Exchange a single-use SSO code for session tokens. The `code` is obtained from t
 
 **401 Unauthorized** — code is invalid or expired (`AUTH_INVALID_TOKEN`)
 
+**403 Forbidden** — onboarding rejection block in force (`CONSULTANT_ONBOARDING_BLOCKED` with `details.blocked_until`).
+
+**403 Forbidden** — account permanently disabled (`AUTH_ACCOUNT_INACTIVE`).
+
 ---
 
 ### POST /auth/sso/google/token
@@ -301,6 +376,10 @@ Exchange a Google ID token for platform session tokens. For clients that run the
 **200 OK** — session tokens returned → [Auth Response](#auth-response)
 
 **401 Unauthorized** — Google ID token rejected (`AUTH_INVALID_TOKEN`)
+
+**403 Forbidden** — onboarding rejection block in force (`CONSULTANT_ONBOARDING_BLOCKED` with `details.blocked_until`).
+
+**403 Forbidden** — account permanently disabled (`AUTH_ACCOUNT_INACTIVE`).
 
 **422 Unprocessable Entity** — validation error
 
@@ -345,11 +424,18 @@ Shape returned by `/login`, `/verify-email`, `/refresh`, `/sso/exchange`, and `/
 
 ## Error Codes
 
-| Code                        | HTTP | Description                                |
-| --------------------------- | ---- | ------------------------------------------ |
-| `AUTH_EMAIL_ALREADY_EXISTS` | 409  | Email is already registered                |
-| `AUTH_INVALID_CREDENTIALS`  | 401  | Wrong email or password                    |
-| `AUTH_INVALID_TOKEN`        | 401  | Token is invalid, expired, or already used |
-| `GENERIC_FORBIDDEN`         | 403  | Account is inactive                        |
-| `GENERIC_UNAUTHORIZED`      | 401  | Missing or invalid access token            |
-| `GENERIC_VALIDATION_ERROR`  | 422  | Request body failed validation             |
+| Code                              | HTTP | Description                                                                                                    |
+| --------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------- |
+| `AUTH_EMAIL_ALREADY_REGISTERED`   | 409  | Email is already registered on this platform                                                                   |
+| `AUTH_EMAIL_PENDING_VERIFICATION` | 409  | Email is pending verification — a valid token is still outstanding                                             |
+| `AUTH_INVALID_CREDENTIALS`        | 401  | Wrong email or password                                                                                        |
+| `AUTH_EMAIL_NOT_VERIFIED`         | 403  | Credentials valid but the email has not been verified; server re-issues a verification email                   |
+| `AUTH_ACCOUNT_INACTIVE`           | 403  | Account is permanently disabled (e.g. AI-content ban from skill exams)                                         |
+| `CONSULTANT_ONBOARDING_BLOCKED`   | 403  | Onboarding was rejected by an admin; `details.blocked_until` is the ISO timestamp when the 3-month block lifts |
+| `AUTH_TOKEN_INVALID`              | 401  | Verification token / reset OTP invalid, expired, or already used                                               |
+| `AUTH_TOKEN_EXPIRED`              | 400  | Verification token expired                                                                                     |
+| `AUTH_TOKEN_ALREADY_USED`         | 400  | Verification token already used                                                                                |
+| `AUTH_RESET_TOKEN_INVALID`        | 400  | Password-reset OTP invalid                                                                                     |
+| `AUTH_RESET_TOKEN_EXPIRED`        | 400  | Password-reset OTP expired                                                                                     |
+| `GENERIC_UNAUTHORIZED`            | 401  | Missing or invalid access token                                                                                |
+| `GENERIC_VALIDATION_FAILED`       | 422  | Request body failed validation                                                                                 |

@@ -51,6 +51,13 @@ export class UserSession extends AuditableEntity {
   @Column({ name: 'user_agent', type: 'text', nullable: true })
   public userAgent!: string | null;
 
+  // IANA timezone name captured at session creation (login DTO field or x-timezone
+  // header). Echoed back into every JWT issued for this session via the `tz` claim,
+  // so RequestContextService can render datetimes in the consultant's local time.
+  // Null means we never received a tz — callers default to Etc/UTC.
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  public timezone!: string | null;
+
   @Column({ name: 'expires_at', type: 'timestamptz' })
   public expiresAt!: Date;
 

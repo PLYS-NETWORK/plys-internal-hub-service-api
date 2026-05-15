@@ -17,6 +17,7 @@ export { DraftTaskResponseDto } from './draft-task-response.dto';
 export { OverviewResponseDto } from './overview-response.dto';
 export { PayTasksResponseDto } from './pay-tasks-response.dto';
 export { ProjectListItemResponseDto } from './project-list-item-response.dto';
+export { ProjectSearchItemResponseDto } from './project-search-item-response.dto';
 export { ProjectSettingsResponseDto } from './project-settings-response.dto';
 export { ProjectSummaryResponseDto } from './project-summary-response.dto';
 export { PublishValidationResponseDto } from './publish-validation-response.dto';

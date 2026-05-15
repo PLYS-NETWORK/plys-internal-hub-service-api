@@ -1,7 +1,7 @@
 # Notifications — Admin Event Catalog
 
 > Audience: Internal Hub (admin platform) frontend engineers.
-> All 6 types below are **broadcast to every active admin** when the triggering action occurs.
+> All 7 types below are **broadcast to every active admin** when the triggering action occurs.
 > Companion guides: [Integration Guide](./notifications-realtime-guide.md) · [REST API](./notifications-api-specs.md)
 
 ---
@@ -141,53 +141,212 @@ interface IAdminTaskPublishedMetadata {
 
 ---
 
-## 5. `admin_consultant_interview_submitted`
+## 5. `admin_consultant_onboarding_submitted`
 
-**Trigger:** A consultant finalises their interview (submits all answers and calls `finalizeInterview`).
+**Trigger:** A consultant finalises their onboarding interview (calls `POST /consultant/onboarding/interview/submit` and all answers land). Replaces the legacy `admin_consultant_interview_submitted` which referenced the now-removed `consultant-applications` schema.
 
-| Field          | Value                                                            |
-| -------------- | ---------------------------------------------------------------- |
-| `type`         | `admin_consultant_interview_submitted`                           |
-| `entity_type`  | `application`                                                    |
-| `entity_id`    | `metadata.application_id`                                        |
-| `redirect_url` | `https://<internal-hub>/consultant-applications/:application_id` |
-| `baseUrl`      | Internal Hub (`internalHubUrl`)                                  |
+| Field          | Value                                                          |
+| -------------- | -------------------------------------------------------------- |
+| `type`         | `admin_consultant_onboarding_submitted`                        |
+| `entity_type`  | `onboarding`                                                   |
+| `entity_id`    | `metadata.onboarding_id`                                       |
+| `redirect_url` | `https://<internal-hub>/consultant-onboardings/:onboarding_id` |
+| `baseUrl`      | Internal Hub (`internalHubUrl`)                                |
 
 **Metadata:**
 
 ```ts
-interface IAdminConsultantInterviewSubmittedMetadata {
-  application_id: string;
+interface IAdminConsultantOnboardingSubmittedMetadata {
+  onboarding_id: string;
+  consultant_user_id: string;
   consultant_name: string;
 }
 ```
 
-**Cache invalidation hint:** Reload the application list and the application detail for `application_id`.
+**Sample payload:**
+
+```json
+{
+  "type": "admin_consultant_onboarding_submitted",
+  "title": "Onboarding submitted: Jane Doe",
+  "body": "Jane Doe has submitted their onboarding interview and is awaiting review.",
+  "metadata": {
+    "onboarding_id": "550e8400-e29b-41d4-a716-446655440000",
+    "consultant_user_id": "0f3b9d24-1111-2222-3333-444455556666",
+    "consultant_name": "Jane Doe"
+  },
+  "entity_type": "onboarding",
+  "entity_id": "550e8400-e29b-41d4-a716-446655440000",
+  "redirect_url": "https://internal-hub.plys.dev/consultant-onboardings/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Cache invalidation hint:** Reload `GET /admin/onboardings?status=INTERVIEW_SUBMITTED` (the pending-review queue) and the detail screen for `onboarding_id`.
 
 ---
 
-## 6. `admin_consultant_ai_rejected`
+## 6. `admin_skill_exam_result`
 
-**Trigger:** Copyleaks AI detection flags an application — the application status transitions to `COPYLEAKS_FAILED`.
+**Trigger:** Every terminal transition of any consultant's skill-exam pipeline — PASSED, FAILED (LOW_SCORE), COPYLEAKS_FAILED, or EXPIRED. Admins use this as a real-time audit log of the automated grading pipeline.
 
-| Field          | Value                                                            |
-| -------------- | ---------------------------------------------------------------- |
-| `type`         | `admin_consultant_ai_rejected`                                   |
-| `entity_type`  | `application`                                                    |
-| `entity_id`    | `metadata.application_id`                                        |
-| `redirect_url` | `https://<internal-hub>/consultant-applications/:application_id` |
-| `baseUrl`      | Internal Hub (`internalHubUrl`)                                  |
+Fired by `NotificationEventHandlerService.onConsultantSkillExamPassed` and `onConsultantSkillExamFailed`, which also dispatch the matching consultant-side notification. The dispatcher fans out to every active admin via `findActiveAdminUserIds()`.
+
+| Field          | Value                                         |
+| -------------- | --------------------------------------------- |
+| `type`         | `admin_skill_exam_result`                     |
+| `entity_type`  | `skill_exam`                                  |
+| `entity_id`    | `metadata.exam_id`                            |
+| `redirect_url` | `https://<internal-hub>/skill-exams/:exam_id` |
+| `baseUrl`      | Internal Hub (`internalHubUrl`)               |
 
 **Metadata:**
 
 ```ts
-interface IAdminConsultantAiRejectedMetadata {
-  application_id: string;
+interface IAdminSkillExamResultMetadata {
+  /** Terminal outcome the admin should review. */
+  outcome: 'PASSED' | 'LOW_SCORE' | 'COPYLEAKS_FAILED' | 'EXPIRED';
+  exam_id: string;
+  consultant_user_id: string;
   consultant_name: string;
+  skill_id: string;
+  skill_name: string;
+  /** 0–100. 0 when CopyLeaks fails before AI eval or when the exam EXPIRED. */
+  final_score: number;
+  /** Set on PASSED only. */
+  proficiency_level?: 'senior' | 'expert';
+  /** Set on LOW_SCORE fails; null/absent for COPYLEAKS_FAILED + EXPIRED. */
+  assigned_proficiency?: 'beginner' | 'intermediate' | null;
+  /** ISO-8601 per-skill retake cooldown. Null for EXPIRED. */
+  cooldown_until?: string | null;
+  /** users.ai_strike_count after this event. */
+  strike_count?: number;
 }
 ```
 
-**Cache invalidation hint:** Reload the application detail for `application_id`; update status badge.
+**Sample payload — PASSED (expert):**
+
+```json
+{
+  "type": "admin_skill_exam_result",
+  "title": "Skill exam passed: Jane Doe",
+  "body": "Jane Doe passed the skill_react exam (92.50%).",
+  "metadata": {
+    "outcome": "PASSED",
+    "exam_id": "11111111-1111-1111-1111-111111111111",
+    "consultant_user_id": "0f3b9d24-...",
+    "consultant_name": "Jane Doe",
+    "skill_id": "22222222-2222-2222-2222-222222222222",
+    "skill_name": "skill_react",
+    "final_score": 92.5,
+    "proficiency_level": "expert"
+  }
+}
+```
+
+**Sample payload — COPYLEAKS_FAILED (1st strike):**
+
+```json
+{
+  "type": "admin_skill_exam_result",
+  "title": "Skill exam COPYLEAKS_FAILED: Jane Doe",
+  "body": "Jane Doe did not pass the skill_react exam (0.00%) — outcome: COPYLEAKS_FAILED.",
+  "metadata": {
+    "outcome": "COPYLEAKS_FAILED",
+    "exam_id": "11111111-1111-1111-1111-111111111111",
+    "consultant_user_id": "0f3b9d24-...",
+    "consultant_name": "Jane Doe",
+    "skill_id": "22222222-2222-2222-2222-222222222222",
+    "skill_name": "skill_react",
+    "final_score": 0,
+    "cooldown_until": "2026-05-19T11:35:00.000Z",
+    "strike_count": 1,
+    "assigned_proficiency": null
+  }
+}
+```
+
+**Sample payload — EXPIRED:**
+
+```json
+{
+  "type": "admin_skill_exam_result",
+  "title": "Skill exam EXPIRED: Jane Doe",
+  "body": "Jane Doe did not pass the skill_react exam (0.00%) — outcome: EXPIRED.",
+  "metadata": {
+    "outcome": "EXPIRED",
+    "exam_id": "11111111-1111-1111-1111-111111111111",
+    "consultant_user_id": "0f3b9d24-...",
+    "consultant_name": "Jane Doe",
+    "skill_id": "22222222-2222-2222-2222-222222222222",
+    "skill_name": "skill_react",
+    "final_score": 0,
+    "cooldown_until": null,
+    "assigned_proficiency": null
+  }
+}
+```
+
+**Cache invalidation hint:** Reload `GET /admin/skill-exams` (filtered or unfiltered) and the detail for `exam_id`. The detail screen carries per-answer CopyLeaks + AI scores.
+
+---
+
+## 7. `admin_consultant_banned`
+
+**Trigger:** A consultant's 3rd CopyLeaks strike just landed and the system has flipped `User.isActive = false`, set `ban_reason = 'AI_CONTENT_ABUSE'`, and revoked every active session for that user. Emitted AFTER the matching `admin_skill_exam_result` (`outcome: 'COPYLEAKS_FAILED'`) for the same exam — render the admin timeline as **flagged → banned**.
+
+| Field          | Value                                              |
+| -------------- | -------------------------------------------------- |
+| `type`         | `admin_consultant_banned`                          |
+| `entity_type`  | `user`                                             |
+| `entity_id`    | `metadata.consultant_user_id`                      |
+| `redirect_url` | `https://<internal-hub>/users/:consultant_user_id` |
+| `baseUrl`      | Internal Hub (`internalHubUrl`)                    |
+
+**Metadata:**
+
+```ts
+interface IAdminConsultantBannedMetadata {
+  consultant_user_id: string;
+  consultant_name: string;
+  ban_reason: 'AI_CONTENT_ABUSE';
+  /** ISO-8601. */
+  banned_at: string;
+  /** Final strike count that triggered the ban (typically 3). */
+  ai_strike_count: number;
+}
+```
+
+**Sample payload:**
+
+```json
+{
+  "type": "admin_consultant_banned",
+  "title": "Consultant banned: Jane Doe",
+  "body": "Jane Doe was banned after 3 CopyLeaks strikes (AI_CONTENT_ABUSE).",
+  "metadata": {
+    "consultant_user_id": "0f3b9d24-...",
+    "consultant_name": "Jane Doe",
+    "ban_reason": "AI_CONTENT_ABUSE",
+    "banned_at": "2026-05-12T11:35:00.000Z",
+    "ai_strike_count": 3
+  },
+  "entity_type": "user",
+  "entity_id": "0f3b9d24-..."
+}
+```
+
+**Cache invalidation hint:** Reload the consultant detail page and any pending-action lists that filtered the user.
+
+---
+
+## Retired admin events
+
+The following admin notifications referenced the now-removed `consultant-applications` schema and are no longer emitted or wired. Existing notification rows of these types are still readable, but no new ones will arrive:
+
+- `admin_consultant_interview_submitted` — **replaced by** `admin_consultant_onboarding_submitted` (section 5).
+- `admin_consultant_ai_rejected` — **superseded by** `admin_skill_exam_result` with `outcome: 'COPYLEAKS_FAILED'` (section 6) and `admin_consultant_banned` on the 3-strike (section 7).
+
+Frontends should drop their switch cases for these types — the dispatcher will never produce them again.
 
 ---
 
@@ -214,12 +373,19 @@ socket.on('notification.new', (n: NotificationPayload) => {
         queryKey: ['admin', 'projects', n.metadata.project_id, 'tasks'],
       });
       break;
-    case 'admin_consultant_interview_submitted':
-    case 'admin_consultant_ai_rejected':
-      qc.invalidateQueries({ queryKey: ['admin', 'applications'] });
+    case 'admin_consultant_onboarding_submitted':
+      qc.invalidateQueries({ queryKey: ['admin', 'onboardings'] });
       qc.invalidateQueries({
-        queryKey: ['admin', 'applications', n.metadata.application_id],
+        queryKey: ['admin', 'onboardings', n.metadata.onboarding_id],
       });
+      break;
+    case 'admin_skill_exam_result':
+      qc.invalidateQueries({ queryKey: ['admin', 'skill-exams'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'skill-exams', n.metadata.exam_id] });
+      break;
+    case 'admin_consultant_banned':
+      qc.invalidateQueries({ queryKey: ['admin', 'users', n.metadata.consultant_user_id] });
+      qc.invalidateQueries({ queryKey: ['admin', 'skill-exams'] });
       break;
   }
 });

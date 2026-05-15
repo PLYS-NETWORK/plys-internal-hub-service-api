@@ -27,16 +27,18 @@ Register a new business account. Sends a verification email on success.
   "email": "owner@acme.com",
   "password": "P@ssword123",
   "active_platform": "business",
-  "company_name": "Acme Inc."
+  "company_name": "Acme Inc.",
+  "full_name": "John Owner"
 }
 ```
 
-| Field             | Type     | Constraints                                                 |
-| ----------------- | -------- | ----------------------------------------------------------- |
-| `email`           | `string` | Valid email address                                         |
-| `password`        | `string` | Min 8 chars, must contain uppercase, lowercase, and a digit |
-| `active_platform` | `string` | Must be `"business"`                                        |
-| `company_name`    | `string` | Required when `active_platform` is `business`               |
+| Field             | Type     | Constraints                                                                        |
+| ----------------- | -------- | ---------------------------------------------------------------------------------- |
+| `email`           | `string` | Valid email address                                                                |
+| `password`        | `string` | Min 8 chars, must contain uppercase, lowercase, and a digit                        |
+| `active_platform` | `string` | Must be `"business"`                                                               |
+| `company_name`    | `string` | Required when `active_platform` is `business`                                      |
+| `full_name`       | `string` | Required when `active_platform` is `business`; stored as the business owner's name |
 
 #### Responses
 

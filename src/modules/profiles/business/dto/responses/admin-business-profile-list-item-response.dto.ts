@@ -18,6 +18,10 @@ export class AdminBusinessProfileListItemResponseDto implements IAdminBusinessPr
   public readonly company_name!: string;
 
   @Expose()
+  @ApiProperty({ name: 'tax_id', example: '1234567890', nullable: true })
+  public readonly tax_id!: string | null;
+
+  @Expose()
   @ApiProperty({ example: 'owner@acme.com' })
   public readonly email!: string;
 

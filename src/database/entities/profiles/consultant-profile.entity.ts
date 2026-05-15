@@ -1,6 +1,5 @@
 import { User } from '@database/entities/auth/user.entity';
 import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
-import { ConsultantAvailability } from '@database/enums';
 import { Column, Entity, JoinColumn, OneToOne, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
 // One consultant profile per user. `max_concurrent_projects` is enforced by
@@ -30,13 +29,6 @@ export class ConsultantProfile extends AuditableEntity {
 
   @Column({ name: 'years_of_experience', type: 'smallint', nullable: true })
   public yearsOfExperience!: number | null;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    nullable: true,
-  })
-  public availability!: ConsultantAvailability | null;
 
   @Column({ name: 'avatar_url', type: 'text', nullable: true })
   public avatarUrl!: string | null;
@@ -72,4 +64,19 @@ export class ConsultantProfile extends AuditableEntity {
     nullable: true,
   })
   public stripeConnectAccountId!: string | null;
+
+  @Column({ name: 'cv_url', type: 'text', nullable: true })
+  public cvUrl!: string | null;
+
+  @Column({ name: 'has_notification_priority', type: 'boolean', default: false })
+  public hasNotificationPriority!: boolean;
+
+  @Column({
+    name: 'avg_rating',
+    type: 'numeric',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
+  public avgRating!: string | null;
 }

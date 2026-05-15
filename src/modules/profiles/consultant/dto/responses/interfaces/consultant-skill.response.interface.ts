@@ -1,8 +1,8 @@
 export interface IConsultantSkillResponse {
   /** UUID of the skill in the global skills taxonomy. */
   readonly skill_id: string;
-  /** Self-reported proficiency level (e.g. `"beginner"`, `"intermediate"`, `"expert"`). */
-  readonly proficiency_level: string;
-  /** Number of years the consultant has actively used this skill; `null` when not provided. */
-  readonly years_with_skill: number | null;
+  /** System-assigned proficiency from the latest passed skill exam; null if not yet passed. */
+  readonly proficiency_level: string | null;
+  /** 0–100 % score from the latest passed skill exam; null if not yet passed. */
+  readonly rating: string | null;
 }

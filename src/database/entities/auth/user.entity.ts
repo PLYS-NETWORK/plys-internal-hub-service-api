@@ -1,5 +1,5 @@
 import { Auditable, AuditableEntity } from '@database/entities/base/auditable.entity';
-import { ActivePlatform, UserRole } from '@database/enums';
+import { ActivePlatform, BanReason, UserRole } from '@database/enums';
 import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 // Root identity. One row per (human, platform) — the same email may exist once
@@ -41,4 +41,23 @@ export class User extends AuditableEntity {
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   public role!: UserRole;
+
+  @Column({ name: 'ai_strike_count', type: 'smallint', default: 0 })
+  public aiStrikeCount!: number;
+
+  @Column({ name: 'banned_at', type: 'timestamptz', nullable: true })
+  public bannedAt!: Date | null;
+
+  @Column({ name: 'ban_reason', type: 'varchar', length: 30, nullable: true })
+  public banReason!: BanReason | null;
+
+  // Platform-wide counter of EXPIRED skill-exam attempts (timer ran out).
+  // Reset to 0 on a passing exam or when the 2-day platform cool-down expires.
+  @Column({ name: 'exam_expired_count', type: 'smallint', default: 0 })
+  public examExpiredCount!: number;
+
+  // Set to `now + 2 days` once `examExpiredCount` hits the EXPIRED_RETRY_LIMIT (3).
+  // While > now, the consultant cannot start a new skill exam on any skill.
+  @Column({ name: 'exam_taking_blocked_until', type: 'timestamptz', nullable: true })
+  public examTakingBlockedUntil!: Date | null;
 }

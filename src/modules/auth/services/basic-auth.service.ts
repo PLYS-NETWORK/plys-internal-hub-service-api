@@ -70,19 +70,19 @@ export class BasicAuthService implements IBasicAuthService {
     await this.uow.withTransaction(async (tx) => {
       const existing = await tx.users.findUserByEmailAndPlatform(dto.email, dto.active_platform);
 
-      // For consultant re-registration, check if the user is currently blocked from applying.
-      // This surfaces the correct error immediately — before any email is sent or user row mutated.
+      // For consultant re-registration, check if the user is currently blocked from onboarding
+      // (set when a previous onboarding was REJECTED, expires after 3 months).
       if (existing && dto.active_platform === ActivePlatform.CONSULTANT) {
-        const latestApp = await tx.consultantApplications.findLatestByUserId(existing.id);
-        if (latestApp?.blockedUntil && latestApp.blockedUntil > new Date()) {
+        const latestOnboarding = await tx.consultantOnboardings.findByUserId(existing.id);
+        if (latestOnboarding?.blockedUntil && latestOnboarding.blockedUntil > new Date()) {
           this.logger.warn(
-            `register — consultant blocked | email: ${dto.email}, until: ${latestApp.blockedUntil.toISOString()}`,
+            `register — consultant blocked | email: ${dto.email}, until: ${latestOnboarding.blockedUntil.toISOString()}`,
           );
           throw new TranslatableException({
-            messageKey: 'error.consultant_application.blocked',
-            errorCode: ERROR_CODES.CONSULTANT_APPLICATION_BLOCKED,
+            messageKey: 'error.consultant_onboarding.blocked',
+            errorCode: ERROR_CODES.CONSULTANT_ONBOARDING_BLOCKED,
             status: HttpStatus.FORBIDDEN,
-            details: { blocked_until: latestApp.blockedUntil.toISOString() },
+            details: { blocked_until: latestOnboarding.blockedUntil.toISOString() },
           });
         }
       }
@@ -271,6 +271,9 @@ export class BasicAuthService implements IBasicAuthService {
         messageKey: 'error.auth.account_inactive',
         errorCode: ERROR_CODES.AUTH_ACCOUNT_INACTIVE,
         status: HttpStatus.FORBIDDEN,
+        // Expose ban_reason so the client can render the specific cause
+        // ("Account banned for AI content abuse") instead of a generic message.
+        details: user.banReason ? { ban_reason: user.banReason } : undefined,
       });
     }
 
@@ -330,11 +333,41 @@ export class BasicAuthService implements IBasicAuthService {
       });
     }
 
+    // Consultant-only: a REJECTED onboarding sets `blocked_until = now + 3 months`.
+    // While that window is open the consultant must NOT be allowed back in (admin
+    // already emailed them the rejection reason). After the window expires login is
+    // allowed again and the consultant can re-onboard.
+    await this.assertConsultantNotBlocked(user.id, dto.active_platform);
+
     user.lastLoginAt = new Date();
     await this.uow.users.save(user);
 
     this.logger.log(`login — complete | userId: ${user.id}`);
     return this.sessionService.createSession(user.id, user.email, dto.active_platform, context);
+  }
+
+  /**
+   * For CONSULTANT logins: if the user has an onboarding row with an active
+   * block (`blocked_until > now` from a prior admin REJECT), refuse login with
+   * `CONSULTANT_ONBOARDING_BLOCKED`. No-op for other platforms.
+   */
+  private async assertConsultantNotBlocked(
+    userId: string,
+    activePlatform: ActivePlatform,
+  ): Promise<void> {
+    if (activePlatform !== ActivePlatform.CONSULTANT) return;
+    const onboarding = await this.uow.consultantOnboardings.findByUserId(userId);
+    if (onboarding?.blockedUntil && onboarding.blockedUntil > new Date()) {
+      this.logger.warn(
+        `login — consultant blocked | userId: ${userId} | until: ${onboarding.blockedUntil.toISOString()}`,
+      );
+      throw new TranslatableException({
+        messageKey: 'error.consultant_onboarding.blocked',
+        errorCode: ERROR_CODES.CONSULTANT_ONBOARDING_BLOCKED,
+        status: HttpStatus.FORBIDDEN,
+        details: { blocked_until: onboarding.blockedUntil.toISOString() },
+      });
+    }
   }
 
   // ─── Change Password ─────────────────────────────────────────────────────

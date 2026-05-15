@@ -47,9 +47,13 @@ export class NotificationDispatcherService implements INotificationDispatcherSer
 
     try {
       const businessId = await this.resolveBusinessId(input.userId);
-      const title = await this.translate(config.titleKey, lang, undefined);
+      const titleKey =
+        typeof config.titleKey === 'function' ? config.titleKey(input.metadata) : config.titleKey;
+      const bodyKey =
+        typeof config.bodyKey === 'function' ? config.bodyKey(input.metadata) : config.bodyKey;
+      const title = await this.translate(titleKey, lang, undefined);
       const body = await this.translate(
-        config.bodyKey,
+        bodyKey,
         lang,
         config.bodyArgs ? config.bodyArgs(input.metadata) : undefined,
       );

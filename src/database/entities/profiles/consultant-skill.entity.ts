@@ -6,7 +6,9 @@ import { ConsultantProfile } from './consultant-profile.entity';
 import { Skill } from './skill.entity';
 
 // Junction table (composite PK) — extends TraceableEntity (createdAt + createdBy only).
-// Full audit (updated*/deleted*) is meaningless for a link row without an identity.
+// `proficiency_level` and `rating` are system-assigned by the skill-exam pipeline:
+// rating is the % score (0–100) from the latest passing exam; proficiency is
+// derived from rating (80–89 → advanced, ≥90 → expert).
 @Traceable()
 @Entity('consultant_skills')
 @Index('idx_consultant_skills_skill_id', ['skillId'])
@@ -35,10 +37,15 @@ export class ConsultantSkill extends TraceableEntity {
     name: 'proficiency_level',
     type: 'varchar',
     length: 20,
-    default: ProficiencyLevel.INTERMEDIATE,
+    nullable: true,
   })
-  public proficiencyLevel!: ProficiencyLevel;
+  public proficiencyLevel!: ProficiencyLevel | null;
 
-  @Column({ name: 'years_with_skill', type: 'smallint', nullable: true })
-  public yearsWithSkill!: number | null;
+  @Column({
+    type: 'numeric',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+  })
+  public rating!: string | null;
 }

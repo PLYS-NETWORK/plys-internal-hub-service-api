@@ -1,8 +1,9 @@
 import { BusinessTransactionType, TransactionStatus } from '@database/enums';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Exclude, Expose } from 'class-transformer';
+import { Exclude, Expose, Type } from 'class-transformer';
 
 import { ITransactionResponse } from './interfaces/transaction.response.interface';
+import { PayerInfoResponseDto } from './payer-info-response.dto';
 
 @Exclude()
 export class TransactionResponseDto implements ITransactionResponse {
@@ -39,6 +40,14 @@ export class TransactionResponseDto implements ITransactionResponse {
   public readonly note!: string | null;
 
   @Expose()
-  @ApiProperty({ example: '2026-04-20T12:00:00.000Z' })
-  public readonly created_at!: Date;
+  @Type(() => PayerInfoResponseDto)
+  @ApiPropertyOptional({ name: 'payer_info', type: PayerInfoResponseDto, nullable: true })
+  public readonly payer_info!: PayerInfoResponseDto | null;
+
+  @Expose()
+  @ApiProperty({
+    example: '2026-04-20T19:00:00.000+07:00',
+    description: "ISO 8601 in the caller's resolved timezone.",
+  })
+  public readonly created_at!: string;
 }

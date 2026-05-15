@@ -63,12 +63,62 @@
     "title": "Görev yayınlandı",
     "body": "{business} tarafından {project} projesindeki \"{title}\" ({code}) görevi yayınlandı."
   },
-  "admin_consultant_interview_submitted": {
-    "title": "Mülakat gönderildi",
-    "body": "{name} mülakat yanıtlarını gönderdi ve değerlendirme bekliyor."
+  "admin_consultant_onboarding_submitted": {
+    "title": "Onboarding gönderildi: {name}",
+    "body": "{name} onboarding mülakatını gönderdi ve değerlendirme bekliyor."
   },
-  "admin_consultant_ai_rejected": {
-    "title": "Başvuru yapay zeka tarafından işaretlendi",
-    "body": "{name}'in başvurusu yapay zeka içeriği nedeniyle işaretlendi ve otomatik olarak reddedildi."
+  "consultant_onboarding_approved": {
+    "title": "Hesabınız doğrulandı",
+    "body": "Plys'e hoş geldiniz! Hesabınız doğrulandı — artık beceri kaydı yapabilir ve sınavlara girebilirsiniz."
+  },
+  "consultant_onboarding_rejected": {
+    "title": "Onboarding kararı: reddedildi",
+    "body": "Onboarding'iniz onaylanmadı. {blocked_until} tarihinden sonra tekrar başvurabilirsiniz. Sebep: {reason}"
+  },
+  "consultant_skill_exam_submitted": {
+    "title": "Beceri sınavı gönderildi",
+    "body": "{skill} sınavınız değerlendiriliyor. Sonuç hazır olduğunda sizi bilgilendireceğiz."
+  },
+  "consultant_skill_exam_failed": {
+    "low_score": {
+      "title": "Beceri sınavı sonucu: geçilemedi",
+      "body": "{skill} sınavınızda {final_score}% aldınız; geçme eşiği %80. {cooldown_until} tarihinden sonra tekrar deneyebilirsiniz."
+    },
+    "copyleaks": {
+      "title": "Beceri sınavı yapay zeka içeriği nedeniyle işaretlendi",
+      "body": "{skill} cevaplarınız işaretlendi. {cooldown_until} tarihinden sonra tekrar deneyebilirsiniz. Hesabınız kalıcı olarak devre dışı bırakılmadan önce {strikes_remaining} deneme hakkınız kaldı."
+    },
+    "expired": {
+      "title": "Beceri sınavının süresi doldu",
+      "body": "{skill} sınavının süresi göndermeden önce doldu. 3 süresi dolmuş denemeden sonra 2 gün boyunca yeni sınav başlatamazsınız."
+    }
+  },
+  "consultant_skill_exam_passed": {
+    "senior": {
+      "title": "Beceri sınavını kıdemli seviyesinde geçtiniz!",
+      "body": "Tebrikler — {skill} sınavını {final_score}% ile kıdemli seviyede geçtiniz."
+    },
+    "expert": {
+      "title": "Beceri sınavını uzman seviyesinde geçtiniz!",
+      "body": "Olağanüstü — {skill} sınavını {final_score}% ile uzman seviyesinde geçtiniz."
+    }
+  },
+  "consultant_account_banned": {
+    "title": "Hesap kalıcı olarak devre dışı bırakıldı",
+    "body": "Tekrarlanan yapay zeka içeriği ihlalleri nedeniyle hesabınız kalıcı olarak devre dışı bırakıldı. Bunun bir hata olduğunu düşünüyorsanız destek ekibiyle iletişime geçin."
+  },
+  "admin_skill_exam_result": {
+    "passed": {
+      "title": "Beceri sınavı geçildi: {consultant}",
+      "body": "{consultant} {skill} sınavını geçti ({score}%)."
+    },
+    "failed": {
+      "title": "Beceri sınavı {outcome}: {consultant}",
+      "body": "{consultant} {skill} sınavını geçemedi ({score}%) — sonuç: {outcome}."
+    }
+  },
+  "admin_consultant_banned": {
+    "title": "Danışman yasaklandı: {consultant}",
+    "body": "{consultant} {strikes} CopyLeaks ihlali ({reason}) sonrası yasaklandı."
   }
 }

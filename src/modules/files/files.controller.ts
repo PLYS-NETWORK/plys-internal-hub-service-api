@@ -2,6 +2,7 @@ import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { FileContentValidator } from '@common/modules/file-storage';
+import { FilePurpose } from '@database/enums';
 import {
   Controller,
   Delete,
@@ -10,10 +11,18 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   Req,
   Res,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { FastifyReply, FastifyRequest } from 'fastify';
 
 import { FileResponseDto } from './dto/responses';
@@ -33,12 +42,24 @@ export class FilesController {
   @ApiOperation({
     summary: 'Upload a file',
     description:
-      'Stores an uploaded file with `purpose = NULL`. The owning surface ' +
-      '(task comment / evidence) sets the purpose later when the file is ' +
-      'attached. Free uploads that are never attached are reclaimed by the ' +
-      'weekly orphan-cleanup cron after the configured grace window.',
+      'Stores an uploaded file. By default `purpose = NULL` and the surface that ' +
+      'later references it sets the purpose via markAsAttached. The optional ' +
+      '`?purpose=consultant_cv` or `?purpose=avatar` query params are the only ' +
+      'purposes accepted at upload time; passing them stores the file at ' +
+      '`consultant-CVs/<env>/...` or `avatars/<env>/...` respectively and stamps ' +
+      'the row with the matching purpose. Other purpose values are ignored ' +
+      '(server treats the upload as purpose-less). Free uploads that are never ' +
+      'attached are reclaimed by the weekly orphan-cleanup cron after the ' +
+      'configured grace window.',
   })
   @ApiConsumes('multipart/form-data')
+  @ApiQuery({
+    name: 'purpose',
+    required: false,
+    enum: FilePurpose,
+    description:
+      'Optional upload-time purpose marker. Only `consultant_cv` and `avatar` are honoured.',
+  })
   @ApiBody({
     schema: {
       type: 'object',
@@ -48,7 +69,10 @@ export class FilesController {
       required: ['file'],
     },
   })
-  public async upload(@Req() req: FastifyRequest): Promise<ITranslatedPayload<FileResponseDto>> {
+  public async upload(
+    @Req() req: FastifyRequest,
+    @Query('purpose') purpose?: string,
+  ): Promise<ITranslatedPayload<FileResponseDto>> {
     const part = await req.file();
     if (!part) {
       throw new TranslatableException({
@@ -75,7 +99,16 @@ export class FilesController {
     }
 
     const input = await this.validator.validate(buffer, part.filename);
-    const data = await this.filesService.upload(input);
+    // Only CONSULTANT_CV and AVATAR are honoured at upload time — every other
+    // value is silently dropped so existing callers that already send unrelated
+    // `purpose` strings keep working.
+    const acceptedPurpose =
+      purpose === FilePurpose.CONSULTANT_CV
+        ? FilePurpose.CONSULTANT_CV
+        : purpose === FilePurpose.AVATAR
+          ? FilePurpose.AVATAR
+          : undefined;
+    const data = await this.filesService.upload(input, acceptedPurpose);
     return { messageKey: 'success.created', data };
   }
 

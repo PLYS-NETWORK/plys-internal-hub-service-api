@@ -8,19 +8,21 @@ import {
   IBusinessProfileRepository,
   IBusinessTransactionRepository,
   IChatMessageRepository,
-  IConsultantApplicationAnswerRepository,
-  IConsultantApplicationQuestionRepository,
-  IConsultantApplicationRepository,
+  IConsultantOnboardingAnswerRepository,
+  IConsultantOnboardingRepository,
   IConsultantProfileRepository,
+  IConsultantSkillExamAnswerRepository,
+  IConsultantSkillExamQuestionRepository,
+  IConsultantSkillExamRepository,
   IConsultantSkillRepository,
   IConsultantSkillScoreRepository,
   IConsultantTransactionRepository,
   IFileRepository,
   IIdempotencyKeyRepository,
-  IInterviewQuestionRepository,
   IInvoiceLineItemRepository,
   IInvoiceRepository,
   INotificationRepository,
+  IOnboardingQuestionRepository,
   IProjectActivityRepository,
   IProjectAiContextRepository,
   IProjectChatSessionRepository,
@@ -43,10 +45,6 @@ import {
   TransactionNumberService,
 } from '@modules/unit-of-work/repositories';
 
-// One typed repository accessor per entity. Service code injects IUnitOfWork
-// instead of individual repository tokens — that way `withTransaction(...)`
-// produces a scoped UoW where every read/write goes through the same
-// EntityManager and participates in one atomic unit.
 export interface IUnitOfWork {
   // Domain 0 — Admin
   readonly adminAllowedEmails: IAdminAllowedEmailRepository;
@@ -105,11 +103,15 @@ export interface IUnitOfWork {
   readonly idempotencyKeys: IIdempotencyKeyRepository;
   readonly aiProviderApiKeys: IAiProviderApiKeyRepository;
 
-  // Domain 10 — Applications
-  readonly consultantApplications: IConsultantApplicationRepository;
-  readonly interviewQuestions: IInterviewQuestionRepository;
-  readonly applicationQuestions: IConsultantApplicationQuestionRepository;
-  readonly applicationAnswers: IConsultantApplicationAnswerRepository;
+  // Domain 10 — Onboarding (consultant signup gate)
+  readonly consultantOnboardings: IConsultantOnboardingRepository;
+  readonly consultantOnboardingAnswers: IConsultantOnboardingAnswerRepository;
+  readonly onboardingQuestions: IOnboardingQuestionRepository;
+
+  // Domain 11 — Skill exams (per-skill, multiple per consultant)
+  readonly consultantSkillExams: IConsultantSkillExamRepository;
+  readonly consultantSkillExamQuestions: IConsultantSkillExamQuestionRepository;
+  readonly consultantSkillExamAnswers: IConsultantSkillExamAnswerRepository;
   readonly consultantSkillScores: IConsultantSkillScoreRepository;
 
   withTransaction<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T>;

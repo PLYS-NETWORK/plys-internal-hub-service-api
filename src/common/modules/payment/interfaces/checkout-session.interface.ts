@@ -1,3 +1,5 @@
+import { IPayerInfo } from '@database/entities/finance/interfaces/payer-info.interface';
+
 /**
  * Represents the normalized checkout session returned by any payment provider.
  * Maps directly to the processor_* columns on the Invoice entity.
@@ -35,6 +37,13 @@ export interface ICreateCheckoutSessionParams {
   readonly lineDescription?: string;
   /** Optional free-form metadata forwarded to the processor. */
   readonly metadata?: Record<string, string>;
+  /**
+   * Payer information used to pre-fill the hosted checkout (name, email, billing
+   * address). Card / PCI data is never included here. The user can still edit
+   * these fields on the provider's hosted page; the webhook later overwrites the
+   * stored snapshot if they do.
+   */
+  readonly payer?: IPayerInfo;
 }
 
 export interface ICheckoutSession {

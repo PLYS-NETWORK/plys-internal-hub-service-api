@@ -1,4 +1,4 @@
-import { OnboardConsultantProfileDto, UpdateConsultantProfileDto } from '../dto/requests';
+import { UpdateConsultantProfileDto } from '../dto/requests';
 import { ConsultantProfileResponseDto } from '../dto/responses';
 
 /**
@@ -19,19 +19,6 @@ export interface IConsultantProfilesService {
    * @throws TranslatableException (404) — profile not found for the caller.
    */
   getProfile(): Promise<ConsultantProfileResponseDto>;
-
-  /**
-   * Creates a new consultant profile for the authenticated user.
-   *
-   * Runs inside a transaction: the profile row and all skill rows are inserted
-   * atomically. Throws if a profile already exists for the caller.
-   *
-   * @param dto - Validated onboarding payload including personal details and
-   *              an optional list of skills.
-   * @returns The newly created `ConsultantProfileResponseDto`.
-   * @throws TranslatableException (409) — profile already exists for the caller.
-   */
-  onboard(dto: OnboardConsultantProfileDto): Promise<ConsultantProfileResponseDto>;
 
   /**
    * Applies a partial update to the authenticated consultant's profile.
