@@ -16,5 +16,4 @@ export interface IOnboardBusinessProfileRequest {
   readonly postal_code: string;
   readonly country_code: string;
   readonly phone_number: string;
-  readonly timezone?: string;
 }

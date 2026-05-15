@@ -98,6 +98,12 @@ export class JwtContextMiddleware implements NestMiddleware {
           payload.activePlatform,
           payload.businessId ?? null,
         );
+
+        // Promote the session's stored timezone (captured at login from the
+        // x-timezone header / login DTO) into the request context so any
+        // datetime rendered for this request matches the user's local time —
+        // even when the current request omits the x-timezone header.
+        this.requestContext.setSessionTimezone(session.timezone);
       } catch (err) {
         if (err instanceof TranslatableException) {
           throw err;

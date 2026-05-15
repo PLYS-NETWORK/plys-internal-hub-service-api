@@ -278,11 +278,12 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
       take: dto.limit,
     });
 
-    // Resolve the timezone to render timestamps in: caller's profile setting
-    // wins, then the x-timezone header (already validated by middleware), then
-    // UTC. The list-wide tz lets a frontend display every row's created_at
-    // with the user's wall-clock without a per-row lookup.
-    const tz = businessProfile.timezone ?? this.requestContext.timezone ?? 'UTC';
+    // Render timestamps in the caller's session timezone (captured at login
+    // and promoted into the request context by JwtContextMiddleware). The
+    // RequestContext middleware also accepts a per-request x-timezone header
+    // for unauthenticated routes; for this authenticated endpoint the session
+    // value wins. Falls back to UTC when neither was supplied.
+    const tz = this.requestContext.timezone ?? 'UTC';
 
     const data = transactions.map((tx) =>
       plainToInstance(

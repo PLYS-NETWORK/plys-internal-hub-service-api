@@ -1,14 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import {
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  IsUppercase,
-  Length,
-  Matches,
-  MaxLength,
-} from 'class-validator';
+import { IsNotEmpty, IsString, IsUppercase, Length, Matches } from 'class-validator';
 
 import { IOnboardBusinessProfileRequest } from './interfaces/onboard-business-profile.request.interface';
 
@@ -78,17 +70,4 @@ export class OnboardBusinessProfileDto implements IOnboardBusinessProfileRequest
   @ApiProperty({ name: 'phone_number', example: '+14155552671' })
   @IsString()
   public readonly phone_number!: string;
-
-  @Expose()
-  @ApiProperty({
-    name: 'timezone',
-    example: 'Asia/Bangkok',
-    description: 'IANA timezone. Defaults to the x-timezone request header when omitted.',
-    required: false,
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(64)
-  @Matches(/^[A-Za-z0-9_+\-/]+$/, { message: 'timezone must be a valid IANA identifier' })
-  public readonly timezone?: string;
 }

@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { IsOptional, IsString, IsUppercase, Length, Matches, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsUppercase, Length, Matches } from 'class-validator';
 
 import { IUpdateBusinessProfileRequest } from './interfaces/update-business-profile.request.interface';
 
@@ -82,16 +82,4 @@ export class UpdateBusinessProfileDto implements IUpdateBusinessProfileRequest {
   @IsOptional()
   @IsString()
   public readonly phone_number?: string;
-
-  @Expose()
-  @ApiPropertyOptional({
-    name: 'timezone',
-    example: 'Asia/Bangkok',
-    description: 'IANA timezone identifier. Used to format transaction timestamps.',
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(64)
-  @Matches(/^[A-Za-z0-9_+\-/]+$/, { message: 'timezone must be a valid IANA identifier' })
-  public readonly timezone?: string;
 }

@@ -60,27 +60,25 @@
 - **Status on success:** `200 OK`
 - **Request body:** [`UpdateBusinessProfileDto`](../../../src/modules/profiles/business/dto/requests/update-business-profile.dto.ts) — every field is optional.
 
-  | Field            | Type     | Required | Constraints                                                                                                                                                                      |
-  | ---------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `company_name`   | `string` | no       | —                                                                                                                                                                                |
-  | `owner_name`     | `string` | no       | Full name of the business owner.                                                                                                                                                 |
-  | `tax_id`         | `string` | no       | Length 5–32; regex `^[A-Z0-9-]+$` (case-insensitive). Uniqueness rule below.                                                                                                     |
-  | `industry`       | `string` | no       | —                                                                                                                                                                                |
-  | `company_size`   | `string` | no       | —                                                                                                                                                                                |
-  | `address_line`   | `string` | no       | —                                                                                                                                                                                |
-  | `city`           | `string` | no       | —                                                                                                                                                                                |
-  | `state_province` | `string` | no       | —                                                                                                                                                                                |
-  | `postal_code`    | `string` | no       | —                                                                                                                                                                                |
-  | `country_code`   | `string` | no       | ISO 3166-1 alpha-2; exactly 2 chars, uppercase (if sent).                                                                                                                        |
-  | `phone_number`   | `string` | no       | —                                                                                                                                                                                |
-  | `timezone`       | `string` | no       | IANA timezone identifier (e.g. `America/Los_Angeles`); ≤64 chars. Validated against `Intl.DateTimeFormat`; invalid values are rejected with `BUSINESS_PROFILE_INVALID_TIMEZONE`. |
+  | Field            | Type     | Required | Constraints                                                                  |
+  | ---------------- | -------- | -------- | ---------------------------------------------------------------------------- |
+  | `company_name`   | `string` | no       | —                                                                            |
+  | `owner_name`     | `string` | no       | Full name of the business owner.                                             |
+  | `tax_id`         | `string` | no       | Length 5–32; regex `^[A-Z0-9-]+$` (case-insensitive). Uniqueness rule below. |
+  | `industry`       | `string` | no       | —                                                                            |
+  | `company_size`   | `string` | no       | —                                                                            |
+  | `address_line`   | `string` | no       | —                                                                            |
+  | `city`           | `string` | no       | —                                                                            |
+  | `state_province` | `string` | no       | —                                                                            |
+  | `postal_code`    | `string` | no       | —                                                                            |
+  | `country_code`   | `string` | no       | ISO 3166-1 alpha-2; exactly 2 chars, uppercase (if sent).                    |
+  | `phone_number`   | `string` | no       | —                                                                            |
 
   ```json
   {
     "tax_id": "9876543210",
     "city": "New York",
-    "phone_number": "+12125552671",
-    "timezone": "America/New_York"
+    "phone_number": "+12125552671"
   }
   ```
 
@@ -109,7 +107,6 @@
   | ---- | ---------------------------------------- | --------------------------------------------------------------------------------------- |
   | 404  | `BUSINESS_PROFILE_NOT_FOUND`             | Caller has no business profile to update.                                               |
   | 409  | `BUSINESS_PROFILE_TAX_ID_ALREADY_EXISTS` | New `(tax_id, country_code)` collides with another active account on the same platform. |
-  | 422  | `BUSINESS_PROFILE_INVALID_TIMEZONE`      | Supplied `timezone` is not a valid IANA identifier (rejected by `Intl.DateTimeFormat`). |
   | 422  | `GENERIC_VALIDATION_ERROR`               | Supplied fields fail DTO validation.                                                    |
 
 ---
@@ -136,7 +133,6 @@ Source: [`BusinessProfileResponseDto`](../../../src/modules/profiles/business/dt
   postal_code: string | null,
   country_code: string | null,    // ISO 3166-1 alpha-2
   phone_number: string | null,
-  timezone: string | null,        // IANA identifier, e.g. "Asia/Bangkok"; used to format transaction timestamps. null when never supplied.
   logo_url: string | null,
   is_verified: boolean,           // set to true on onboarding; can also be toggled by admin
   is_partner_platform: boolean,   // set by admin only; always false after onboarding
