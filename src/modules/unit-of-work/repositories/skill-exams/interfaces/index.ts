@@ -17,6 +17,13 @@ export interface IConsultantSkillExamRepository extends AbstractRepository<Consu
   findCurrentByConsultant(consultantId: string): Promise<ConsultantSkillExam | null>;
   /** Returns IN_PROGRESS exams whose deadline has passed. Used by the 5-min sweep. */
   findExpiredInProgress(limit: number): Promise<ConsultantSkillExam[]>;
+  /**
+   * Counts exams currently in admin-actionable states — `SUBMITTED` (awaiting
+   * the automated CopyLeaks+AI pipeline) and `COPYLEAKS_FAILED` (terminal
+   * provider failure that needs a manual retry). Used by the admin dashboard
+   * operational-queues card.
+   */
+  countAwaitingReview(): Promise<number>;
 }
 
 export interface IConsultantSkillExamQuestionRepository extends AbstractRepository<ConsultantSkillExamQuestion> {

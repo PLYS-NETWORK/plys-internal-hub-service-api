@@ -1,6 +1,7 @@
 import { EmailModule } from '@common/modules/email';
 import { EnvironmentsModule } from '@common/modules/environments';
 import { FileStorageModule } from '@common/modules/file-storage';
+import { RedisModule } from '@common/modules/redis/redis.module';
 import { ProjectAiContextModule } from '@modules/project-ai-context/project-ai-context.module';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
 import { forwardRef, Module } from '@nestjs/common';
@@ -33,6 +34,7 @@ import { TaskAttachmentsService } from './services/task-attachments.service';
     EmailModule,
     EnvironmentsModule,
     FileStorageModule,
+    RedisModule,
     // forwardRef breaks the cycle: ProjectAiContextModule imports
     // BusinessProjectsModule for BusinessAccessService.
     forwardRef(() => ProjectAiContextModule),

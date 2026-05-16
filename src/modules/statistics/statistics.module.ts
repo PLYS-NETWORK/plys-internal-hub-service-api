@@ -1,27 +1,44 @@
+import { RedisModule } from '@common/modules/redis/redis.module';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
 import { Module } from '@nestjs/common';
 
-import { BusinessStatisticsController } from './business/business-statistics.controller';
-import { BusinessStatisticsScope } from './business/scopes/business-statistics.scope';
-import { BusinessBillingStatisticsService } from './business/services/business-billing-statistics.service';
-import { BusinessDashboardSummaryService } from './business/services/business-dashboard-summary.service';
-import { BusinessProjectStatisticsService } from './business/services/business-project-statistics.service';
-import { BusinessTaskStatisticsService } from './business/services/business-task-statistics.service';
+import { AdminStatisticsController } from './admin/admin-statistics.controller';
+import {
+  AdminDashboardSummaryService,
+  AdminGrowthTrendService,
+  AdminOperationalQueuesService,
+  AdminUsersBreakdownService,
+} from './admin/services';
+import { BusinessDashboardController } from './business/dashboard/business-dashboard.controller';
+import {
+  BusinessActionItemsService,
+  BusinessDashboardSummaryService,
+  BusinessProjectHealthService,
+  BusinessSpendTrendService,
+  BusinessTeamPerformanceService,
+} from './business/dashboard/services';
 
 /**
- * Read-only dashboard statistics for the BUSINESS platform. Built on a
- * scope-strategy pattern so consultant + admin variants can drop in later
- * without duplicating any aggregation SQL — see `shared/services/abstract-*`.
+ * Read-only dashboard endpoints for both platforms.
+ *
+ * - `/business/dashboard/*` — owner-focused KPIs (money, portfolio, throughput,
+ *   team, action items) backed by a per-business Redis cache.
+ * - `/admin/dashboard/*` — platform-wide KPIs (users, financial, queues,
+ *   growth) backed by a global Redis cache.
  */
 @Module({
-  imports: [UnitOfWorkModule],
-  controllers: [BusinessStatisticsController],
+  imports: [UnitOfWorkModule, RedisModule],
+  controllers: [BusinessDashboardController, AdminStatisticsController],
   providers: [
-    BusinessStatisticsScope,
-    BusinessProjectStatisticsService,
-    BusinessTaskStatisticsService,
-    BusinessBillingStatisticsService,
     BusinessDashboardSummaryService,
+    BusinessActionItemsService,
+    BusinessSpendTrendService,
+    BusinessProjectHealthService,
+    BusinessTeamPerformanceService,
+    AdminDashboardSummaryService,
+    AdminUsersBreakdownService,
+    AdminGrowthTrendService,
+    AdminOperationalQueuesService,
   ],
 })
 export class StatisticsModule {}

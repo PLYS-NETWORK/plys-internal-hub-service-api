@@ -30,6 +30,14 @@ export interface IConsultantPaymentHistoryRow {
   period_end: string | null;
 }
 
+/** Time-series point for platform-wide consultant payouts. */
+export interface IPayoutsTrendPoint {
+  /** `YYYY-MM` for monthly, `IYYY-IW` for weekly. */
+  period_label: string;
+  /** SUM(amount) inside this period — fixed-point string from Postgres. */
+  amount: string;
+}
+
 export interface IConsultantTransactionRepository extends AbstractRepository<ConsultantTransaction> {
   /**
    * Returns the consultant's per-project earnings split between cleared and
@@ -59,4 +67,29 @@ export interface IConsultantTransactionRepository extends AbstractRepository<Con
     consultantId: string,
     projectId: string,
   ): Promise<IConsultantPaymentHistoryRow[]>;
+
+  /**
+   * Platform-wide consultant payouts in a window — sum of `amount` for
+   * COMPLETED `WITHDRAWAL` rows. Used by the admin dashboard's financial KPIs.
+   * @param from Inclusive lower bound on `created_at`.
+   * @param to   Inclusive upper bound on `created_at`.
+   * @returns Decimal string (`'0.00'` when empty).
+   */
+  sumPayoutsBetween(from: Date, to: Date): Promise<string>;
+
+  /**
+   * Platform-wide consultant payouts grouped by period (admin growth chart).
+   * Same filter as {@link sumPayoutsBetween}. Sorted ascending by `period_label`.
+   */
+  sumPayoutsGroupedByPeriod(
+    from: Date,
+    to: Date,
+    granularity: 'month' | 'week',
+  ): Promise<IPayoutsTrendPoint[]>;
+
+  /**
+   * Counts pending withdrawal rows across all consultants (operational queue).
+   * Filter: `type = WITHDRAWAL AND status = PENDING`.
+   */
+  countPendingWithdrawals(): Promise<number>;
 }

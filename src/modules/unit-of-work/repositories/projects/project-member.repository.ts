@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 
-import { IProjectMemberRepository } from './interfaces';
+import { IBusinessTeamConsultantRow, IProjectMemberRepository } from './interfaces';
 
 @Injectable()
 export class ProjectMemberRepository
@@ -51,5 +51,65 @@ export class ProjectMemberRepository
       .andWhere('pm.status = :status', { status: ProjectMemberStatus.ACTIVE })
       .getRawOne<{ count: string }>();
     return Number(row?.count ?? 0);
+  }
+
+  /** @inheritdoc */
+  public async countDistinctActiveConsultantsByProjectIds(projectIds: string[]): Promise<number> {
+    if (projectIds.length === 0) return 0;
+    const row = await this.createQueryBuilder('pm')
+      .select('COUNT(DISTINCT pm.consultant_id)', 'count')
+      .where('pm.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('pm.status = :status', { status: ProjectMemberStatus.ACTIVE })
+      .getRawOne<{ count: string }>();
+    return Number(row?.count ?? 0);
+  }
+
+  /** @inheritdoc */
+  public async countDistinctNewConsultantsByProjectIdsBetween(
+    projectIds: string[],
+    from: Date,
+    to: Date,
+  ): Promise<number> {
+    if (projectIds.length === 0) return 0;
+    const row = await this.createQueryBuilder('pm')
+      .select('COUNT(DISTINCT pm.consultant_id)', 'count')
+      .where('pm.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('pm.joined_at >= :from', { from })
+      .andWhere('pm.joined_at <= :to', { to })
+      .getRawOne<{ count: string }>();
+    return Number(row?.count ?? 0);
+  }
+
+  /** @inheritdoc */
+  public async findActiveConsultantsByProjectIds(
+    projectIds: string[],
+    limit: number,
+  ): Promise<IBusinessTeamConsultantRow[]> {
+    if (projectIds.length === 0) return [];
+    const rows = await this.createQueryBuilder('pm')
+      .innerJoin('consultant_profiles', 'cp', 'cp.id = pm.consultant_id')
+      .select('pm.consultant_id', 'consultant_id')
+      .addSelect('cp.full_name', 'full_name')
+      .addSelect('cp.avatar_url', 'avatar_url')
+      .addSelect('COUNT(DISTINCT pm.project_id)::int', 'active_projects_count')
+      .where('pm.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('pm.status = :status', { status: ProjectMemberStatus.ACTIVE })
+      .groupBy('pm.consultant_id')
+      .addGroupBy('cp.full_name')
+      .addGroupBy('cp.avatar_url')
+      .orderBy('cp.full_name', 'ASC')
+      .limit(limit)
+      .getRawMany<{
+        consultant_id: string;
+        full_name: string;
+        avatar_url: string | null;
+        active_projects_count: number;
+      }>();
+    return rows.map((r) => ({
+      consultant_id: r.consultant_id,
+      full_name: r.full_name,
+      avatar_url: r.avatar_url,
+      active_projects_count: Number(r.active_projects_count),
+    }));
   }
 }

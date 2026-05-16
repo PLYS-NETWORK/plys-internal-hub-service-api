@@ -1,6 +1,6 @@
 import { AbstractRepository } from '@common/repositories';
 import { ConsultantTransaction } from '@database/entities';
-import { ConsultantTransactionType } from '@database/enums';
+import { ConsultantTransactionType, TransactionStatus } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
@@ -10,6 +10,7 @@ import {
   IConsultantEarningsTotals,
   IConsultantPaymentHistoryRow,
   IConsultantTransactionRepository,
+  IPayoutsTrendPoint,
 } from './interfaces';
 
 @Injectable()
@@ -130,5 +131,50 @@ export class ConsultantTransactionRepository
       period_start: r.period_start,
       period_end: r.period_end,
     }));
+  }
+
+  /** @inheritdoc */
+  public async sumPayoutsBetween(from: Date, to: Date): Promise<string> {
+    const row = await this.createQueryBuilder('ct')
+      .select('COALESCE(SUM(ct.amount), 0)', 'amount')
+      .where('ct.type = :type', { type: ConsultantTransactionType.WITHDRAWAL })
+      .andWhere('ct.status = :status', { status: TransactionStatus.COMPLETED })
+      .andWhere('ct.created_at >= :from', { from })
+      .andWhere('ct.created_at <= :to', { to })
+      .getRawOne<{ amount: string }>();
+    return row?.amount ?? '0.00';
+  }
+
+  /** @inheritdoc */
+  public async sumPayoutsGroupedByPeriod(
+    from: Date,
+    to: Date,
+    granularity: 'month' | 'week',
+  ): Promise<IPayoutsTrendPoint[]> {
+    const periodExpr =
+      granularity === 'week'
+        ? `to_char(ct.created_at, 'IYYY-IW')`
+        : `to_char(date_trunc('month', ct.created_at), 'YYYY-MM')`;
+
+    return this.createQueryBuilder('ct')
+      .select(periodExpr, 'period_label')
+      .addSelect('COALESCE(SUM(ct.amount), 0)', 'amount')
+      .where('ct.type = :type', { type: ConsultantTransactionType.WITHDRAWAL })
+      .andWhere('ct.status = :status', { status: TransactionStatus.COMPLETED })
+      .andWhere('ct.created_at >= :from', { from })
+      .andWhere('ct.created_at <= :to', { to })
+      .groupBy('period_label')
+      .orderBy('period_label', 'ASC')
+      .getRawMany<IPayoutsTrendPoint>();
+  }
+
+  /** @inheritdoc */
+  public async countPendingWithdrawals(): Promise<number> {
+    return this.repository.count({
+      where: {
+        type: ConsultantTransactionType.WITHDRAWAL,
+        status: TransactionStatus.PENDING,
+      },
+    });
   }
 }

@@ -62,4 +62,19 @@ export interface IProjectRepository extends AbstractRepository<Project> {
     from?: string,
     to?: string,
   ): Promise<IProjectTrendPoint[]>;
+
+  /**
+   * Returns active (PUBLISHED + IN_PROGRESS by default) projects for a
+   * business, optionally narrowed to a single status. Sorted by `published_at`
+   * DESC, then `id` ASC for stability. Used by the business-dashboard
+   * project-health table.
+   * @param businessId Owner.
+   * @param limit Max rows; the caller caps the upper bound on validation.
+   * @param statuses Status whitelist; defaults to PUBLISHED + IN_PROGRESS.
+   */
+  findActiveByBusinessId(
+    businessId: string,
+    limit: number,
+    statuses?: ProjectStatus[],
+  ): Promise<Project[]>;
 }

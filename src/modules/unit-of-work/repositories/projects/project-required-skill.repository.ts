@@ -21,4 +21,13 @@ export class ProjectRequiredSkillRepository
   public withManager(manager: EntityManager): this {
     return new ProjectRequiredSkillRepository(manager) as this;
   }
+
+  /** @inheritdoc */
+  public async findSkillIdsByProjectId(projectId: string): Promise<string[]> {
+    const rows = await this.createQueryBuilder('prs')
+      .select('prs.skill_id', 'skill_id')
+      .where('prs.project_id = :projectId', { projectId })
+      .getRawMany<{ skill_id: string }>();
+    return rows.map((r) => r.skill_id);
+  }
 }

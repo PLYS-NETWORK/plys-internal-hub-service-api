@@ -73,4 +73,13 @@ export class ConsultantSkillExamRepository
       take: limit,
     });
   }
+
+  /** @inheritdoc */
+  public async countAwaitingReview(): Promise<number> {
+    return this.repository.count({
+      where: {
+        status: In([SkillExamStatus.SUBMITTED, SkillExamStatus.COPYLEAKS_FAILED]),
+      },
+    });
+  }
 }
