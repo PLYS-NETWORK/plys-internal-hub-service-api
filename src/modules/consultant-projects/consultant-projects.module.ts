@@ -1,36 +1,21 @@
-import { FileStorageModule } from '@common/modules/file-storage';
-import { BusinessProjectsModule } from '@modules/business-projects/business-projects.module';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
 import { Module } from '@nestjs/common';
 
-import { ConsultantBoardController } from './controllers/board.controller';
-import { ConsultantOverviewController } from './controllers/overview.controller';
-import { ConsultantProjectsController } from './controllers/projects.controller';
-import { ConsultantBoardService } from './services/board/board.service';
-import { ConsultantBoardResultsService } from './services/board/board-results.service';
+import { ConsultantExploreController } from './controllers/consultant-explore.controller';
 import { ConsultantAccessService } from './services/consultant-access.service';
-import { ConsultantOverviewService } from './services/overview.service';
-import { ConsultantProjectsService } from './services/projects.service';
+import { ConsultantExploreService } from './services/consultant-explore.service';
 
 /**
- * Consultant-side projects surface (`/projects/consultant/...`). Mirrors
- * `BusinessProjectsModule` in structure; the read-only discovery flow that
- * used to live in `ProjectsModule` (`/projects-consultant`) has been folded
- * into `ConsultantProjectsService` here.
+ * Consultant-side projects surface, rebuilt feature-by-feature. Step 1 ships
+ * the explore discovery feed only; overview / board are reintroduced as
+ * separate features in later steps and will be wired in here.
+ *
+ * `RedisModule` and `I18nModule` are registered globally, so they are not
+ * imported here even though `ConsultantExploreService` injects them.
  */
 @Module({
-  imports: [UnitOfWorkModule, FileStorageModule, BusinessProjectsModule],
-  controllers: [
-    ConsultantProjectsController,
-    ConsultantOverviewController,
-    ConsultantBoardController,
-  ],
-  providers: [
-    ConsultantAccessService,
-    ConsultantProjectsService,
-    ConsultantOverviewService,
-    ConsultantBoardService,
-    ConsultantBoardResultsService,
-  ],
+  imports: [UnitOfWorkModule],
+  controllers: [ConsultantExploreController],
+  providers: [ConsultantAccessService, ConsultantExploreService],
 })
 export class ConsultantProjectsModule {}

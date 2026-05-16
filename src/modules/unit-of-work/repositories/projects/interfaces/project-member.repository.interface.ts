@@ -45,6 +45,21 @@ export interface IProjectMemberRepository extends AbstractRepository<ProjectMemb
   ): Promise<number>;
 
   /**
+   * Returns the subset of `projectIds` for which the given consultant has
+   * an ACTIVE membership row. Powers per-row `is_joined` flags in the
+   * consultant discovery feed (list) and the detail view (single id). Runs
+   * as one query and returns a `Set` for O(1) lookup during DTO mapping.
+   *
+   * @param consultantId - Caller's consultant profile id.
+   * @param projectIds - Project UUIDs to check against. Empty array short-circuits to an empty set.
+   * @returns Set of project IDs where the consultant is currently ACTIVE.
+   */
+  findActiveProjectIdsByConsultantId(
+    consultantId: string,
+    projectIds: string[],
+  ): Promise<Set<string>>;
+
+  /**
    * Top-N consultants for the team-performance roster table, joining
    * `consultant_profiles` so the row carries `full_name` + `avatar_url`.
    * Filtered to ACTIVE memberships across the given projects. Returns

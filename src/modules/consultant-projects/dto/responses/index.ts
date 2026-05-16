@@ -1,12 +1,3 @@
-export { ConsultantBoardAttachmentResponseDto } from './consultant-board-attachment-response.dto';
-export {
-  ConsultantBoardResultAuthorDto,
-  ConsultantBoardResultResponseDto,
-} from './consultant-board-result-response.dto';
-export {
-  ConsultantBoardTaskAssigneeDto,
-  ConsultantBoardTaskResponseDto,
-} from './consultant-board-task-response.dto';
-export { ConsultantOverviewResponseDto } from './consultant-overview-response.dto';
-export { ConsultantProjectDetailResponseDto } from './consultant-project-detail-response.dto';
-export { ConsultantProjectListItemResponseDto } from './consultant-project-list-item-response.dto';
+export { ConsultantExploreProjectDetailResponseDto } from './consultant-explore-project-detail.response.dto';
+export { ConsultantExploreProjectListItemResponseDto } from './consultant-explore-project-list-item.response.dto';
+export { ConsultantExploreSkillResponseDto } from './consultant-explore-skill.response.dto';

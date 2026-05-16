@@ -25,30 +25,38 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
   }
 
   /** @inheritdoc */
-  public async findAccessibleMatchingSkills(
-    skillIds: string[],
-    statuses: ProjectStatus[],
-    skip: number,
-    take: number,
-  ): Promise<[Project[], number]> {
-    if (skillIds.length === 0 || statuses.length === 0) return [[], 0];
+  public async findDiscoverableForConsultant(params: {
+    titleSearch?: string;
+    status?: ProjectStatus.PUBLISHED | ProjectStatus.IN_PROGRESS;
+    skip: number;
+    take: number;
+  }): Promise<[Project[], number]> {
+    // Hard-pinned status allow-list. Narrowing to a single value is allowed
+    // (and validated by the DTO), but DRAFT / CONFIGURED / DONE / CANCELLED
+    // can never leak through even if the caller crafts a request.
+    const allowedStatuses: ProjectStatus[] = [ProjectStatus.PUBLISHED, ProjectStatus.IN_PROGRESS];
+    const statuses: ProjectStatus[] =
+      params.status && allowedStatuses.includes(params.status) ? [params.status] : allowedStatuses;
 
     const qb = this.createQueryBuilder('project')
-      .where('project.status IN (:...statuses)', { statuses })
-      .andWhere('project.deleted_at IS NULL')
-      .andWhere((subQb) => {
-        const sub = subQb
-          .subQuery()
-          .select('prs.project_id')
-          .from('project_required_skills', 'prs')
-          .where('prs.skill_id IN (:...skillIds)', { skillIds })
-          .getQuery();
-        return `project.id IN ${sub}`;
-      })
-      .orderBy('project.published_at', 'DESC')
+      .innerJoinAndSelect('project.business', 'business')
+      .where('project.deleted_at IS NULL')
+      .andWhere('project.status IN (:...statuses)', { statuses });
+
+    const trimmedTitle = params.titleSearch?.trim();
+    if (trimmedTitle && trimmedTitle.length > 0) {
+      qb.andWhere('LOWER(project.title) LIKE :title', {
+        title: `%${trimmedTitle.toLowerCase()}%`,
+      });
+    }
+
+    // Partner-platform projects bubble to the top (TRUE > FALSE under DESC),
+    // then most-recently-published, then id for a stable tiebreak across pages.
+    qb.orderBy('business.is_partner_platform', 'DESC')
+      .addOrderBy('project.published_at', 'DESC', 'NULLS LAST')
       .addOrderBy('project.id', 'ASC')
-      .skip(skip)
-      .take(take);
+      .skip(params.skip)
+      .take(params.take);
 
     return qb.getManyAndCount();
   }

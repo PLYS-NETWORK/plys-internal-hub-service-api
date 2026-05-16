@@ -14,17 +14,30 @@ export interface IProjectRepository extends AbstractRepository<Project> {
   findByIdAndBusinessId(id: string, businessId: string): Promise<Project | null>;
 
   /**
-   * Returns projects whose `status` is one of `statuses` and that require at
-   * least one of the supplied skill ids. Used by the consultant discovery
-   * feed; PUBLISHED + IN_PROGRESS are both surfaced because in-progress
-   * projects can still recruit additional members.
+   * Returns the discovery-feed list for an authenticated consultant. Status
+   * is hard-pinned to PUBLISHED + IN_PROGRESS regardless of caller input —
+   * other statuses can never be surfaced. When `status` is provided it must
+   * be one of those two values; the method then narrows to that single
+   * status. Optional case-insensitive title substring. Sort order:
+   * `business.is_partner_platform DESC` (so partner-platform projects
+   * surface first), then `project.published_at DESC NULLS LAST`, then
+   * `project.id ASC` for a stable cross-page tiebreak. Returned `Project`
+   * rows have `business` eagerly populated, so callers can read
+   * `project.business.companyName` / `isPartnerPlatform` without a second
+   * round-trip.
+   *
+   * @param params.titleSearch - Optional case-insensitive substring match on `project.title`.
+   * @param params.status - Optional single-status narrow; falls back to both PUBLISHED + IN_PROGRESS.
+   * @param params.skip - Pagination offset (0-based).
+   * @param params.take - Page size.
+   * @returns A `[rows, totalCount]` tuple — total ignores skip/take.
    */
-  findAccessibleMatchingSkills(
-    skillIds: string[],
-    statuses: ProjectStatus[],
-    skip: number,
-    take: number,
-  ): Promise<[Project[], number]>;
+  findDiscoverableForConsultant(params: {
+    titleSearch?: string;
+    status?: ProjectStatus.PUBLISHED | ProjectStatus.IN_PROGRESS;
+    skip: number;
+    take: number;
+  }): Promise<[Project[], number]>;
 
   /**
    * Returns a project that is either in one of the accessible `statuses` or
