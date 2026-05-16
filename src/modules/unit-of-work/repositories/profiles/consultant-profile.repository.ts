@@ -41,4 +41,12 @@ export class ConsultantProfileRepository
       .getRawMany<{ userId: string }>();
     return rows.map((r) => r.userId);
   }
+
+  /** @inheritdoc */
+  public async sumAccountBalances(): Promise<string> {
+    const row = await this.createQueryBuilder('cp')
+      .select('COALESCE(SUM(cp.account_balance), 0)', 'amount')
+      .getRawOne<{ amount: string }>();
+    return row?.amount ?? '0.00';
+  }
 }

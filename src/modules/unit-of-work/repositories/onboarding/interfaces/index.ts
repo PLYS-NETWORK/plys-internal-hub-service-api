@@ -7,6 +7,11 @@ import {
 
 export interface IConsultantOnboardingRepository extends AbstractRepository<ConsultantOnboarding> {
   findByUserId(userId: string): Promise<ConsultantOnboarding | null>;
+  /**
+   * Counts consultant onboardings sitting in the admin review queue —
+   * `status = INTERVIEW_SUBMITTED`. Used by the admin dashboard.
+   */
+  countPendingReview(): Promise<number>;
 }
 
 export interface IConsultantOnboardingAnswerRepository extends AbstractRepository<ConsultantOnboardingAnswer> {

@@ -7,9 +7,19 @@ import { EntityManager } from 'typeorm';
 
 import {
   IBusinessTransactionRepository,
+  IGmvTrendPoint,
   IPublishingSpendSummary,
   ISpendTrendPoint,
 } from './interfaces';
+
+// Platform-wide GMV is the gross inflow from businesses: direct top-ups +
+// monthly billing settlements. PROJECT_PUBLISHED and TASK_ADDED are internal
+// debit entries against the business balance (no fresh external money), and
+// REFUND / WITHDRAW are outflows — none belong in GMV.
+const GMV_TYPES: readonly BusinessTransactionType[] = [
+  BusinessTransactionType.TOP_UP,
+  BusinessTransactionType.MONTHLY_BILLING,
+];
 
 @Injectable()
 export class BusinessTransactionRepository
@@ -68,5 +78,40 @@ export class BusinessTransactionRepository
     if (to) qb.andWhere('bt.created_at <= :to', { to });
 
     return qb.groupBy('period_label').orderBy('period_label', 'ASC').getRawMany<ISpendTrendPoint>();
+  }
+
+  /** @inheritdoc */
+  public async sumGmvBetween(from: Date, to: Date): Promise<string> {
+    const row = await this.createQueryBuilder('bt')
+      .select('COALESCE(SUM(bt.total_amount), 0)', 'amount')
+      .where('bt.type IN (:...types)', { types: GMV_TYPES })
+      .andWhere('bt.status = :status', { status: TransactionStatus.COMPLETED })
+      .andWhere('bt.created_at >= :from', { from })
+      .andWhere('bt.created_at <= :to', { to })
+      .getRawOne<{ amount: string }>();
+    return row?.amount ?? '0.00';
+  }
+
+  /** @inheritdoc */
+  public async sumGmvGroupedByPeriod(
+    from: Date,
+    to: Date,
+    granularity: 'month' | 'week',
+  ): Promise<IGmvTrendPoint[]> {
+    const periodExpr =
+      granularity === 'week'
+        ? `to_char(bt.created_at, 'IYYY-IW')`
+        : `to_char(date_trunc('month', bt.created_at), 'YYYY-MM')`;
+
+    return this.createQueryBuilder('bt')
+      .select(periodExpr, 'period_label')
+      .addSelect('COALESCE(SUM(bt.total_amount), 0)', 'amount')
+      .where('bt.type IN (:...types)', { types: GMV_TYPES })
+      .andWhere('bt.status = :status', { status: TransactionStatus.COMPLETED })
+      .andWhere('bt.created_at >= :from', { from })
+      .andWhere('bt.created_at <= :to', { to })
+      .groupBy('period_label')
+      .orderBy('period_label', 'ASC')
+      .getRawMany<IGmvTrendPoint>();
   }
 }

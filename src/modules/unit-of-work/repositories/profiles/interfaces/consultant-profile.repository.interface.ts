@@ -12,4 +12,12 @@ export interface IConsultantProfileRepository extends AbstractRepository<Consult
    * @returns Array of userId strings.
    */
   findUserIdsBySkillIds(skillIds: string[], offset: number, limit: number): Promise<string[]>;
+
+  /**
+   * Sums `account_balance` across every consultant profile. Used by the admin
+   * dashboard's `outstanding_payouts` KPI (total earnings sitting in wallets
+   * awaiting withdrawal).
+   * @returns Decimal string (`'0.00'` when no rows).
+   */
+  sumAccountBalances(): Promise<string>;
 }

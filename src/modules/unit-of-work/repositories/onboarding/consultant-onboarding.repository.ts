@@ -1,5 +1,6 @@
 import { AbstractRepository } from '@common/repositories';
 import { ConsultantOnboarding } from '@database/entities';
+import { OnboardingStatus } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
@@ -21,5 +22,10 @@ export class ConsultantOnboardingRepository
 
   public async findByUserId(userId: string): Promise<ConsultantOnboarding | null> {
     return this.repository.findOne({ where: { userId } });
+  }
+
+  /** @inheritdoc */
+  public async countPendingReview(): Promise<number> {
+    return this.repository.count({ where: { status: OnboardingStatus.INTERVIEW_SUBMITTED } });
   }
 }

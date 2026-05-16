@@ -1,5 +1,6 @@
 import { AbstractRepository } from '@common/repositories';
 import { TaskDispute } from '@database/entities';
+import { TaskDisputeStatus } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
@@ -20,5 +21,10 @@ export class TaskDisputeRepository
 
   public withManager(manager: EntityManager): this {
     return new TaskDisputeRepository(manager) as this;
+  }
+
+  /** @inheritdoc */
+  public async countOpen(): Promise<number> {
+    return this.repository.count({ where: { status: TaskDisputeStatus.OPEN } });
   }
 }
