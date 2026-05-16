@@ -287,6 +287,17 @@ export class TaskRepository extends AbstractRepository<Task> implements ITaskRep
   }
 
   /** @inheritdoc */
+  public async sumDraftPricesByProjectId(projectId: string): Promise<string> {
+    const row = await this.createQueryBuilder('task')
+      .select('COALESCE(SUM(task.price), 0)', 'amount')
+      .where('task.project_id = :projectId', { projectId })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere(`task.kanban_status = '${TaskKanbanStatus.DRAFT}'`)
+      .getRawOne<{ amount: string }>();
+    return row?.amount ?? '0.00';
+  }
+
+  /** @inheritdoc */
   public async findAwaitingReviewByProjectIds(
     projectIds: string[],
     limit: number,

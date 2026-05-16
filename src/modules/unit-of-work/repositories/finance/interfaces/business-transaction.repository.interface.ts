@@ -129,4 +129,22 @@ export interface IBusinessTransactionRepository extends AbstractRepository<Busin
    * Projects without spend in the window are absent from the map.
    */
   sumMtdSpendByProjectIds(projectIds: string[], from: Date, to: Date): Promise<Map<string, string>>;
+
+  /**
+   * Lifetime outflow on a single project grouped by `type`. Filters to
+   * `status = COMPLETED AND project_id = ?`. Types absent from the result
+   * map have zero spend. Used by the project-overview `money` block to
+   * split `spent_on_publish` (PROJECT_PUBLISHED) vs. `spent_on_tasks`
+   * (TASK_ADDED).
+   */
+  sumOutflowByProjectIdGroupedByType(projectId: string): Promise<Map<string, string>>;
+
+  /**
+   * Per-project projected monthly bill — sum of `total_amount` for
+   * `TASK_ADDED` rows linked to the business's currently OPEN billing
+   * period AND scoped to this project. Returns `'0.00'` when there are no
+   * matching rows. Caller should only invoke for projects with
+   * `payment_type = PER_MONTH`.
+   */
+  sumProjectedMonthlyBillByProjectId(projectId: string): Promise<string>;
 }

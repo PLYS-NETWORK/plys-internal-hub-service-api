@@ -158,6 +158,14 @@ export interface ITaskRepository extends AbstractRepository<Task> {
   sumUnpublishedTaskPricesByBusinessId(businessId: string): Promise<string>;
 
   /**
+   * SUM(task.price) for DRAFT tasks within a single project (excluding
+   * soft-deleted rows). Used by the project-overview
+   * `money.unpublished_pipeline_value` KPI — money waiting to be paid and
+   * promoted onto the board.
+   */
+  sumDraftPricesByProjectId(projectId: string): Promise<string>;
+
+  /**
    * Top-N rows currently in IN_REVIEW status across the given projects,
    * sorted by `updated_at` ASC (oldest first — that's the action queue order).
    * Includes the owning project's title via JOIN so the action-items endpoint

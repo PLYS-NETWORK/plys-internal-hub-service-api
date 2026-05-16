@@ -30,4 +30,16 @@ export interface ITaskDisputeRepository extends AbstractRepository<TaskDispute> 
    * (oldest first — those are the ones the owner has been sitting on).
    */
   findOpenByBusinessId(businessId: string, limit: number): Promise<IBusinessDisputeRow[]>;
+
+  /**
+   * Per-project count of `OPEN` disputes. Joins through `task` and filters by
+   * `task.project_id`. Used by the per-project overview's action-items count.
+   */
+  countOpenByProjectId(projectId: string): Promise<number>;
+
+  /**
+   * Top-N `OPEN` disputes scoped to a single project, sorted by `opened_at`
+   * ASC. Same row shape as {@link findOpenByBusinessId}.
+   */
+  findOpenByProjectId(projectId: string, limit: number): Promise<IBusinessDisputeRow[]>;
 }

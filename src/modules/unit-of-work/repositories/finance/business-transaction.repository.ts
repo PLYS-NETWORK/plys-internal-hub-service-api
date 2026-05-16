@@ -250,4 +250,31 @@ export class BusinessTransactionRepository
     for (const r of rows) out.set(r.project_id, r.amount);
     return out;
   }
+
+  /** @inheritdoc */
+  public async sumOutflowByProjectIdGroupedByType(projectId: string): Promise<Map<string, string>> {
+    const rows = await this.createQueryBuilder('bt')
+      .select('bt.type', 'type')
+      .addSelect('COALESCE(SUM(bt.total_amount), 0)', 'amount')
+      .where('bt.project_id = :projectId', { projectId })
+      .andWhere('bt.status = :status', { status: TransactionStatus.COMPLETED })
+      .groupBy('bt.type')
+      .getRawMany<{ type: string; amount: string }>();
+    const out = new Map<string, string>();
+    for (const r of rows) out.set(r.type, r.amount);
+    return out;
+  }
+
+  /** @inheritdoc */
+  public async sumProjectedMonthlyBillByProjectId(projectId: string): Promise<string> {
+    const row = await this.createQueryBuilder('bt')
+      .innerJoin('bt.invoice', 'invoice')
+      .innerJoin('invoice.billingPeriod', 'bp')
+      .select('COALESCE(SUM(bt.total_amount), 0)', 'amount')
+      .where('bt.project_id = :projectId', { projectId })
+      .andWhere('bt.type = :type', { type: BusinessTransactionType.TASK_ADDED })
+      .andWhere(`bp.status = 'open'`)
+      .getRawOne<{ amount: string }>();
+    return row?.amount ?? '0.00';
+  }
 }

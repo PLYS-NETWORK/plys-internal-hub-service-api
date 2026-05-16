@@ -1,33 +1,48 @@
 import { AppLogger } from '@common/modules/logger';
+import { RedisService } from '@common/modules/redis/redis.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { DateUtil } from '@common/utils/date';
 import { Money } from '@common/utils/money';
-import { ProjectMemberActiveStatus, ProjectMemberStatus, TaskKanbanStatus } from '@database/enums';
-import { ActivityType, IActivityEventRow } from '@modules/unit-of-work/repositories';
+import {
+  BusinessTransactionType,
+  Currency,
+  ProficiencyLevel,
+  ProjectMemberActiveStatus,
+  ProjectMemberStatus,
+  ProjectPaymentType,
+  TaskKanbanStatus,
+} from '@database/enums';
+import {
+  ActivityType,
+  IActivityEventRow,
+  IConsultantSkillRow,
+} from '@modules/unit-of-work/repositories';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 
 import {
-  IOverviewActivityEvent,
-  IOverviewStatistics,
-  IOverviewSummary,
-  IOverviewTaskStatuses,
-  IOverviewTeamMember,
-} from '../dto/responses/interfaces/overview.response.interface';
+  PROJECT_OVERVIEW_ACTION_ITEMS_LIMIT,
+  PROJECT_OVERVIEW_ACTIVITY_LIMIT,
+  PROJECT_OVERVIEW_CACHE_KEY,
+  PROJECT_OVERVIEW_CACHE_TTL_SECONDS,
+  PROJECT_OVERVIEW_STALE_REVIEW_DAYS,
+  PROJECT_OVERVIEW_TEAM_LIMIT,
+} from '../constants';
 import { OverviewResponseDto } from '../dto/responses/overview-response.dto';
 import { IBusinessProjectOverviewService } from '../interfaces/overview.service.interface';
 import { BusinessAccessService } from './business-access.service';
 
 const ACTIVE_THRESHOLD_HOURS = 8;
 const IDLE_THRESHOLD_HOURS = 48;
-const RECENT_ACTIVITY_LIMIT = 20;
+const STALE_REVIEW_MS = PROJECT_OVERVIEW_STALE_REVIEW_DAYS * 24 * 60 * 60 * 1000;
 
-interface ITeamMemberRow {
+interface ITeamMemberContext {
   consultant_id: string;
   full_name: string;
   avatar_url: string | null;
   last_login_at: Date | null;
+  joined_at: Date;
 }
 
 @Injectable()
@@ -36,7 +51,8 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
 
   constructor(
     private readonly uow: UnitOfWorkService,
-    private readonly requestContext: RequestContextService,
+    private readonly redis: RedisService,
+    requestContext: RequestContextService,
     private readonly access: BusinessAccessService,
   ) {
     this.logger = new AppLogger(BusinessProjectOverviewService.name, requestContext);
@@ -48,97 +64,231 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
 
     const { project, businessProfile } = await this.access.resolveOwnedProject(projectId);
 
-    const [taskStatuses, teamMembers, activityRows, projectCost] = await Promise.all([
-      this.fetchTaskStatuses(projectId),
-      this.fetchTeamMembers(projectId),
+    const cacheKey = PROJECT_OVERVIEW_CACHE_KEY(projectId);
+    const cached = await this.redis.get(cacheKey);
+    if (cached) {
+      this.logger.log(`getOverview — cache hit | projectId: ${projectId}`);
+      return plainToInstance(OverviewResponseDto, JSON.parse(cached) as Record<string, unknown>, {
+        excludeExtraneousValues: true,
+      });
+    }
+
+    const now = new Date();
+    const mtdStart = DateUtil.toDate(DateUtil.startOf(now, 'month'));
+    const sevenDaysAgo = DateUtil.toDate(DateUtil.subtract(now, 7, 'day'));
+
+    // Roster + project required-skill-ids need to land first so the
+    // per-consultant performance + skill rows can reference them. Everything
+    // else fires in the main fan-out below.
+    const [memberRows, requiredSkillIds] = await Promise.all([
+      this.fetchTeamMemberRows(projectId),
+      this.uow.projectRequiredSkills.findSkillIdsByProjectId(projectId),
+    ]);
+    const consultantIds = memberRows.map((m) => m.consultant_id);
+
+    const projectedBillCall =
+      project.paymentType === ProjectPaymentType.PER_MONTH
+        ? this.uow.businessTransactions.sumProjectedMonthlyBillByProjectId(projectId)
+        : Promise.resolve(null);
+
+    const [
+      healthRows,
+      statusCounts,
+      completedLast7d,
+      outflowByType,
+      draftPipeline,
+      projectedBill,
+      perfRows,
+      consultantSkills,
+      awaitingReviewRows,
+      overdueRows,
+      overdueCount,
+      disputeRows,
+      disputeCount,
+      activityResult,
+    ] = await Promise.all([
+      this.uow.tasks.aggregateHealthByProjectIds([projectId]),
+      this.uow.tasks.countByProjectIdsGroupedByStatus([projectId], projectId),
+      this.uow.tasks.countCompletedByProjectIdsBetween([projectId], sevenDaysAgo, now),
+      this.uow.businessTransactions.sumOutflowByProjectIdGroupedByType(projectId),
+      this.uow.tasks.sumDraftPricesByProjectId(projectId),
+      projectedBillCall,
+      this.uow.tasks.aggregatePerformanceByAssigneesBetween(
+        [projectId],
+        consultantIds,
+        mtdStart,
+        now,
+      ),
+      this.uow.consultantSkills.findByConsultantIds(consultantIds),
+      this.uow.tasks.findAwaitingReviewByProjectIds(
+        [projectId],
+        PROJECT_OVERVIEW_ACTION_ITEMS_LIMIT,
+      ),
+      this.uow.tasks.findOverdueByProjectIds([projectId], PROJECT_OVERVIEW_ACTION_ITEMS_LIMIT),
+      this.uow.tasks.countOverdueByProjectIds([projectId]),
+      this.uow.taskDisputes.findOpenByProjectId(projectId, PROJECT_OVERVIEW_ACTION_ITEMS_LIMIT),
+      this.uow.taskDisputes.countOpenByProjectId(projectId),
       this.uow.projectActivity.findEventsByProjectId(
         projectId,
         0,
-        RECENT_ACTIVITY_LIMIT,
+        PROJECT_OVERVIEW_ACTIVITY_LIMIT,
         undefined as ActivityType[] | undefined,
       ),
-      this.fetchProjectCost(projectId),
     ]);
 
-    const summary: IOverviewSummary = {
+    const [activityRows] = activityResult;
+    const health = healthRows[0];
+
+    const summary = {
+      id: project.id,
+      code: project.code,
       title: project.title,
-      created_at: project.createdAt,
-      updated_at: project.updatedAt,
-      published_at: project.publishedAt,
-      business_company_name: businessProfile.companyName,
       status: project.status,
       payment_type: project.paymentType,
-      project_cost: projectCost.toFixedString(),
+      business_company_name: businessProfile.companyName,
+      required_consultants: project.requiredConsultants,
+      created_at: project.createdAt.toISOString(),
+      published_at: project.publishedAt ? project.publishedAt.toISOString() : null,
+      started_at: project.startedAt ? project.startedAt.toISOString() : null,
+      completed_at: project.completedAt ? project.completedAt.toISOString() : null,
     };
 
-    const statistics: IOverviewStatistics = {
-      // total_tasks excludes drafts (drafts are not "on the board" yet).
-      total_tasks: this.sumNonDraft(taskStatuses),
-      completed_tasks: taskStatuses[TaskKanbanStatus.DONE],
-      in_progress_tasks: taskStatuses[TaskKanbanStatus.IN_PROGRESS],
-      total_project_members: teamMembers.length,
+    const total = health?.total ?? 0;
+    const completed = health?.completed ?? 0;
+    const inReview = health?.in_review ?? 0;
+    const overdue = health?.overdue ?? 0;
+    const lastActivity = health?.last_activity_at ?? null;
+    const oldestInReview = health?.oldest_in_review_at ?? null;
+    const reviewStale =
+      oldestInReview !== null && Date.now() - oldestInReview.getTime() > STALE_REVIEW_MS;
+
+    const healthBlock = {
+      total_tasks: total,
+      completed_tasks: completed,
+      in_review_tasks: inReview,
+      in_progress_tasks: statusCounts[TaskKanbanStatus.IN_PROGRESS] ?? 0,
+      overdue_tasks: overdue,
+      completion_pct: total > 0 ? ((completed / total) * 100).toFixed(1) : null,
+      tasks_completed_last_7d: completedLast7d,
+      open_disputes: disputeCount,
+      is_at_risk: overdue > 0 || (inReview > 0 && reviewStale),
+      last_activity_at: lastActivity ? lastActivity.toISOString() : null,
     };
 
-    const taskStatusesDto: IOverviewTaskStatuses = {
-      draft: taskStatuses[TaskKanbanStatus.DRAFT],
-      to_do: taskStatuses[TaskKanbanStatus.TO_DO],
-      assigned: taskStatuses[TaskKanbanStatus.ASSIGNED],
-      in_progress: taskStatuses[TaskKanbanStatus.IN_PROGRESS],
-      in_review: taskStatuses[TaskKanbanStatus.IN_REVIEW],
-      pending_approval: taskStatuses[TaskKanbanStatus.PENDING_APPROVAL],
-      revision_requested: taskStatuses[TaskKanbanStatus.REVISION_REQUESTED],
-      done: taskStatuses[TaskKanbanStatus.DONE],
-      cancelled: taskStatuses[TaskKanbanStatus.CANCELLED],
+    const spentOnPublish = outflowByType.get(BusinessTransactionType.PROJECT_PUBLISHED) ?? '0.00';
+    const spentOnTasks = outflowByType.get(BusinessTransactionType.TASK_ADDED) ?? '0.00';
+    const totalSpent = (Number(spentOnPublish) + Number(spentOnTasks)).toFixed(2);
+    const money = {
+      currency: Currency.USD,
+      spent_on_publish: Money.from(spentOnPublish).toFixedString(),
+      spent_on_tasks: Money.from(spentOnTasks).toFixedString(),
+      total_spent: Money.from(totalSpent).toFixedString(),
+      unpublished_pipeline_value: Money.from(draftPipeline).toFixedString(),
+      projected_monthly_bill:
+        projectedBill !== null ? Money.from(projectedBill).toFixedString() : null,
     };
 
-    const tz = this.requestContext.timezone ?? undefined;
-    const now = DateUtil.now(tz).toDate();
-    const teamMemberDtos: IOverviewTeamMember[] = teamMembers.map((m) => ({
-      consultant_id: m.consultant_id,
-      full_name: m.full_name,
-      avatar_url: m.avatar_url,
-      active_status: bucketActiveStatus(m.last_login_at, now),
-    }));
+    const requiredSkillSet = new Set(requiredSkillIds);
+    const skillsByConsultant = new Map<string, IConsultantSkillRow[]>();
+    for (const row of consultantSkills) {
+      const list = skillsByConsultant.get(row.consultant_id) ?? [];
+      list.push(row);
+      skillsByConsultant.set(row.consultant_id, list);
+    }
+    const perfByConsultant = new Map(perfRows.map((r) => [r.consultant_id, r]));
 
-    const [rows] = activityRows;
-    const recentActivity: IOverviewActivityEvent[] = rows.map((row) => this.toActivityEvent(row));
+    const team = memberRows.map((m) => {
+      const perf = perfByConsultant.get(m.consultant_id);
+      const totalDone = perf?.total_done ?? 0;
+      const skills = (skillsByConsultant.get(m.consultant_id) ?? []).map((s) => ({
+        skill_id: s.skill_id,
+        skill_name: s.skill_name,
+        proficiency_level: s.proficiency_level as ProficiencyLevel | null,
+        rating: s.rating,
+        is_required: requiredSkillSet.has(s.skill_id),
+      }));
+      return {
+        consultant_id: m.consultant_id,
+        full_name: m.full_name,
+        avatar_url: m.avatar_url,
+        active_status: bucketActiveStatus(m.last_login_at, now),
+        joined_at: m.joined_at.toISOString(),
+        completed_tasks: perf?.completed ?? 0,
+        in_progress_tasks: perf?.in_progress ?? 0,
+        avg_cycle_days:
+          perf?.avg_cycle_days !== undefined && perf?.avg_cycle_days !== null
+            ? perf.avg_cycle_days.toFixed(1)
+            : null,
+        on_time_pct: totalDone > 0 ? (((perf?.on_time ?? 0) / totalDone) * 100).toFixed(1) : null,
+        skills,
+      };
+    });
+
+    const actionItems = {
+      tasks_awaiting_review: {
+        total: inReview,
+        items: awaitingReviewRows.map((r) => ({
+          task_id: r.task_id,
+          task_code: r.task_code,
+          title: r.title,
+          reference_at: r.reference_at.toISOString(),
+          days_overdue: null,
+        })),
+      },
+      overdue_tasks: {
+        total: overdueCount,
+        items: overdueRows.map((r) => ({
+          task_id: r.task_id,
+          task_code: r.task_code,
+          title: r.title,
+          reference_at: r.reference_at.toISOString(),
+          days_overdue: r.days_overdue ?? 0,
+        })),
+      },
+      open_disputes: {
+        total: disputeCount,
+        items: disputeRows.map((r) => ({
+          dispute_id: r.dispute_id,
+          task_id: r.task_id,
+          task_code: r.task_code,
+          reason_snippet: r.reason_snippet,
+          opened_at: r.opened_at.toISOString(),
+        })),
+      },
+    };
+
+    const activity = activityRows.map((row) => this.toActivityEvent(row));
+
+    const payload = {
+      summary,
+      health: healthBlock,
+      money,
+      team,
+      action_items: actionItems,
+      activity,
+      generated_at: now.toISOString(),
+    };
+
+    try {
+      await this.redis.set(cacheKey, JSON.stringify(payload), PROJECT_OVERVIEW_CACHE_TTL_SECONDS);
+    } catch (err: unknown) {
+      this.logger.warn(
+        `getOverview — cache set failed | error: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
 
     this.logger.log(
-      `getOverview — complete | projectId: ${projectId}, members: ${teamMemberDtos.length}, events: ${recentActivity.length}`,
+      `getOverview — complete | projectId: ${projectId}, members: ${team.length}, events: ${activity.length}, total_spent: ${money.total_spent}`,
     );
 
-    return plainToInstance(
-      OverviewResponseDto,
-      {
-        summary,
-        statistics,
-        task_statuses: taskStatusesDto,
-        team_members: teamMemberDtos,
-        recent_activity: recentActivity,
-      },
-      { excludeExtraneousValues: true },
-    );
+    return plainToInstance(OverviewResponseDto, payload, { excludeExtraneousValues: true });
   }
 
-  // ─── Helpers ───────────────────────────────────────────────────────────────
-
-  private async fetchTaskStatuses(projectId: string): Promise<Record<TaskKanbanStatus, number>> {
-    return this.uow.tasks.countByProjectIdsGroupedByStatus([projectId], projectId);
-  }
-
-  private sumNonDraft(byStatus: Record<TaskKanbanStatus, number>): number {
-    let total = 0;
-    for (const status of Object.keys(byStatus) as TaskKanbanStatus[]) {
-      if (status === TaskKanbanStatus.DRAFT) continue;
-      total += byStatus[status];
-    }
-    return total;
-  }
-
-  // Active members of a project with the consultant profile and their last
-  // login time. Hand-rolled because the existing repo helper does not include
-  // the avatar URL — and the team-members card needs it.
-  private async fetchTeamMembers(projectId: string): Promise<ITeamMemberRow[]> {
+  // Active members joined to the consultant profile + user. Hand-rolled
+  // because the existing roster helper doesn't include `last_login_at`,
+  // which the active-status bucketing depends on. Capped at
+  // PROJECT_OVERVIEW_TEAM_LIMIT.
+  private async fetchTeamMemberRows(projectId: string): Promise<ITeamMemberContext[]> {
     return this.uow.projectMembers
       .createQueryBuilder('pm')
       .innerJoin('pm.consultant', 'cp')
@@ -147,26 +297,23 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
       .addSelect('cp.full_name', 'full_name')
       .addSelect('cp.avatar_url', 'avatar_url')
       .addSelect('u.last_login_at', 'last_login_at')
+      .addSelect('pm.joined_at', 'joined_at')
       .where('pm.project_id = :projectId', { projectId })
       .andWhere('pm.status = :active', { active: ProjectMemberStatus.ACTIVE })
       .orderBy('pm.joined_at', 'ASC')
-      .getRawMany<ITeamMemberRow>();
+      .limit(PROJECT_OVERVIEW_TEAM_LIMIT)
+      .getRawMany<ITeamMemberContext>();
   }
 
-  private async fetchProjectCost(projectId: string): Promise<Money> {
-    const row = await this.uow.tasks
-      .createQueryBuilder('t')
-      .select('COALESCE(SUM(t.price), 0)', 'sum')
-      .where('t.project_id = :projectId', { projectId })
-      .andWhere('t.kanban_status != :cancelled', { cancelled: TaskKanbanStatus.CANCELLED })
-      .andWhere('t.deleted_at IS NULL')
-      .getRawOne<{ sum: string }>();
-    return Money.from(row?.sum ?? '0');
-  }
-
-  private toActivityEvent(row: IActivityEventRow): IOverviewActivityEvent {
+  private toActivityEvent(row: IActivityEventRow): {
+    event_type: IActivityEventRow['event_type'];
+    event_id: string;
+    occurred_at: Date;
+    actor: { user_id: string | null; name: string | null };
+    payload: Record<string, unknown>;
+  } {
     return {
-      event_type: row.event_type as IOverviewActivityEvent['event_type'],
+      event_type: row.event_type,
       event_id: row.event_id,
       occurred_at: row.occurred_at,
       actor: { user_id: row.actor_user_id, name: row.actor_name },

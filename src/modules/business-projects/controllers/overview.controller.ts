@@ -30,9 +30,9 @@ export class BusinessProjectOverviewController {
   @Get(':id/overview')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Single aggregated overview for the dashboard top page',
+    summary: 'Owner-facing project overview, batched into one round trip',
     description:
-      'Returns summary, statistics, task_statuses, team_members, application_breakdown, and the most recent 20 activity events in one round trip.',
+      'Returns summary, health, money, team (with per-member skills + performance), action_items (top-5 per category), and the most recent 20 activity events. Cached per-project for 30 s.',
   })
   public async getOverview(
     @Param('id', ParseUUIDPipe) id: string,

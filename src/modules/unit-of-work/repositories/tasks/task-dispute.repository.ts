@@ -68,4 +68,40 @@ export class TaskDisputeRepository
       }>();
     return rows;
   }
+
+  /** @inheritdoc */
+  public async countOpenByProjectId(projectId: string): Promise<number> {
+    const row = await this.createQueryBuilder('td')
+      .innerJoin('td.task', 'task')
+      .select('COUNT(*)', 'count')
+      .where('task.project_id = :projectId', { projectId })
+      .andWhere('td.status = :status', { status: TaskDisputeStatus.OPEN })
+      .getRawOne<{ count: string }>();
+    return Number(row?.count ?? 0);
+  }
+
+  /** @inheritdoc */
+  public async findOpenByProjectId(
+    projectId: string,
+    limit: number,
+  ): Promise<IBusinessDisputeRow[]> {
+    return this.createQueryBuilder('td')
+      .innerJoin('td.task', 'task')
+      .select('td.id', 'dispute_id')
+      .addSelect('task.id', 'task_id')
+      .addSelect('task.code', 'task_code')
+      .addSelect('LEFT(td.reason, 120)', 'reason_snippet')
+      .addSelect('td.opened_at', 'opened_at')
+      .where('task.project_id = :projectId', { projectId })
+      .andWhere('td.status = :status', { status: TaskDisputeStatus.OPEN })
+      .orderBy('td.opened_at', 'ASC')
+      .limit(limit)
+      .getRawMany<{
+        dispute_id: string;
+        task_id: string;
+        task_code: string;
+        reason_snippet: string;
+        opened_at: Date;
+      }>();
+  }
 }
