@@ -34,7 +34,8 @@ const CACHE_KEY = {
   projectList: (lang: string, dto: ListExploreProjectsDto): string => {
     const skillsPart = (dto.skillIds ?? []).slice().sort().join(',');
     const titlePart = (dto.title ?? '').trim().toLowerCase();
-    return `explore:projects:list:${lang}:${dto.page}:${dto.limit}:${skillsPart}:${titlePart}`;
+    const statusPart = dto.status ?? '';
+    return `explore:projects:list:${lang}:${dto.page}:${dto.limit}:${statusPart}:${skillsPart}:${titlePart}`;
   },
   projectDetail: (lang: string, id: string): string => `explore:projects:detail:${lang}:${id}`,
 };
@@ -83,7 +84,7 @@ export class ExploreService implements IExploreService {
     const lang = this.requestContext.lang;
     const cacheKey = CACHE_KEY.projectList(lang, dto);
     this.logger.log(
-      `[${this.rid}] listProjects — start | lang: ${lang}, page: ${dto.page}, limit: ${dto.limit}, skill_ids: ${(dto.skillIds ?? []).length}, title: ${dto.title ?? ''}`,
+      `[${this.rid}] listProjects — start | lang: ${lang}, page: ${dto.page}, limit: ${dto.limit}, skill_ids: ${(dto.skillIds ?? []).length}, title: ${dto.title ?? ''}, status: ${dto.status ?? 'any'}`,
     );
 
     const cached = await this.readCache<PageDto<ExploreProjectListItemResponseDto>>(cacheKey);
@@ -95,11 +96,21 @@ export class ExploreService implements IExploreService {
     const [projects, itemCount] = await this.uow.projects.findExploreList({
       skillIds: dto.skillIds,
       titleSearch: dto.title,
+      status: dto.status,
       skip: dto.skip,
       take: dto.limit,
     });
 
-    const data = projects.map((project) => this.toListItemDto(project));
+    // One round-trip for member counts across the whole page; the consultant
+    // discovery flow uses the same `countActiveByProjectIds` helper.
+    const memberCounts =
+      projects.length === 0
+        ? new Map<string, number>()
+        : await this.uow.projectMembers.countActiveByProjectIds(projects.map((p) => p.id));
+
+    const data = projects.map((project) =>
+      this.toListItemDto(project, memberCounts.get(project.id) ?? 0),
+    );
     const result = new PageDto(data, new PageMetaDto({ pageOptionsDto: dto, itemCount }));
 
     await this.writeCache(cacheKey, result, CACHE_TTL.projectList);
@@ -131,8 +142,11 @@ export class ExploreService implements IExploreService {
       });
     }
 
-    const requiredSkills = await this.uow.projectRequiredSkills.findWithSkillByProjectId(id);
-    const result = this.toDetailDto(project, requiredSkills, lang);
+    const [requiredSkills, totalMembers] = await Promise.all([
+      this.uow.projectRequiredSkills.findWithSkillByProjectId(id),
+      this.uow.projectMembers.countActiveTotalByProjectIds([id]),
+    ]);
+    const result = this.toDetailDto(project, requiredSkills, totalMembers, lang);
 
     await this.writeCache(cacheKey, result, CACHE_TTL.projectDetail);
     this.logger.log(`[${this.rid}] getProjectDetail — complete | id: ${id}`);
@@ -156,7 +170,7 @@ export class ExploreService implements IExploreService {
     );
   }
 
-  private toListItemDto(project: Project): ExploreProjectListItemResponseDto {
+  private toListItemDto(project: Project, totalMembers: number): ExploreProjectListItemResponseDto {
     return plainToInstance(
       ExploreProjectListItemResponseDto,
       {
@@ -167,6 +181,7 @@ export class ExploreService implements IExploreService {
         is_partner_platform: project.business?.isPartnerPlatform ?? false,
         published_at: project.publishedAt,
         required_consultants: project.requiredConsultants,
+        total_members: totalMembers,
       },
       { excludeExtraneousValues: true },
     );
@@ -175,6 +190,7 @@ export class ExploreService implements IExploreService {
   private toDetailDto(
     project: Project,
     requiredSkills: ProjectRequiredSkill[],
+    totalMembers: number,
     lang: string,
   ): ExploreProjectDetailResponseDto {
     return plainToInstance(
@@ -187,6 +203,7 @@ export class ExploreService implements IExploreService {
         is_partner_platform: project.business?.isPartnerPlatform ?? false,
         published_at: project.publishedAt,
         required_consultants: project.requiredConsultants,
+        total_members: totalMembers,
         introduction: project.introduction,
         required_skills: requiredSkills.map((prs) => this.toSkillDto(prs.skill, lang)),
         started_at: project.startedAt,

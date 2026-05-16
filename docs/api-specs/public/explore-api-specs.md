@@ -35,11 +35,11 @@ When exceeded, the response is `429 Too Many Requests` (`error_code: AUTH_RATE_L
 
 Responses are cached in Redis keyed by `(locale, params)`. There is no explicit invalidation — short TTLs mean newly published / cancelled projects roll over within ≤2 minutes.
 
-| Endpoint                    | TTL   | Key shape                                                         |
-| --------------------------- | ----- | ----------------------------------------------------------------- |
-| `GET /explore/skills`       | 3600s | `explore:skills:<lang>`                                           |
-| `GET /explore/projects`     | 60s   | `explore:projects:list:<lang>:<page>:<limit>:<skill_ids>:<title>` |
-| `GET /explore/projects/:id` | 120s  | `explore:projects:detail:<lang>:<id>`                             |
+| Endpoint                    | TTL   | Key shape                                                                  |
+| --------------------------- | ----- | -------------------------------------------------------------------------- |
+| `GET /explore/skills`       | 3600s | `explore:skills:<lang>`                                                    |
+| `GET /explore/projects`     | 60s   | `explore:projects:list:<lang>:<page>:<limit>:<status>:<skill_ids>:<title>` |
+| `GET /explore/projects/:id` | 120s  | `explore:projects:detail:<lang>:<id>`                                      |
 
 Cache failures (Redis down/timeouts) are non-fatal: the endpoint falls through to the database.
 
@@ -93,23 +93,25 @@ Locale resolution: the `Accept-Language` header (or whatever the project's i18n 
 - **Throttle:** 60 req / 60s
 - **Query params:** [`ListExploreProjectsDto`](../../../src/modules/explore/dto/requests/list-explore-projects.dto.ts) extends [`PageOptionsDto`](../../../src/common/dto/page-options.dto.ts)
 
-  | Field       | Type                     | Required | Notes                                                     |
-  | ----------- | ------------------------ | -------- | --------------------------------------------------------- |
-  | `page`      | `number`                 | no       | Default `1`. Min `1`.                                     |
-  | `limit`     | `number`                 | no       | Default `20`. Max `100`.                                  |
-  | `skill_ids` | `string` (CSV of UUIDv4) | no       | Comma-separated. Max 20 entries. **ANY-match** semantics. |
-  | `title`     | `string`                 | no       | Case-insensitive substring match. Max length 100.         |
+  | Field       | Type                           | Required | Notes                                                                                                                                                                              |
+  | ----------- | ------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `page`      | `number`                       | no       | Default `1`. Min `1`.                                                                                                                                                              |
+  | `limit`     | `number`                       | no       | Default `20`. Max `100`.                                                                                                                                                           |
+  | `skill_ids` | `string` (CSV of UUIDv4)       | no       | Comma-separated. Max 20 entries. **ANY-match** semantics.                                                                                                                          |
+  | `title`     | `string`                       | no       | Case-insensitive substring match. Max length 100.                                                                                                                                  |
+  | `status`    | `'published' \| 'in_progress'` | no       | Narrow to a single status. Any other value (including `draft`, `cancelled`, `done`) is rejected with 422. Omit to return both. The repository hard-pins the allow-list either way. |
 
 - **Behaviour:**
-  - Returns projects whose `status ∈ {published, in_progress}` and `deleted_at IS NULL`.
+  - Returns projects whose `status ∈ {published, in_progress}` and `deleted_at IS NULL`. The status set is pinned in the repository; even a crafted request can never surface DRAFT / CANCELLED / DONE projects.
   - Filter logic:
+    - `status`: when provided, narrows the list to that single status. Otherwise both `published` and `in_progress` are returned.
     - `skill_ids`: project is included if it requires **at least one** of the listed skills (subquery on `project_required_skills.skill_id IN (...)`).
     - `title`: `LOWER(project.title) LIKE LOWER('%<title>%')`.
   - Ordering (deterministic):
     1. `business.is_partner_platform DESC` — partner-platform projects pinned to the top.
     2. `project.published_at DESC` (NULLS LAST).
     3. `project.id ASC` — stable tiebreaker for pagination.
-  - Cached per `(lang, page, limit, sorted-skill_ids, lowercased-title)` tuple for 60s.
+  - Cached per `(lang, page, limit, status, sorted-skill_ids, lowercased-title)` tuple for 60s.
 
 - **Response 200:** [`PageDto<IExploreProjectListItemResponse>`](../../../src/modules/explore/dto/responses/interfaces/explore-project-list-item.response.interface.ts)
 
@@ -123,7 +125,8 @@ Locale resolution: the `Accept-Language` header (or whatever the project's i18n 
     company_logo_url: string | null,     // business_profiles.logo_url
     is_partner_platform: boolean,        // business_profiles.is_partner_platform
     published_at: string | null,         // ISO 8601, nullable
-    required_consultants: number         // smallint, 0 when not specified
+    required_consultants: number,        // smallint, 0 when not specified
+    total_members: number                // COUNT(project_members WHERE status='active')
   }
   ```
 
@@ -154,7 +157,8 @@ x-api-key: <secret>
         "company_logo_url": "https://cdn.example.com/logos/acme.png",
         "is_partner_platform": true,
         "published_at": "2026-05-10T08:42:00.000Z",
-        "required_consultants": 3
+        "required_consultants": 3,
+        "total_members": 2
       }
     ],
     "meta": {
@@ -195,6 +199,7 @@ x-api-key: <secret>
     is_partner_platform: boolean,
     published_at: string | null,
     required_consultants: number,
+    total_members: number,                        // COUNT(project_members WHERE status='active')
     introduction: Record<string, unknown> | null, // TipTap / ProseMirror JSON
     required_skills: IExploreSkillResponse[],     // see § 1 for shape
     started_at: string | null,                    // ISO 8601, nullable
@@ -243,6 +248,7 @@ If a new sensitive column is later added to one of these entities, the `@Exclude
 | `is_partner_platform`   | "Partner platform" verified badge when `true`. Combine with the pinned ordering for a visual hierarchy.                  |
 | `published_at`          | Relative timestamp ("2 days ago"). Hide when `null` (shouldn't happen for accessible-status projects, but be defensive). |
 | `required_consultants`  | "Looking for N consultants" stat. Hide when `0`.                                                                         |
+| `total_members`         | "`total_members` / `required_consultants` joined" progress chip. Indicates roster fill.                                  |
 
 ### Project detail (`GET /explore/projects/:id`)
 

@@ -10,6 +10,7 @@ export interface IExploreProjectDetailResponse {
   readonly is_partner_platform: boolean;
   readonly published_at: Date | null;
   readonly required_consultants: number;
+  readonly total_members: number;
   readonly introduction: Record<string, unknown> | null;
   readonly required_skills: IExploreSkillResponse[];
   readonly started_at: Date | null;

@@ -6,4 +6,5 @@ export interface IExploreProjectListItemResponse {
   readonly is_partner_platform: boolean;
   readonly published_at: Date | null;
   readonly required_consultants: number;
+  readonly total_members: number;
 }

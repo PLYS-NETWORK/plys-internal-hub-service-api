@@ -1,9 +1,29 @@
 import { PageOptionsDto } from '@common/dto/page-options.dto';
+import { ProjectStatus } from '@database/enums';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose, Transform } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 
-import { IListExploreProjectsRequest } from './list-explore-projects.request.interface';
+import {
+  ExploreProjectStatusFilter,
+  IListExploreProjectsRequest,
+} from './list-explore-projects.request.interface';
+
+// Whitelisted statuses for the public filter. The repository hard-pins the
+// status set to this same pair regardless of the query param, so even a
+// crafted request can never surface DRAFT / CANCELLED / DONE projects.
+const EXPLORE_STATUS_FILTER_VALUES: ExploreProjectStatusFilter[] = [
+  ProjectStatus.PUBLISHED,
+  ProjectStatus.IN_PROGRESS,
+];
 
 export class ListExploreProjectsDto extends PageOptionsDto implements IListExploreProjectsRequest {
   @Expose({ name: 'skill_ids' })
@@ -46,4 +66,16 @@ export class ListExploreProjectsDto extends PageOptionsDto implements IListExplo
   @IsString()
   @MaxLength(100)
   public readonly title?: string;
+
+  @Expose({ name: 'status' })
+  @ApiPropertyOptional({
+    name: 'status',
+    description:
+      'Narrow the list to a single status. Only `published` or `in_progress` are accepted; any other value is rejected with 422. Omit the param to return both statuses.',
+    enum: EXPLORE_STATUS_FILTER_VALUES,
+    example: ProjectStatus.PUBLISHED,
+  })
+  @IsOptional()
+  @IsIn(EXPLORE_STATUS_FILTER_VALUES)
+  public readonly status?: ExploreProjectStatusFilter;
 }

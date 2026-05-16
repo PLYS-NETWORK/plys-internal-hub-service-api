@@ -36,4 +36,12 @@ export class ExploreProjectListItemResponseDto implements IExploreProjectListIte
   @Expose()
   @ApiProperty({ name: 'required_consultants', example: 3 })
   public readonly required_consultants!: number;
+
+  @Expose()
+  @ApiProperty({
+    name: 'total_members',
+    description: 'Active members currently on the project (ACTIVE status only).',
+    example: 2,
+  })
+  public readonly total_members!: number;
 }

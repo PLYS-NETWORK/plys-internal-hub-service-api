@@ -40,6 +40,14 @@ export class ExploreProjectDetailResponseDto implements IExploreProjectDetailRes
   public readonly required_consultants!: number;
 
   @Expose()
+  @ApiProperty({
+    name: 'total_members',
+    description: 'Active members currently on the project (ACTIVE status only).',
+    example: 2,
+  })
+  public readonly total_members!: number;
+
+  @Expose()
   @ApiProperty({ type: 'object', additionalProperties: true, nullable: true })
   public readonly introduction!: Record<string, unknown> | null;
 

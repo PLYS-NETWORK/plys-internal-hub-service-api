@@ -57,18 +57,20 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
   public async findExploreList(params: {
     skillIds?: string[];
     titleSearch?: string;
+    status?: ProjectStatus.PUBLISHED | ProjectStatus.IN_PROGRESS;
     skip: number;
     take: number;
   }): Promise<[Project[], number]> {
-    const accessibleStatuses: ProjectStatus[] = [
-      ProjectStatus.PUBLISHED,
-      ProjectStatus.IN_PROGRESS,
-    ];
+    // Allow-list pinned here so the public endpoint cannot surface
+    // DRAFT / CANCELLED / DONE projects even if the caller crafts a request.
+    const allowedStatuses: ProjectStatus[] = [ProjectStatus.PUBLISHED, ProjectStatus.IN_PROGRESS];
+    const statuses: ProjectStatus[] =
+      params.status && allowedStatuses.includes(params.status) ? [params.status] : allowedStatuses;
 
     const qb = this.createQueryBuilder('project')
       .innerJoinAndSelect('project.business', 'business')
       .where('project.deleted_at IS NULL')
-      .andWhere('project.status IN (:...statuses)', { statuses: accessibleStatuses });
+      .andWhere('project.status IN (:...statuses)', { statuses });
 
     const trimmedTitle = params.titleSearch?.trim();
     if (trimmedTitle && trimmedTitle.length > 0) {

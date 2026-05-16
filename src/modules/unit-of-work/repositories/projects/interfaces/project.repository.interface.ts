@@ -80,16 +80,21 @@ export interface IProjectRepository extends AbstractRepository<Project> {
 
   /**
    * Returns the public explore-page list. PUBLISHED + IN_PROGRESS projects
-   * only, optionally filtered by a case-insensitive title substring and/or
-   * a set of required-skill ids (ANY match — i.e. the project requires at
-   * least one of `skillIds`). Sorted by `business.is_partner_platform DESC`
-   * so partner-platform projects bubble to the top, then by
-   * `project.published_at DESC`, then by `project.id ASC` for stability.
-   * The returned `Project[]` rows have `business` eagerly populated.
+   * only — the status filter is hard-pinned by this method regardless of
+   * caller input, so DRAFT / CANCELLED / DONE projects can never be
+   * surfaced. When `status` is provided it must be one of those two values;
+   * the method narrows the filter to that single status. Optional
+   * case-insensitive title substring and/or a set of required-skill ids
+   * (ANY-match — i.e. the project requires at least one of `skillIds`).
+   * Sorted by `business.is_partner_platform DESC` so partner-platform
+   * projects bubble to the top, then by `project.published_at DESC`, then
+   * by `project.id ASC` for stability. The returned `Project[]` rows have
+   * `business` eagerly populated.
    */
   findExploreList(params: {
     skillIds?: string[];
     titleSearch?: string;
+    status?: ProjectStatus.PUBLISHED | ProjectStatus.IN_PROGRESS;
     skip: number;
     take: number;
   }): Promise<[Project[], number]>;
