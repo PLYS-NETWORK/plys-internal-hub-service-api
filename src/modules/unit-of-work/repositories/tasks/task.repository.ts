@@ -5,7 +5,14 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, SelectQueryBuilder } from 'typeorm';
 
-import { ITaskCompletionRow, ITaskOverdueRow, ITaskRepository } from './interfaces';
+import {
+  IConsultantPerformanceAggregate,
+  IProjectHealthAggregate,
+  ITaskActionItemRow,
+  ITaskCompletionRow,
+  ITaskOverdueRow,
+  ITaskRepository,
+} from './interfaces';
 
 @Injectable()
 export class TaskRepository extends AbstractRepository<Task> implements ITaskRepository {
@@ -201,6 +208,276 @@ export class TaskRepository extends AbstractRepository<Task> implements ITaskRep
       if (row.avg_price !== null) out.set(row.project_id, Number(row.avg_price));
     }
     return out;
+  }
+
+  /** @inheritdoc */
+  public async countCompletedByProjectIdsBetween(
+    projectIds: string[],
+    from: Date,
+    to: Date,
+  ): Promise<number> {
+    if (projectIds.length === 0) return 0;
+    const row = await this.createQueryBuilder('task')
+      .select('COUNT(*)', 'count')
+      .where('task.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere(`task.kanban_status = '${TaskKanbanStatus.DONE}'`)
+      .andWhere('task.completed_at >= :from', { from })
+      .andWhere('task.completed_at <= :to', { to })
+      .getRawOne<{ count: string }>();
+    return Number(row?.count ?? 0);
+  }
+
+  /** @inheritdoc */
+  public async avgCycleDaysByProjectIdsBetween(
+    projectIds: string[],
+    from: Date,
+    to: Date,
+  ): Promise<number | null> {
+    if (projectIds.length === 0) return null;
+    const row = await this.createQueryBuilder('task')
+      .select('AVG(EXTRACT(EPOCH FROM (task.completed_at - task.started_at)) / 86400)', 'avg_days')
+      .where('task.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere(`task.kanban_status = '${TaskKanbanStatus.DONE}'`)
+      .andWhere('task.completed_at IS NOT NULL')
+      .andWhere('task.started_at IS NOT NULL')
+      .andWhere('task.completed_at >= :from', { from })
+      .andWhere('task.completed_at <= :to', { to })
+      .getRawOne<{ avg_days: string | null }>();
+    return row?.avg_days !== null && row?.avg_days !== undefined ? Number(row.avg_days) : null;
+  }
+
+  /** @inheritdoc */
+  public async countOnTimeByProjectIdsBetween(
+    projectIds: string[],
+    from: Date,
+    to: Date,
+  ): Promise<{ onTime: number; total: number }> {
+    if (projectIds.length === 0) return { onTime: 0, total: 0 };
+    const row = await this.createQueryBuilder('task')
+      .select('COUNT(*)', 'total')
+      .addSelect('COUNT(*) FILTER (WHERE task.completed_at <= task.due_date)', 'on_time')
+      .where('task.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere(`task.kanban_status = '${TaskKanbanStatus.DONE}'`)
+      .andWhere('task.completed_at IS NOT NULL')
+      .andWhere('task.due_date IS NOT NULL')
+      .andWhere('task.completed_at >= :from', { from })
+      .andWhere('task.completed_at <= :to', { to })
+      .getRawOne<{ total: string; on_time: string }>();
+    return {
+      onTime: Number(row?.on_time ?? 0),
+      total: Number(row?.total ?? 0),
+    };
+  }
+
+  /** @inheritdoc */
+  public async sumUnpublishedTaskPricesByBusinessId(businessId: string): Promise<string> {
+    const row = await this.createQueryBuilder('task')
+      .innerJoin('task.project', 'project')
+      .select('COALESCE(SUM(task.price), 0)', 'amount')
+      .where('project.business_id = :businessId', { businessId })
+      .andWhere('project.deleted_at IS NULL')
+      .andWhere(`project.status IN ('draft', 'configured')`)
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere(`task.kanban_status <> '${TaskKanbanStatus.CANCELLED}'`)
+      .getRawOne<{ amount: string }>();
+    return row?.amount ?? '0.00';
+  }
+
+  /** @inheritdoc */
+  public async findAwaitingReviewByProjectIds(
+    projectIds: string[],
+    limit: number,
+  ): Promise<ITaskActionItemRow[]> {
+    if (projectIds.length === 0) return [];
+    const rows = await this.createQueryBuilder('task')
+      .innerJoin('task.project', 'project')
+      .select('task.id', 'task_id')
+      .addSelect('task.code', 'task_code')
+      .addSelect('task.title', 'title')
+      .addSelect('project.id', 'project_id')
+      .addSelect('project.title', 'project_title')
+      .addSelect('task.updated_at', 'reference_at')
+      .where('task.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere(`task.kanban_status = '${TaskKanbanStatus.IN_REVIEW}'`)
+      .orderBy('task.updated_at', 'ASC')
+      .limit(limit)
+      .getRawMany<{
+        task_id: string;
+        task_code: string;
+        title: string;
+        project_id: string;
+        project_title: string;
+        reference_at: Date;
+      }>();
+    return rows.map((r) => ({ ...r, days_overdue: null }));
+  }
+
+  /** @inheritdoc */
+  public async findOverdueByProjectIds(
+    projectIds: string[],
+    limit: number,
+  ): Promise<ITaskActionItemRow[]> {
+    if (projectIds.length === 0) return [];
+    const rows = await this.createQueryBuilder('task')
+      .innerJoin('task.project', 'project')
+      .select('task.id', 'task_id')
+      .addSelect('task.code', 'task_code')
+      .addSelect('task.title', 'title')
+      .addSelect('project.id', 'project_id')
+      .addSelect('project.title', 'project_title')
+      .addSelect('task.due_date', 'reference_at')
+      .addSelect('EXTRACT(DAY FROM (NOW() - task.due_date))::int', 'days_overdue')
+      .where('task.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere('task.due_date IS NOT NULL')
+      .andWhere('task.due_date < NOW()')
+      .andWhere(
+        `task.kanban_status NOT IN ('${TaskKanbanStatus.DONE}', '${TaskKanbanStatus.CANCELLED}')`,
+      )
+      .orderBy('task.due_date', 'ASC')
+      .limit(limit)
+      .getRawMany<{
+        task_id: string;
+        task_code: string;
+        title: string;
+        project_id: string;
+        project_title: string;
+        reference_at: Date;
+        days_overdue: number;
+      }>();
+    return rows.map((r) => ({
+      task_id: r.task_id,
+      task_code: r.task_code,
+      title: r.title,
+      project_id: r.project_id,
+      project_title: r.project_title,
+      reference_at: r.reference_at,
+      days_overdue: Number(r.days_overdue),
+    }));
+  }
+
+  /** @inheritdoc */
+  public async aggregateHealthByProjectIds(
+    projectIds: string[],
+  ): Promise<IProjectHealthAggregate[]> {
+    if (projectIds.length === 0) return [];
+    const rows = await this.createQueryBuilder('task')
+      .select('task.project_id', 'project_id')
+      .addSelect('COUNT(*)::int', 'total')
+      .addSelect(
+        `COUNT(*) FILTER (WHERE task.kanban_status = '${TaskKanbanStatus.DONE}')::int`,
+        'completed',
+      )
+      .addSelect(
+        `COUNT(*) FILTER (WHERE task.kanban_status = '${TaskKanbanStatus.IN_REVIEW}')::int`,
+        'in_review',
+      )
+      .addSelect(
+        `COUNT(*) FILTER (WHERE task.due_date IS NOT NULL AND task.due_date < NOW() AND task.kanban_status NOT IN ('${TaskKanbanStatus.DONE}', '${TaskKanbanStatus.CANCELLED}'))::int`,
+        'overdue',
+      )
+      .addSelect('MAX(task.updated_at)', 'last_activity_at')
+      .addSelect(
+        `MIN(task.updated_at) FILTER (WHERE task.kanban_status = '${TaskKanbanStatus.IN_REVIEW}')`,
+        'oldest_in_review_at',
+      )
+      .where('task.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('task.deleted_at IS NULL')
+      .groupBy('task.project_id')
+      .getRawMany<{
+        project_id: string;
+        total: number;
+        completed: number;
+        in_review: number;
+        overdue: number;
+        last_activity_at: Date | null;
+        oldest_in_review_at: Date | null;
+      }>();
+    return rows.map((r) => ({
+      project_id: r.project_id,
+      total: Number(r.total),
+      completed: Number(r.completed),
+      in_review: Number(r.in_review),
+      overdue: Number(r.overdue),
+      last_activity_at: r.last_activity_at,
+      oldest_in_review_at: r.oldest_in_review_at,
+    }));
+  }
+
+  /** @inheritdoc */
+  public async aggregatePerformanceByAssigneesBetween(
+    projectIds: string[],
+    consultantIds: string[],
+    from: Date,
+    to: Date,
+  ): Promise<IConsultantPerformanceAggregate[]> {
+    if (projectIds.length === 0 || consultantIds.length === 0) return [];
+    const rows = await this.createQueryBuilder('task')
+      .select('task.assigned_to', 'consultant_id')
+      // Completed tasks finished by this consultant in the window.
+      .addSelect(
+        `COUNT(*) FILTER (WHERE task.kanban_status = '${TaskKanbanStatus.DONE}' AND task.completed_at >= :from AND task.completed_at <= :to)::int`,
+        'completed',
+      )
+      // Currently in progress (regardless of window).
+      .addSelect(
+        `COUNT(*) FILTER (WHERE task.kanban_status = '${TaskKanbanStatus.IN_PROGRESS}')::int`,
+        'in_progress',
+      )
+      .addSelect(
+        `AVG(EXTRACT(EPOCH FROM (task.completed_at - task.started_at)) / 86400)
+           FILTER (
+             WHERE task.kanban_status = '${TaskKanbanStatus.DONE}'
+               AND task.completed_at IS NOT NULL
+               AND task.started_at IS NOT NULL
+               AND task.completed_at >= :from AND task.completed_at <= :to
+           )`,
+        'avg_cycle_days',
+      )
+      .addSelect(
+        `COUNT(*) FILTER (
+           WHERE task.kanban_status = '${TaskKanbanStatus.DONE}'
+             AND task.completed_at IS NOT NULL
+             AND task.due_date IS NOT NULL
+             AND task.completed_at <= task.due_date
+             AND task.completed_at >= :from AND task.completed_at <= :to
+         )::int`,
+        'on_time',
+      )
+      .addSelect(
+        `COUNT(*) FILTER (
+           WHERE task.kanban_status = '${TaskKanbanStatus.DONE}'
+             AND task.completed_at IS NOT NULL
+             AND task.due_date IS NOT NULL
+             AND task.completed_at >= :from AND task.completed_at <= :to
+         )::int`,
+        'total_done',
+      )
+      .where('task.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('task.assigned_to IN (:...consultantIds)', { consultantIds })
+      .andWhere('task.deleted_at IS NULL')
+      .setParameters({ from, to })
+      .groupBy('task.assigned_to')
+      .getRawMany<{
+        consultant_id: string;
+        completed: number;
+        in_progress: number;
+        avg_cycle_days: string | null;
+        on_time: number;
+        total_done: number;
+      }>();
+    return rows.map((r) => ({
+      consultant_id: r.consultant_id,
+      completed: Number(r.completed),
+      in_progress: Number(r.in_progress),
+      avg_cycle_days: r.avg_cycle_days !== null ? Number(r.avg_cycle_days) : null,
+      on_time: Number(r.on_time),
+      total_done: Number(r.total_done),
+    }));
   }
 
   private applyProjectIdFilter(qb: SelectQueryBuilder<Task>, projectIdFilter?: string): void {

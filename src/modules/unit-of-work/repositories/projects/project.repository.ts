@@ -111,6 +111,23 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
     return out;
   }
 
+  /** @inheritdoc */
+  public async findActiveByBusinessId(
+    businessId: string,
+    limit: number,
+    statuses: ProjectStatus[] = [ProjectStatus.PUBLISHED, ProjectStatus.IN_PROGRESS],
+  ): Promise<Project[]> {
+    if (statuses.length === 0) return [];
+    return this.createQueryBuilder('project')
+      .where('project.business_id = :businessId', { businessId })
+      .andWhere('project.deleted_at IS NULL')
+      .andWhere('project.status IN (:...statuses)', { statuses })
+      .orderBy('project.published_at', 'DESC', 'NULLS LAST')
+      .addOrderBy('project.id', 'ASC')
+      .take(limit)
+      .getMany();
+  }
+
   // Time-series of created/published counts grouped by week or month.
   // Uses `to_char(date_trunc(...))` so Postgres formats the period_label without
   // round-tripping JS Date objects.

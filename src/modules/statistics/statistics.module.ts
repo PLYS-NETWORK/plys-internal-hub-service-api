@@ -9,28 +9,32 @@ import {
   AdminOperationalQueuesService,
   AdminUsersBreakdownService,
 } from './admin/services';
-import { BusinessStatisticsController } from './business/business-statistics.controller';
-import { BusinessStatisticsScope } from './business/scopes/business-statistics.scope';
-import { BusinessBillingStatisticsService } from './business/services/business-billing-statistics.service';
-import { BusinessDashboardSummaryService } from './business/services/business-dashboard-summary.service';
-import { BusinessProjectStatisticsService } from './business/services/business-project-statistics.service';
-import { BusinessTaskStatisticsService } from './business/services/business-task-statistics.service';
+import { BusinessDashboardController } from './business/dashboard/business-dashboard.controller';
+import {
+  BusinessActionItemsService,
+  BusinessDashboardSummaryService,
+  BusinessProjectHealthService,
+  BusinessSpendTrendService,
+  BusinessTeamPerformanceService,
+} from './business/dashboard/services';
 
 /**
- * Read-only dashboard statistics. The BUSINESS-platform endpoints live under
- * `business/` and use the scope-strategy pattern in `shared/services/abstract-*`.
- * The ADMIN dashboard endpoints under `admin/` aggregate platform-wide and
- * cache the heavy reads in Redis — hence the additional `RedisModule` import.
+ * Read-only dashboard endpoints for both platforms.
+ *
+ * - `/business/dashboard/*` — owner-focused KPIs (money, portfolio, throughput,
+ *   team, action items) backed by a per-business Redis cache.
+ * - `/admin/dashboard/*` — platform-wide KPIs (users, financial, queues,
+ *   growth) backed by a global Redis cache.
  */
 @Module({
   imports: [UnitOfWorkModule, RedisModule],
-  controllers: [BusinessStatisticsController, AdminStatisticsController],
+  controllers: [BusinessDashboardController, AdminStatisticsController],
   providers: [
-    BusinessStatisticsScope,
-    BusinessProjectStatisticsService,
-    BusinessTaskStatisticsService,
-    BusinessBillingStatisticsService,
     BusinessDashboardSummaryService,
+    BusinessActionItemsService,
+    BusinessSpendTrendService,
+    BusinessProjectHealthService,
+    BusinessTeamPerformanceService,
     AdminDashboardSummaryService,
     AdminUsersBreakdownService,
     AdminGrowthTrendService,
