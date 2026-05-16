@@ -54,6 +54,65 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
   }
 
   /** @inheritdoc */
+  public async findExploreList(params: {
+    skillIds?: string[];
+    titleSearch?: string;
+    skip: number;
+    take: number;
+  }): Promise<[Project[], number]> {
+    const accessibleStatuses: ProjectStatus[] = [
+      ProjectStatus.PUBLISHED,
+      ProjectStatus.IN_PROGRESS,
+    ];
+
+    const qb = this.createQueryBuilder('project')
+      .innerJoinAndSelect('project.business', 'business')
+      .where('project.deleted_at IS NULL')
+      .andWhere('project.status IN (:...statuses)', { statuses: accessibleStatuses });
+
+    const trimmedTitle = params.titleSearch?.trim();
+    if (trimmedTitle && trimmedTitle.length > 0) {
+      qb.andWhere('LOWER(project.title) LIKE :title', {
+        title: `%${trimmedTitle.toLowerCase()}%`,
+      });
+    }
+
+    if (params.skillIds && params.skillIds.length > 0) {
+      qb.andWhere((subQb) => {
+        const sub = subQb
+          .subQuery()
+          .select('prs.project_id')
+          .from('project_required_skills', 'prs')
+          .where('prs.skill_id IN (:...skillIds)', { skillIds: params.skillIds })
+          .getQuery();
+        return `project.id IN ${sub}`;
+      });
+    }
+
+    // Partner-platform projects sort first (TRUE > FALSE in Postgres DESC),
+    // then most-recently-published, then id for a stable tiebreak.
+    qb.orderBy('business.is_partner_platform', 'DESC')
+      .addOrderBy('project.published_at', 'DESC', 'NULLS LAST')
+      .addOrderBy('project.id', 'ASC')
+      .skip(params.skip)
+      .take(params.take);
+
+    return qb.getManyAndCount();
+  }
+
+  /** @inheritdoc */
+  public async findExploreDetail(id: string): Promise<Project | null> {
+    return this.createQueryBuilder('project')
+      .innerJoinAndSelect('project.business', 'business')
+      .where('project.id = :id', { id })
+      .andWhere('project.deleted_at IS NULL')
+      .andWhere('project.status IN (:...statuses)', {
+        statuses: [ProjectStatus.PUBLISHED, ProjectStatus.IN_PROGRESS],
+      })
+      .getOne();
+  }
+
+  /** @inheritdoc */
   public async findAccessibleByIdForConsultant(
     id: string,
     consultantId: string,

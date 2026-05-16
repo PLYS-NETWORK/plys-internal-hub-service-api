@@ -21,7 +21,8 @@
     "oauth_state_invalid": "Geçersiz OAuth geri çağrısı. Lütfen oturum açma işlemini baştan tekrarlayın.",
     "rate_limited": "Çok fazla istek. Lütfen biraz bekleyip tekrar deneyin.",
     "sso_exchange_invalid": "SSO değişim kodu geçersiz veya süresi dolmuş",
-    "sso_email_missing": "SSO sağlayıcısı bir e-posta adresi döndürmedi"
+    "sso_email_missing": "SSO sağlayıcısı bir e-posta adresi döndürmedi",
+    "api_key_invalid": "API anahtarı geçersiz veya eksik."
   },
   "business_profile": {
     "not_found": "İşletme profili bulunamadı.",

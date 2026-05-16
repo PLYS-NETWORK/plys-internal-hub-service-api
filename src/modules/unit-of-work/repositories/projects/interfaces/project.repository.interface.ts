@@ -77,4 +77,27 @@ export interface IProjectRepository extends AbstractRepository<Project> {
     limit: number,
     statuses?: ProjectStatus[],
   ): Promise<Project[]>;
+
+  /**
+   * Returns the public explore-page list. PUBLISHED + IN_PROGRESS projects
+   * only, optionally filtered by a case-insensitive title substring and/or
+   * a set of required-skill ids (ANY match — i.e. the project requires at
+   * least one of `skillIds`). Sorted by `business.is_partner_platform DESC`
+   * so partner-platform projects bubble to the top, then by
+   * `project.published_at DESC`, then by `project.id ASC` for stability.
+   * The returned `Project[]` rows have `business` eagerly populated.
+   */
+  findExploreList(params: {
+    skillIds?: string[];
+    titleSearch?: string;
+    skip: number;
+    take: number;
+  }): Promise<[Project[], number]>;
+
+  /**
+   * Returns a single PUBLISHED or IN_PROGRESS project for the public detail
+   * endpoint, with `business` eagerly populated. Returns null when the id
+   * does not exist, is soft-deleted, or has a non-accessible status.
+   */
+  findExploreDetail(id: string): Promise<Project | null>;
 }

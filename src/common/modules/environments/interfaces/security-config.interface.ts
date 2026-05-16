@@ -20,4 +20,11 @@ export interface ISecurityConfig {
 
   /** Prefix for throttler counter keys (namespaces shared Redis). */
   readonly throttleRedisPrefix: string;
+
+  /**
+   * Shared secret presented by trusted BFFs via the `x-api-key` header on
+   * public marketplace endpoints (e.g. /api/v1/explore/*). Required at boot
+   * via `getOrThrow`; the guard rejects requests when missing or mismatched.
+   */
+  readonly publicEndpointApiKey: string;
 }

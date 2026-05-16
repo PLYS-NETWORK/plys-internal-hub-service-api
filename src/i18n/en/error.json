@@ -25,7 +25,8 @@
     "oauth_state_invalid": "Invalid OAuth callback. Please retry the sign-in flow from the start.",
     "rate_limited": "Too many requests. Please slow down and try again in a moment.",
     "sso_exchange_invalid": "SSO exchange code is invalid or has expired",
-    "sso_email_missing": "SSO provider did not return an email address"
+    "sso_email_missing": "SSO provider did not return an email address",
+    "api_key_invalid": "Invalid or missing API key."
   },
   "business_profile": {
     "not_found": "Business profile not found.",
