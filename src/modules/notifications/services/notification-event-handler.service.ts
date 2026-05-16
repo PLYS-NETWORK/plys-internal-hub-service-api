@@ -5,6 +5,7 @@ import {
   IConsultantOnboardingRejectedEvent,
   IConsultantOnboardingSubmittedEvent,
   IConsultantProjectJoinedEvent,
+  IConsultantProjectLeftEvent,
   IConsultantSkillExamFailedEvent,
   IConsultantSkillExamPassedEvent,
   IConsultantSkillExamSubmittedEvent,
@@ -143,9 +144,24 @@ export class NotificationEventHandlerService implements INotificationEventHandle
   @OnEvent(NOTIFICATION_EVENTS.CONSULTANT_PROJECT_JOINED, { async: true })
   public async onProjectJoined(event: IConsultantProjectJoinedEvent): Promise<void> {
     this.logger.log(
-      `[${this.rid}] onProjectJoined — start | consultantUserId: ${event.consultant_user_id}`,
+      `[${this.rid}] onProjectJoined — start | consultantUserId: ${event.consultant_user_id}, projectId: ${event.project_id}`,
     );
-    await this.onConsultantProjectJoined(event);
+    await Promise.allSettled([
+      this.onConsultantProjectJoined(event),
+      this.onBusinessProjectConsultantJoined(event),
+      this.onAdminConsultantProjectJoined(event),
+    ]);
+  }
+
+  @OnEvent(NOTIFICATION_EVENTS.CONSULTANT_PROJECT_LEFT, { async: true })
+  public async onProjectLeft(event: IConsultantProjectLeftEvent): Promise<void> {
+    this.logger.log(
+      `[${this.rid}] onProjectLeft — start | consultantUserId: ${event.consultant_user_id}, projectId: ${event.project_id}`,
+    );
+    await Promise.allSettled([
+      this.onBusinessProjectConsultantLeft(event),
+      this.onAdminConsultantProjectLeft(event),
+    ]);
   }
 
   @OnEvent(NOTIFICATION_EVENTS.TASK_STATUS_CHANGED, { async: true })
@@ -257,6 +273,34 @@ export class NotificationEventHandlerService implements INotificationEventHandle
           `[${this.rid}] onConsultantOnboardingRejected — failed | userId: ${event.consultant_user_id} | error: ${String(err)}`,
         ),
       );
+  }
+
+  /** @inheritdoc */
+  public async onAdminConsultantProjectJoined(event: IConsultantProjectJoinedEvent): Promise<void> {
+    const businessName = await this.resolveBusinessName(event.business_id);
+    await this.dispatchToAllAdmins(NOTIFICATION_TYPES.ADMIN_CONSULTANT_PROJECT_JOINED, {
+      consultant_user_id: event.consultant_user_id,
+      consultant_name: event.consultant_name,
+      project_id: event.project_id,
+      project_code: event.project_code,
+      project_title: event.project_title,
+      business_id: event.business_id,
+      business_name: businessName,
+    });
+  }
+
+  /** @inheritdoc */
+  public async onAdminConsultantProjectLeft(event: IConsultantProjectLeftEvent): Promise<void> {
+    const businessName = await this.resolveBusinessName(event.business_id);
+    await this.dispatchToAllAdmins(NOTIFICATION_TYPES.ADMIN_CONSULTANT_PROJECT_LEFT, {
+      consultant_user_id: event.consultant_user_id,
+      consultant_name: event.consultant_name,
+      project_id: event.project_id,
+      project_code: event.project_code,
+      project_title: event.project_title,
+      business_id: event.business_id,
+      business_name: businessName,
+    });
   }
 
   // ── Business handlers ─────────────────────────────────────────────────────
@@ -401,6 +445,50 @@ export class NotificationEventHandlerService implements INotificationEventHandle
       .catch((err: unknown) =>
         this.logger.error(
           `[${this.rid}] onPaymentWithdrawReversed — failed | txId: ${event.transaction_id} | error: ${String(err)}`,
+        ),
+      );
+  }
+
+  /** @inheritdoc */
+  public async onBusinessProjectConsultantJoined(
+    event: IConsultantProjectJoinedEvent,
+  ): Promise<void> {
+    void this.dispatcher
+      .dispatch({
+        userId: event.business_user_id,
+        type: NOTIFICATION_TYPES.PROJECT_CONSULTANT_JOINED,
+        metadata: {
+          project_id: event.project_id,
+          project_code: event.project_code,
+          project_title: event.project_title,
+          consultant_user_id: event.consultant_user_id,
+          consultant_name: event.consultant_name,
+        },
+      })
+      .catch((err: unknown) =>
+        this.logger.error(
+          `[${this.rid}] onBusinessProjectConsultantJoined — failed | projectId: ${event.project_id} | error: ${String(err)}`,
+        ),
+      );
+  }
+
+  /** @inheritdoc */
+  public async onBusinessProjectConsultantLeft(event: IConsultantProjectLeftEvent): Promise<void> {
+    void this.dispatcher
+      .dispatch({
+        userId: event.business_user_id,
+        type: NOTIFICATION_TYPES.PROJECT_CONSULTANT_LEFT,
+        metadata: {
+          project_id: event.project_id,
+          project_code: event.project_code,
+          project_title: event.project_title,
+          consultant_user_id: event.consultant_user_id,
+          consultant_name: event.consultant_name,
+        },
+      })
+      .catch((err: unknown) =>
+        this.logger.error(
+          `[${this.rid}] onBusinessProjectConsultantLeft — failed | projectId: ${event.project_id} | error: ${String(err)}`,
         ),
       );
   }
@@ -618,6 +706,11 @@ export class NotificationEventHandlerService implements INotificationEventHandle
     if (profile?.fullName) return profile.fullName;
     const user = await this.uow.users.findById(userId);
     return user?.email ?? '';
+  }
+
+  private async resolveBusinessName(businessId: string): Promise<string> {
+    const profile = await this.uow.businessProfiles.findOne({ where: { id: businessId } });
+    return profile?.companyName ?? '';
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────

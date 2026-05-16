@@ -23,6 +23,10 @@
     "re_published": "Proje yeniden yayınlanmak üzere yapılandırıldı durumuna alındı.",
     "deleted": "Proje başarıyla silindi."
   },
+  "membership": {
+    "applied": "Projeye başarıyla katıldınız.",
+    "left": "Projeden ayrıldınız."
+  },
   "task": {
     "created": "Görev başarıyla oluşturuldu.",
     "result_created": "Sonuç başarıyla oluşturuldu.",

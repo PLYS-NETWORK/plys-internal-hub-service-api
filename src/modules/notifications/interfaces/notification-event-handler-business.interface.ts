@@ -1,4 +1,6 @@
 import {
+  IConsultantProjectJoinedEvent,
+  IConsultantProjectLeftEvent,
   IPaymentTopUpCompletedEvent,
   IPaymentTopUpRefundedEvent,
   IPaymentWithdrawCompletedEvent,
@@ -57,4 +59,18 @@ export interface IBusinessNotificationEventHandlerService {
    * @param event Payload extending the completed event with a reversal reason.
    */
   onPaymentWithdrawReversed(event: IPaymentWithdrawReversedEvent): Promise<void>;
+
+  /**
+   * Sends `PROJECT_CONSULTANT_JOINED` to the owning business user when a
+   * consultant joins one of their projects (post-apply).
+   * @param event Payload carrying consultant + project + owning business.
+   */
+  onBusinessProjectConsultantJoined(event: IConsultantProjectJoinedEvent): Promise<void>;
+
+  /**
+   * Sends `PROJECT_CONSULTANT_LEFT` to the owning business user when a
+   * consultant leaves one of their projects.
+   * @param event Payload carrying consultant + project + owning business.
+   */
+  onBusinessProjectConsultantLeft(event: IConsultantProjectLeftEvent): Promise<void>;
 }

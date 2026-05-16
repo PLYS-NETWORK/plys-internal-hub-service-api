@@ -23,6 +23,10 @@
     "re_published": "Project reverted to configured for re-publish.",
     "deleted": "Project deleted successfully."
   },
+  "membership": {
+    "applied": "You have successfully joined the project.",
+    "left": "You have left the project."
+  },
   "task": {
     "created": "Task created successfully.",
     "result_created": "Result created successfully.",

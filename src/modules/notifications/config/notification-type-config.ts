@@ -8,6 +8,8 @@ import {
   IAdminBusinessTopUpMetadata,
   IAdminConsultantBannedMetadata,
   IAdminConsultantOnboardingSubmittedMetadata,
+  IAdminConsultantProjectJoinedMetadata,
+  IAdminConsultantProjectLeftMetadata,
   IAdminProjectPublishedMetadata,
   IAdminSkillExamResultMetadata,
   IAdminTaskPublishedMetadata,
@@ -22,6 +24,8 @@ import {
   IConsultantTaskStatusChangedMetadata,
   IPasswordChangedMetadata,
   IProfileUpdatedMetadata,
+  IProjectConsultantJoinedMetadata,
+  IProjectConsultantLeftMetadata,
   IProjectPublishedMetadata,
   IProjectUnpublishedMetadata,
   ITaskPublishedMetadata,
@@ -138,6 +142,32 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
     bodyArgs: (m: ITaskPublishedMetadata) => ({
       title: m.task_title,
       code: m.task_code,
+    }),
+  },
+  [NOTIFICATION_TYPES.PROJECT_CONSULTANT_JOINED]: {
+    entityType: NOTIFICATION_ENTITY_TYPES.PROJECT,
+    getEntityId: (m: IProjectConsultantJoinedMetadata) => m.project_id,
+    getRedirectUrl: (m, base, businessId) =>
+      businessId ? `${base}/c/${businessId}/projects/${m.project_id}/team` : null,
+    titleKey: 'notification.project_consultant_joined.title',
+    bodyKey: 'notification.project_consultant_joined.body',
+    bodyArgs: (m: IProjectConsultantJoinedMetadata) => ({
+      consultant: m.consultant_name,
+      title: m.project_title,
+      code: m.project_code,
+    }),
+  },
+  [NOTIFICATION_TYPES.PROJECT_CONSULTANT_LEFT]: {
+    entityType: NOTIFICATION_ENTITY_TYPES.PROJECT,
+    getEntityId: (m: IProjectConsultantLeftMetadata) => m.project_id,
+    getRedirectUrl: (m, base, businessId) =>
+      businessId ? `${base}/c/${businessId}/projects/${m.project_id}/team` : null,
+    titleKey: 'notification.project_consultant_left.title',
+    bodyKey: 'notification.project_consultant_left.body',
+    bodyArgs: (m: IProjectConsultantLeftMetadata) => ({
+      consultant: m.consultant_name,
+      title: m.project_title,
+      code: m.project_code,
     }),
   },
 
@@ -405,6 +435,34 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
       consultant: m.consultant_name,
       reason: m.ban_reason,
       strikes: m.ai_strike_count,
+    }),
+  },
+  [NOTIFICATION_TYPES.ADMIN_CONSULTANT_PROJECT_JOINED]: {
+    entityType: NOTIFICATION_ENTITY_TYPES.PROJECT,
+    baseUrlKey: 'internalHubUrl',
+    getEntityId: (m: IAdminConsultantProjectJoinedMetadata) => m.project_id,
+    getRedirectUrl: (m, base) => `${base}/projects/${m.project_id}`,
+    titleKey: 'notification.admin_consultant_project_joined.title',
+    bodyKey: 'notification.admin_consultant_project_joined.body',
+    bodyArgs: (m: IAdminConsultantProjectJoinedMetadata) => ({
+      consultant: m.consultant_name,
+      title: m.project_title,
+      code: m.project_code,
+      business: m.business_name,
+    }),
+  },
+  [NOTIFICATION_TYPES.ADMIN_CONSULTANT_PROJECT_LEFT]: {
+    entityType: NOTIFICATION_ENTITY_TYPES.PROJECT,
+    baseUrlKey: 'internalHubUrl',
+    getEntityId: (m: IAdminConsultantProjectLeftMetadata) => m.project_id,
+    getRedirectUrl: (m, base) => `${base}/projects/${m.project_id}`,
+    titleKey: 'notification.admin_consultant_project_left.title',
+    bodyKey: 'notification.admin_consultant_project_left.body',
+    bodyArgs: (m: IAdminConsultantProjectLeftMetadata) => ({
+      consultant: m.consultant_name,
+      title: m.project_title,
+      code: m.project_code,
+      business: m.business_name,
     }),
   },
 }) as ConfigMap;

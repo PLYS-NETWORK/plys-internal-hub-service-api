@@ -81,6 +81,29 @@ export class ProjectMemberRepository
   }
 
   /** @inheritdoc */
+  public async findByProjectAndConsultant(
+    projectId: string,
+    consultantId: string,
+  ): Promise<ProjectMember | null> {
+    return this.findOne({ where: { projectId, consultantId } });
+  }
+
+  /** @inheritdoc */
+  public async activate(member: ProjectMember): Promise<ProjectMember> {
+    member.status = ProjectMemberStatus.ACTIVE;
+    member.joinedAt = new Date();
+    member.leftAt = null;
+    return this.save(member);
+  }
+
+  /** @inheritdoc */
+  public async markLeft(member: ProjectMember): Promise<ProjectMember> {
+    member.status = ProjectMemberStatus.LEFT;
+    member.leftAt = new Date();
+    return this.save(member);
+  }
+
+  /** @inheritdoc */
   public async findActiveProjectIdsByConsultantId(
     consultantId: string,
     projectIds: string[],

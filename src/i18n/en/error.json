@@ -49,7 +49,15 @@
     "recall_transaction_not_found": "Original publication transaction not found for recall refund.",
     "cannot_be_deleted": "Only draft, setting-up, or configured projects can be deleted.",
     "invalid_status_transition": "Invalid project status transition.",
-    "code_already_exists": "A project with this code already exists for your business."
+    "code_already_exists": "A project with this code already exists for your business.",
+    "already_member": "You are already an active member of this project.",
+    "membership_banned": "You can no longer join this project.",
+    "full": "This project has already reached its consultant capacity.",
+    "not_joinable": "This project is not accepting new members in its current state.",
+    "skill_match_insufficient": "Your skills match less than 50% of this project's required skills.",
+    "concurrent_limit_reached": "You have reached the maximum number of concurrent projects.",
+    "not_member": "You are not an active member of this project.",
+    "leave_blocked_by_active_tasks": "You cannot leave this project while you have tasks still in progress."
   },
   "task": {
     "not_found": "Task not found.",

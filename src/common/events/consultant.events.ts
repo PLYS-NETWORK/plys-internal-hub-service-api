@@ -1,9 +1,24 @@
 export interface IConsultantProjectJoinedEvent {
   readonly consultant_user_id: string;
+  /** Consultant's display name. Resolved at event-emit time so listeners
+   *  don't each hit the DB. Used by admin + business notification copy. */
+  readonly consultant_name: string;
   readonly project_id: string;
   readonly project_code: string;
   readonly project_title: string;
   readonly business_id: string;
+  /** Owning business user — recipient of the business-side notification. */
+  readonly business_user_id: string;
+}
+
+export interface IConsultantProjectLeftEvent {
+  readonly consultant_user_id: string;
+  readonly consultant_name: string;
+  readonly project_id: string;
+  readonly project_code: string;
+  readonly project_title: string;
+  readonly business_id: string;
+  readonly business_user_id: string;
 }
 
 export interface IConsultantOnboardingSubmittedEvent {

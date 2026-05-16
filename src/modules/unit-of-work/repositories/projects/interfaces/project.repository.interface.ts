@@ -14,6 +14,16 @@ export interface IProjectRepository extends AbstractRepository<Project> {
   findByIdAndBusinessId(id: string, businessId: string): Promise<Project | null>;
 
   /**
+   * Returns the project row under a `SELECT ... FOR UPDATE` pessimistic
+   * write lock. MUST be called inside an active transaction — TypeORM raises
+   * "Lock mode requires query runner" otherwise. Used by the apply flow to
+   * serialize concurrent join attempts so capacity (`active_member_count <
+   * required_consultants`) cannot be exceeded by a race. Returns `null`
+   * when the project is missing or soft-deleted.
+   */
+  findByIdForUpdate(projectId: string): Promise<Project | null>;
+
+  /**
    * Returns the discovery-feed list for an authenticated consultant. Status
    * is hard-pinned to PUBLISHED + IN_PROGRESS regardless of caller input —
    * other statuses can never be surfaced. When `status` is provided it must

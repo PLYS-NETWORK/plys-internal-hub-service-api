@@ -1,7 +1,7 @@
 # Notifications — Admin Event Catalog
 
 > Audience: Internal Hub (admin platform) frontend engineers.
-> All 7 types below are **broadcast to every active admin** when the triggering action occurs.
+> All 9 types below are **broadcast to every active admin** when the triggering action occurs.
 > Companion guides: [Integration Guide](../../shared/notifications-realtime-api-specs.md) · [REST API](../../business/notifications/notifications-api-specs.md)
 
 ---
@@ -339,6 +339,108 @@ interface IAdminConsultantBannedMetadata {
 
 ---
 
+## 8. `admin_consultant_project_joined`
+
+**Trigger:** A consultant successfully applies to a project via `POST /projects/consultant/membership/:projectId/apply`. Fired once the membership row is committed (insert or LEFT→ACTIVE reactivate) and the calling consultant's explore caches have been invalidated.
+
+| Field          | Value                                         |
+| -------------- | --------------------------------------------- |
+| `type`         | `admin_consultant_project_joined`             |
+| `entity_type`  | `project`                                     |
+| `entity_id`    | `metadata.project_id`                         |
+| `redirect_url` | `https://<internal-hub>/projects/:project_id` |
+| `baseUrl`      | Internal Hub (`internalHubUrl`)               |
+
+**Metadata:**
+
+```ts
+interface IAdminConsultantProjectJoinedMetadata {
+  consultant_user_id: string;
+  consultant_name: string;
+  project_id: string;
+  project_code: string;
+  project_title: string;
+  business_id: string;
+  business_name: string;
+}
+```
+
+**Sample payload:**
+
+```json
+{
+  "type": "admin_consultant_project_joined",
+  "title": "Consultant joined project: Jane Doe",
+  "body": "Jane Doe joined project \"AI-powered support\" (PRJ-0042) owned by Acme Inc.",
+  "metadata": {
+    "consultant_user_id": "0f3b9d24-1111-2222-3333-444455556666",
+    "consultant_name": "Jane Doe",
+    "project_id": "550e8400-e29b-41d4-a716-446655440000",
+    "project_code": "PRJ-0042",
+    "project_title": "AI-powered support",
+    "business_id": "a1b2c3d4-...",
+    "business_name": "Acme Inc."
+  },
+  "entity_type": "project",
+  "entity_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Cache invalidation hint:** Reload the project members / activity feed for `project_id`, and any "recently active consultants" admin dashboard that lists `consultant_user_id`.
+
+---
+
+## 9. `admin_consultant_project_left`
+
+**Trigger:** A consultant leaves a project via `POST /projects/consultant/membership/:projectId/leave`. Fired once the membership row has been flipped to `LEFT` and the consultant's explore caches have been invalidated. Distinct from admin-initiated removals (which would land as a separate `REMOVED` event in a future step) — this signal indicates a voluntary departure.
+
+| Field          | Value                                         |
+| -------------- | --------------------------------------------- |
+| `type`         | `admin_consultant_project_left`               |
+| `entity_type`  | `project`                                     |
+| `entity_id`    | `metadata.project_id`                         |
+| `redirect_url` | `https://<internal-hub>/projects/:project_id` |
+| `baseUrl`      | Internal Hub (`internalHubUrl`)               |
+
+**Metadata:**
+
+```ts
+interface IAdminConsultantProjectLeftMetadata {
+  consultant_user_id: string;
+  consultant_name: string;
+  project_id: string;
+  project_code: string;
+  project_title: string;
+  business_id: string;
+  business_name: string;
+}
+```
+
+**Sample payload:**
+
+```json
+{
+  "type": "admin_consultant_project_left",
+  "title": "Consultant left project: Jane Doe",
+  "body": "Jane Doe left project \"AI-powered support\" (PRJ-0042) owned by Acme Inc.",
+  "metadata": {
+    "consultant_user_id": "0f3b9d24-1111-2222-3333-444455556666",
+    "consultant_name": "Jane Doe",
+    "project_id": "550e8400-e29b-41d4-a716-446655440000",
+    "project_code": "PRJ-0042",
+    "project_title": "AI-powered support",
+    "business_id": "a1b2c3d4-...",
+    "business_name": "Acme Inc."
+  },
+  "entity_type": "project",
+  "entity_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Cache invalidation hint:** Reload the project members / activity feed for `project_id`. Capacity-watch dashboards (rosters with available slots) should also refresh — the project just freed a seat.
+
+---
+
 ## Retired admin events
 
 The following admin notifications referenced the now-removed `consultant-applications` schema and are no longer emitted or wired. Existing notification rows of these types are still readable, but no new ones will arrive:
@@ -386,6 +488,11 @@ socket.on('notification.new', (n: NotificationPayload) => {
     case 'admin_consultant_banned':
       qc.invalidateQueries({ queryKey: ['admin', 'users', n.metadata.consultant_user_id] });
       qc.invalidateQueries({ queryKey: ['admin', 'skill-exams'] });
+      break;
+    case 'admin_consultant_project_joined':
+    case 'admin_consultant_project_left':
+      qc.invalidateQueries({ queryKey: ['admin', 'projects', n.metadata.project_id, 'members'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'projects', n.metadata.project_id, 'activity'] });
       break;
   }
 });

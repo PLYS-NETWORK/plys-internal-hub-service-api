@@ -43,7 +43,15 @@
     "recall_transaction_not_found": "Geri çağırma iadesi için orijinal yayın işlemi bulunamadı.",
     "cannot_be_deleted": "Yalnızca taslak, kurulum aşamasında veya yapılandırılmış projeler silinebilir.",
     "invalid_status_transition": "Geçersiz proje durumu geçişi.",
-    "code_already_exists": "Bu kodla bir proje işletmenizde zaten mevcut."
+    "code_already_exists": "Bu kodla bir proje işletmenizde zaten mevcut.",
+    "already_member": "Bu projeye zaten aktif olarak katılmış durumdasınız.",
+    "membership_banned": "Bu projeye artık katılamazsınız.",
+    "full": "Bu proje danışman kapasitesine ulaşmış durumda.",
+    "not_joinable": "Bu proje şu anda yeni üye kabul etmiyor.",
+    "skill_match_insufficient": "Yetenekleriniz, bu projenin gerekli yeteneklerinin %50'sinden azını karşılıyor.",
+    "concurrent_limit_reached": "Eş zamanlı katılabileceğiniz proje sayısının üst sınırına ulaştınız.",
+    "not_member": "Bu projenin aktif bir üyesi değilsiniz.",
+    "leave_blocked_by_active_tasks": "Devam eden göreviniz olduğu sürece bu projeden ayrılamazsınız."
   },
   "task": {
     "not_found": "Görev bulunamadı.",

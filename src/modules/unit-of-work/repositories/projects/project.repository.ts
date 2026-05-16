@@ -25,6 +25,15 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
   }
 
   /** @inheritdoc */
+  public async findByIdForUpdate(projectId: string): Promise<Project | null> {
+    return this.createQueryBuilder('project')
+      .setLock('pessimistic_write')
+      .where('project.id = :projectId', { projectId })
+      .andWhere('project.deleted_at IS NULL')
+      .getOne();
+  }
+
+  /** @inheritdoc */
   public async findDiscoverableForConsultant(params: {
     titleSearch?: string;
     status?: ProjectStatus.PUBLISHED | ProjectStatus.IN_PROGRESS;
