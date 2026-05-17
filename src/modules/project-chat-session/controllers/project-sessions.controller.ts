@@ -1,3 +1,4 @@
+import { THROTTLE_INTERACTIVE, THROTTLE_MODERATE } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PlatformGuard } from '@common/guards/platform.guard';
@@ -16,6 +17,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { CreateSessionDto } from '../dto/requests';
 import { ChatSessionListItemResponseDto, ChatSessionMetaResponseDto } from '../dto/responses';
@@ -31,6 +33,7 @@ import { ProjectChatSessionService } from '../project-chat-session.service';
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
+@Throttle(THROTTLE_INTERACTIVE)
 export class ProjectSessionsController {
   constructor(private readonly service: ProjectChatSessionService) {}
 
@@ -48,6 +51,7 @@ export class ProjectSessionsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({
     summary: 'Create a new chat session on a project',
     description:

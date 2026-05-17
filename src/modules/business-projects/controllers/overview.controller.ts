@@ -1,3 +1,4 @@
+import { THROTTLE_INTERACTIVE } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PlatformGuard } from '@common/guards/platform.guard';
@@ -14,6 +15,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { OverviewResponseDto } from '../dto/responses/overview-response.dto';
 import { BusinessProjectOverviewService } from '../services/overview.service';
@@ -24,6 +26,7 @@ import { BusinessProjectOverviewService } from '../services/overview.service';
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
+@Throttle(THROTTLE_INTERACTIVE)
 export class BusinessProjectOverviewController {
   constructor(private readonly overviewService: BusinessProjectOverviewService) {}
 

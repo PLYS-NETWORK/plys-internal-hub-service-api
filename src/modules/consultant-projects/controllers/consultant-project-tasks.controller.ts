@@ -1,4 +1,4 @@
-import { THROTTLE_DISCOVERY, THROTTLE_STRICT } from '@common/constants';
+import { THROTTLE_DEFAULT, THROTTLE_STRICT } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
@@ -35,12 +35,12 @@ import { ConsultantProjectTasksService } from '../services/consultant-project-ta
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.CONSULTANT)
+@Throttle(THROTTLE_DEFAULT)
 export class ConsultantProjectTasksController {
   constructor(private readonly service: ConsultantProjectTasksService) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @Throttle(THROTTLE_DISCOVERY)
   @ApiOperation({
     summary:
       'List tasks for a joined project. Shows unassigned TO_DO tasks plus the caller-owned non-DRAFT tasks. Ordered IN_PROGRESS → TO_DO → others. Cached 60 s.',

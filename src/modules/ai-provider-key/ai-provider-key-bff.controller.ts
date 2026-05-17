@@ -1,6 +1,8 @@
+import { THROTTLE_DEFAULT } from '@common/constants';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { Controller, Get, HttpCode, HttpStatus, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { AiProviderKeyService } from './ai-provider-key.service';
 import { GetActiveKeyQueryDto } from './dto/requests';
@@ -14,6 +16,7 @@ import { ApiKeyBffResponseDto } from './dto/responses';
 @ApiTags('AI Provider Keys')
 @ApiBearerAuth()
 @Controller('ai-provider-keys')
+@Throttle(THROTTLE_DEFAULT)
 export class AiProviderKeyBffController {
   constructor(private readonly service: AiProviderKeyService) {}
 

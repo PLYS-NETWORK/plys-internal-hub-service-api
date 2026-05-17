@@ -1,3 +1,4 @@
+import { THROTTLE_MODERATE } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PlatformGuard } from '@common/guards/platform.guard';
@@ -7,6 +8,7 @@ import { ActivePlatform, UserRole } from '@database/enums';
 import { BusinessProfileResponseDto } from '@modules/profiles/business/dto/responses/business-profile-response.dto';
 import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { OnboardBusinessProfileDto } from '../dto/requests/onboard-business-profile.dto';
 import { BusinessOnboardingService } from '../services/business-onboarding.service';
@@ -17,6 +19,7 @@ import { BusinessOnboardingService } from '../services/business-onboarding.servi
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
+@Throttle(THROTTLE_MODERATE)
 export class BusinessOnboardingController {
   constructor(private readonly onboardingService: BusinessOnboardingService) {}
 

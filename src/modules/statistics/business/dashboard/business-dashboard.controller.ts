@@ -1,3 +1,4 @@
+import { THROTTLE_INTERACTIVE } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PlatformGuard } from '@common/guards/platform.guard';
@@ -6,6 +7,7 @@ import { ITranslatedPayload } from '@common/interceptors/transform-response.inte
 import { ActivePlatform, UserRole } from '@database/enums';
 import { Controller, Get, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { BusinessProjectHealthDto } from '../../dto/requests/business-project-health.dto';
 import { BusinessSpendTrendDto } from '../../dto/requests/business-spend-trend.dto';
@@ -31,6 +33,7 @@ import {
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
+@Throttle(THROTTLE_INTERACTIVE)
 export class BusinessDashboardController {
   constructor(
     private readonly summary: BusinessDashboardSummaryService,

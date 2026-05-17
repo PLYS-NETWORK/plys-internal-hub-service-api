@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT, THROTTLE_STRICT } from '@common/constants';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
@@ -14,6 +15,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { ListBillsDto } from './dto/requests/list-bills.dto';
 import { TriggerSettlementDto } from './dto/requests/trigger-settlement.dto';
@@ -26,6 +28,7 @@ import { BillingAdminService } from './services/billing-admin.service';
 @ApiBearerAuth()
 @Controller('admin/bills')
 @Roles(UserRole.ADMIN_PLATFORM)
+@Throttle(THROTTLE_DEFAULT)
 export class BillingController {
   constructor(private readonly billingAdmin: BillingAdminService) {}
 
@@ -41,6 +44,7 @@ export class BillingController {
 
   @Post('trigger-settlement')
   @HttpCode(HttpStatus.ACCEPTED)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary: 'Manually trigger monthly settlement for a given year/month (Admin only)',
   })
@@ -65,6 +69,7 @@ export class BillingController {
 
   @Post(':invoiceId/send')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary: 'Manually (re)send the monthly invoice email for a specific bill (Admin only)',
   })

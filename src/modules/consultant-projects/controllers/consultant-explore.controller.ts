@@ -1,4 +1,4 @@
-import { THROTTLE_DISCOVERY } from '@common/constants';
+import { THROTTLE_DEFAULT } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
@@ -32,12 +32,12 @@ import { ConsultantExploreService } from '../services/consultant-explore.service
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.CONSULTANT)
+@Throttle(THROTTLE_DEFAULT)
 export class ConsultantExploreController {
   constructor(private readonly service: ConsultantExploreService) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @Throttle(THROTTLE_DISCOVERY)
   @ApiOperation({
     summary:
       'List discoverable projects for the calling consultant. Partner-platform projects pinned to the top. Cached 60 s, throttled 60 req/min.',
@@ -51,7 +51,6 @@ export class ConsultantExploreController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  @Throttle(THROTTLE_DISCOVERY)
   @ApiOperation({
     summary:
       'Detail view of a discoverable project, or one the consultant has joined. Cached 120 s, throttled 60 req/min.',

@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT, THROTTLE_MODERATE } from '@common/constants';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
 import { RolesGuard } from '@common/guards/roles.guard';
@@ -18,6 +19,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import {
   CreateOnboardingQuestionDto,
@@ -34,11 +36,13 @@ import { AdminOnboardingQuestionsService } from '../services/admin-onboarding-qu
 @Controller('admin/onboarding-questions')
 @UseGuards(RolesGuard)
 @Roles(UserRole.ADMIN_PLATFORM)
+@Throttle(THROTTLE_DEFAULT)
 export class AdminOnboardingQuestionsController {
   constructor(private readonly service: AdminOnboardingQuestionsService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({
     summary:
       'Create an onboarding question. When is_active=true (default), it is appended to the end of the active set.',
@@ -82,6 +86,7 @@ export class AdminOnboardingQuestionsController {
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({
     summary: 'Update question text and/or options. Type is immutable.',
   })
@@ -95,6 +100,7 @@ export class AdminOnboardingQuestionsController {
 
   @Patch(':id/active')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({
     summary:
       'Toggle is_active. Activating assigns next-free position; deactivating clears position and compacts remaining.',
@@ -109,6 +115,7 @@ export class AdminOnboardingQuestionsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({
     summary:
       'Soft-delete an onboarding question. If active, the remaining active set is compacted.',
@@ -122,6 +129,7 @@ export class AdminOnboardingQuestionsController {
 
   @Post('reorder')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({
     summary:
       'Bulk reorder the active set. Body must list every active question id exactly once. Inactive ids are rejected.',

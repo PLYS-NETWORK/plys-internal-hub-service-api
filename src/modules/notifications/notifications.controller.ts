@@ -1,3 +1,4 @@
+import { THROTTLE_INTERACTIVE } from '@common/constants';
 import { Roles } from '@common/decorators/roles.decorator';
 import { RolesGuard } from '@common/guards/roles.guard';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
@@ -14,6 +15,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { ListNotificationsDto } from './dto/requests';
 import {
@@ -29,6 +31,7 @@ import { NotificationsService } from './services/notifications.service';
 @Controller('notifications')
 @UseGuards(RolesGuard)
 @Roles(UserRole.USER, UserRole.ADMIN_PLATFORM)
+@Throttle(THROTTLE_INTERACTIVE)
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 

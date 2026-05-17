@@ -1,3 +1,4 @@
+import { THROTTLE_MODERATE, THROTTLE_STRICT } from '@common/constants';
 import { IdempotencyKey } from '@common/decorators/idempotency-key.decorator';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
@@ -18,6 +19,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { AttachFilesDto, UpdateTaskAttachmentDto } from '../dto/requests';
 import { TaskAttachmentResponseDto } from '../dto/responses';
@@ -29,6 +31,7 @@ import { TaskAttachmentsService } from '../services/task-attachments.service';
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
+@Throttle(THROTTLE_MODERATE)
 export class TaskAttachmentsController {
   constructor(private readonly attachmentsService: TaskAttachmentsService) {}
 
@@ -68,6 +71,7 @@ export class TaskAttachmentsController {
 
   @Delete(':attachmentId')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary: 'Soft-delete a task attachment and orphan the underlying file for cleanup',
   })

@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT } from '@common/constants';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
@@ -15,6 +16,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { InviteAdminEmailDto } from './dto/requests/invite-admin-email.dto';
 import { ListAdminAllowedEmailsDto } from './dto/requests/list-admin-allowed-emails.dto';
@@ -29,6 +31,7 @@ import { AdminAllowedEmailsService } from './services/admin-allowed-emails.servi
 @ApiBearerAuth()
 @Controller('admin/allowed-emails')
 @Roles(UserRole.ADMIN_PLATFORM)
+@Throttle(THROTTLE_DEFAULT)
 export class AdminAllowedEmailsController {
   constructor(private readonly adminAllowedEmailsService: AdminAllowedEmailsService) {}
 

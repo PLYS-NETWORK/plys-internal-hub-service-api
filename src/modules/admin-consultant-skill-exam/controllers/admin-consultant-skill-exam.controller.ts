@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT } from '@common/constants';
 import { Roles } from '@common/decorators/roles.decorator';
 import { RolesGuard } from '@common/guards/roles.guard';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
@@ -13,6 +14,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { ListSkillExamsDto } from '../dto/requests/list-skill-exams.dto';
 import { AdminSkillExamDetailResponseDto } from '../dto/responses/skill-exam-detail-response.dto';
@@ -24,6 +26,7 @@ import { AdminConsultantSkillExamService } from '../services/admin-consultant-sk
 @Controller('admin/skill-exams')
 @UseGuards(RolesGuard)
 @Roles(UserRole.ADMIN_PLATFORM)
+@Throttle(THROTTLE_DEFAULT)
 export class AdminConsultantSkillExamController {
   constructor(private readonly service: AdminConsultantSkillExamService) {}
 

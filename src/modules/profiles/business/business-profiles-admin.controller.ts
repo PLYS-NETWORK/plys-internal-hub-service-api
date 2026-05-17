@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT, THROTTLE_STRICT } from '@common/constants';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
@@ -14,6 +15,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { BusinessProfilesAdminService } from './business-profiles-admin.service';
 import { ListBusinessProfilesDto } from './dto/requests/list-business-profiles.dto';
@@ -28,6 +30,7 @@ import { AdminBusinessProfileListItemResponseDto } from './dto/responses/admin-b
 @ApiBearerAuth()
 @Controller('admin/business-profiles')
 @Roles(UserRole.ADMIN_PLATFORM)
+@Throttle(THROTTLE_DEFAULT)
 export class BusinessProfilesAdminController {
   constructor(private readonly adminService: BusinessProfilesAdminService) {}
 
@@ -67,6 +70,7 @@ export class BusinessProfilesAdminController {
 
   @Patch(':id/partner-platform')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary: 'Set is_partner_platform on a business profile (Admin only)',
     description: 'Bidirectional setter — body `{ "value": true | false }`.',
@@ -81,6 +85,7 @@ export class BusinessProfilesAdminController {
 
   @Patch(':id/payment-credit')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary: 'Set allow_payment_credit on a business profile (Admin only)',
     description: 'Bidirectional setter — body `{ "value": true | false }`.',

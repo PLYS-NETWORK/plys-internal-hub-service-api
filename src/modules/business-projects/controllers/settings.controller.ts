@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT, THROTTLE_MODERATE } from '@common/constants';
 import { IdempotencyKey } from '@common/decorators/idempotency-key.decorator';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
@@ -17,6 +18,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { UpdateProjectSettingsDto } from '../dto/requests';
 import { ProjectSettingsResponseDto, ProjectSummaryResponseDto } from '../dto/responses';
@@ -28,6 +30,7 @@ import { SettingsService } from '../services/settings.service';
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
+@Throttle(THROTTLE_DEFAULT)
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
 
@@ -46,6 +49,7 @@ export class SettingsController {
   @Patch()
   @IdempotencyKey()
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({
     summary: 'Update project metadata (title, introduction, skills, max_consultants)',
     description:

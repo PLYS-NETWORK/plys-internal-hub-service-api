@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT, THROTTLE_MODERATE } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PlatformGuard } from '@common/guards/platform.guard';
@@ -16,6 +17,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { StartSkillExamDto } from '../dto/requests/start-skill-exam.dto';
 import { SubmitSkillExamAnswerDto } from '../dto/requests/submit-skill-exam-answer.dto';
@@ -32,6 +34,7 @@ import { ConsultantSkillExamService } from '../services/consultant-skill-exam.se
 @UseGuards(RolesGuard, PlatformGuard, NotBannedGuard, OnboardingApprovedGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.CONSULTANT)
+@Throttle(THROTTLE_DEFAULT)
 export class ConsultantSkillExamController {
   constructor(private readonly service: ConsultantSkillExamService) {}
 
@@ -57,6 +60,7 @@ export class ConsultantSkillExamController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({
     summary:
       'Start a new skill exam — enqueues AI question generation (status: GENERATING_QUESTIONS).',
@@ -79,6 +83,7 @@ export class ConsultantSkillExamController {
 
   @Post(':examId/answers')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({ summary: 'Upsert a single skill-exam answer (idempotent)' })
   public async submitAnswer(
     @Param('examId', ParseUUIDPipe) examId: string,
@@ -90,6 +95,7 @@ export class ConsultantSkillExamController {
 
   @Post(':examId/submit')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({
     summary: 'Finalise the skill exam (requires all 20 answers) — enqueues Copyleaks then AI eval.',
   })

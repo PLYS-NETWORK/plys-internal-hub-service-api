@@ -1,3 +1,4 @@
+import { THROTTLE_WEBHOOK } from '@common/constants';
 import { Public } from '@common/decorators/public.decorator';
 import {
   Controller,
@@ -9,12 +10,14 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { FastifyRequest } from 'fastify';
 
 import { WebhookProcessorService } from './webhook-processor.service';
 
 @ApiTags('Webhooks')
 @Controller('webhooks')
+@Throttle(THROTTLE_WEBHOOK)
 export class WebhooksController {
   constructor(private readonly webhookProcessorService: WebhookProcessorService) {}
 

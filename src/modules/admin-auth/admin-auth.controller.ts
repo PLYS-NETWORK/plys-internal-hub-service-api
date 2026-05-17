@@ -1,4 +1,4 @@
-import { HEADERS } from '@common/constants';
+import { HEADERS, THROTTLE_OTP } from '@common/constants';
 import { Public } from '@common/decorators/public.decorator';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
@@ -6,12 +6,14 @@ import { AuthResponseDto } from '@modules/auth/dto/responses/auth-response.dto';
 import { ISessionContext } from '@modules/auth/interfaces/auth-service.interface';
 import { Body, Controller, Headers, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { AdminRequestOtpDto, AdminVerifyOtpDto } from './dto/requests';
 import { AdminAuthService } from './services/admin-auth.service';
 
 @ApiTags('Admin Auth')
 @Controller('admin/auth')
+@Throttle(THROTTLE_OTP)
 export class AdminAuthController {
   constructor(
     private readonly adminAuthService: AdminAuthService,

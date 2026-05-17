@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT, THROTTLE_STRICT } from '@common/constants';
 import { IdempotencyKey } from '@common/decorators/idempotency-key.decorator';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
@@ -21,6 +22,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { CreateProjectDto, ListProjectsDto } from '../dto/requests';
 import { TransitionProjectStatusDto } from '../dto/requests/transition-project-status.dto';
@@ -40,6 +42,7 @@ import { BusinessProjectsService } from '../services/projects/projects.service';
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
+@Throttle(THROTTLE_DEFAULT)
 export class BusinessProjectsController {
   constructor(
     private readonly projectsService: BusinessProjectsService,
@@ -49,6 +52,7 @@ export class BusinessProjectsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary: 'Create a new project (DRAFT)',
     description:
@@ -99,6 +103,7 @@ export class BusinessProjectsController {
 
   @Patch(':id/publish')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({ summary: 'Atomically publish the project and settle payment' })
   public async confirmPublish(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     await this.publishService.confirmPublish(id);
@@ -106,6 +111,7 @@ export class BusinessProjectsController {
 
   @Patch(':id/re-publish')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary: 'Revert a PUBLISHED project to CONFIGURED so it can be re-published',
     description:
@@ -121,6 +127,7 @@ export class BusinessProjectsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary: 'Soft-delete a project (only DRAFT or CONFIGURED)',
     description:
@@ -135,6 +142,7 @@ export class BusinessProjectsController {
   @Patch(':id/status')
   @IdempotencyKey()
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary: 'Explicit `draft → configured` transition with a price-gate check',
     description:

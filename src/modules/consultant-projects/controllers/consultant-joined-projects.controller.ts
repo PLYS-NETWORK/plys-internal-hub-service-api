@@ -1,4 +1,4 @@
-import { THROTTLE_DISCOVERY } from '@common/constants';
+import { THROTTLE_DEFAULT } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
@@ -33,12 +33,12 @@ import { ConsultantJoinedProjectsService } from '../services/consultant-joined-p
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.CONSULTANT)
+@Throttle(THROTTLE_DEFAULT)
 export class ConsultantJoinedProjectsController {
   constructor(private readonly service: ConsultantJoinedProjectsService) {}
 
   @Get('projects/consultant/workspaces')
   @HttpCode(HttpStatus.OK)
-  @Throttle(THROTTLE_DISCOVERY)
   @ApiOperation({
     summary:
       'Lightweight switcher list of every project the consultant has actively joined. Returned in full (no pagination, no keyword filter); IN_PROGRESS projects are surfaced first. Cached 60 s.',
@@ -52,7 +52,6 @@ export class ConsultantJoinedProjectsController {
 
   @Get('projects/consultant/joined')
   @HttpCode(HttpStatus.OK)
-  @Throttle(THROTTLE_DISCOVERY)
   @ApiOperation({
     summary:
       'List of projects the consultant has actively joined, with per-project completion percentage and personal task counters. Cached 60 s.',
@@ -66,7 +65,6 @@ export class ConsultantJoinedProjectsController {
 
   @Get('projects/consultant/joined/:projectId')
   @HttpCode(HttpStatus.OK)
-  @Throttle(THROTTLE_DISCOVERY)
   @ApiOperation({
     summary:
       'Detail view of a joined project, including the consultant-specific progress block. Cached 120 s. 404 when the caller is not an active member.',
