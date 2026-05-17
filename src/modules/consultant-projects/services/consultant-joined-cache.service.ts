@@ -5,7 +5,6 @@ import { Injectable } from '@nestjs/common';
 
 import { ListConsultantJoinedProjectsDto } from '../dto/requests/list-consultant-joined-projects.dto';
 import { ListConsultantProjectTasksDto } from '../dto/requests/list-consultant-project-tasks.dto';
-import { ListConsultantWorkspacesDto } from '../dto/requests/list-consultant-workspaces.dto';
 import { IConsultantJoinedCacheService } from '../interfaces/consultant-joined-cache.service.interface';
 
 const KEY_PREFIX = {
@@ -31,8 +30,8 @@ export class ConsultantJoinedCacheService implements IConsultantJoinedCacheServi
   }
 
   /** @inheritdoc */
-  public buildWorkspaceListKey(consultantId: string, dto: ListConsultantWorkspacesDto): string {
-    return `${KEY_PREFIX.workspace}:${consultantId}:${dto.page}:${dto.limit}:${this.normalizeKeyword(dto.keyword)}`;
+  public buildWorkspaceListKey(consultantId: string): string {
+    return `${KEY_PREFIX.workspace}:${consultantId}`;
   }
 
   /** @inheritdoc */
@@ -88,7 +87,7 @@ export class ConsultantJoinedCacheService implements IConsultantJoinedCacheServi
     // because the listing shape changes for any project write, so we wipe the
     // consultant-level prefixes wholesale.
     const patterns = [
-      `${KEY_PREFIX.workspace}:${consultantId}:*`,
+      `${KEY_PREFIX.workspace}:${consultantId}`,
       `${KEY_PREFIX.joinedList}:${consultantId}:*`,
       `${KEY_PREFIX.joinedDetail}:${consultantId}:${projectId}`,
       `${KEY_PREFIX.taskList}:${consultantId}:${projectId}:*`,

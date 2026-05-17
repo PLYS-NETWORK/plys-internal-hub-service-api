@@ -15,7 +15,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { ILike } from 'typeorm';
 
-import { CreateProjectDto, ListProjectsDto, SearchProjectsDto } from '../../dto/requests';
+import { CreateProjectDto, ListProjectsDto } from '../../dto/requests';
 import { TransitionProjectStatusDto } from '../../dto/requests/transition-project-status.dto';
 import {
   ProjectListItemResponseDto,
@@ -128,30 +128,25 @@ export class BusinessProjectsService implements IBusinessProjectsService {
   }
 
   /** @inheritdoc */
-  public async searchMyProjects(
-    dto: SearchProjectsDto,
-  ): Promise<PageDto<ProjectSearchItemResponseDto>> {
+  public async searchMyProjects(): Promise<ProjectSearchItemResponseDto[]> {
     const { id: businessId } = await this.access.resolveBusinessProfile();
-    this.logger.log(
-      `searchMyProjects — start | businessId: ${businessId}, page: ${dto.page}, limit: ${dto.limit}, keywords: ${dto.keywords ?? '<none>'}`,
-    );
+    this.logger.log(`searchMyProjects — start | businessId: ${businessId}`);
 
-    // Query builder (not findAndCount) so we can OR across title + code in a
-    // single ILIKE clause — see board.service.ts for the same pattern. The
-    // explicit `deleted_at IS NULL` mirrors TypeORM's soft-delete auto-filter
-    // that find* methods apply but the builder does not.
-    const qb = this.uow.projects
+    // Explicit `deleted_at IS NULL` mirrors TypeORM's soft-delete auto-filter
+    // that find* methods apply but the raw builder does not.
+    //
+    // Sort priority: IN_PROGRESS projects surface first (active workload the
+    // owner cares about), then `created_at DESC` for everything else; `id` is
+    // the final tiebreak for deterministic ordering.
+    const projects = await this.uow.projects
       .createQueryBuilder('p')
       .where('p.business_id = :businessId', { businessId })
-      .andWhere('p.deleted_at IS NULL');
-
-    if (dto.keywords) {
-      qb.andWhere('(p.title ILIKE :kw OR p.code ILIKE :kw)', { kw: `%${dto.keywords}%` });
-    }
-
-    qb.orderBy('p.created_at', 'DESC').skip(dto.skip).take(dto.limit);
-
-    const [projects, itemCount] = await qb.getManyAndCount();
+      .andWhere('p.deleted_at IS NULL')
+      .orderBy(`CASE WHEN p.status = :inProgress THEN 0 ELSE 1 END`, 'ASC')
+      .addOrderBy('p.created_at', 'DESC')
+      .addOrderBy('p.id', 'ASC')
+      .setParameter('inProgress', ProjectStatus.IN_PROGRESS)
+      .getMany();
 
     const data = projects.map((p) =>
       plainToInstance(
@@ -161,9 +156,8 @@ export class BusinessProjectsService implements IBusinessProjectsService {
       ),
     );
 
-    const meta = new PageMetaDto({ pageOptionsDto: dto, itemCount });
-    this.logger.log(`searchMyProjects — complete | returned: ${data.length}, total: ${itemCount}`);
-    return new PageDto(data, meta);
+    this.logger.log(`searchMyProjects — complete | returned: ${data.length}`);
+    return data;
   }
 
   /** @inheritdoc */

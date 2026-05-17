@@ -22,7 +22,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { CreateProjectDto, ListProjectsDto, SearchProjectsDto } from '../dto/requests';
+import { CreateProjectDto, ListProjectsDto } from '../dto/requests';
 import { TransitionProjectStatusDto } from '../dto/requests/transition-project-status.dto';
 import {
   ProjectListItemResponseDto,
@@ -77,15 +77,13 @@ export class BusinessProjectsController {
   @Get('search')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Lightweight search for project pickers (workspace switcher)',
+    summary: 'Lightweight switcher list (every owned project)',
     description:
-      'Returns a minimal `{ id, code, title }` payload for each project owned by the caller. ' +
-      'Filter via `keywords` (case-insensitive substring on title OR code). Paginated.',
+      'Returns a minimal `{ id, code, title }` payload for every project owned by the caller. ' +
+      'No pagination, no keyword filter. IN_PROGRESS projects are surfaced first.',
   })
-  public async searchMyProjects(
-    @Query() dto: SearchProjectsDto,
-  ): Promise<ITranslatedPayload<PageDto<ProjectSearchItemResponseDto>>> {
-    const data = await this.projectsService.searchMyProjects(dto);
+  public async searchMyProjects(): Promise<ITranslatedPayload<ProjectSearchItemResponseDto[]>> {
+    const data = await this.projectsService.searchMyProjects();
     return { messageKey: 'success.ok', data };
   }
 

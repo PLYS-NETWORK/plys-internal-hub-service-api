@@ -147,14 +147,10 @@ export interface IProjectRepository extends AbstractRepository<Project> {
 
   /**
    * Lightweight variant of {@link findJoinedByConsultantPaginated} used by
-   * the workspace switcher. Projects only (no business join), selects only
-   * `id, code, title, status`. Sorted alphabetically by `title ASC, id ASC`
-   * — switcher-friendly UX.
+   * the workspace switcher. Returns **every** ACTIVE-membership project for
+   * the consultant — no pagination, no keyword filter. Selects only
+   * `id, code, title, status`. Sort priority: `IN_PROGRESS` projects first
+   * (the consultant's active workload), then `title ASC, id ASC`.
    */
-  findJoinedByConsultantLightweight(params: {
-    consultantId: string;
-    keyword?: string;
-    skip: number;
-    take: number;
-  }): Promise<[Project[], number]>;
+  findJoinedByConsultantLightweight(params: { consultantId: string }): Promise<Project[]>;
 }

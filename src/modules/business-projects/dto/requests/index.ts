@@ -6,7 +6,6 @@ export type { BoardTaskOrderBy, BoardTaskSortBy } from './list-board-tasks.dto';
 export { ASSIGNEE_ID_UNASSIGNED, ListBoardTasksDto } from './list-board-tasks.dto';
 export { ListDraftTasksDto } from './list-draft-tasks.dto';
 export { ListProjectsDto } from './list-projects.dto';
-export { SearchProjectsDto } from './search-projects.dto';
 export { TaskIdsDto } from './task-ids.dto';
 export { UpdateDraftTaskDto } from './update-draft-task.dto';
 export { UpdateProjectSettingsDto } from './update-project-settings.dto';

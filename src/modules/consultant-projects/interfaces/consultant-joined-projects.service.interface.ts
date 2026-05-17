@@ -1,7 +1,6 @@
 import { PageDto } from '@common/dto/page.dto';
 
 import { ListConsultantJoinedProjectsDto } from '../dto/requests/list-consultant-joined-projects.dto';
-import { ListConsultantWorkspacesDto } from '../dto/requests/list-consultant-workspaces.dto';
 import {
   ConsultantJoinedProjectDetailResponseDto,
   ConsultantJoinedProjectListItemResponseDto,
@@ -20,16 +19,15 @@ import {
  */
 export interface IConsultantJoinedProjectsService {
   /**
-   * Lightweight switcher list. Returns only `id`, `code`, `title`, `status`
-   * — kept small because this endpoint is hit on every workspace navigation.
+   * Lightweight switcher list. Returns every ACTIVE-membership project for
+   * the caller — no pagination, no keyword filter — projected to only
+   * `id`, `code`, `title`, `status`. `IN_PROGRESS` projects are surfaced
+   * first; remaining statuses follow alphabetically by title.
    *
-   * @param dto Pagination + optional case-insensitive keyword (title or code).
-   * @returns Paginated workspace items sorted alphabetically by title.
+   * @returns Workspace items, `IN_PROGRESS` first, then `title ASC`.
    * @throws TranslatableException 403 CONSULTANT_PROFILE_NOT_FOUND.
    */
-  listWorkspaces(
-    dto: ListConsultantWorkspacesDto,
-  ): Promise<PageDto<ConsultantWorkspaceListItemResponseDto>>;
+  listWorkspaces(): Promise<ConsultantWorkspaceListItemResponseDto[]>;
 
   /**
    * Full joined-projects list with progress aggregates. Each item carries

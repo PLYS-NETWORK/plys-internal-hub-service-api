@@ -20,7 +20,6 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
 import { ListConsultantJoinedProjectsDto } from '../dto/requests/list-consultant-joined-projects.dto';
-import { ListConsultantWorkspacesDto } from '../dto/requests/list-consultant-workspaces.dto';
 import {
   ConsultantJoinedProjectDetailResponseDto,
   ConsultantJoinedProjectListItemResponseDto,
@@ -42,12 +41,12 @@ export class ConsultantJoinedProjectsController {
   @Throttle(THROTTLE_DISCOVERY)
   @ApiOperation({
     summary:
-      'Lightweight switcher list of projects the consultant has actively joined. Filters by keyword on title or code. Cached 60 s.',
+      'Lightweight switcher list of every project the consultant has actively joined. Returned in full (no pagination, no keyword filter); IN_PROGRESS projects are surfaced first. Cached 60 s.',
   })
-  public async listWorkspaces(
-    @Query() dto: ListConsultantWorkspacesDto,
-  ): Promise<ITranslatedPayload<PageDto<ConsultantWorkspaceListItemResponseDto>>> {
-    const data = await this.service.listWorkspaces(dto);
+  public async listWorkspaces(): Promise<
+    ITranslatedPayload<ConsultantWorkspaceListItemResponseDto[]>
+  > {
+    const data = await this.service.listWorkspaces();
     return { messageKey: 'success.ok', data };
   }
 

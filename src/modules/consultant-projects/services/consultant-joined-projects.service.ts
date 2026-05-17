@@ -10,7 +10,6 @@ import { plainToInstance } from 'class-transformer';
 import { I18nService } from 'nestjs-i18n';
 
 import { ListConsultantJoinedProjectsDto } from '../dto/requests/list-consultant-joined-projects.dto';
-import { ListConsultantWorkspacesDto } from '../dto/requests/list-consultant-workspaces.dto';
 import {
   ConsultantExploreSkillResponseDto,
   ConsultantJoinedProjectDetailResponseDto,
@@ -41,36 +40,26 @@ export class ConsultantJoinedProjectsService implements IConsultantJoinedProject
   }
 
   /** @inheritdoc */
-  public async listWorkspaces(
-    dto: ListConsultantWorkspacesDto,
-  ): Promise<PageDto<ConsultantWorkspaceListItemResponseDto>> {
+  public async listWorkspaces(): Promise<ConsultantWorkspaceListItemResponseDto[]> {
     const consultantProfile = await this.access.resolveConsultantProfile();
     const consultantId = consultantProfile.id;
-    this.logger.log(
-      `[${this.rid}] listWorkspaces — start | consultantId: ${consultantId}, page: ${dto.page}, limit: ${dto.limit}, keyword: ${dto.keyword ?? ''}`,
-    );
+    this.logger.log(`[${this.rid}] listWorkspaces — start | consultantId: ${consultantId}`);
 
-    const cacheKey = this.cache.buildWorkspaceListKey(consultantId, dto);
-    const cached = await this.cache.read<PageDto<ConsultantWorkspaceListItemResponseDto>>(cacheKey);
+    const cacheKey = this.cache.buildWorkspaceListKey(consultantId);
+    const cached = await this.cache.read<ConsultantWorkspaceListItemResponseDto[]>(cacheKey);
     if (cached) {
       this.logger.log(`[${this.rid}] listWorkspaces — cache hit | key: ${cacheKey}`);
       return cached;
     }
 
-    const [projects, itemCount] = await this.uow.projects.findJoinedByConsultantLightweight({
+    const projects = await this.uow.projects.findJoinedByConsultantLightweight({
       consultantId,
-      keyword: dto.keyword,
-      skip: dto.skip,
-      take: dto.limit,
     });
 
     const data = projects.map((p) => this.toWorkspaceDto(p));
-    const page = new PageDto(data, new PageMetaDto({ pageOptionsDto: dto, itemCount }));
-    await this.cache.write(cacheKey, page, CONSULTANT_JOINED_CACHE_TTL.workspaceList);
-    this.logger.log(
-      `[${this.rid}] listWorkspaces — complete | returned: ${data.length}, total: ${itemCount}`,
-    );
-    return page;
+    await this.cache.write(cacheKey, data, CONSULTANT_JOINED_CACHE_TTL.workspaceList);
+    this.logger.log(`[${this.rid}] listWorkspaces — complete | returned: ${data.length}`);
+    return data;
   }
 
   /** @inheritdoc */

@@ -46,11 +46,11 @@ When exceeded, the response is `429 Too Many Requests` (surfaced through the env
 
 Responses are cached in Redis keyed on the **consultant** and request params. Cache keys MUST include `consultantId` — no two consultants share a slot. Writes from the [Tasks controller](tasks-api-specs.md) and the [Membership controller](membership-api-specs.md) invalidate these keys on success so freshly-joined projects / status flips appear immediately.
 
-| Endpoint                                     | TTL  | Key shape                                                               |
-| -------------------------------------------- | ---- | ----------------------------------------------------------------------- |
-| `GET /projects/consultant/workspaces`        | 60s  | `consultant_workspaces:list:<consultantId>:<page>:<limit>:<keyword-lc>` |
-| `GET /projects/consultant/joined`            | 60s  | `consultant_joined:list:<consultantId>:<page>:<limit>:<keyword-lc>`     |
-| `GET /projects/consultant/joined/:projectId` | 120s | `consultant_joined:detail:<consultantId>:<projectId>`                   |
+| Endpoint                                     | TTL  | Key shape                                                           |
+| -------------------------------------------- | ---- | ------------------------------------------------------------------- |
+| `GET /projects/consultant/workspaces`        | 60s  | `consultant_workspaces:list:<consultantId>`                         |
+| `GET /projects/consultant/joined`            | 60s  | `consultant_joined:list:<consultantId>:<page>:<limit>:<keyword-lc>` |
+| `GET /projects/consultant/joined/:projectId` | 120s | `consultant_joined:detail:<consultantId>:<projectId>`               |
 
 Cache failures (Redis down/timeouts) are non-fatal — both reads and writes log a warning and the endpoint falls through to the database.
 
@@ -77,21 +77,15 @@ Lightweight list designed for the workspace-switcher dropdown in the consultant 
 - **Method:** `GET`
 - **Throttle:** 60 req / 60s
 - **Cache:** 60s
-- **Query params:** [`ListConsultantWorkspacesDto`](../../../../src/modules/consultant-projects/dto/requests/list-consultant-workspaces.dto.ts) extends [`PageOptionsDto`](../../../../src/common/dto/page-options.dto.ts)
-
-  | Field     | Type     | Required | Notes                                                                                    |
-  | --------- | -------- | -------- | ---------------------------------------------------------------------------------------- |
-  | `page`    | `number` | no       | Default `1`. Min `1`.                                                                    |
-  | `limit`   | `number` | no       | Default `20`. Max `100`.                                                                 |
-  | `keyword` | `string` | no       | Case-insensitive substring match on `project.title` OR `project.code`. Max length `100`. |
+- **Query params:** _none_ — the endpoint does not accept `page`, `limit`, or `keyword`. Anything sent is ignored by the controller.
 
 - **Behaviour:**
   - Resolves the caller's consultant profile via `RequestContextService.userId`.
-  - Returns every project where the caller has `project_members.status = 'active'` AND `project.deleted_at IS NULL`. LEFT / REMOVED memberships are excluded.
-  - Ordering: `project.title ASC`, then `project.id ASC` (stable cross-page tiebreak). Alphabetical fits a switcher's UX.
+  - Returns **every** project where the caller has `project_members.status = 'active'` AND `project.deleted_at IS NULL` in a single response — no pagination. LEFT / REMOVED memberships are excluded.
+  - Ordering: `IN_PROGRESS` projects float to the top (the consultant's active workload), then `project.title ASC`, then `project.id ASC` (stable tiebreak).
   - Lightweight projection — only `id`, `code`, `title`, `status` selected from the DB. No business join, no skill/task aggregates.
 
-- **Response 200:** `PageDto<`[`IConsultantWorkspaceListItemResponse`](../../../../src/modules/consultant-projects/dto/responses/interfaces/consultant-workspace-list-item.response.interface.ts)`>`
+- **Response 200:** [`IConsultantWorkspaceListItemResponse[]`](../../../../src/modules/consultant-projects/dto/responses/interfaces/consultant-workspace-list-item.response.interface.ts) (plain array — no `PageDto` envelope around it; the `data` field of the standard response holds the array directly)
 
   Item shape:
 
@@ -109,7 +103,7 @@ Lightweight list designed for the workspace-switcher dropdown in the consultant 
 #### Example request
 
 ```http
-GET /api/v1/projects/consultant/workspaces?page=1&limit=10&keyword=ai
+GET /api/v1/projects/consultant/workspaces
 Authorization: Bearer <access_token>
 ```
 
@@ -120,34 +114,26 @@ Authorization: Bearer <access_token>
   "status_code": 200,
   "message": "OK",
   "error_code": null,
-  "data": {
-    "data": [
-      {
-        "id": "550e8400-e29b-41d4-a716-446655440000",
-        "title": "AI-powered customer support automation",
-        "code": "AI-1",
-        "status": "in_progress"
-      },
-      {
-        "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-        "title": "AI demand forecasting",
-        "code": "AI-2",
-        "status": "published"
-      }
-    ],
-    "meta": {
-      "page": 1,
-      "limit": 10,
-      "itemCount": 2,
-      "pageCount": 1,
-      "hasPreviousPage": false,
-      "hasNextPage": false
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "AI-powered customer support automation",
+      "code": "AI-1",
+      "status": "in_progress"
+    },
+    {
+      "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "title": "AI demand forecasting",
+      "code": "AI-2",
+      "status": "published"
     }
-  },
+  ],
   "timestamp": "2026-05-17T10:00:00.000Z",
   "path": "/api/v1/projects/consultant/workspaces"
 }
 ```
+
+The first row above is `in_progress` and ranks ahead of the alphabetically-earlier `published` row — that is the new ordering rule.
 
 ---
 
@@ -352,12 +338,12 @@ Accept-Language: en
 
 These read endpoints don't issue writes — they're invalidated by writes elsewhere:
 
-| Source write                                                        | Keys deleted                                                                                                                                                                                            |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /projects/consultant/membership/:projectId/apply` or `/leave` | `consultant_workspaces:list:<consultantId>:*`, `consultant_joined:list:<consultantId>:*`, `consultant_joined:detail:<consultantId>:<projectId>`, `consultant_joined:tasks:<consultantId>:<projectId>:*` |
-| `POST /projects/consultant/joined/:projectId/tasks/:taskId/assign`  | Same prefixes for `(consultantId, projectId)`                                                                                                                                                           |
-| `POST .../tasks/:taskId/unassign`                                   | Same                                                                                                                                                                                                    |
-| `POST .../tasks/:taskId/submit-for-review`                          | Same                                                                                                                                                                                                    |
+| Source write                                                        | Keys deleted                                                                                                                                                                                          |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /projects/consultant/membership/:projectId/apply` or `/leave` | `consultant_workspaces:list:<consultantId>`, `consultant_joined:list:<consultantId>:*`, `consultant_joined:detail:<consultantId>:<projectId>`, `consultant_joined:tasks:<consultantId>:<projectId>:*` |
+| `POST /projects/consultant/joined/:projectId/tasks/:taskId/assign`  | Same prefixes for `(consultantId, projectId)`                                                                                                                                                         |
+| `POST .../tasks/:taskId/unassign`                                   | Same                                                                                                                                                                                                  |
+| `POST .../tasks/:taskId/submit-for-review`                          | Same                                                                                                                                                                                                  |
 
 Redis failures during invalidation are non-fatal — the service logs a warn and the affected reads simply remain stale until the TTL expires.
 

@@ -282,30 +282,27 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
   /** @inheritdoc */
   public async findJoinedByConsultantLightweight(params: {
     consultantId: string;
-    keyword?: string;
-    skip: number;
-    take: number;
-  }): Promise<[Project[], number]> {
-    const { consultantId, keyword, skip, take } = params;
+  }): Promise<Project[]> {
+    const { consultantId } = params;
 
-    const qb = this.createQueryBuilder('project')
-      .select(['project.id', 'project.code', 'project.title', 'project.status'])
-      .innerJoin(
-        'project_members',
-        'pm',
-        'pm.project_id = project.id AND pm.consultant_id = :consultantId AND pm.status = :memberStatus',
-        { consultantId, memberStatus: ProjectMemberStatus.ACTIVE },
-      )
-      .where('project.deleted_at IS NULL');
-
-    const trimmed = keyword?.trim();
-    if (trimmed && trimmed.length > 0) {
-      const like = `%${trimmed.toLowerCase()}%`;
-      qb.andWhere('(LOWER(project.title) LIKE :kw OR LOWER(project.code) LIKE :kw)', { kw: like });
-    }
-
-    qb.orderBy('project.title', 'ASC').addOrderBy('project.id', 'ASC').skip(skip).take(take);
-
-    return qb.getManyAndCount();
+    return (
+      this.createQueryBuilder('project')
+        .select(['project.id', 'project.code', 'project.title', 'project.status'])
+        .innerJoin(
+          'project_members',
+          'pm',
+          'pm.project_id = project.id AND pm.consultant_id = :consultantId AND pm.status = :memberStatus',
+          { consultantId, memberStatus: ProjectMemberStatus.ACTIVE },
+        )
+        .where('project.deleted_at IS NULL')
+        // IN_PROGRESS projects float to the top — they're the consultant's
+        // active workload. Remaining statuses fall back to alphabetical so the
+        // switcher stays scannable; id is the final tiebreak for stability.
+        .orderBy(`CASE WHEN project.status = :inProgress THEN 0 ELSE 1 END`, 'ASC')
+        .addOrderBy('project.title', 'ASC')
+        .addOrderBy('project.id', 'ASC')
+        .setParameter('inProgress', ProjectStatus.IN_PROGRESS)
+        .getMany()
+    );
   }
 }

@@ -1,6 +1,5 @@
 import { ListConsultantJoinedProjectsDto } from '../dto/requests/list-consultant-joined-projects.dto';
 import { ListConsultantProjectTasksDto } from '../dto/requests/list-consultant-project-tasks.dto';
-import { ListConsultantWorkspacesDto } from '../dto/requests/list-consultant-workspaces.dto';
 
 /**
  * Cache key/TTL/invalidate helper for the consultant joined-project surfaces.
@@ -10,7 +9,7 @@ import { ListConsultantWorkspacesDto } from '../dto/requests/list-consultant-wor
  */
 export interface IConsultantJoinedCacheService {
   /** Key for {@link ConsultantJoinedProjectsService.listWorkspaces}. */
-  buildWorkspaceListKey(consultantId: string, dto: ListConsultantWorkspacesDto): string;
+  buildWorkspaceListKey(consultantId: string): string;
 
   /** Key for {@link ConsultantJoinedProjectsService.listJoinedProjects}. */
   buildJoinedListKey(consultantId: string, dto: ListConsultantJoinedProjectsDto): string;
