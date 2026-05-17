@@ -55,6 +55,10 @@
     "title": "Task status updated",
     "body": "Task \"{title}\" ({code}) moved to {new_status}."
   },
+  "business_task_status_changed": {
+    "title": "Task status updated by consultant",
+    "body": "Task \"{title}\" ({code}) was moved to {new_status} by the assigned consultant."
+  },
   "admin_business_onboarded": {
     "title": "New business registered",
     "body": "{name} has completed onboarding and is ready to post projects."

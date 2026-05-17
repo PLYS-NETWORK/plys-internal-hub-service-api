@@ -34,7 +34,10 @@
     "result_deleted": "Result deleted successfully.",
     "attachment_created": "Attachments uploaded successfully.",
     "attachment_updated": "Attachment updated successfully.",
-    "attachment_deleted": "Attachment deleted successfully."
+    "attachment_deleted": "Attachment deleted successfully.",
+    "assigned": "Task assigned successfully.",
+    "unassigned": "Task unassigned successfully.",
+    "submitted_for_review": "Task submitted for review."
   },
   "billing": {
     "invoice_checkout_initiated": "Invoice payment initiated."

@@ -55,6 +55,10 @@
     "title": "Görev durumu güncellendi",
     "body": "\"{title}\" ({code}) görevi {new_status} durumuna geçti."
   },
+  "business_task_status_changed": {
+    "title": "Danışman görev durumunu güncelledi",
+    "body": "\"{title}\" ({code}) görevi atanan danışman tarafından {new_status} durumuna geçirildi."
+  },
   "admin_business_onboarded": {
     "title": "Yeni iş yeri kaydoldu",
     "body": "{name} kayıt işlemini tamamladı ve proje yayınlamaya hazır."

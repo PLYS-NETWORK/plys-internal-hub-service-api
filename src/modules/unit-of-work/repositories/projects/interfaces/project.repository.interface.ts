@@ -128,4 +128,33 @@ export interface IProjectRepository extends AbstractRepository<Project> {
    * does not exist, is soft-deleted, or has a non-accessible status.
    */
   findExploreDetail(id: string): Promise<Project | null>;
+
+  /**
+   * Paginated list of projects where the given consultant has an ACTIVE
+   * membership. Eagerly loads `business` so callers can read
+   * `companyName` without a second round-trip. Optional case-insensitive
+   * substring keyword matched against `title` OR `code`. Sorted by
+   * `pm.joined_at DESC` then `project.id ASC` for cross-page stability.
+   *
+   * @returns `[rows, totalCount]` — total ignores skip/take.
+   */
+  findJoinedByConsultantPaginated(params: {
+    consultantId: string;
+    keyword?: string;
+    skip: number;
+    take: number;
+  }): Promise<[Project[], number]>;
+
+  /**
+   * Lightweight variant of {@link findJoinedByConsultantPaginated} used by
+   * the workspace switcher. Projects only (no business join), selects only
+   * `id, code, title, status`. Sorted alphabetically by `title ASC, id ASC`
+   * — switcher-friendly UX.
+   */
+  findJoinedByConsultantLightweight(params: {
+    consultantId: string;
+    keyword?: string;
+    skip: number;
+    take: number;
+  }): Promise<[Project[], number]>;
 }

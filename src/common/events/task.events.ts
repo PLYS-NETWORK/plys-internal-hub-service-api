@@ -17,6 +17,6 @@ export interface ITaskStatusChangedEvent {
   readonly new_status: string;
   /** The consultant who owns / is assigned to the task. */
   readonly consultant_user_id: string;
-  /** The business owner of the project — optional; not consumed by the current handler. */
-  readonly business_user_id?: string;
+  /** The business owner of the project — required so handlers can fan out to them. */
+  readonly business_user_id: string;
 }

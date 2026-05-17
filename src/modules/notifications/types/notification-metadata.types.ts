@@ -56,6 +56,16 @@ export interface IProjectConsultantLeftMetadata {
   consultant_name: string;
 }
 
+export interface IBusinessTaskStatusChangedMetadata {
+  task_id: string;
+  task_code: string;
+  task_title: string;
+  project_id: string;
+  consultant_user_id: string;
+  old_status: string;
+  new_status: string;
+}
+
 // ── Business: finance ───────────────────────────────────────────────────────
 
 export interface ITopUpCompletedMetadata {
@@ -263,6 +273,7 @@ export type NotificationMetadataMap = {
   [NOTIFICATION_TYPES.TASK_PUBLISHED]: ITaskPublishedMetadata;
   [NOTIFICATION_TYPES.PROJECT_CONSULTANT_JOINED]: IProjectConsultantJoinedMetadata;
   [NOTIFICATION_TYPES.PROJECT_CONSULTANT_LEFT]: IProjectConsultantLeftMetadata;
+  [NOTIFICATION_TYPES.BUSINESS_TASK_STATUS_CHANGED]: IBusinessTaskStatusChangedMetadata;
   [NOTIFICATION_TYPES.TOP_UP_COMPLETED]: ITopUpCompletedMetadata;
   [NOTIFICATION_TYPES.TOP_UP_REFUNDED]: ITopUpRefundedMetadata;
   [NOTIFICATION_TYPES.WITHDRAW_COMPLETED]: IWithdrawCompletedMetadata;

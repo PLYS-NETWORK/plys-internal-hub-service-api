@@ -3,7 +3,7 @@ import { TranslatableException } from '@common/exceptions/translatable.exception
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ConsultantProfile } from '@database/entities';
-import { ProjectStatus } from '@database/enums';
+import { ProjectMemberStatus, ProjectStatus } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 
@@ -73,11 +73,44 @@ export class ConsultantAccessService implements IConsultantAccessService {
     return { project, consultantProfile };
   }
 
+  /** @inheritdoc */
+  public async resolveJoinedProject(projectId: string): Promise<IResolvedAccessibleProject> {
+    const consultantProfile = await this.resolveConsultantProfile();
+    const membership = await this.uow.projectMembers.findByProjectAndConsultant(
+      projectId,
+      consultantProfile.id,
+    );
+    if (!membership || membership.status !== ProjectMemberStatus.ACTIVE) {
+      // 404 not 403 — leaking project existence to non-members would invite
+      // ID enumeration. Active-only gating is the whole point of this method.
+      this.logger.warn(
+        `[${this.rid}] resolveJoinedProject — not an active member | projectId: ${projectId}, consultantId: ${consultantProfile.id}`,
+      );
+      throw this.projectNotFound();
+    }
+    const project = await this.uow.projects.findOne({ where: { id: projectId } });
+    if (!project) {
+      this.logger.warn(
+        `[${this.rid}] resolveJoinedProject — project row missing | projectId: ${projectId}`,
+      );
+      throw this.projectNotFound();
+    }
+    return { project, consultantProfile };
+  }
+
   private consultantProfileNotFound(): TranslatableException {
     return new TranslatableException({
       messageKey: 'error.consultant_profile.not_found',
       errorCode: ERROR_CODES.CONSULTANT_PROFILE_NOT_FOUND,
       status: HttpStatus.FORBIDDEN,
+    });
+  }
+
+  private projectNotFound(): TranslatableException {
+    return new TranslatableException({
+      messageKey: 'error.project.not_found',
+      errorCode: ERROR_CODES.PROJECT_NOT_FOUND,
+      status: HttpStatus.NOT_FOUND,
     });
   }
 }

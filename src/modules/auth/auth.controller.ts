@@ -1,5 +1,6 @@
 import { HEADERS } from '@common/constants';
 import { Public } from '@common/decorators/public.decorator';
+import { PublicEndpointApiKeyGuard } from '@common/guards/public-endpoint-api-key.guard';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { EnvironmentsService } from '@common/modules/environments';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
@@ -17,7 +18,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiHeader, ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { FastifyReply, FastifyRequest } from 'fastify';
 
@@ -58,10 +59,21 @@ export class AuthController {
   // ─── Email / Password ────────────────────────────────────────────────────
 
   @Public()
+  @UseGuards(PublicEndpointApiKeyGuard)
+  @ApiSecurity('x-api-key')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Register a new user with email/password' })
+  @ApiOperation({
+    summary: 'Register a new user with email/password',
+    description:
+      'Public endpoint gated by the BFF shared secret (`x-api-key`). Caller must be a trusted first-party frontend; direct browser calls are rejected.',
+  })
+  @ApiHeader({
+    name: HEADERS.X_API_KEY,
+    required: true,
+    description: 'BFF shared secret. Compared with timingSafeEqual.',
+  })
   @ApiHeader({
     name: HEADERS.X_DEVICE_ID,
     required: false,

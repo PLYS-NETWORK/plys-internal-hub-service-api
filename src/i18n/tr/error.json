@@ -67,7 +67,12 @@
     "attachment_not_found": "Görev eki bulunamadı.",
     "attachment_forbidden": "Bu görevin eklerini yönetme yetkiniz yok.",
     "attachment_file_not_owned": "Eklenen dosyalardan biri veya birkaçı size ait değil ya da mevcut değil.",
-    "attachment_invalid_status": "Bu durumdaki görevlerin ekleri değiştirilemez."
+    "attachment_invalid_status": "Bu durumdaki görevlerin ekleri değiştirilemez.",
+    "not_claimable": "Bu görev şu anda alınamaz.",
+    "not_owned_by_consultant": "Bu görev size atanmamış.",
+    "invalid_state_for_unassign": "Bu görev mevcut durumunda iade edilemez.",
+    "invalid_state_for_submit": "Bu görev mevcut durumunda incelemeye gönderilemez.",
+    "due_date_invalid": "Son teslim tarihi geçerli ve gelecekteki bir tarih olmalıdır."
   },
   "payment": {
     "insufficient_balance": "Yetersiz hesap bakiyesi.",

@@ -1,18 +1,25 @@
 import { timingSafeEqual } from 'node:crypto';
 
 import { ERROR_CODES } from '@common/constants/error-codes';
+import { HEADERS } from '@common/constants/headers';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EnvironmentsService } from '@common/modules/environments';
 import { CanActivate, ExecutionContext, HttpStatus, Injectable } from '@nestjs/common';
 import { FastifyRequest } from 'fastify';
 
+/**
+ * Validates the `x-api-key` header against `PUBLIC_ENDPOINT_API_KEY` for
+ * routes exposed to first-party BFFs that authenticate at the edge instead
+ * of carrying a JWT. Uses `timingSafeEqual` so a mismatched-length input
+ * fails fast without leaking timing data.
+ */
 @Injectable()
-export class ExploreApiKeyGuard implements CanActivate {
+export class PublicEndpointApiKeyGuard implements CanActivate {
   constructor(private readonly env: EnvironmentsService) {}
 
   public canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest<FastifyRequest>();
-    const headerValue = req.headers['x-api-key'];
+    const headerValue = req.headers[HEADERS.X_API_KEY];
     const provided = Array.isArray(headerValue) ? headerValue[0] : headerValue;
     const expected = this.env.publicEndpointApiKey;
 

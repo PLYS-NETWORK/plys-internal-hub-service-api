@@ -1,6 +1,6 @@
 import { AbstractRepository } from '@common/repositories';
 import { Project } from '@database/entities';
-import { PROJECT_STATUSES, ProjectStatus } from '@database/enums';
+import { PROJECT_STATUSES, ProjectMemberStatus, ProjectStatus } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
@@ -247,5 +247,65 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
       created_count: Number(row.created_count),
       published_count: Number(row.published_count),
     }));
+  }
+
+  /** @inheritdoc */
+  public async findJoinedByConsultantPaginated(params: {
+    consultantId: string;
+    keyword?: string;
+    skip: number;
+    take: number;
+  }): Promise<[Project[], number]> {
+    const { consultantId, keyword, skip, take } = params;
+
+    const qb = this.createQueryBuilder('project')
+      .innerJoin(
+        'project_members',
+        'pm',
+        'pm.project_id = project.id AND pm.consultant_id = :consultantId AND pm.status = :memberStatus',
+        { consultantId, memberStatus: ProjectMemberStatus.ACTIVE },
+      )
+      .leftJoinAndSelect('project.business', 'business')
+      .where('project.deleted_at IS NULL');
+
+    const trimmed = keyword?.trim();
+    if (trimmed && trimmed.length > 0) {
+      const like = `%${trimmed.toLowerCase()}%`;
+      qb.andWhere('(LOWER(project.title) LIKE :kw OR LOWER(project.code) LIKE :kw)', { kw: like });
+    }
+
+    qb.orderBy('pm.joined_at', 'DESC').addOrderBy('project.id', 'ASC').skip(skip).take(take);
+
+    return qb.getManyAndCount();
+  }
+
+  /** @inheritdoc */
+  public async findJoinedByConsultantLightweight(params: {
+    consultantId: string;
+    keyword?: string;
+    skip: number;
+    take: number;
+  }): Promise<[Project[], number]> {
+    const { consultantId, keyword, skip, take } = params;
+
+    const qb = this.createQueryBuilder('project')
+      .select(['project.id', 'project.code', 'project.title', 'project.status'])
+      .innerJoin(
+        'project_members',
+        'pm',
+        'pm.project_id = project.id AND pm.consultant_id = :consultantId AND pm.status = :memberStatus',
+        { consultantId, memberStatus: ProjectMemberStatus.ACTIVE },
+      )
+      .where('project.deleted_at IS NULL');
+
+    const trimmed = keyword?.trim();
+    if (trimmed && trimmed.length > 0) {
+      const like = `%${trimmed.toLowerCase()}%`;
+      qb.andWhere('(LOWER(project.title) LIKE :kw OR LOWER(project.code) LIKE :kw)', { kw: like });
+    }
+
+    qb.orderBy('project.title', 'ASC').addOrderBy('project.id', 'ASC').skip(skip).take(take);
+
+    return qb.getManyAndCount();
   }
 }

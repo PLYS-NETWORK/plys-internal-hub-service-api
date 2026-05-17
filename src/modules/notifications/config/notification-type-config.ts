@@ -13,6 +13,7 @@ import {
   IAdminProjectPublishedMetadata,
   IAdminSkillExamResultMetadata,
   IAdminTaskPublishedMetadata,
+  IBusinessTaskStatusChangedMetadata,
   IConsultantAccountBannedMetadata,
   IConsultantOnboardingApprovedMetadata,
   IConsultantOnboardingRejectedMetadata,
@@ -168,6 +169,19 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
       consultant: m.consultant_name,
       title: m.project_title,
       code: m.project_code,
+    }),
+  },
+  [NOTIFICATION_TYPES.BUSINESS_TASK_STATUS_CHANGED]: {
+    entityType: NOTIFICATION_ENTITY_TYPES.TASK,
+    getEntityId: (m: IBusinessTaskStatusChangedMetadata) => m.task_id,
+    getRedirectUrl: (m, base, businessId) =>
+      businessId ? `${base}/c/${businessId}/projects/${m.project_id}/tasks/${m.task_id}` : null,
+    titleKey: 'notification.business_task_status_changed.title',
+    bodyKey: 'notification.business_task_status_changed.body',
+    bodyArgs: (m: IBusinessTaskStatusChangedMetadata) => ({
+      code: m.task_code,
+      title: m.task_title,
+      new_status: m.new_status,
     }),
   },
 

@@ -167,7 +167,10 @@ export class NotificationEventHandlerService implements INotificationEventHandle
   @OnEvent(NOTIFICATION_EVENTS.TASK_STATUS_CHANGED, { async: true })
   public async onTaskStatusChanged(event: ITaskStatusChangedEvent): Promise<void> {
     this.logger.log(`[${this.rid}] onTaskStatusChanged — start | taskId: ${event.task_id}`);
-    await this.onConsultantTaskStatusChanged(event);
+    await Promise.allSettled([
+      this.onConsultantTaskStatusChanged(event),
+      this.onBusinessTaskStatusChanged(event),
+    ]);
   }
 
   @OnEvent(NOTIFICATION_EVENTS.CONSULTANT_ONBOARDING_APPROVED, { async: true })
@@ -554,6 +557,30 @@ export class NotificationEventHandlerService implements INotificationEventHandle
       .catch((err: unknown) =>
         this.logger.error(
           `[${this.rid}] onConsultantTaskStatusChanged — failed | taskId: ${event.task_id} | error: ${String(err)}`,
+        ),
+      );
+  }
+
+  /** @inheritdoc */
+  public async onBusinessTaskStatusChanged(event: ITaskStatusChangedEvent): Promise<void> {
+    void this.dispatcher
+      .dispatch({
+        userId: event.business_user_id,
+        type: NOTIFICATION_TYPES.BUSINESS_TASK_STATUS_CHANGED,
+        metadata: {
+          task_id: event.task_id,
+          task_code: event.task_code,
+          task_title: event.task_title,
+          project_id: event.project_id,
+          consultant_user_id: event.consultant_user_id,
+          old_status: event.old_status,
+          new_status: event.new_status,
+        },
+        actorId: event.consultant_user_id,
+      })
+      .catch((err: unknown) =>
+        this.logger.error(
+          `[${this.rid}] onBusinessTaskStatusChanged — failed | taskId: ${event.task_id} | error: ${String(err)}`,
         ),
       );
   }

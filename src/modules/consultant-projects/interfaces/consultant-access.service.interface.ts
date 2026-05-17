@@ -35,4 +35,19 @@ export interface IConsultantAccessService {
    *         calling consultant.
    */
   resolveAccessibleProject(projectId: string): Promise<IResolvedAccessibleProject>;
+
+  /**
+   * Strict-membership variant used by the "joined" surface. Returns the
+   * project only when the caller currently has an ACTIVE `ProjectMember`
+   * row — discovery/public status does NOT grant access. Returns 404 (not
+   * 403) on every failure to avoid leaking project existence to non-members.
+   *
+   * @param projectId - UUID of the project to load.
+   * @returns The project plus the verified consultant profile.
+   * @throws TranslatableException 403 CONSULTANT_PROFILE_NOT_FOUND when the
+   *         caller has no consultant profile.
+   * @throws TranslatableException 404 PROJECT_NOT_FOUND when the project is
+   *         missing, soft-deleted, or the caller has no ACTIVE membership.
+   */
+  resolveJoinedProject(projectId: string): Promise<IResolvedAccessibleProject>;
 }

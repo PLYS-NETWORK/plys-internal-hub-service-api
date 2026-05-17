@@ -73,7 +73,12 @@
     "attachment_not_found": "Task attachment not found.",
     "attachment_forbidden": "You do not have permission to manage attachments on this task.",
     "attachment_file_not_owned": "One or more attached files do not belong to you or do not exist.",
-    "attachment_invalid_status": "Attachments cannot be modified for tasks in this status."
+    "attachment_invalid_status": "Attachments cannot be modified for tasks in this status.",
+    "not_claimable": "This task cannot be claimed right now.",
+    "not_owned_by_consultant": "You are not assigned to this task.",
+    "invalid_state_for_unassign": "This task cannot be unassigned in its current state.",
+    "invalid_state_for_submit": "This task cannot be submitted for review in its current state.",
+    "due_date_invalid": "Due date must be a valid future date."
   },
   "payment": {
     "insufficient_balance": "Insufficient account balance.",

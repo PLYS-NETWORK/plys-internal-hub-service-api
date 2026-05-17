@@ -346,9 +346,16 @@ export class ConsultantMembershipService implements IConsultantMembershipService
   // explore read just falls through to the DB.
 
   private async invalidateConsultantCaches(consultantId: string, projectId: string): Promise<void> {
+    // Apply/leave also flips the consultant's workspace switcher and the
+    // joined-project list/detail/tasks views — wipe those prefixes too so
+    // freshly-joined projects appear without waiting for a 60–120s TTL.
     const patterns = [
       `consultant_explore:list:${consultantId}:*`,
       `consultant_explore:detail:${consultantId}:*:${projectId}`,
+      `consultant_workspaces:list:${consultantId}:*`,
+      `consultant_joined:list:${consultantId}:*`,
+      `consultant_joined:detail:${consultantId}:${projectId}`,
+      `consultant_joined:tasks:${consultantId}:${projectId}:*`,
     ];
     try {
       for (const pattern of patterns) {

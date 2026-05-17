@@ -201,4 +201,62 @@ export interface ITaskRepository extends AbstractRepository<Task> {
     from: Date,
     to: Date,
   ): Promise<IConsultantPerformanceAggregate[]>;
+
+  /**
+   * Paginated visibility query for the consultant joined-project task list.
+   * Returns tasks where either (a) the task is unassigned and in TO_DO
+   * (claimable by anyone) OR (b) the task is assigned to the given consultant
+   * and not in DRAFT. Soft-deleted rows are excluded. Results are ordered with
+   * IN_PROGRESS first, then TO_DO, then the remaining review/done/cancelled
+   * buckets — mirrors the consultant's mental "what needs my attention" order.
+   *
+   * @param params projectId + consultantId + optional case-insensitive keyword
+   *               match on `title` OR `code` + skip/take for pagination.
+   * @returns `[rows, total]` tuple compatible with `PageMetaDto`.
+   */
+  findVisibleForConsultant(params: {
+    projectId: string;
+    consultantId: string;
+    keyword?: string;
+    skip: number;
+    take: number;
+  }): Promise<[Task[], number]>;
+
+  /**
+   * Count of DONE tasks per project that were completed by a single
+   * consultant. One round-trip via grouped scan; projects with zero matches
+   * are absent from the returned map. Powers the `completed_tasks_by_me`
+   * column in the joined-projects list.
+   */
+  countCompletedByAssigneeAndProjectIds(
+    consultantId: string,
+    projectIds: string[],
+  ): Promise<Map<string, number>>;
+
+  /**
+   * Race-safe self-assign primitive. Locks the task row with `FOR UPDATE SKIP
+   * LOCKED` only when status is TO_DO and `assigned_to IS NULL` — concurrent
+   * claims see `null` and back off (caller throws `TASK_NOT_CLAIMABLE`).
+   * Returns the locked row so the caller can mutate it inside the same
+   * transaction. Soft-deleted rows are ignored.
+   *
+   * @throws Nothing — surfaces `null` for every "cannot claim" path so the
+   *         caller controls the error code.
+   */
+  lockToDoUnassignedTaskById(projectId: string, taskId: string): Promise<Task | null>;
+
+  /**
+   * Locks a task that the consultant already owns for in-place state
+   * transitions (unassign, submit-for-review). Filters by `assigned_to =
+   * consultantId` and a whitelist of expected statuses; returns `null` when
+   * the row is missing, not owned, in the wrong status, or soft-deleted. The
+   * caller is responsible for disambiguating those cases via a non-locking
+   * pre-fetch when they need to emit specific error codes.
+   */
+  lockTaskForOwner(
+    projectId: string,
+    taskId: string,
+    consultantId: string,
+    expectedStatuses: TaskKanbanStatus[],
+  ): Promise<Task | null>;
 }
