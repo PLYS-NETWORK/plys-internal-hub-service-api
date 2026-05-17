@@ -4,6 +4,7 @@ import { Global, Module } from '@nestjs/common';
 import { STORAGE_PROVIDER } from './constants';
 import { IStorageProvider } from './interfaces';
 import { LocalStorageProvider, S3StorageProvider } from './providers';
+import { UrlResolverService } from './services/url-resolver.service';
 import { FileContentValidator } from './validators';
 
 /**
@@ -32,6 +33,7 @@ import { FileContentValidator } from './validators';
     FileContentValidator,
     LocalStorageProvider,
     S3StorageProvider,
+    UrlResolverService,
     {
       provide: STORAGE_PROVIDER,
       inject: [EnvironmentsService, LocalStorageProvider, S3StorageProvider],
@@ -53,6 +55,6 @@ import { FileContentValidator } from './validators';
       },
     },
   ],
-  exports: [STORAGE_PROVIDER, FileContentValidator],
+  exports: [STORAGE_PROVIDER, FileContentValidator, UrlResolverService],
 })
 export class FileStorageModule {}

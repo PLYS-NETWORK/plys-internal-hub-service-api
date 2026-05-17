@@ -3,6 +3,7 @@ import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { UrlResolverService } from '@common/modules/file-storage';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { TaskResultAttachment } from '@database/entities';
@@ -36,6 +37,7 @@ export class BoardResultsService implements IBoardResultsService {
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly access: BusinessAccessService,
+    private readonly urlResolver: UrlResolverService,
   ) {
     this.logger = new AppLogger(BoardResultsService.name, requestContext);
   }
@@ -95,7 +97,11 @@ export class BoardResultsService implements IBoardResultsService {
       byResult.set(a.resultId, list);
     }
 
-    const data = rows.map((r) => this.mapRow(r, byResult.get(r.result_id) ?? []));
+    // Re-sign every author avatar once and align to row order before mapping.
+    const authorAvatars = await this.urlResolver.resolveMany(rows.map((r) => r.consultant_avatar));
+    const data = rows.map((r, idx) =>
+      this.mapRow(r, byResult.get(r.result_id) ?? [], authorAvatars[idx]),
+    );
     this.logger.log(
       `list — complete | taskId: ${taskId}, returned: ${data.length}, total: ${itemCount}`,
     );
@@ -115,7 +121,11 @@ export class BoardResultsService implements IBoardResultsService {
     }
   }
 
-  private mapRow(r: IResultRow, attachments: TaskResultAttachment[]): BoardResultResponseDto {
+  private mapRow(
+    r: IResultRow,
+    attachments: TaskResultAttachment[],
+    authorAvatarUrl: string | null,
+  ): BoardResultResponseDto {
     return plainToInstance(
       BoardResultResponseDto,
       {
@@ -124,7 +134,7 @@ export class BoardResultsService implements IBoardResultsService {
         author: {
           consultant_id: r.consultant_id ?? '',
           full_name: r.consultant_name ?? '',
-          avatar_url: r.consultant_avatar,
+          avatar_url: authorAvatarUrl,
         },
         remarks: r.remarks,
         is_edited: r.is_edited,

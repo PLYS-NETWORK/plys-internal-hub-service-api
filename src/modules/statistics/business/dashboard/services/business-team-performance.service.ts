@@ -1,5 +1,6 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { UrlResolverService } from '@common/modules/file-storage';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { DateUtil } from '@common/utils/date';
@@ -30,6 +31,7 @@ export class BusinessTeamPerformanceService implements IBusinessTeamPerformanceS
   constructor(
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
+    private readonly urlResolver: UrlResolverService,
   ) {
     this.logger = new AppLogger(BusinessTeamPerformanceService.name, requestContext);
   }
@@ -89,7 +91,10 @@ export class BusinessTeamPerformanceService implements IBusinessTeamPerformanceS
       perfRows.map((r) => [r.consultant_id, r]),
     );
 
-    const items: IPerformanceItem[] = consultantRows.map((row) => {
+    const avatarUrls = await this.urlResolver.resolveMany(
+      consultantRows.map((row) => row.avatar_url),
+    );
+    const items: IPerformanceItem[] = consultantRows.map((row, idx) => {
       const perf = perfById.get(row.consultant_id);
       const completed = perf?.completed ?? 0;
       const inProgress = perf?.in_progress ?? 0;
@@ -101,7 +106,7 @@ export class BusinessTeamPerformanceService implements IBusinessTeamPerformanceS
       return {
         consultant_id: row.consultant_id,
         full_name: row.full_name,
-        avatar_url: row.avatar_url,
+        avatar_url: avatarUrls[idx],
         active_projects_count: row.active_projects_count,
         completed_tasks: completed,
         in_progress_tasks: inProgress,

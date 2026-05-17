@@ -1,50 +1,90 @@
 # Consultant Auth API
 
-Authentication endpoints for the Consultant platform.
+Authentication endpoints for the Consultant platform. All routes live under the global prefix `/api/v1` and the controller is mounted on `/auth`.
 
-**Base path:** `/api/v1`  
+**Base path:** `/api/v1/auth`
 **`active_platform` value:** `consultant`
+
+All request and response payloads are `snake_case`. Successful responses are wrapped by the global `TransformResponseInterceptor`:
+
+```json
+{
+  "status_code": 200,
+  "message": "OK",
+  "error_code": null,
+  "data": { ... },
+  "timestamp": "2026-05-17T00:00:00.000Z",
+  "path": "/api/v1/auth/<route>"
+}
+```
+
+Error responses follow the same envelope with `error_code` populated and HTTP `status_code` matching the failure. `details` is present for errors that carry contextual data (e.g. `blocked_until`, `ban_reason`).
 
 ---
 
-## Onboarding-rejection block (read first)
+## Two consultant-specific account gates
 
-The Consultant platform layers an extra gate on top of the standard auth flow. After an admin **rejects** a consultant's onboarding (`POST /admin/onboardings/:id/decide` with `decision = REJECTED`):
+The consultant platform layers two extra gates on top of the standard auth flow. Both share the same shape (HTTP 403 + `details`) but carry distinct `error_code` values so the client can render the right copy.
+
+### 1. Time-boxed onboarding block — `CONSULTANT_ONBOARDING_BLOCKED`
+
+After an admin **rejects** a consultant's onboarding (`POST /admin/onboardings/:id/decide` with `decision = REJECTED`):
 
 1. The server records `consultant_onboardings.blocked_until = now + 3 months` on the rejected row.
-2. The consultant receives a rejection email (`sendApplicationRejectedEmail`) explaining the decision and the date the block lifts.
-3. While `blocked_until > now`, **every** of the following calls returns **`403 CONSULTANT_ONBOARDING_BLOCKED`** with `details.blocked_until` (ISO timestamp):
-   - `POST /auth/register` (re-registration attempts on the same email + platform)
+2. The consultant receives a rejection email explaining the decision and the date the block lifts.
+3. While `blocked_until > now`, the following endpoints return **`403 CONSULTANT_ONBOARDING_BLOCKED`** with `details.blocked_until` (ISO timestamp):
+   - `POST /auth/register` (re-registration on the same email + platform)
    - `POST /auth/login` (email/password sign-in)
    - `POST /auth/sso/exchange` and `POST /auth/sso/google/token` (Google SSO sign-in)
-   - `POST /consultant/onboarding/profile` (defence-in-depth — the consultant cannot reach this without a session anyway)
-4. `user.is_active` is **not** touched by a rejection — the block is time-boxed, not a permanent ban. Once `blocked_until` passes (still 3 months later by default), every endpoint above returns to normal and the consultant may re-onboard.
-
-Permanent bans (e.g. repeat AI-content violations from skill exams) take a different path: they set `users.is_active = false` and return `403 AUTH_ACCOUNT_INACTIVE` instead. The two error codes are distinct so the client can tell "come back after 2026-08-14" apart from "your account is permanently disabled".
-
-## Permanent ban — `AUTH_ACCOUNT_INACTIVE` (CopyLeaks 3-strike)
-
-A separate, **permanent** ban path fires from skill-exam CopyLeaks abuse. When the consultant submits a skill exam that CopyLeaks flags as AI-generated for the 3rd time (lifetime counter — never resets):
-
-1. `users.is_active = false`, `users.banned_at = now`, `users.ban_reason = 'AI_CONTENT_ABUSE'`.
-2. **Every active `user_sessions` row for this user is deleted in the same transaction.** Any device's cached JWT becomes immediately useless — the next request hits the `is_active = false` gate and is rejected with `403 AUTH_ACCOUNT_INACTIVE`.
-3. The consultant receives the `consultant_account_banned` in-app notification; admin platform receives an `admin_consultant_banned` fan-out so every reviewer sees the strike.
-
-Subsequent calls to `POST /auth/login`, `POST /auth/sso/exchange`, `POST /auth/sso/google/token` return `403 AUTH_ACCOUNT_INACTIVE` with `details.ban_reason` set to the reason code:
+4. `users.is_active` is **not** touched by a rejection — the block is time-boxed. Once `blocked_until` passes, every endpoint above returns to normal and the consultant may re-onboard.
 
 ```json
 {
   "status_code": 403,
-  "message": "Your account is permanently disabled.",
-  "error_code": "AUTH_ACCOUNT_INACTIVE",
+  "message": "Your account is blocked from onboarding until 2026-08-14T10:11:00.000Z. Please try again after that date.",
+  "error_code": "CONSULTANT_ONBOARDING_BLOCKED",
   "data": null,
-  "details": { "ban_reason": "AI_CONTENT_ABUSE" },
-  "timestamp": "2026-05-14T10:11:00.000Z",
+  "details": { "blocked_until": "2026-08-14T10:11:00.000Z" },
+  "timestamp": "2026-05-17T10:11:00.000Z",
   "path": "/api/v1/auth/login"
 }
 ```
 
-This is **distinct** from the time-boxed `CONSULTANT_ONBOARDING_BLOCKED` — the two errors carry different codes so the client can tell "come back after 2026-08-14" apart from "your account is permanently disabled; contact support to appeal".
+### 2. Permanent ban — `AUTH_ACCOUNT_INACTIVE`
+
+A separate, permanent ban path fires from skill-exam CopyLeaks abuse (3-strike lifetime counter). When the third strike lands:
+
+1. `users.is_active = false`, `users.banned_at = now`, `users.ban_reason = 'AI_CONTENT_ABUSE'`.
+2. **Every active `user_sessions` row for the user is deleted in the same transaction.** Cached JWTs are immediately useless — the next request hits the `is_active = false` gate.
+3. The consultant gets a `consultant_account_banned` in-app notification; admin platform receives an `admin_consultant_banned` fan-out.
+
+Subsequent calls to `POST /auth/login`, `POST /auth/sso/exchange`, `POST /auth/sso/google/token`, and any authenticated route return `403 AUTH_ACCOUNT_INACTIVE` with `details.ban_reason`:
+
+```json
+{
+  "status_code": 403,
+  "message": "Account is inactive",
+  "error_code": "AUTH_ACCOUNT_INACTIVE",
+  "data": null,
+  "details": { "ban_reason": "AI_CONTENT_ABUSE" },
+  "timestamp": "2026-05-17T10:11:00.000Z",
+  "path": "/api/v1/auth/login"
+}
+```
+
+---
+
+## Throttling tiers
+
+Every endpoint is rate-limited. Exceeding the limit returns HTTP `429 Too Many Requests` (`error_code: AUTH_RATE_LIMITED`).
+
+| Tier          | Limit          | Applied to                                                           |
+| ------------- | -------------- | -------------------------------------------------------------------- |
+| `STRICT`      | 5 req / 60 s   | `register`, `login`, `change-password`                               |
+| `MODERATE`    | 10 req / 60 s  | `verify-email`, `reset-password`, `sso/exchange`, `sso/google/token` |
+| `INTERACTIVE` | 30 req / 60 s  | `refresh`                                                            |
+| `OTP`         | 3 req / 60 min | `forgot-password`, `resend-verification`                             |
+| `DEFAULT`     | 60 req / 60 s  | `logout`, `me`, `sso/google`, `sso/google/callback`                  |
 
 ---
 
@@ -52,16 +92,17 @@ This is **distinct** from the time-boxed `CONSULTANT_ONBOARDING_BLOCKED` — the
 
 ### POST /auth/register
 
-Register a new consultant account. Sends a verification email on success.
+Register a new consultant account. Sends a verification email on success. This endpoint is gated by the **BFF shared secret** (`x-api-key`) — direct browser calls are rejected.
 
 #### Headers
 
-| Header          | Required | Description                                     |
-| --------------- | -------- | ----------------------------------------------- |
-| `x-device-id`   | No       | Stable device identifier for session binding    |
-| `x-fingerprint` | No       | Client fingerprint stored in the session record |
+| Header          | Required | Description                                         |
+| --------------- | -------- | --------------------------------------------------- |
+| `x-api-key`     | **Yes**  | BFF shared secret. Compared with `timingSafeEqual`. |
+| `x-device-id`   | No       | Stable device identifier for session binding        |
+| `x-fingerprint` | No       | Client fingerprint stored in the session record     |
 
-#### Request Body
+#### Request body
 
 ```json
 {
@@ -72,16 +113,16 @@ Register a new consultant account. Sends a verification email on success.
 }
 ```
 
-| Field             | Type     | Constraints                                                 |
-| ----------------- | -------- | ----------------------------------------------------------- |
-| `email`           | `string` | Valid email address                                         |
-| `password`        | `string` | Min 8 chars, must contain uppercase, lowercase, and a digit |
-| `active_platform` | `string` | Must be `"consultant"`                                      |
-| `full_name`       | `string` | Required when `active_platform` is `consultant`             |
+| Field             | Type     | Constraints                                                                                  |
+| ----------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `email`           | `string` | Valid email address                                                                          |
+| `password`        | `string` | Min 8 chars; must contain at least one uppercase letter, one lowercase letter, and one digit |
+| `active_platform` | `string` | Must be `"consultant"` (admin self-registration is rejected)                                 |
+| `full_name`       | `string` | Required when `active_platform` is `consultant`                                              |
 
 #### Responses
 
-**201 Created** — account created, verification email dispatched
+**201 Created** — account created, verification email dispatched. `data` is `null`.
 
 ```json
 {
@@ -89,34 +130,27 @@ Register a new consultant account. Sends a verification email on success.
   "message": "Created",
   "error_code": null,
   "data": null,
-  "timestamp": "2026-05-07T12:00:00.000Z",
+  "timestamp": "2026-05-17T12:00:00.000Z",
   "path": "/api/v1/auth/register"
 }
 ```
 
-**409 Conflict** — email already registered (`AUTH_EMAIL_ALREADY_EXISTS`)
+**Error responses**
 
-**403 Forbidden** — re-registration blocked while an admin rejection is in force (`CONSULTANT_ONBOARDING_BLOCKED`). Body includes `details.blocked_until` (ISO timestamp the block lifts).
-
-```json
-{
-  "status_code": 403,
-  "message": "Your account is blocked from onboarding until 2026-08-14T10:11:00.000Z. Please try again after that date.",
-  "error_code": "CONSULTANT_ONBOARDING_BLOCKED",
-  "data": null,
-  "details": { "blocked_until": "2026-08-14T10:11:00.000Z" },
-  "timestamp": "2026-05-14T10:11:00.000Z",
-  "path": "/api/v1/auth/register"
-}
-```
-
-**422 Unprocessable Entity** — validation error (`GENERIC_VALIDATION_ERROR`)
+| HTTP | `error_code`                      | When                                                                                                                                                                                                             |
+| ---- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 401  | `GENERIC_UNAUTHORIZED`            | Missing or invalid `x-api-key`                                                                                                                                                                                   |
+| 409  | `AUTH_EMAIL_ALREADY_REGISTERED`   | Email is already registered **and verified** on this platform                                                                                                                                                    |
+| 409  | `AUTH_EMAIL_PENDING_VERIFICATION` | Email exists but is unverified and a still-valid verification token is outstanding (user should check inbox); when the prior token has expired the server transparently issues a new one and returns 201 instead |
+| 403  | `CONSULTANT_ONBOARDING_BLOCKED`   | Prior admin rejection is still in force; body includes `details.blocked_until`                                                                                                                                   |
+| 422  | `GENERIC_VALIDATION_FAILED`       | Body failed validation                                                                                                                                                                                           |
+| 429  | `AUTH_RATE_LIMITED`               | STRICT throttle exceeded (5/60 s)                                                                                                                                                                                |
 
 ---
 
 ### POST /auth/verify-email
 
-Verify email using the token from the verification link.
+Verify email using the token from the verification link. Returns a fresh session on success — the consultant is signed in immediately.
 
 #### Headers
 
@@ -125,30 +159,41 @@ Verify email using the token from the verification link.
 | `x-device-id`   | No       | Stable device identifier for session binding    |
 | `x-fingerprint` | No       | Client fingerprint stored in the session record |
 
-#### Request Body
+#### Request body
 
 ```json
 {
-  "token": "<verification-token>",
-  "active_platform": "consultant"
+  "token": "<verification-token>"
 }
 ```
 
+| Field   | Type     | Constraints                                          |
+| ------- | -------- | ---------------------------------------------------- |
+| `token` | `string` | Opaque verification token issued by `/auth/register` |
+
+> The legacy `active_platform` field is no longer required — the platform is recovered from the user record bound to the token.
+
 #### Responses
 
-**200 OK** — email verified, session tokens returned → [Auth Response](#auth-response)
+**200 OK** — email verified, session tokens returned. `data` is the [Auth Response](#auth-response) shape.
 
-**401 Unauthorized** — token invalid or expired (`AUTH_INVALID_TOKEN`)
+**Error responses**
 
-**422 Unprocessable Entity** — validation error
+| HTTP | `error_code`                | When                                      |
+| ---- | --------------------------- | ----------------------------------------- |
+| 400  | `AUTH_TOKEN_INVALID`        | Token not found (never issued / mistyped) |
+| 400  | `AUTH_TOKEN_ALREADY_USED`   | Token was already consumed                |
+| 400  | `AUTH_TOKEN_EXPIRED`        | Token is past its 24 h expiry             |
+| 422  | `GENERIC_VALIDATION_FAILED` | Body failed validation                    |
+| 429  | `AUTH_RATE_LIMITED`         | MODERATE throttle exceeded (10/60 s)      |
 
 ---
 
 ### POST /auth/resend-verification
 
-Resend the email verification link. Always returns `200` regardless of whether the account exists (prevents enumeration).
+Resend the email verification link. **Always returns 200** regardless of whether the account exists or is already verified — prevents user enumeration.
 
-#### Request Body
+#### Request body
 
 ```json
 {
@@ -157,17 +202,38 @@ Resend the email verification link. Always returns `200` regardless of whether t
 }
 ```
 
+| Field             | Type     | Constraints            |
+| ----------------- | -------- | ---------------------- |
+| `email`           | `string` | Valid email address    |
+| `active_platform` | `string` | Must be `"consultant"` |
+
 #### Responses
 
-**200 OK** — verification email dispatched (or silently ignored)
+**200 OK** — verification email dispatched (or silently ignored when the account does not exist / is already verified).
 
-**422 Unprocessable Entity** — validation error
+```json
+{
+  "status_code": 200,
+  "message": "OK",
+  "error_code": null,
+  "data": null,
+  "timestamp": "2026-05-17T12:00:00.000Z",
+  "path": "/api/v1/auth/resend-verification"
+}
+```
+
+**Error responses**
+
+| HTTP | `error_code`                | When                                        |
+| ---- | --------------------------- | ------------------------------------------- |
+| 422  | `GENERIC_VALIDATION_FAILED` | Body failed validation                      |
+| 429  | `AUTH_RATE_LIMITED`         | OTP throttle exceeded (3/hour per IP+email) |
 
 ---
 
 ### POST /auth/login
 
-Login with email and password.
+Authenticate with email and password.
 
 #### Headers
 
@@ -176,7 +242,7 @@ Login with email and password.
 | `x-device-id`   | No       | Stable device identifier for session binding    |
 | `x-fingerprint` | No       | Client fingerprint stored in the session record |
 
-#### Request Body
+#### Request body
 
 ```json
 {
@@ -186,49 +252,44 @@ Login with email and password.
 }
 ```
 
+| Field             | Type     | Constraints            |
+| ----------------- | -------- | ---------------------- |
+| `email`           | `string` | Valid email address    |
+| `password`        | `string` | Any non-empty string   |
+| `active_platform` | `string` | Must be `"consultant"` |
+
 #### Responses
 
-**200 OK** — login successful → [Auth Response](#auth-response)
+**200 OK** — login successful. `data` is the [Auth Response](#auth-response) shape.
 
-**401 Unauthorized** — wrong email or password (`AUTH_INVALID_CREDENTIALS`)
+**Error responses**
 
-**403 Forbidden** — credentials are valid but the account is unverified (`AUTH_EMAIL_NOT_VERIFIED`); server re-issues a verification email best-effort.
-
-**403 Forbidden** — account is permanently disabled (`AUTH_ACCOUNT_INACTIVE`). Distinct from a time-boxed onboarding block.
-
-**403 Forbidden** — admin rejected the consultant's onboarding and the 3-month block window is still active (`CONSULTANT_ONBOARDING_BLOCKED`). Body includes `details.blocked_until` so the client can show "Try again after &lt;date&gt;".
-
-```json
-{
-  "status_code": 403,
-  "message": "Your account is blocked from onboarding until 2026-08-14T10:11:00.000Z. Please try again after that date.",
-  "error_code": "CONSULTANT_ONBOARDING_BLOCKED",
-  "data": null,
-  "details": { "blocked_until": "2026-08-14T10:11:00.000Z" },
-  "timestamp": "2026-05-14T10:11:00.000Z",
-  "path": "/api/v1/auth/login"
-}
-```
-
-**422 Unprocessable Entity** — validation error
+| HTTP | `error_code`                    | When                                                                                                                          |
+| ---- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 401  | `AUTH_INVALID_CREDENTIALS`      | Wrong email or password; or no password set on the account (e.g. SSO-only)                                                    |
+| 403  | `AUTH_EMAIL_NOT_VERIFIED`       | Credentials valid but the email has not been verified; server best-effort re-issues a verification email                      |
+| 403  | `AUTH_ACCOUNT_INACTIVE`         | Account permanently disabled — `details.ban_reason` is included                                                               |
+| 403  | `CONSULTANT_ONBOARDING_BLOCKED` | Admin rejected the consultant's onboarding and the 3-month block window is still active — `details.blocked_until` is included |
+| 422  | `GENERIC_VALIDATION_FAILED`     | Body failed validation                                                                                                        |
+| 429  | `AUTH_ACCOUNT_LOCKED`           | Too many recent failed login attempts on this account; counter rolls after the lockout window                                 |
+| 429  | `AUTH_RATE_LIMITED`             | STRICT throttle exceeded (5/60 s)                                                                                             |
 
 ---
 
 ### POST /auth/refresh
 
-Refresh the access token using a refresh token.
+Rotate the refresh token and issue a fresh access/refresh pair. Single-use: the supplied refresh token is invalidated on success, and detected reuse revokes every session for the user.
 
-Requires `Authorization: Bearer <refresh_token>` header.
+The refresh token is read from **the request body**, not the `Authorization` header. The JWT signature is verified by Passport (`jwt-refresh` strategy) before the controller runs.
 
 #### Headers
 
 | Header          | Required | Description                                     |
 | --------------- | -------- | ----------------------------------------------- |
-| `Authorization` | **Yes**  | `Bearer <refresh_token>`                        |
 | `x-device-id`   | No       | Stable device identifier for session binding    |
 | `x-fingerprint` | No       | Client fingerprint stored in the session record |
 
-#### Request Body
+#### Request body
 
 ```json
 {
@@ -236,33 +297,120 @@ Requires `Authorization: Bearer <refresh_token>` header.
 }
 ```
 
+| Field           | Type     | Constraints                                                                                                 |
+| --------------- | -------- | ----------------------------------------------------------------------------------------------------------- |
+| `refresh_token` | `string` | Refresh JWT issued by a previous `/auth/login`, `/auth/verify-email`, `/auth/refresh`, or SSO exchange call |
+
 #### Responses
 
-**200 OK** — new session tokens returned → [Auth Response](#auth-response)
+**200 OK** — new session tokens returned. `data` is the [Auth Response](#auth-response) shape.
 
-**401 Unauthorized** — refresh token invalid or expired (`AUTH_INVALID_TOKEN`)
+**Error responses**
+
+| HTTP | `error_code`                | When                                                                                |
+| ---- | --------------------------- | ----------------------------------------------------------------------------------- |
+| 401  | `GENERIC_UNAUTHORIZED`      | Refresh JWT signature invalid, missing, or expired (rejected at the Passport guard) |
+| 401  | `AUTH_TOKEN_INVALID`        | JWT validates but no matching active session is found (already rotated / replay)    |
+| 401  | `AUTH_TOKEN_EXPIRED`        | Session row exists but `expires_at` has passed                                      |
+| 422  | `GENERIC_VALIDATION_FAILED` | Body failed validation                                                              |
+| 429  | `AUTH_RATE_LIMITED`         | INTERACTIVE throttle exceeded (30/60 s)                                             |
+
+> **Replay handling.** When the supplied refresh token matches a session whose `used_at` is already set, the server treats this as a replay attempt and revokes **all** sessions for that user before returning `AUTH_TOKEN_INVALID`. The user must sign in again on every device.
 
 ---
 
 ### POST /auth/logout
 
-Revoke the current session.
+Revoke the current session. Requires `Authorization: Bearer <access_token>`.
 
-Requires `Authorization: Bearer <access_token>` header.
+#### Request body
+
+_None._
 
 #### Responses
 
-**200 OK** — session revoked
+**200 OK** — session revoked. `data` is `null`.
 
-**401 Unauthorized** — missing or invalid access token
+**Error responses**
+
+| HTTP | `error_code`           | When                            |
+| ---- | ---------------------- | ------------------------------- |
+| 401  | `GENERIC_UNAUTHORIZED` | Missing or invalid access token |
+
+---
+
+### GET /auth/me
+
+Return the authenticated user's profile. Requires `Authorization: Bearer <access_token>`.
+
+#### Responses
+
+**200 OK** — `data` is a [User Response](#user-response).
+
+```json
+{
+  "status_code": 200,
+  "message": "OK",
+  "error_code": null,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "email": "jane@example.com",
+    "is_email_verified": true,
+    "is_active": true
+  },
+  "timestamp": "2026-05-17T12:00:00.000Z",
+  "path": "/api/v1/auth/me"
+}
+```
+
+**Error responses**
+
+| HTTP | `error_code`           | When                                                       |
+| ---- | ---------------------- | ---------------------------------------------------------- |
+| 401  | `GENERIC_UNAUTHORIZED` | Missing or invalid access token                            |
+| 404  | `AUTH_USER_NOT_FOUND`  | The user the JWT refers to has been deleted or deactivated |
+
+---
+
+### POST /auth/change-password
+
+Change the authenticated user's password. Requires `Authorization: Bearer <access_token>`. All **other** sessions (every device except the current one) are revoked on success.
+
+#### Request body
+
+```json
+{
+  "current_password": "P@ssword123",
+  "new_password": "NewP@ssword123"
+}
+```
+
+| Field              | Type     | Constraints                                                            |
+| ------------------ | -------- | ---------------------------------------------------------------------- |
+| `current_password` | `string` | Any non-empty string                                                   |
+| `new_password`     | `string` | Min 8 chars; must contain at least one uppercase, lowercase, and digit |
+
+#### Responses
+
+**200 OK** — password updated; current session is preserved, all others revoked.
+
+**Error responses**
+
+| HTTP | `error_code`                | When                                                                          |
+| ---- | --------------------------- | ----------------------------------------------------------------------------- |
+| 400  | `AUTH_INVALID_CREDENTIALS`  | `current_password` is incorrect or the account has no password set (SSO-only) |
+| 401  | `GENERIC_UNAUTHORIZED`      | Missing or invalid access token                                               |
+| 404  | `AUTH_USER_NOT_FOUND`       | User no longer exists or is inactive                                          |
+| 422  | `GENERIC_VALIDATION_FAILED` | Body failed validation                                                        |
+| 429  | `AUTH_RATE_LIMITED`         | STRICT throttle exceeded (5/60 s)                                             |
 
 ---
 
 ### POST /auth/forgot-password
 
-Request a password-reset OTP. Always returns `200` regardless of whether the account exists (prevents enumeration). Rate limited to **3 requests per hour per email**.
+Request a password-reset OTP. **Always returns 200** regardless of whether the account exists — prevents enumeration.
 
-#### Request Body
+#### Request body
 
 ```json
 {
@@ -271,89 +419,129 @@ Request a password-reset OTP. Always returns `200` regardless of whether the acc
 }
 ```
 
+| Field             | Type     | Constraints            |
+| ----------------- | -------- | ---------------------- |
+| `email`           | `string` | Valid email address    |
+| `active_platform` | `string` | Must be `"consultant"` |
+
 #### Responses
 
-**200 OK** — reset OTP dispatched (or silently ignored)
+**200 OK** — reset OTP dispatched (or silently ignored when no account / SSO-only / inactive).
 
-**422 Unprocessable Entity** — validation error
+**Error responses**
+
+| HTTP | `error_code`                | When                                        |
+| ---- | --------------------------- | ------------------------------------------- |
+| 422  | `GENERIC_VALIDATION_FAILED` | Body failed validation                      |
+| 429  | `AUTH_RATE_LIMITED`         | OTP throttle exceeded (3/hour per IP+email) |
 
 ---
 
 ### POST /auth/reset-password
 
-Reset password using the OTP received by email. Revokes all existing sessions on success.
+Reset the password using the 6-digit OTP delivered by email. **Revokes all existing sessions on success** — the user must sign in again on every device.
 
-#### Request Body
+#### Request body
 
 ```json
 {
   "email": "jane@example.com",
+  "active_platform": "consultant",
   "otp": "391827",
-  "new_password": "NewP@ssword123",
-  "active_platform": "consultant"
+  "new_password": "NewP@ssword123"
 }
 ```
 
-| Field             | Type     | Constraints                                                 |
-| ----------------- | -------- | ----------------------------------------------------------- |
-| `email`           | `string` | Valid email address                                         |
-| `otp`             | `string` | Exactly 6 digits                                            |
-| `new_password`    | `string` | Min 8 chars, must contain uppercase, lowercase, and a digit |
-| `active_platform` | `string` | Must be `"consultant"`                                      |
+| Field             | Type     | Constraints                                                            |
+| ----------------- | -------- | ---------------------------------------------------------------------- |
+| `email`           | `string` | Valid email address                                                    |
+| `active_platform` | `string` | Must be `"consultant"`                                                 |
+| `otp`             | `string` | Exactly 6 digits (`/^\d{6}$/`)                                         |
+| `new_password`    | `string` | Min 8 chars; must contain at least one uppercase, lowercase, and digit |
 
 #### Responses
 
-**200 OK** — password reset, all sessions revoked
+**200 OK** — password reset; all sessions revoked.
 
-**401 Unauthorized** — OTP invalid or expired (`AUTH_INVALID_TOKEN`)
+**Error responses**
 
-**422 Unprocessable Entity** — validation error
+| HTTP | `error_code`                | When                                      |
+| ---- | --------------------------- | ----------------------------------------- |
+| 400  | `AUTH_RESET_TOKEN_INVALID`  | OTP unknown or no matching active account |
+| 400  | `AUTH_TOKEN_ALREADY_USED`   | OTP was already consumed                  |
+| 400  | `AUTH_RESET_TOKEN_EXPIRED`  | OTP is past its 15-minute window          |
+| 422  | `GENERIC_VALIDATION_FAILED` | Body failed validation                    |
+| 429  | `AUTH_RATE_LIMITED`         | MODERATE throttle exceeded (10/60 s)      |
 
 ---
 
 ### GET /auth/sso/google
 
-Initiate Google OAuth redirect. Pass `active_platform=consultant` as a query parameter.
+Initiate the Google OAuth redirect flow. The server stores a CSRF-bound state nonce in Redis and forwards the browser to Google.
 
-#### Query Parameters
+#### Query parameters
 
-| Parameter         | Required | Description                                                          |
-| ----------------- | -------- | -------------------------------------------------------------------- |
-| `active_platform` | No       | `consultant` — stored in the CSRF state record, used in the callback |
+| Parameter         | Required | Description                                                                                                                              |
+| ----------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `active_platform` | No       | `consultant` — recorded in the CSRF state record. Used by the callback to pick the right frontend host and platform when issuing tokens. |
 
 #### Response
 
-**302 Redirect** — forwards to Google OAuth consent screen
+**302 Redirect** — forwards to the Google OAuth consent screen.
+
+---
+
+### GET /auth/sso/google/callback
+
+Google OAuth callback. Validates the CSRF state nonce, runs `ssoLogin`, then **redirects the browser to the frontend** with a single-use exchange `code` (no tokens in the URL):
+
+```
+<LONA_URL>/auth/sso/callback?code=<single-use-exchange-code>
+```
+
+The frontend then POSTs the code to [`/auth/sso/exchange`](#post-authssoexchange) to receive tokens. The code is valid **once** for a short TTL (~60 seconds).
+
+This endpoint is reached by the user-agent following a Google redirect, not called directly by clients. It can fail with `AUTH_OAUTH_STATE_INVALID` (400) if the CSRF state nonce is missing, malformed, or already consumed.
 
 ---
 
 ### POST /auth/sso/exchange
 
-Exchange a single-use SSO code for session tokens. The `code` is obtained from the redirect URL after `/auth/sso/google/callback` completes. Each code is valid **once** for a short TTL (~60 seconds).
+Exchange the single-use code returned by `/auth/sso/google/callback` for real session tokens.
 
-#### Request Body
+#### Request body
 
 ```json
 {
-  "code": "<single-use-exchange-code>"
+  "code": "BJfQg7..."
 }
 ```
 
+| Field  | Type     | Constraints                                                       |
+| ------ | -------- | ----------------------------------------------------------------- |
+| `code` | `string` | 16–128 characters; single-use code from the SSO callback redirect |
+
 #### Responses
 
-**200 OK** — session tokens returned → [Auth Response](#auth-response)
+**200 OK** — session tokens returned. `data` is the [Auth Response](#auth-response) shape.
 
-**401 Unauthorized** — code is invalid or expired (`AUTH_INVALID_TOKEN`)
+**Error responses**
 
-**403 Forbidden** — onboarding rejection block in force (`CONSULTANT_ONBOARDING_BLOCKED` with `details.blocked_until`).
+| HTTP | `error_code`                    | When                                                                  |
+| ---- | ------------------------------- | --------------------------------------------------------------------- |
+| 401  | `AUTH_SSO_EXCHANGE_INVALID`     | Code is unknown, already consumed, or expired                         |
+| 403  | `AUTH_ACCOUNT_INACTIVE`         | Account is permanently disabled — `details.ban_reason` included       |
+| 403  | `CONSULTANT_ONBOARDING_BLOCKED` | Admin rejection block still active — `details.blocked_until` included |
+| 422  | `GENERIC_VALIDATION_FAILED`     | Body failed validation                                                |
+| 429  | `AUTH_RATE_LIMITED`             | MODERATE throttle exceeded (10/60 s)                                  |
 
-**403 Forbidden** — account permanently disabled (`AUTH_ACCOUNT_INACTIVE`).
+> The 403 errors here surface only when the underlying `ssoLogin` ran during the callback step but the exchange itself happens after the user has hit a blocked / inactive state — in practice the callback redirect already issued the code, so most exchange-time failures are 401.
 
 ---
 
 ### POST /auth/sso/google/token
 
-Exchange a Google ID token for platform session tokens. For clients that run the Google OAuth flow natively (SPA, mobile).
+Exchange a Google **ID token** (obtained client-side via the Google JS / native SDK) for platform session tokens. Used by SPAs and mobile clients that run the OAuth flow natively instead of using the server redirect.
 
 #### Headers
 
@@ -362,7 +550,7 @@ Exchange a Google ID token for platform session tokens. For clients that run the
 | `x-device-id`   | No       | Stable device identifier for session binding    |
 | `x-fingerprint` | No       | Client fingerprint stored in the session record |
 
-#### Request Body
+#### Request body
 
 ```json
 {
@@ -371,23 +559,30 @@ Exchange a Google ID token for platform session tokens. For clients that run the
 }
 ```
 
+| Field             | Type     | Constraints                                     |
+| ----------------- | -------- | ----------------------------------------------- |
+| `id_token`        | `string` | Google ID token from the client-side OAuth flow |
+| `active_platform` | `string` | Must be `"consultant"`                          |
+
 #### Responses
 
-**200 OK** — session tokens returned → [Auth Response](#auth-response)
+**200 OK** — session tokens returned. `data` is the [Auth Response](#auth-response) shape.
 
-**401 Unauthorized** — Google ID token rejected (`AUTH_INVALID_TOKEN`)
+**Error responses**
 
-**403 Forbidden** — onboarding rejection block in force (`CONSULTANT_ONBOARDING_BLOCKED` with `details.blocked_until`).
-
-**403 Forbidden** — account permanently disabled (`AUTH_ACCOUNT_INACTIVE`).
-
-**422 Unprocessable Entity** — validation error
+| HTTP | `error_code`                    | When                                                                         |
+| ---- | ------------------------------- | ---------------------------------------------------------------------------- |
+| 401  | `AUTH_INVALID_CREDENTIALS`      | Google ID token failed verification (expired, wrong audience, missing email) |
+| 403  | `AUTH_ACCOUNT_INACTIVE`         | Account is permanently disabled — `details.ban_reason` included              |
+| 403  | `CONSULTANT_ONBOARDING_BLOCKED` | Admin rejection block still active — `details.blocked_until` included        |
+| 422  | `GENERIC_VALIDATION_FAILED`     | Body failed validation                                                       |
+| 429  | `AUTH_RATE_LIMITED`             | MODERATE throttle exceeded (10/60 s)                                         |
 
 ---
 
 ## Auth Response
 
-Shape returned by `/login`, `/verify-email`, `/refresh`, `/sso/exchange`, and `/sso/google/token`:
+Shape of the `data` field for `/login`, `/verify-email`, `/refresh`, `/sso/exchange`, and `/sso/google/token`:
 
 ```json
 {
@@ -405,37 +600,63 @@ Shape returned by `/login`, `/verify-email`, `/refresh`, `/sso/exchange`, and `/
       "is_active": true
     }
   },
-  "timestamp": "2026-05-07T12:00:00.000Z",
+  "timestamp": "2026-05-17T12:00:00.000Z",
   "path": "/api/v1/auth/login"
 }
 ```
 
-| Field                    | Type      | Description                                |
-| ------------------------ | --------- | ------------------------------------------ |
-| `access_token`           | `string`  | JWT access token                           |
-| `refresh_token`          | `string`  | JWT refresh token                          |
-| `expires_in`             | `number`  | Access token TTL in seconds (default: 900) |
-| `user.id`                | `string`  | User UUID                                  |
-| `user.email`             | `string`  | User email address                         |
-| `user.is_email_verified` | `boolean` | Whether email has been verified            |
-| `user.is_active`         | `boolean` | Whether account is active                  |
+### Response interface (snake_case JSON contract)
+
+```ts
+interface IAuthResponse {
+  access_token: string; // signed access JWT (HS256)
+  refresh_token: string; // signed refresh JWT (HS256, single-use, rotated by /auth/refresh)
+  expires_in: number; // access-token TTL in seconds (default 900)
+  user: IUserResponse;
+}
+```
+
+### User Response
+
+Shape of the `data` field for `/me`, and the embedded `user` object inside `IAuthResponse`:
+
+```ts
+interface IUserResponse {
+  id: string; // user UUID
+  email: string; // user email
+  is_email_verified: boolean;
+  is_active: boolean;
+}
+```
+
+| Field               | Type      | Description                                      |
+| ------------------- | --------- | ------------------------------------------------ |
+| `id`                | `string`  | User UUID                                        |
+| `email`             | `string`  | User email address                               |
+| `is_email_verified` | `boolean` | Whether the email has been verified              |
+| `is_active`         | `boolean` | `false` when the account is permanently disabled |
 
 ---
 
-## Error Codes
+## Error code reference
 
-| Code                              | HTTP | Description                                                                                                    |
-| --------------------------------- | ---- | -------------------------------------------------------------------------------------------------------------- |
-| `AUTH_EMAIL_ALREADY_REGISTERED`   | 409  | Email is already registered on this platform                                                                   |
-| `AUTH_EMAIL_PENDING_VERIFICATION` | 409  | Email is pending verification — a valid token is still outstanding                                             |
-| `AUTH_INVALID_CREDENTIALS`        | 401  | Wrong email or password                                                                                        |
-| `AUTH_EMAIL_NOT_VERIFIED`         | 403  | Credentials valid but the email has not been verified; server re-issues a verification email                   |
-| `AUTH_ACCOUNT_INACTIVE`           | 403  | Account is permanently disabled (e.g. AI-content ban from skill exams)                                         |
-| `CONSULTANT_ONBOARDING_BLOCKED`   | 403  | Onboarding was rejected by an admin; `details.blocked_until` is the ISO timestamp when the 3-month block lifts |
-| `AUTH_TOKEN_INVALID`              | 401  | Verification token / reset OTP invalid, expired, or already used                                               |
-| `AUTH_TOKEN_EXPIRED`              | 400  | Verification token expired                                                                                     |
-| `AUTH_TOKEN_ALREADY_USED`         | 400  | Verification token already used                                                                                |
-| `AUTH_RESET_TOKEN_INVALID`        | 400  | Password-reset OTP invalid                                                                                     |
-| `AUTH_RESET_TOKEN_EXPIRED`        | 400  | Password-reset OTP expired                                                                                     |
-| `GENERIC_UNAUTHORIZED`            | 401  | Missing or invalid access token                                                                                |
-| `GENERIC_VALIDATION_FAILED`       | 422  | Request body failed validation                                                                                 |
+| `error_code`                      | HTTP      | Where it fires                                                                                                                       |
+| --------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `GENERIC_UNAUTHORIZED`            | 401       | Missing/invalid access JWT, missing/invalid `x-api-key`, or refresh JWT failed Passport verification                                 |
+| `GENERIC_VALIDATION_FAILED`       | 422       | DTO validation failure (class-validator)                                                                                             |
+| `AUTH_INVALID_CREDENTIALS`        | 401 / 400 | Wrong password (login: 401), invalid current password (change-password: 400), or Google ID-token rejected (sso/google/token: 401)    |
+| `AUTH_EMAIL_NOT_VERIFIED`         | 403       | Credentials valid but email is unverified; server best-effort re-issues a verification email                                         |
+| `AUTH_EMAIL_ALREADY_REGISTERED`   | 409       | Register attempt against an existing **verified** account on this platform                                                           |
+| `AUTH_EMAIL_PENDING_VERIFICATION` | 409       | Register attempt against an existing unverified account whose verification token is still valid                                      |
+| `AUTH_ACCOUNT_INACTIVE`           | 403       | Account permanently disabled (`users.is_active = false`); `details.ban_reason` included                                              |
+| `AUTH_ACCOUNT_LOCKED`             | 429       | Too many recent failed login attempts; counter rolls automatically after the lockout window                                          |
+| `AUTH_TOKEN_INVALID`              | 400 / 401 | Verification token not found (verify-email: 400) or no matching active session for the refresh JWT (refresh: 401)                    |
+| `AUTH_TOKEN_EXPIRED`              | 400 / 401 | Verification token expired (verify-email: 400) or session expired (refresh: 401)                                                     |
+| `AUTH_TOKEN_ALREADY_USED`         | 400       | Verification token or OTP was already consumed                                                                                       |
+| `AUTH_RESET_TOKEN_INVALID`        | 400       | Password-reset OTP unknown or no matching account                                                                                    |
+| `AUTH_RESET_TOKEN_EXPIRED`        | 400       | Password-reset OTP past its 15-minute window                                                                                         |
+| `AUTH_SSO_EXCHANGE_INVALID`       | 401       | SSO exchange code unknown, consumed, or expired                                                                                      |
+| `AUTH_OAUTH_STATE_INVALID`        | 400       | CSRF state nonce missing/consumed during Google OAuth callback                                                                       |
+| `AUTH_USER_NOT_FOUND`             | 404       | Authenticated user no longer exists or is inactive (raised by `/me`, `/change-password`)                                             |
+| `AUTH_RATE_LIMITED`               | 429       | Endpoint throttle exceeded (per-IP/email)                                                                                            |
+| `CONSULTANT_ONBOARDING_BLOCKED`   | 403       | Admin rejected the consultant's onboarding and the 3-month block window is still active; `details.blocked_until` is an ISO timestamp |

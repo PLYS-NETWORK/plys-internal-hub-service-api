@@ -3,6 +3,7 @@ import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { PageOptionsDto } from '@common/dto/page-options.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { UrlResolverService } from '@common/modules/file-storage';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { TaskHistoryChangeType, TaskKanbanStatus } from '@database/enums';
@@ -44,6 +45,7 @@ export class BoardHistoryService implements IBoardHistoryService {
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly access: BusinessAccessService,
+    private readonly urlResolver: UrlResolverService,
   ) {
     this.logger = new AppLogger(BoardHistoryService.name, requestContext);
   }
@@ -109,7 +111,24 @@ export class BoardHistoryService implements IBoardHistoryService {
       .take(pageOptions.limit)
       .getRawMany<IHistoryRow>();
 
-    const data = rows.map((r) => this.mapRow(r));
+    // Each row has up to three distinct avatar/logo URLs: prev assignee, new
+    // assignee, and the author's avatar (consultant_profiles or business_profiles).
+    // Re-sign all of them in a single batched call before mapping rows.
+    const flatUrls: Array<string | null> = [];
+    for (const r of rows) {
+      flatUrls.push(r.prev_avatar_url);
+      flatUrls.push(r.new_avatar_url);
+      flatUrls.push(r.consultant_avatar ?? r.business_logo ?? null);
+    }
+    const resigned = await this.urlResolver.resolveMany(flatUrls);
+    const data = rows.map((r, idx) => {
+      const base = idx * 3;
+      return this.mapRow(r, {
+        prevAvatarUrl: resigned[base],
+        newAvatarUrl: resigned[base + 1],
+        authorAvatarUrl: resigned[base + 2],
+      });
+    });
     this.logger.log(
       `list — complete | taskId: ${taskId}, returned: ${data.length}, total: ${itemCount}`,
     );
@@ -129,10 +148,16 @@ export class BoardHistoryService implements IBoardHistoryService {
     }
   }
 
-  private mapRow(r: IHistoryRow): BoardTaskHistoryResponseDto {
+  private mapRow(
+    r: IHistoryRow,
+    urls: {
+      prevAvatarUrl: string | null;
+      newAvatarUrl: string | null;
+      authorAvatarUrl: string | null;
+    },
+  ): BoardTaskHistoryResponseDto {
     const authorName =
       r.consultant_name ?? r.business_name ?? r.user_email ?? (r.changed_by ? '—' : 'System');
-    const authorAvatar = r.consultant_avatar ?? r.business_logo ?? null;
 
     return plainToInstance(
       BoardTaskHistoryResponseDto,
@@ -146,20 +171,20 @@ export class BoardHistoryService implements IBoardHistoryService {
           ? {
               consultant_id: r.prev_consultant_id,
               full_name: r.prev_full_name ?? '',
-              avatar_url: r.prev_avatar_url,
+              avatar_url: urls.prevAvatarUrl,
             }
           : null,
         new_assignee: r.new_consultant_id
           ? {
               consultant_id: r.new_consultant_id,
               full_name: r.new_full_name ?? '',
-              avatar_url: r.new_avatar_url,
+              avatar_url: urls.newAvatarUrl,
             }
           : null,
         author: {
           user_id: r.changed_by,
           name: authorName,
-          avatar_url: authorAvatar,
+          avatar_url: urls.authorAvatarUrl,
         },
         note: r.note,
         changed_at: r.changed_at,
