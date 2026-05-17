@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT, THROTTLE_STRICT } from '@common/constants';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
@@ -16,6 +17,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { AiProviderKeyService } from './ai-provider-key.service';
 import { CreateApiKeyDto, ListApiKeysDto, UpdateApiKeyDto } from './dto/requests';
@@ -29,6 +31,7 @@ import { ApiKeyAdminResponseDto } from './dto/responses';
 @ApiBearerAuth()
 @Controller('admin/ai-provider-keys')
 @Roles(UserRole.ADMIN_PLATFORM)
+@Throttle(THROTTLE_DEFAULT)
 export class AiProviderKeyAdminController {
   constructor(private readonly service: AiProviderKeyService) {}
 
@@ -51,6 +54,7 @@ export class AiProviderKeyAdminController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary: 'Create and activate a new AI provider key (Admin only)',
     description:
@@ -70,6 +74,7 @@ export class AiProviderKeyAdminController {
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary: 'Update label/model on an AI provider key (Admin only)',
     description:
@@ -87,6 +92,7 @@ export class AiProviderKeyAdminController {
 
   @Patch(':id/activate')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary:
       'Activate this key, deactivating any prior active key for the same assistant_type (Admin only)',
@@ -106,6 +112,7 @@ export class AiProviderKeyAdminController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary: 'Revoke an AI provider key (Admin only)',
     description:
@@ -119,6 +126,7 @@ export class AiProviderKeyAdminController {
 
   @Post('_re-encrypt')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary: 'Re-encrypt every row to the current master key version (Admin only)',
     description:

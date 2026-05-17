@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT, THROTTLE_MODERATE } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PlatformGuard } from '@common/guards/platform.guard';
@@ -6,6 +7,7 @@ import { ITranslatedPayload } from '@common/interceptors/transform-response.inte
 import { ActivePlatform, UserRole } from '@database/enums';
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { SubmitOnboardingAnswersDto } from '../dto/requests/submit-onboarding-answers.dto';
 import { SubmitOnboardingProfileDto } from '../dto/requests/submit-onboarding-profile.dto';
@@ -20,6 +22,7 @@ import { OnboardingInterviewService } from '../services/onboarding-interview.ser
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.CONSULTANT)
+@Throttle(THROTTLE_DEFAULT)
 export class ConsultantOnboardingController {
   constructor(
     private readonly onboardingService: ConsultantOnboardingService,
@@ -35,6 +38,7 @@ export class ConsultantOnboardingController {
 
   @Post('profile')
   @HttpCode(HttpStatus.CREATED)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({
     summary:
       'Step 1 — submit basic profile (+ optional cv_url from a prior /files upload). Transitions onboarding to IN_INTERVIEW.',
@@ -57,6 +61,7 @@ export class ConsultantOnboardingController {
 
   @Post('interview/submit')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({
     summary:
       'Step 2 — submit ALL answers in one shot. Body must contain one entry per active question. Notifies admins on success.',

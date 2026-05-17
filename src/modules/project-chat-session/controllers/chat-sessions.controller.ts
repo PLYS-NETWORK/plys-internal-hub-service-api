@@ -1,3 +1,4 @@
+import { THROTTLE_INTERACTIVE } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PlatformGuard } from '@common/guards/platform.guard';
@@ -37,6 +38,7 @@ import { ProjectChatSessionService } from '../project-chat-session.service';
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
+@Throttle(THROTTLE_INTERACTIVE)
 export class ChatSessionsController {
   constructor(private readonly service: ProjectChatSessionService) {}
 
@@ -55,8 +57,8 @@ export class ChatSessionsController {
   @Patch()
   // FE patches once per chat turn — typical AI exchange produces 1–3 messages,
   // so 30 patches/min per (user, IP) is generous for normal use and shuts
-  // down a runaway in-tab loop or scripted abuse.
-  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  // down a runaway in-tab loop or scripted abuse. Inherits the class-level
+  // THROTTLE_INTERACTIVE tier.
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Append messages and/or update the session draft / stage',

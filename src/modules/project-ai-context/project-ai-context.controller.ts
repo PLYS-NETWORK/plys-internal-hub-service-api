@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT } from '@common/constants';
 import { IdempotencyKey } from '@common/decorators/idempotency-key.decorator';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
@@ -17,6 +18,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { LogDecisionDto, UpdateDerivedContextDto } from './dto/requests';
 import { AiContextResponseDto } from './dto/responses';
@@ -32,6 +34,7 @@ import { ProjectAiContextService } from './project-ai-context.service';
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
+@Throttle(THROTTLE_DEFAULT)
 export class ProjectAiContextController {
   constructor(private readonly service: ProjectAiContextService) {}
 

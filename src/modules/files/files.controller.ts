@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT, THROTTLE_MODERATE, THROTTLE_STRICT } from '@common/constants';
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
@@ -23,6 +24,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { FastifyReply, FastifyRequest } from 'fastify';
 
 import { FileResponseDto } from './dto/responses';
@@ -31,6 +33,7 @@ import { FilesService } from './files.service';
 @ApiTags('Files')
 @ApiBearerAuth()
 @Controller('files')
+@Throttle(THROTTLE_DEFAULT)
 export class FilesController {
   constructor(
     private readonly filesService: FilesService,
@@ -39,6 +42,7 @@ export class FilesController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({
     summary: 'Upload a file',
     description:
@@ -151,6 +155,7 @@ export class FilesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({ summary: 'Delete a file (soft delete)' })
   public async remove(@Param('id') id: string): Promise<void> {
     await this.filesService.remove(id);

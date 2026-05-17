@@ -1,3 +1,4 @@
+import { THROTTLE_MODERATE } from '@common/constants';
 import { IdempotencyKey } from '@common/decorators/idempotency-key.decorator';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
@@ -16,6 +17,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { AiSyncSettingsDto } from '../dto/requests/ai-sync-settings.dto';
 import { AiSyncSkillsDto } from '../dto/requests/ai-sync-skills.dto';
@@ -36,6 +38,7 @@ import { SettingsService } from '../services/settings.service';
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
+@Throttle(THROTTLE_MODERATE)
 export class AiSyncController {
   constructor(
     private readonly settingsService: SettingsService,

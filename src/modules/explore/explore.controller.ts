@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT, THROTTLE_PUBLIC_READ } from '@common/constants';
 import { Public } from '@common/decorators/public.decorator';
 import { PageDto } from '@common/dto/page.dto';
 import { PublicEndpointApiKeyGuard } from '@common/guards/public-endpoint-api-key.guard';
@@ -30,12 +31,13 @@ import { ExploreService } from './services/explore.service';
 // `PublicEndpointApiKeyGuard` enforces the BFF shared secret instead.
 @Public()
 @UseGuards(PublicEndpointApiKeyGuard)
+@Throttle(THROTTLE_DEFAULT)
 export class ExploreController {
   constructor(private readonly exploreService: ExploreService) {}
 
   @Get('skills')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 120, ttl: 60_000 } })
+  @Throttle(THROTTLE_PUBLIC_READ)
   @ApiOperation({ summary: 'List skills for the explore-page filter dropdown.' })
   public async listSkills(): Promise<ITranslatedPayload<ExploreSkillResponseDto[]>> {
     const data = await this.exploreService.listSkills();
@@ -44,7 +46,6 @@ export class ExploreController {
 
   @Get('projects')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 60, ttl: 60_000 } })
   @ApiOperation({
     summary: 'List publicly visible projects. Partner-platform projects are pinned to the top.',
   })
@@ -57,7 +58,6 @@ export class ExploreController {
 
   @Get('projects/:id')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 60, ttl: 60_000 } })
   @ApiOperation({ summary: 'Public detail view of a single project.' })
   public async getProjectDetail(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,

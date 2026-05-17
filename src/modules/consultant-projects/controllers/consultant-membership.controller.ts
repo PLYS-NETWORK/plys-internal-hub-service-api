@@ -26,12 +26,12 @@ import { ConsultantMembershipService } from '../services/consultant-membership.s
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.CONSULTANT)
+@Throttle(THROTTLE_STRICT)
 export class ConsultantMembershipController {
   constructor(private readonly service: ConsultantMembershipService) {}
 
   @Post(':projectId/apply')
   @HttpCode(HttpStatus.OK)
-  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary:
       'Apply (join) a discoverable project. Requires ≥50% required-skill match. Throttled 5 req/min.',
@@ -45,7 +45,6 @@ export class ConsultantMembershipController {
 
   @Post(':projectId/leave')
   @HttpCode(HttpStatus.OK)
-  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary:
       'Leave a project the caller has joined. Blocked while any assigned task is actively in flight. Throttled 5 req/min.',

@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
@@ -17,6 +18,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { GetMilestonesDto, ListBoardTasksDto } from '../dto/requests';
 import {
@@ -37,6 +39,7 @@ import { BoardResultsService } from '../services/board/board-results.service';
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
+@Throttle(THROTTLE_DEFAULT)
 export class BoardController {
   constructor(
     private readonly boardService: BoardService,

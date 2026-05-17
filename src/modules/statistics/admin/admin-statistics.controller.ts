@@ -1,9 +1,11 @@
+import { THROTTLE_INTERACTIVE } from '@common/constants';
 import { Roles } from '@common/decorators/roles.decorator';
 import { RolesGuard } from '@common/guards/roles.guard';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { UserRole } from '@database/enums';
 import { Controller, Get, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { AdminGrowthTrendDto } from '../dto/requests/admin-growth-trend.dto';
 import {
@@ -24,6 +26,7 @@ import {
 @Controller('admin/dashboard')
 @UseGuards(RolesGuard)
 @Roles(UserRole.ADMIN_PLATFORM)
+@Throttle(THROTTLE_INTERACTIVE)
 export class AdminStatisticsController {
   constructor(
     private readonly summary: AdminDashboardSummaryService,

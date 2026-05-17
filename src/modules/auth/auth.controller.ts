@@ -1,4 +1,11 @@
-import { HEADERS } from '@common/constants';
+import {
+  HEADERS,
+  THROTTLE_DEFAULT,
+  THROTTLE_INTERACTIVE,
+  THROTTLE_MODERATE,
+  THROTTLE_OTP,
+  THROTTLE_STRICT,
+} from '@common/constants';
 import { Public } from '@common/decorators/public.decorator';
 import { PublicEndpointApiKeyGuard } from '@common/guards/public-endpoint-api-key.guard';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
@@ -47,6 +54,7 @@ import { GoogleProfile } from './strategies/google.strategy';
 
 @ApiTags('Auth')
 @Controller('auth')
+@Throttle(THROTTLE_DEFAULT)
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
@@ -61,7 +69,7 @@ export class AuthController {
   @Public()
   @UseGuards(PublicEndpointApiKeyGuard)
   @ApiSecurity('x-api-key')
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Throttle(THROTTLE_STRICT)
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -95,7 +103,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Throttle(THROTTLE_MODERATE)
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify email with token from verification link' })
@@ -120,7 +128,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @Throttle(THROTTLE_OTP)
   @Post('resend-verification')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -136,7 +144,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Throttle(THROTTLE_STRICT)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email/password' })
@@ -161,7 +169,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Throttle(THROTTLE_INTERACTIVE)
   @UseGuards(RefreshTokenGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
@@ -203,6 +211,7 @@ export class AuthController {
     return { messageKey: 'success.ok', data };
   }
 
+  @Throttle(THROTTLE_STRICT)
   @Post('change-password')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
@@ -215,10 +224,9 @@ export class AuthController {
   // ─── Forgot / Reset Password ─────────────────────────────────────────────
 
   @Public()
-  // Strict: 3 forgot-password requests per hour per IP+email. The
-  // AuthThrottlerGuard composes the email into the key so a single IP can't
-  // burn another user's quota.
-  @Throttle({ default: { limit: 3, ttl: 3_600_000 } })
+  // OTP-tier: 3 forgot-password requests per hour. The AuthThrottlerGuard
+  // composes the email into the key so a single IP can't burn another user's quota.
+  @Throttle(THROTTLE_OTP)
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -234,7 +242,7 @@ export class AuthController {
   @Public()
   // Tight: 10 attempts/min per IP+email. With 6-digit OTPs (1M space) this
   // caps brute-force probability at 150/1_000_000 over the 15-minute window.
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Throttle(THROTTLE_MODERATE)
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -317,7 +325,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Throttle(THROTTLE_MODERATE)
   @Post('sso/exchange')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -335,7 +343,7 @@ export class AuthController {
   // ─── Google SSO — Token Exchange Flow (SPA/Mobile) ──────────────────────
 
   @Public()
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Throttle(THROTTLE_MODERATE)
   @Post('sso/google/token')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Exchange Google ID token for platform tokens (SPA/mobile)' })

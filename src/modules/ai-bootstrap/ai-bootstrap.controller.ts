@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PlatformGuard } from '@common/guards/platform.guard';
@@ -14,6 +15,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { AiBootstrapService } from './ai-bootstrap.service';
 import { AiBootstrapResponseDto } from './dto/responses';
@@ -27,6 +29,7 @@ import { AiBootstrapResponseDto } from './dto/responses';
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
+@Throttle(THROTTLE_DEFAULT)
 export class AiBootstrapController {
   constructor(private readonly service: AiBootstrapService) {}
 

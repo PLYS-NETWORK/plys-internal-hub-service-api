@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT, THROTTLE_MODERATE, THROTTLE_STRICT } from '@common/constants';
 import { IdempotencyKey } from '@common/decorators/idempotency-key.decorator';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
@@ -21,6 +22,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import {
   CreateDraftTaskDto,
@@ -41,12 +43,14 @@ import { BacklogsService } from '../services/backlogs.service';
 @UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.BUSINESS)
+@Throttle(THROTTLE_DEFAULT)
 export class BacklogsController {
   constructor(private readonly backlogsService: BacklogsService) {}
 
   @Post()
   @IdempotencyKey()
   @HttpCode(HttpStatus.CREATED)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({
     summary: 'Create a single draft task',
     description:
@@ -85,6 +89,7 @@ export class BacklogsController {
   @Patch(':taskId')
   @IdempotencyKey()
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({
     summary: 'Partially update a draft task (title, description, price)',
   })
@@ -100,6 +105,7 @@ export class BacklogsController {
   @Delete()
   @IdempotencyKey()
   @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({
     summary: 'Hard-delete one or more draft tasks (atomic)',
     description:
@@ -114,6 +120,7 @@ export class BacklogsController {
 
   @Post('add-to-board')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary: 'Validate moving drafts to the board (no state change, no charge)',
   })
@@ -127,6 +134,7 @@ export class BacklogsController {
 
   @Post('pay-tasks')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary: 'Authorise & settle: charge the business and promote drafts to TO_DO',
   })

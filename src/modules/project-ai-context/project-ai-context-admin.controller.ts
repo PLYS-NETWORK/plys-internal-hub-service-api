@@ -1,8 +1,10 @@
+import { THROTTLE_DEFAULT } from '@common/constants';
 import { Roles } from '@common/decorators/roles.decorator';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { UserRole } from '@database/enums';
 import { Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { AiContextResponseDto } from './dto/responses';
 import { ProjectAiContextService } from './project-ai-context.service';
@@ -15,6 +17,7 @@ import { ProjectAiContextService } from './project-ai-context.service';
 @ApiBearerAuth()
 @Controller('admin/projects/:projectId/ai-context')
 @Roles(UserRole.ADMIN_PLATFORM)
+@Throttle(THROTTLE_DEFAULT)
 export class ProjectAiContextAdminController {
   constructor(private readonly service: ProjectAiContextService) {}
 

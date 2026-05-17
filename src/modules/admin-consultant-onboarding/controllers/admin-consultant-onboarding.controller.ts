@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT, THROTTLE_STRICT } from '@common/constants';
 import { Roles } from '@common/decorators/roles.decorator';
 import { RolesGuard } from '@common/guards/roles.guard';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
@@ -15,6 +16,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { ListOnboardingsDto } from '../dto/requests/list-onboardings.dto';
 import { OnboardingDecisionDto } from '../dto/requests/onboarding-decision.dto';
@@ -27,6 +29,7 @@ import { AdminConsultantOnboardingService } from '../services/admin-consultant-o
 @Controller('admin/onboardings')
 @UseGuards(RolesGuard)
 @Roles(UserRole.ADMIN_PLATFORM)
+@Throttle(THROTTLE_DEFAULT)
 export class AdminConsultantOnboardingController {
   constructor(private readonly service: AdminConsultantOnboardingService) {}
 
@@ -50,6 +53,7 @@ export class AdminConsultantOnboardingController {
 
   @Post(':id/decide')
   @HttpCode(HttpStatus.OK)
+  @Throttle(THROTTLE_STRICT)
   @ApiOperation({
     summary:
       'Approve or reject the onboarding. Approved unlocks platform; rejected blocks 3 months.',

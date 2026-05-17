@@ -1,9 +1,11 @@
+import { THROTTLE_STRICT } from '@common/constants';
 import { Roles } from '@common/decorators/roles.decorator';
 import { RolesGuard } from '@common/guards/roles.guard';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { UserRole } from '@database/enums';
 import { Body, Controller, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { CreateWithdrawDto } from './dto/requests/create-withdraw.dto';
 import { TransactionIdParamDto } from './dto/requests/transaction-id-param.dto';
@@ -13,6 +15,7 @@ import { PaymentsService } from './payments.service';
 @ApiTags('Payments')
 @ApiBearerAuth()
 @Controller('payments')
+@Throttle(THROTTLE_STRICT)
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 

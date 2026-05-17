@@ -1,3 +1,4 @@
+import { THROTTLE_DEFAULT, THROTTLE_STRICT } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { PageDto } from '@common/dto/page.dto';
@@ -17,6 +18,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { CreateTopUpDto } from '../dto/requests/create-top-up.dto';
 import { ListBusinessTransactionsDto } from '../dto/requests/list-business-transactions.dto';
@@ -33,6 +35,7 @@ import { BusinessPaymentsService } from './business-payments.service';
 @ApiTags('Business Payments')
 @ApiBearerAuth()
 @Controller('payments/business')
+@Throttle(THROTTLE_STRICT)
 export class BusinessPaymentsController {
   constructor(private readonly businessPaymentsService: BusinessPaymentsService) {}
 
@@ -93,6 +96,7 @@ export class BusinessPaymentsController {
   @UseGuards(RolesGuard, PlatformGuard)
   @Roles(UserRole.USER)
   @Platform(ActivePlatform.BUSINESS)
+  @Throttle(THROTTLE_DEFAULT)
   @ApiOperation({ summary: 'List own transactions' })
   public async listTransactions(
     @Query() dto: ListBusinessTransactionsDto,

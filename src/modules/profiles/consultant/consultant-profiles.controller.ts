@@ -1,9 +1,11 @@
+import { THROTTLE_DEFAULT, THROTTLE_MODERATE } from '@common/constants';
 import { Platform } from '@common/decorators/platform.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { ITranslatedPayload } from '@common/interceptors/transform-response.interceptor';
 import { ActivePlatform, UserRole } from '@database/enums';
 import { Body, Controller, Get, HttpCode, HttpStatus, Patch, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { PlatformGuard } from '../../../common/guards/platform.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
@@ -14,6 +16,7 @@ import { ConsultantProfileResponseDto } from './dto/responses';
 @ApiTags('Consultant Profiles')
 @ApiBearerAuth()
 @Controller('consultant-profiles')
+@Throttle(THROTTLE_DEFAULT)
 export class ConsultantProfilesController {
   constructor(private readonly consultantProfilesService: ConsultantProfilesService) {}
 
@@ -33,6 +36,7 @@ export class ConsultantProfilesController {
   @UseGuards(RolesGuard, PlatformGuard)
   @Roles(UserRole.USER)
   @Platform(ActivePlatform.CONSULTANT)
+  @Throttle(THROTTLE_MODERATE)
   @ApiOperation({ summary: 'Update own consultant profile' })
   public async updateProfile(
     @Body() dto: UpdateConsultantProfileDto,
