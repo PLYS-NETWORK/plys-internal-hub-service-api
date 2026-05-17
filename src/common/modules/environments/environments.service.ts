@@ -104,6 +104,10 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.configService.getOrThrow<string>('app.security.throttleRedisPrefix');
   }
 
+  public get publicEndpointApiKey(): string {
+    return this.configService.getOrThrow<string>('app.security.publicEndpointApiKey');
+  }
+
   public get resendApiKey(): string {
     return this.configService.getOrThrow<string>('app.resend.apiKey');
   }

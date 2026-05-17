@@ -1,11 +1,8 @@
-import { IAiKeysVersionedSecrets } from '@common/modules/environments/interfaces';
 import { AppDataSource } from '@database/data-source';
 import { AdminAllowedEmail } from '@database/entities/admin/admin-allowed-email.entity';
 import { User } from '@database/entities/auth/user.entity';
-import { AiProviderApiKey } from '@database/entities/infra/ai-provider-api-key.entity';
 import { Skill } from '@database/entities/profiles/skill.entity';
-import { ActivePlatform, AiAssistantType, AiProvider, UserRole } from '@database/enums';
-import { GcmCipher } from '@modules/ai-provider-key/crypto/aes-gcm';
+import { ActivePlatform, UserRole } from '@database/enums';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -19,13 +16,6 @@ const ADMIN_ALLOWED_EMAILS: readonly string[] = [
   'yildsez@gmail.com',
 ];
 const KEY_REGEX = /^(skill|category|industry)_[a-z0-9_]+$/;
-
-const GROQ_API_KEY = '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';
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
-const GROQ_LABEL = 'Groq Llama 3.3 70B';
-// Must match the LABEL constant inside MasterKeyCipher so the cipher can
-// decrypt this ciphertext without modification.
-const AI_KEYS_MASTER_LABEL = 'AI_KEYS_MASTER_KEY';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -153,74 +143,6 @@ async function seedAdminAllowedEmails(): Promise<void> {
   );
 }
 
-function buildAiMasterSecrets(): IAiKeysVersionedSecrets {
-  const currentVersion = parseInt(process.env.AI_KEYS_CURRENT_MASTER_VERSION ?? '1', 10);
-  const versions: Record<number, string> = {};
-  for (const [envKey, value] of Object.entries(process.env)) {
-    const m = /^AI_KEYS_MASTER_KEY_v(\d+)$/.exec(envKey);
-    if (m && value) versions[parseInt(m[1], 10)] = value;
-  }
-  if (!versions[currentVersion]) {
-    throw new Error(`Env var AI_KEYS_MASTER_KEY_v${currentVersion} is not set`);
-  }
-  return { currentVersion, versions };
-}
-
-async function seedChatBoxAssistantKey(): Promise<void> {
-  const repo = AppDataSource.getRepository(AiProviderApiKey);
-  const userRepo = AppDataSource.getRepository(User);
-
-  // Idempotent — skip if a chat_box assistant key already exists (active or not).
-  // The active-key partition is on assistant_type, so this matches the unique
-  // constraint we care about.
-  const existing = await repo.findOne({
-    where: { assistantType: AiAssistantType.CHAT_BOX },
-  });
-  if (existing) {
-    console.log('[chat-box-key] Already exists — skipped');
-    return;
-  }
-
-  // createdBy is a non-nullable FK. seedAdminAllowedEmails() runs first and seeds
-  // a passwordless ADMIN_PLATFORM user for every whitelisted email, so picking
-  // the earliest one here is deterministic and re-runs are idempotent.
-  const admin = await userRepo.findOne({
-    where: {
-      platform: ActivePlatform.ADMIN_PLATFORM,
-      role: UserRole.ADMIN_PLATFORM,
-    },
-    order: { createdAt: 'ASC' },
-  });
-  if (!admin) {
-    throw new Error('[chat-box-key] No admin user found — seedAdminAllowedEmails() must run first');
-  }
-
-  const secrets = buildAiMasterSecrets();
-  const envelope = GcmCipher.encrypt(GROQ_API_KEY, secrets, AI_KEYS_MASTER_LABEL);
-  // Inline MasterKeyCipher.serialise() — "v<N>:<iv_b64>:<tag_b64>:<ct_b64>"
-  const keyCiphertext = `v${envelope.version}:${envelope.iv}:${envelope.tag}:${envelope.ciphertext}`;
-  const keyLast4 = GROQ_API_KEY.slice(-4).padStart(4, '*');
-
-  await repo.save(
-    repo.create({
-      assistantType: AiAssistantType.CHAT_BOX,
-      provider: AiProvider.GROQ,
-      model: GROQ_MODEL,
-      label: GROQ_LABEL,
-      masterKeyVersion: envelope.version,
-      keyCiphertext,
-      keyLast4,
-      isActive: true,
-      createdBy: admin.id,
-    }),
-  );
-
-  console.log(
-    `[chat-box-key] Seeded: assistant_type=chat_box, provider=groq, ` +
-      `model=${GROQ_MODEL}, last4=${keyLast4}, active=true`,
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Validation helpers
 // ---------------------------------------------------------------------------
@@ -333,7 +255,6 @@ async function main(): Promise<void> {
   try {
     await seedSkills(dataDir, i18nDir);
     await seedAdminAllowedEmails();
-    await seedChatBoxAssistantKey();
   } finally {
     await AppDataSource.destroy();
   }

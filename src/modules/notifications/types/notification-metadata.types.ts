@@ -40,6 +40,32 @@ export interface ITaskPublishedMetadata {
   project_code: string;
 }
 
+export interface IProjectConsultantJoinedMetadata {
+  project_id: string;
+  project_code: string;
+  project_title: string;
+  consultant_user_id: string;
+  consultant_name: string;
+}
+
+export interface IProjectConsultantLeftMetadata {
+  project_id: string;
+  project_code: string;
+  project_title: string;
+  consultant_user_id: string;
+  consultant_name: string;
+}
+
+export interface IBusinessTaskStatusChangedMetadata {
+  task_id: string;
+  task_code: string;
+  task_title: string;
+  project_id: string;
+  consultant_user_id: string;
+  old_status: string;
+  new_status: string;
+}
+
 // ── Business: finance ───────────────────────────────────────────────────────
 
 export interface ITopUpCompletedMetadata {
@@ -216,6 +242,26 @@ export interface IAdminConsultantBannedMetadata {
   ai_strike_count: number;
 }
 
+export interface IAdminConsultantProjectJoinedMetadata {
+  consultant_user_id: string;
+  consultant_name: string;
+  project_id: string;
+  project_code: string;
+  project_title: string;
+  business_id: string;
+  business_name: string;
+}
+
+export interface IAdminConsultantProjectLeftMetadata {
+  consultant_user_id: string;
+  consultant_name: string;
+  project_id: string;
+  project_code: string;
+  project_title: string;
+  business_id: string;
+  business_name: string;
+}
+
 // Mapped type binding each discriminator value to its metadata shape.
 // Used by the dispatcher's generic signature so passing a wrong-shaped
 // metadata for a given type is a compile error.
@@ -225,6 +271,9 @@ export type NotificationMetadataMap = {
   [NOTIFICATION_TYPES.PROJECT_PUBLISHED]: IProjectPublishedMetadata;
   [NOTIFICATION_TYPES.PROJECT_UNPUBLISHED]: IProjectUnpublishedMetadata;
   [NOTIFICATION_TYPES.TASK_PUBLISHED]: ITaskPublishedMetadata;
+  [NOTIFICATION_TYPES.PROJECT_CONSULTANT_JOINED]: IProjectConsultantJoinedMetadata;
+  [NOTIFICATION_TYPES.PROJECT_CONSULTANT_LEFT]: IProjectConsultantLeftMetadata;
+  [NOTIFICATION_TYPES.BUSINESS_TASK_STATUS_CHANGED]: IBusinessTaskStatusChangedMetadata;
   [NOTIFICATION_TYPES.TOP_UP_COMPLETED]: ITopUpCompletedMetadata;
   [NOTIFICATION_TYPES.TOP_UP_REFUNDED]: ITopUpRefundedMetadata;
   [NOTIFICATION_TYPES.WITHDRAW_COMPLETED]: IWithdrawCompletedMetadata;
@@ -245,6 +294,8 @@ export type NotificationMetadataMap = {
   [NOTIFICATION_TYPES.ADMIN_CONSULTANT_ONBOARDING_SUBMITTED]: IAdminConsultantOnboardingSubmittedMetadata;
   [NOTIFICATION_TYPES.ADMIN_SKILL_EXAM_RESULT]: IAdminSkillExamResultMetadata;
   [NOTIFICATION_TYPES.ADMIN_CONSULTANT_BANNED]: IAdminConsultantBannedMetadata;
+  [NOTIFICATION_TYPES.ADMIN_CONSULTANT_PROJECT_JOINED]: IAdminConsultantProjectJoinedMetadata;
+  [NOTIFICATION_TYPES.ADMIN_CONSULTANT_PROJECT_LEFT]: IAdminConsultantProjectLeftMetadata;
 };
 
 // The discriminated-union the FE consumes — TS narrows `metadata` automatically

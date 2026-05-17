@@ -43,6 +43,7 @@ import { BusinessProjectsModule } from './modules/business-projects/business-pro
 import { ConsultantOnboardingModule } from './modules/consultant-onboarding/consultant-onboarding.module';
 import { ConsultantProjectsModule } from './modules/consultant-projects/consultant-projects.module';
 import { ConsultantSkillExamModule } from './modules/consultant-skill-exam/consultant-skill-exam.module';
+import { ExploreModule } from './modules/explore/explore.module';
 import { FilesModule } from './modules/files';
 import { HealthModule } from './modules/health/health.module';
 import { HousekeepingModule } from './modules/housekeeping/housekeeping.module';
@@ -116,6 +117,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     ConsultantOnboardingModule,
     ConsultantSkillExamModule,
     ConsultantProjectsModule,
+    ExploreModule,
     FilesModule,
     HealthModule,
     HousekeepingModule,

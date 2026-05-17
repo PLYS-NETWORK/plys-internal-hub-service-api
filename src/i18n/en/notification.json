@@ -19,6 +19,14 @@
     "title": "Task published",
     "body": "Task \"{title}\" ({code}) has been published and is now open for consultants."
   },
+  "project_consultant_joined": {
+    "title": "Consultant joined your project",
+    "body": "{consultant} joined your project \"{title}\" ({code})."
+  },
+  "project_consultant_left": {
+    "title": "Consultant left your project",
+    "body": "{consultant} left your project \"{title}\" ({code})."
+  },
   "top_up_completed": {
     "title": "Top-up successful",
     "body": "Your top-up of {amount} {currency} was credited to your account."
@@ -46,6 +54,10 @@
   "consultant_task_status_changed": {
     "title": "Task status updated",
     "body": "Task \"{title}\" ({code}) moved to {new_status}."
+  },
+  "business_task_status_changed": {
+    "title": "Task status updated by consultant",
+    "body": "Task \"{title}\" ({code}) was moved to {new_status} by the assigned consultant."
   },
   "admin_business_onboarded": {
     "title": "New business registered",
@@ -120,5 +132,13 @@
   "admin_consultant_banned": {
     "title": "Consultant banned: {consultant}",
     "body": "{consultant} was banned after {strikes} CopyLeaks strikes ({reason})."
+  },
+  "admin_consultant_project_joined": {
+    "title": "Consultant joined project: {consultant}",
+    "body": "{consultant} joined project \"{title}\" ({code}) owned by {business}."
+  },
+  "admin_consultant_project_left": {
+    "title": "Consultant left project: {consultant}",
+    "body": "{consultant} left project \"{title}\" ({code}) owned by {business}."
   }
 }

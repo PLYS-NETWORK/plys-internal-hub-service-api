@@ -10,21 +10,16 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   IConsultantAccessService,
   IResolvedAccessibleProject,
-  IResolvedProjectMembership,
 } from '../interfaces/consultant-access.service.interface';
 
-// Statuses a consultant may discover or open from the public feed.
-// Mirrors the contract of `findAccessibleByIdForConsultant` in ProjectRepository.
+// Statuses that a consultant may discover or open from the public feed. The
+// detail repo query OR's this with an ACTIVE membership check so members
+// keep access even after a project moves outside this set.
 export const ACCESSIBLE_PROJECT_STATUSES: readonly ProjectStatus[] = [
   ProjectStatus.PUBLISHED,
   ProjectStatus.IN_PROGRESS,
 ];
 
-/**
- * Centralised tenant resolution for the consultant-projects module. Mirrors
- * `BusinessAccessService` — every entry point should call one of these
- * methods to verify the caller's identity before any business logic runs.
- */
 @Injectable()
 export class ConsultantAccessService implements IConsultantAccessService {
   private readonly logger: AppLogger;
@@ -36,16 +31,22 @@ export class ConsultantAccessService implements IConsultantAccessService {
     this.logger = new AppLogger(ConsultantAccessService.name, requestContext);
   }
 
+  private get rid(): string {
+    return this.requestContext.requestId;
+  }
+
   /** @inheritdoc */
   public async resolveConsultantProfile(): Promise<ConsultantProfile> {
     const userId = this.requestContext.userId;
     if (!userId) {
-      this.logger.warn(`resolveConsultantProfile — missing userId`);
+      this.logger.warn(`[${this.rid}] resolveConsultantProfile — missing userId`);
       throw this.consultantProfileNotFound();
     }
     const profile = await this.uow.consultantProfiles.findByUserId(userId);
     if (!profile) {
-      this.logger.warn(`resolveConsultantProfile — profile not found | userId: ${userId}`);
+      this.logger.warn(
+        `[${this.rid}] resolveConsultantProfile — profile not found | userId: ${userId}`,
+      );
       throw this.consultantProfileNotFound();
     }
     return profile;
@@ -61,7 +62,7 @@ export class ConsultantAccessService implements IConsultantAccessService {
     );
     if (!project) {
       this.logger.warn(
-        `resolveAccessibleProject — not found | projectId: ${projectId}, consultantId: ${consultantProfile.id}`,
+        `[${this.rid}] resolveAccessibleProject — not found | projectId: ${projectId}, consultantId: ${consultantProfile.id}`,
       );
       throw new TranslatableException({
         messageKey: 'error.project.not_found',
@@ -73,37 +74,28 @@ export class ConsultantAccessService implements IConsultantAccessService {
   }
 
   /** @inheritdoc */
-  public async resolveProjectMembership(projectId: string): Promise<IResolvedProjectMembership> {
+  public async resolveJoinedProject(projectId: string): Promise<IResolvedAccessibleProject> {
     const consultantProfile = await this.resolveConsultantProfile();
+    const membership = await this.uow.projectMembers.findByProjectAndConsultant(
+      projectId,
+      consultantProfile.id,
+    );
+    if (!membership || membership.status !== ProjectMemberStatus.ACTIVE) {
+      // 404 not 403 — leaking project existence to non-members would invite
+      // ID enumeration. Active-only gating is the whole point of this method.
+      this.logger.warn(
+        `[${this.rid}] resolveJoinedProject — not an active member | projectId: ${projectId}, consultantId: ${consultantProfile.id}`,
+      );
+      throw this.projectNotFound();
+    }
     const project = await this.uow.projects.findOne({ where: { id: projectId } });
     if (!project) {
-      this.logger.warn(`resolveProjectMembership — project not found | projectId: ${projectId}`);
-      throw new TranslatableException({
-        messageKey: 'error.project.not_found',
-        errorCode: ERROR_CODES.PROJECT_NOT_FOUND,
-        status: HttpStatus.NOT_FOUND,
-      });
-    }
-
-    const member = await this.uow.projectMembers.findOne({
-      where: {
-        projectId,
-        consultantId: consultantProfile.id,
-        status: ProjectMemberStatus.ACTIVE,
-      },
-    });
-    if (!member) {
       this.logger.warn(
-        `resolveProjectMembership — not a member | projectId: ${projectId}, consultantId: ${consultantProfile.id}`,
+        `[${this.rid}] resolveJoinedProject — project row missing | projectId: ${projectId}`,
       );
-      throw new TranslatableException({
-        messageKey: 'error.project.forbidden',
-        errorCode: ERROR_CODES.PROJECT_FORBIDDEN,
-        status: HttpStatus.FORBIDDEN,
-      });
+      throw this.projectNotFound();
     }
-
-    return { project, consultantProfile, member };
+    return { project, consultantProfile };
   }
 
   private consultantProfileNotFound(): TranslatableException {
@@ -111,6 +103,14 @@ export class ConsultantAccessService implements IConsultantAccessService {
       messageKey: 'error.consultant_profile.not_found',
       errorCode: ERROR_CODES.CONSULTANT_PROFILE_NOT_FOUND,
       status: HttpStatus.FORBIDDEN,
+    });
+  }
+
+  private projectNotFound(): TranslatableException {
+    return new TranslatableException({
+      messageKey: 'error.project.not_found',
+      errorCode: ERROR_CODES.PROJECT_NOT_FOUND,
+      status: HttpStatus.NOT_FOUND,
     });
   }
 }

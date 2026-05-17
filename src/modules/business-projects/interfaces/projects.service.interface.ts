@@ -1,6 +1,6 @@
 import { PageDto } from '@common/dto/page.dto';
 
-import { CreateProjectDto, ListProjectsDto, SearchProjectsDto } from '../dto/requests';
+import { CreateProjectDto, ListProjectsDto } from '../dto/requests';
 import { TransitionProjectStatusDto } from '../dto/requests/transition-project-status.dto';
 import {
   ProjectListItemResponseDto,
@@ -38,17 +38,17 @@ export interface IBusinessProjectsService {
   listMyProjects(dto: ListProjectsDto): Promise<PageDto<ProjectListItemResponseDto>>;
 
   /**
-   * Lightweight search of the calling business's projects, intended for
-   * project-picker / workspace-switcher dropdowns. Filters by case-insensitive
-   * substring on either `title` OR `code`, paginated, returns the minimal
-   * `{ id, code, title }` shape only.
+   * Lightweight switcher list of every project owned by the caller — no
+   * pagination, no keyword filter. Returns the minimal `{ id, code, title }`
+   * shape only. `IN_PROGRESS` projects float to the top (the owner's active
+   * workload); remaining statuses follow `created_at DESC`, then `id ASC`
+   * for stability.
    *
-   * @param dto Pagination + optional `keywords` filter (2–200 chars, trimmed).
-   * @returns Paged list of lightweight project items ordered by `created_at DESC`.
+   * @returns Lightweight project items in switcher order.
    * @throws TranslatableException 403 BUSINESS_PROFILE_NOT_FOUND when the
    *   caller has no business profile.
    */
-  searchMyProjects(dto: SearchProjectsDto): Promise<PageDto<ProjectSearchItemResponseDto>>;
+  searchMyProjects(): Promise<ProjectSearchItemResponseDto[]>;
 
   /**
    * Soft-deletes a project owned by the calling business. Only allowed while

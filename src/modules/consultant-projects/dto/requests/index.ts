@@ -1,3 +1,4 @@
-export { ChangeTaskStatusDto } from './change-task-status.dto';
-export { CreateBoardResultDto } from './create-board-result.dto';
-export { UpdateBoardResultDto } from './update-board-result.dto';
+export { AssignConsultantTaskDto } from './assign-consultant-task.dto';
+export { ListConsultantExploreProjectsDto } from './list-consultant-explore-projects.dto';
+export { ListConsultantJoinedProjectsDto } from './list-consultant-joined-projects.dto';
+export { ListConsultantProjectTasksDto } from './list-consultant-project-tasks.dto';

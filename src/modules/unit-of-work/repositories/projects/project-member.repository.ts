@@ -81,6 +81,44 @@ export class ProjectMemberRepository
   }
 
   /** @inheritdoc */
+  public async findByProjectAndConsultant(
+    projectId: string,
+    consultantId: string,
+  ): Promise<ProjectMember | null> {
+    return this.findOne({ where: { projectId, consultantId } });
+  }
+
+  /** @inheritdoc */
+  public async activate(member: ProjectMember): Promise<ProjectMember> {
+    member.status = ProjectMemberStatus.ACTIVE;
+    member.joinedAt = new Date();
+    member.leftAt = null;
+    return this.save(member);
+  }
+
+  /** @inheritdoc */
+  public async markLeft(member: ProjectMember): Promise<ProjectMember> {
+    member.status = ProjectMemberStatus.LEFT;
+    member.leftAt = new Date();
+    return this.save(member);
+  }
+
+  /** @inheritdoc */
+  public async findActiveProjectIdsByConsultantId(
+    consultantId: string,
+    projectIds: string[],
+  ): Promise<Set<string>> {
+    if (projectIds.length === 0) return new Set();
+    const rows = await this.createQueryBuilder('pm')
+      .select('pm.project_id', 'project_id')
+      .where('pm.consultant_id = :consultantId', { consultantId })
+      .andWhere('pm.status = :status', { status: ProjectMemberStatus.ACTIVE })
+      .andWhere('pm.project_id IN (:...projectIds)', { projectIds })
+      .getRawMany<{ project_id: string }>();
+    return new Set(rows.map((r) => r.project_id));
+  }
+
+  /** @inheritdoc */
   public async findActiveConsultantsByProjectIds(
     projectIds: string[],
     limit: number,

@@ -54,6 +54,9 @@ export default registerAs('app', () => ({
     loginLockoutWindowMin: parseInt(process.env.LOGIN_LOCKOUT_WINDOW_MIN ?? '15', 10),
     // Used to namespace throttler keys across environments / shared Redis.
     throttleRedisPrefix: process.env.THROTTLE_REDIS_PREFIX ?? 'throttle:',
+    // Shared secret presented by trusted BFFs (e.g. Next.js Server Actions) via
+    // the `x-api-key` header on /api/v1/explore/* routes. Constant-time compared.
+    publicEndpointApiKey: process.env.PUBLIC_ENDPOINT_API_KEY ?? '',
   },
   resend: {
     apiKey: process.env.RESEND_API_KEY ?? '',

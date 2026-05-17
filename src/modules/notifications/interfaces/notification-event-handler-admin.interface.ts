@@ -1,6 +1,8 @@
 import {
   IBusinessOnboardedEvent,
   IConsultantOnboardingSubmittedEvent,
+  IConsultantProjectJoinedEvent,
+  IConsultantProjectLeftEvent,
   IPaymentTopUpCompletedEvent,
   IProjectPublishedEvent,
   ITaskPublishedEvent,
@@ -42,4 +44,20 @@ export interface IAdminNotificationEventHandlerService {
    * @param event Payload carrying onboarding id + consultant display name.
    */
   onConsultantOnboardingSubmitted(event: IConsultantOnboardingSubmittedEvent): Promise<void>;
+
+  /**
+   * Fan-out `ADMIN_CONSULTANT_PROJECT_JOINED` to all active admins when a
+   * consultant successfully applies to a project (post-`POST /projects/consultant/membership/:projectId/apply`).
+   * Includes both the consultant identity and the project's owning business
+   * so the admin can audit / cross-reference without an extra lookup.
+   * @param event Payload carrying consultant + project + business identity.
+   */
+  onAdminConsultantProjectJoined(event: IConsultantProjectJoinedEvent): Promise<void>;
+
+  /**
+   * Fan-out `ADMIN_CONSULTANT_PROJECT_LEFT` to all active admins when a
+   * consultant leaves a project (post-`POST /projects/consultant/membership/:projectId/leave`).
+   * @param event Payload carrying consultant + project + business identity.
+   */
+  onAdminConsultantProjectLeft(event: IConsultantProjectLeftEvent): Promise<void>;
 }

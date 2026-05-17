@@ -12,6 +12,12 @@ export const NOTIFICATION_TYPES = {
   PROJECT_PUBLISHED: 'project_published',
   PROJECT_UNPUBLISHED: 'project_unpublished',
   TASK_PUBLISHED: 'task_published',
+  // Consultant joined the business's project (post-apply confirmation).
+  PROJECT_CONSULTANT_JOINED: 'project_consultant_joined',
+  // Consultant left the business's project (post-leave notice).
+  PROJECT_CONSULTANT_LEFT: 'project_consultant_left',
+  // Consultant moved a task between kanban statuses (assign / unassign / submit-for-review).
+  BUSINESS_TASK_STATUS_CHANGED: 'business_task_status_changed',
 
   // ── Business: finance ───────────────────────────────────────────────────────
   TOP_UP_COMPLETED: 'top_up_completed',
@@ -42,6 +48,10 @@ export const NOTIFICATION_TYPES = {
   ADMIN_SKILL_EXAM_RESULT: 'admin_skill_exam_result',
   // Fan-out when a consultant hits the 3-strike CopyLeaks ban.
   ADMIN_CONSULTANT_BANNED: 'admin_consultant_banned',
+  // Fan-out when a consultant joins any project (post-apply).
+  ADMIN_CONSULTANT_PROJECT_JOINED: 'admin_consultant_project_joined',
+  // Fan-out when a consultant leaves any project.
+  ADMIN_CONSULTANT_PROJECT_LEFT: 'admin_consultant_project_left',
 } as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];

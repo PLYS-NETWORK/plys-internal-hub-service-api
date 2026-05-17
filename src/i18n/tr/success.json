@@ -23,6 +23,10 @@
     "re_published": "Proje yeniden yayınlanmak üzere yapılandırıldı durumuna alındı.",
     "deleted": "Proje başarıyla silindi."
   },
+  "membership": {
+    "applied": "Projeye başarıyla katıldınız.",
+    "left": "Projeden ayrıldınız."
+  },
   "task": {
     "created": "Görev başarıyla oluşturuldu.",
     "result_created": "Sonuç başarıyla oluşturuldu.",
@@ -30,7 +34,10 @@
     "result_deleted": "Sonuç başarıyla silindi.",
     "attachment_created": "Ekler başarıyla yüklendi.",
     "attachment_updated": "Ek başarıyla güncellendi.",
-    "attachment_deleted": "Ek başarıyla silindi."
+    "attachment_deleted": "Ek başarıyla silindi.",
+    "assigned": "Görev başarıyla atandı.",
+    "unassigned": "Görev ataması başarıyla kaldırıldı.",
+    "submitted_for_review": "Görev incelemeye gönderildi."
   },
   "billing": {
     "invoice_checkout_initiated": "Fatura ödemesi başlatıldı."

@@ -25,7 +25,8 @@
     "oauth_state_invalid": "Invalid OAuth callback. Please retry the sign-in flow from the start.",
     "rate_limited": "Too many requests. Please slow down and try again in a moment.",
     "sso_exchange_invalid": "SSO exchange code is invalid or has expired",
-    "sso_email_missing": "SSO provider did not return an email address"
+    "sso_email_missing": "SSO provider did not return an email address",
+    "api_key_invalid": "Invalid or missing API key."
   },
   "business_profile": {
     "not_found": "Business profile not found.",
@@ -48,7 +49,15 @@
     "recall_transaction_not_found": "Original publication transaction not found for recall refund.",
     "cannot_be_deleted": "Only draft, setting-up, or configured projects can be deleted.",
     "invalid_status_transition": "Invalid project status transition.",
-    "code_already_exists": "A project with this code already exists for your business."
+    "code_already_exists": "A project with this code already exists for your business.",
+    "already_member": "You are already an active member of this project.",
+    "membership_banned": "You can no longer join this project.",
+    "full": "This project has already reached its consultant capacity.",
+    "not_joinable": "This project is not accepting new members in its current state.",
+    "skill_match_insufficient": "Your skills match less than 50% of this project's required skills.",
+    "concurrent_limit_reached": "You have reached the maximum number of concurrent projects.",
+    "not_member": "You are not an active member of this project.",
+    "leave_blocked_by_active_tasks": "You cannot leave this project while you have tasks still in progress."
   },
   "task": {
     "not_found": "Task not found.",
@@ -64,7 +73,12 @@
     "attachment_not_found": "Task attachment not found.",
     "attachment_forbidden": "You do not have permission to manage attachments on this task.",
     "attachment_file_not_owned": "One or more attached files do not belong to you or do not exist.",
-    "attachment_invalid_status": "Attachments cannot be modified for tasks in this status."
+    "attachment_invalid_status": "Attachments cannot be modified for tasks in this status.",
+    "not_claimable": "This task cannot be claimed right now.",
+    "not_owned_by_consultant": "You are not assigned to this task.",
+    "invalid_state_for_unassign": "This task cannot be unassigned in its current state.",
+    "invalid_state_for_submit": "This task cannot be submitted for review in its current state.",
+    "due_date_invalid": "Due date must be a valid future date."
   },
   "payment": {
     "insufficient_balance": "Insufficient account balance.",

@@ -222,6 +222,98 @@ interface IWithdrawReversedMetadata {
 
 ---
 
+## 8. `project_consultant_joined`
+
+**Trigger:** A consultant joins one of the business's projects via `POST /projects/consultant/membership/:projectId/apply`. Fired once the membership row is committed (insert or LEFT→ACTIVE reactivate). The consultant has already passed the ≥ 50% skill match gate, the concurrency cap, and the capacity check by the time this notification arrives.
+
+| Field          | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| `type`         | `project_consultant_joined`                                |
+| `entity_type`  | `project`                                                  |
+| `entity_id`    | `metadata.project_id`                                      |
+| `redirect_url` | `https://<ployos>/c/:businessId/projects/:project_id/team` |
+
+**Metadata:**
+
+```ts
+interface IProjectConsultantJoinedMetadata {
+  project_id: string;
+  project_code: string;
+  project_title: string;
+  consultant_user_id: string;
+  consultant_name: string;
+}
+```
+
+**Sample payload:**
+
+```json
+{
+  "type": "project_consultant_joined",
+  "title": "Consultant joined your project",
+  "body": "Jane Doe joined your project \"AI-powered support\" (PRJ-0042).",
+  "metadata": {
+    "project_id": "550e8400-e29b-41d4-a716-446655440000",
+    "project_code": "PRJ-0042",
+    "project_title": "AI-powered support",
+    "consultant_user_id": "0f3b9d24-1111-2222-3333-444455556666",
+    "consultant_name": "Jane Doe"
+  },
+  "entity_type": "project",
+  "entity_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Cache invalidation hint:** Reload the project team / members panel for `project_id` and the project detail (active member count changed). If the business dashboard surfaces an "open roster" widget, refresh it too — `total_members / required_consultants` ticked up by one.
+
+---
+
+## 9. `project_consultant_left`
+
+**Trigger:** A consultant leaves one of the business's projects via `POST /projects/consultant/membership/:projectId/leave`. Fired once the membership row is flipped to `LEFT`. The consultant must have first completed or unassigned every in-flight task (`IN_PROGRESS`, `IN_REVIEW`, `PENDING_APPROVAL`, `REVISION_REQUESTED`) on the project — so on receipt the business can assume no work is mid-flight from that consultant.
+
+| Field          | Value                                                      |
+| -------------- | ---------------------------------------------------------- |
+| `type`         | `project_consultant_left`                                  |
+| `entity_type`  | `project`                                                  |
+| `entity_id`    | `metadata.project_id`                                      |
+| `redirect_url` | `https://<ployos>/c/:businessId/projects/:project_id/team` |
+
+**Metadata:**
+
+```ts
+interface IProjectConsultantLeftMetadata {
+  project_id: string;
+  project_code: string;
+  project_title: string;
+  consultant_user_id: string;
+  consultant_name: string;
+}
+```
+
+**Sample payload:**
+
+```json
+{
+  "type": "project_consultant_left",
+  "title": "Consultant left your project",
+  "body": "Jane Doe left your project \"AI-powered support\" (PRJ-0042).",
+  "metadata": {
+    "project_id": "550e8400-e29b-41d4-a716-446655440000",
+    "project_code": "PRJ-0042",
+    "project_title": "AI-powered support",
+    "consultant_user_id": "0f3b9d24-1111-2222-3333-444455556666",
+    "consultant_name": "Jane Doe"
+  },
+  "entity_type": "project",
+  "entity_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Cache invalidation hint:** Reload the project team / members panel for `project_id`, the project detail (a slot just opened up), and the project task list (any `TO_DO` / `ASSIGNED` tasks the consultant held are now unassigned — see [TaskRepository.countByAssigneeAndProjectGroupedByStatus](../../../../src/modules/unit-of-work/repositories/tasks/task.repository.ts) for the status breakdown).
+
+---
+
 ## React Query switch example
 
 ```ts
@@ -247,6 +339,18 @@ socket.on('notification.new', (n: NotificationPayload) => {
     case 'withdraw_reversed':
       qc.invalidateQueries({ queryKey: ['business', 'wallet'] });
       qc.invalidateQueries({ queryKey: ['business', 'transactions'] });
+      break;
+    case 'project_consultant_joined':
+    case 'project_consultant_left':
+      qc.invalidateQueries({
+        queryKey: ['business', 'projects', n.metadata.project_id, 'team'],
+      });
+      qc.invalidateQueries({ queryKey: ['business', 'projects', n.metadata.project_id] });
+      if (n.type === 'project_consultant_left') {
+        qc.invalidateQueries({
+          queryKey: ['business', 'projects', n.metadata.project_id, 'tasks'],
+        });
+      }
       break;
   }
 });

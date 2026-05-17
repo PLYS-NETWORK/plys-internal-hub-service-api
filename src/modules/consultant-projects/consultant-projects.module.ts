@@ -1,36 +1,42 @@
-import { FileStorageModule } from '@common/modules/file-storage';
-import { BusinessProjectsModule } from '@modules/business-projects/business-projects.module';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
 import { Module } from '@nestjs/common';
 
-import { ConsultantBoardController } from './controllers/board.controller';
-import { ConsultantOverviewController } from './controllers/overview.controller';
-import { ConsultantProjectsController } from './controllers/projects.controller';
-import { ConsultantBoardService } from './services/board/board.service';
-import { ConsultantBoardResultsService } from './services/board/board-results.service';
+import { ConsultantExploreController } from './controllers/consultant-explore.controller';
+import { ConsultantJoinedProjectsController } from './controllers/consultant-joined-projects.controller';
+import { ConsultantMembershipController } from './controllers/consultant-membership.controller';
+import { ConsultantProjectTasksController } from './controllers/consultant-project-tasks.controller';
 import { ConsultantAccessService } from './services/consultant-access.service';
-import { ConsultantOverviewService } from './services/overview.service';
-import { ConsultantProjectsService } from './services/projects.service';
+import { ConsultantExploreService } from './services/consultant-explore.service';
+import { ConsultantJoinedCacheService } from './services/consultant-joined-cache.service';
+import { ConsultantJoinedProjectsService } from './services/consultant-joined-projects.service';
+import { ConsultantMembershipService } from './services/consultant-membership.service';
+import { ConsultantProjectTasksService } from './services/consultant-project-tasks.service';
 
 /**
- * Consultant-side projects surface (`/projects/consultant/...`). Mirrors
- * `BusinessProjectsModule` in structure; the read-only discovery flow that
- * used to live in `ProjectsModule` (`/projects-consultant`) has been folded
- * into `ConsultantProjectsService` here.
+ * Consultant-side projects surface, rebuilt feature-by-feature. Step 1
+ * shipped the explore discovery feed; step 2 added membership writes
+ * (apply / leave); step 3 adds the joined-project surface (workspace
+ * switcher, joined list, joined detail) and task-level operations
+ * (list, assign, unassign, submit-for-review).
+ *
+ * `RedisModule` and `I18nModule` are registered globally, so they are not
+ * imported here even though the services inject them.
  */
 @Module({
-  imports: [UnitOfWorkModule, FileStorageModule, BusinessProjectsModule],
+  imports: [UnitOfWorkModule],
   controllers: [
-    ConsultantProjectsController,
-    ConsultantOverviewController,
-    ConsultantBoardController,
+    ConsultantExploreController,
+    ConsultantJoinedProjectsController,
+    ConsultantMembershipController,
+    ConsultantProjectTasksController,
   ],
   providers: [
     ConsultantAccessService,
-    ConsultantProjectsService,
-    ConsultantOverviewService,
-    ConsultantBoardService,
-    ConsultantBoardResultsService,
+    ConsultantExploreService,
+    ConsultantJoinedCacheService,
+    ConsultantJoinedProjectsService,
+    ConsultantMembershipService,
+    ConsultantProjectTasksService,
   ],
 })
 export class ConsultantProjectsModule {}

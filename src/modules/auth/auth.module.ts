@@ -1,3 +1,4 @@
+import { PublicEndpointApiKeyGuard } from '@common/guards/public-endpoint-api-key.guard';
 import { EnvironmentsService } from '@common/modules/environments';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { NotificationsModule } from '@modules/notifications/notifications.module';
@@ -109,6 +110,7 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
     RefreshTokenGuard,
     GoogleOAuthGuard,
     GoogleCallbackGuard,
+    PublicEndpointApiKeyGuard,
 
     // Module-scoped throttler guard. Keys on email+ip for /login and
     // /forgot-password, otherwise falls back to the default IP-only key.

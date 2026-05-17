@@ -19,6 +19,14 @@
     "title": "Görev yayınlandı",
     "body": "\"{title}\" ({code}) görevi yayınlandı ve danışmanlara açık."
   },
+  "project_consultant_joined": {
+    "title": "Bir danışman projenize katıldı",
+    "body": "{consultant}, \"{title}\" ({code}) projenize katıldı."
+  },
+  "project_consultant_left": {
+    "title": "Bir danışman projenizden ayrıldı",
+    "body": "{consultant}, \"{title}\" ({code}) projenizden ayrıldı."
+  },
   "top_up_completed": {
     "title": "Yükleme başarılı",
     "body": "{amount} {currency} tutarındaki yüklemeniz hesabınıza eklendi."
@@ -46,6 +54,10 @@
   "consultant_task_status_changed": {
     "title": "Görev durumu güncellendi",
     "body": "\"{title}\" ({code}) görevi {new_status} durumuna geçti."
+  },
+  "business_task_status_changed": {
+    "title": "Danışman görev durumunu güncelledi",
+    "body": "\"{title}\" ({code}) görevi atanan danışman tarafından {new_status} durumuna geçirildi."
   },
   "admin_business_onboarded": {
     "title": "Yeni iş yeri kaydoldu",
@@ -120,5 +132,13 @@
   "admin_consultant_banned": {
     "title": "Danışman yasaklandı: {consultant}",
     "body": "{consultant} {strikes} CopyLeaks ihlali ({reason}) sonrası yasaklandı."
+  },
+  "admin_consultant_project_joined": {
+    "title": "Danışman projeye katıldı: {consultant}",
+    "body": "{consultant}, {business} adlı iş yerinin \"{title}\" ({code}) projesine katıldı."
+  },
+  "admin_consultant_project_left": {
+    "title": "Danışman projeden ayrıldı: {consultant}",
+    "body": "{consultant}, {business} adlı iş yerinin \"{title}\" ({code}) projesinden ayrıldı."
   }
 }

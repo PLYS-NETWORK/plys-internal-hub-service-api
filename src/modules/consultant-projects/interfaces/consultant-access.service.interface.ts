@@ -1,56 +1,53 @@
-import { ConsultantProfile, Project, ProjectMember } from '@database/entities';
+import { ConsultantProfile, Project } from '@database/entities';
 
 export interface IResolvedAccessibleProject {
   project: Project;
   consultantProfile: ConsultantProfile;
 }
 
-export interface IResolvedProjectMembership {
-  project: Project;
-  consultantProfile: ConsultantProfile;
-  member: ProjectMember;
-}
-
 /**
- * Centralised tenant resolution for the consultant-projects module. Mirrors
- * `BusinessAccessService`. Every endpoint must call one of the resolve
- * methods to verify the JWT user matches an existing consultant profile and
- * (when needed) is an active member of the requested project.
+ * Tenant resolution for the consultant-projects module. Every endpoint must
+ * call one of the resolve methods to verify the JWT user matches an existing
+ * consultant profile before any business logic runs.
  */
 export interface IConsultantAccessService {
   /**
-   * Verifies the calling user has a consultant profile. Used by the public
-   * discovery endpoints which only require a consultant identity (no project
-   * membership).
+   * Verifies the calling user has a consultant profile. Used by endpoints
+   * that only require a consultant identity (no project membership).
    *
    * @returns The verified consultant profile.
-   * @throws TranslatableException 403 CONSULTANT_PROFILE_NOT_FOUND.
+   * @throws TranslatableException 403 CONSULTANT_PROFILE_NOT_FOUND when the
+   *         request context has no `userId` or the user has no consultant
+   *         profile row.
    */
   resolveConsultantProfile(): Promise<ConsultantProfile>;
 
   /**
-   * Loads the project for the discovery flow. Allows access if the project
-   * is in a publicly-discoverable status (PUBLISHED, IN_PROGRESS) OR if the
-   * caller already has an ACTIVE membership.
+   * Loads a project for the discovery flow. Allows access when the project
+   * is in a publicly-discoverable status (PUBLISHED, IN_PROGRESS) **or** when
+   * the caller already has an ACTIVE membership on that project.
    *
+   * @param projectId - UUID of the project to load.
    * @returns The project plus the verified consultant profile.
    * @throws TranslatableException 403 CONSULTANT_PROFILE_NOT_FOUND.
    * @throws TranslatableException 404 PROJECT_NOT_FOUND when the project is
-   *         missing/soft-deleted, or accessible to neither the public nor
-   *         the calling consultant.
+   *         missing/soft-deleted or accessible to neither the public nor the
+   *         calling consultant.
    */
   resolveAccessibleProject(projectId: string): Promise<IResolvedAccessibleProject>;
 
   /**
-   * Asserts the calling consultant is an ACTIVE member of the project. Used
-   * by overview / board endpoints. Returns the project, profile, and member
-   * row in one trip.
+   * Strict-membership variant used by the "joined" surface. Returns the
+   * project only when the caller currently has an ACTIVE `ProjectMember`
+   * row — discovery/public status does NOT grant access. Returns 404 (not
+   * 403) on every failure to avoid leaking project existence to non-members.
    *
-   * @throws TranslatableException 403 CONSULTANT_PROFILE_NOT_FOUND.
-   * @throws TranslatableException 404 PROJECT_NOT_FOUND when the project does
-   *         not exist or is soft-deleted.
-   * @throws TranslatableException 403 PROJECT_FORBIDDEN when the consultant
-   *         is not an ACTIVE member of the project.
+   * @param projectId - UUID of the project to load.
+   * @returns The project plus the verified consultant profile.
+   * @throws TranslatableException 403 CONSULTANT_PROFILE_NOT_FOUND when the
+   *         caller has no consultant profile.
+   * @throws TranslatableException 404 PROJECT_NOT_FOUND when the project is
+   *         missing, soft-deleted, or the caller has no ACTIVE membership.
    */
-  resolveProjectMembership(projectId: string): Promise<IResolvedProjectMembership>;
+  resolveJoinedProject(projectId: string): Promise<IResolvedAccessibleProject>;
 }

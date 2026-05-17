@@ -30,4 +30,13 @@ export class ProjectRequiredSkillRepository
       .getRawMany<{ skill_id: string }>();
     return rows.map((r) => r.skill_id);
   }
+
+  /** @inheritdoc */
+  public async findWithSkillByProjectId(projectId: string): Promise<ProjectRequiredSkill[]> {
+    return this.createQueryBuilder('prs')
+      .innerJoinAndSelect('prs.skill', 'skill')
+      .where('prs.project_id = :projectId', { projectId })
+      .orderBy('skill.name', 'ASC')
+      .getMany();
+  }
 }

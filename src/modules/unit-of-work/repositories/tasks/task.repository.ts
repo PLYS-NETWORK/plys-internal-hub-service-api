@@ -496,4 +496,116 @@ export class TaskRepository extends AbstractRepository<Task> implements ITaskRep
       qb.andWhere('task.project_id = :projectIdFilter', { projectIdFilter });
     }
   }
+
+  /** @inheritdoc */
+  public async findVisibleForConsultant(params: {
+    projectId: string;
+    consultantId: string;
+    keyword?: string;
+    skip: number;
+    take: number;
+  }): Promise<[Task[], number]> {
+    const { projectId, consultantId, keyword, skip, take } = params;
+
+    const qb = this.createQueryBuilder('task')
+      .where('task.project_id = :projectId', { projectId })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere(
+        // Visibility = unassigned TO_DO ∪ caller-owned non-DRAFT.
+        `(
+          (task.assigned_to IS NULL AND task.kanban_status = :toDoStatus)
+          OR
+          (task.assigned_to = :consultantId AND task.kanban_status <> :draftStatus)
+        )`,
+        {
+          toDoStatus: TaskKanbanStatus.TO_DO,
+          draftStatus: TaskKanbanStatus.DRAFT,
+          consultantId,
+        },
+      );
+
+    if (keyword && keyword.trim().length > 0) {
+      const like = `%${keyword.trim().toLowerCase()}%`;
+      qb.andWhere('(LOWER(task.title) LIKE :kw OR LOWER(task.code) LIKE :kw)', { kw: like });
+    }
+
+    // Status priority bucket — keeps active work surfaced before done/cancelled.
+    qb.addSelect(
+      `CASE task.kanban_status
+        WHEN '${TaskKanbanStatus.IN_PROGRESS}' THEN 1
+        WHEN '${TaskKanbanStatus.TO_DO}' THEN 2
+        WHEN '${TaskKanbanStatus.IN_REVIEW}' THEN 3
+        WHEN '${TaskKanbanStatus.PENDING_APPROVAL}' THEN 4
+        WHEN '${TaskKanbanStatus.REVISION_REQUESTED}' THEN 5
+        WHEN '${TaskKanbanStatus.DONE}' THEN 6
+        WHEN '${TaskKanbanStatus.CANCELLED}' THEN 7
+        ELSE 8
+      END`,
+      'status_rank',
+    )
+      .orderBy('status_rank', 'ASC')
+      .addOrderBy('task.created_at', 'DESC')
+      .addOrderBy('task.id', 'ASC')
+      .skip(skip)
+      .take(take);
+
+    return qb.getManyAndCount();
+  }
+
+  /** @inheritdoc */
+  public async countCompletedByAssigneeAndProjectIds(
+    consultantId: string,
+    projectIds: string[],
+  ): Promise<Map<string, number>> {
+    if (projectIds.length === 0) return new Map();
+
+    const rows = await this.createQueryBuilder('task')
+      .select('task.project_id', 'project_id')
+      .addSelect('COUNT(*)::int', 'count')
+      .where('task.project_id IN (:...projectIds)', { projectIds })
+      .andWhere('task.assigned_to = :consultantId', { consultantId })
+      .andWhere(`task.kanban_status = '${TaskKanbanStatus.DONE}'`)
+      .andWhere('task.deleted_at IS NULL')
+      .groupBy('task.project_id')
+      .getRawMany<{ project_id: string; count: number }>();
+
+    const out = new Map<string, number>();
+    for (const row of rows) out.set(row.project_id, Number(row.count));
+    return out;
+  }
+
+  /** @inheritdoc */
+  public async lockToDoUnassignedTaskById(projectId: string, taskId: string): Promise<Task | null> {
+    // FOR UPDATE SKIP LOCKED: concurrent claimants either win the row or
+    // observe null — the lost-race path translates to TASK_NOT_CLAIMABLE.
+    const row = await this.createQueryBuilder('task')
+      .where('task.id = :taskId', { taskId })
+      .andWhere('task.project_id = :projectId', { projectId })
+      .andWhere(`task.kanban_status = '${TaskKanbanStatus.TO_DO}'`)
+      .andWhere('task.assigned_to IS NULL')
+      .andWhere('task.deleted_at IS NULL')
+      .setLock('pessimistic_write')
+      .setOnLocked('skip_locked')
+      .getOne();
+    return row ?? null;
+  }
+
+  /** @inheritdoc */
+  public async lockTaskForOwner(
+    projectId: string,
+    taskId: string,
+    consultantId: string,
+    expectedStatuses: TaskKanbanStatus[],
+  ): Promise<Task | null> {
+    if (expectedStatuses.length === 0) return null;
+    const row = await this.createQueryBuilder('task')
+      .where('task.id = :taskId', { taskId })
+      .andWhere('task.project_id = :projectId', { projectId })
+      .andWhere('task.assigned_to = :consultantId', { consultantId })
+      .andWhere('task.kanban_status IN (:...expectedStatuses)', { expectedStatuses })
+      .andWhere('task.deleted_at IS NULL')
+      .setLock('pessimistic_write')
+      .getOne();
+    return row ?? null;
+  }
 }

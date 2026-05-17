@@ -1,4 +1,6 @@
 import {
+  IConsultantProjectJoinedEvent,
+  IConsultantProjectLeftEvent,
   IPaymentTopUpCompletedEvent,
   IPaymentTopUpRefundedEvent,
   IPaymentWithdrawCompletedEvent,
@@ -6,6 +8,7 @@ import {
   IProjectPublishedEvent,
   IProjectUnpublishedEvent,
   ITaskPublishedEvent,
+  ITaskStatusChangedEvent,
 } from '@common/events';
 
 export interface IBusinessNotificationEventHandlerService {
@@ -57,4 +60,28 @@ export interface IBusinessNotificationEventHandlerService {
    * @param event Payload extending the completed event with a reversal reason.
    */
   onPaymentWithdrawReversed(event: IPaymentWithdrawReversedEvent): Promise<void>;
+
+  /**
+   * Sends `PROJECT_CONSULTANT_JOINED` to the owning business user when a
+   * consultant joins one of their projects (post-apply).
+   * @param event Payload carrying consultant + project + owning business.
+   */
+  onBusinessProjectConsultantJoined(event: IConsultantProjectJoinedEvent): Promise<void>;
+
+  /**
+   * Sends `PROJECT_CONSULTANT_LEFT` to the owning business user when a
+   * consultant leaves one of their projects.
+   * @param event Payload carrying consultant + project + owning business.
+   */
+  onBusinessProjectConsultantLeft(event: IConsultantProjectLeftEvent): Promise<void>;
+
+  /**
+   * Sends `BUSINESS_TASK_STATUS_CHANGED` to the owning business user when a
+   * consultant transitions a task between kanban statuses (assign /
+   * unassign / submit-for-review). Fan-out is fire-and-forget; failures are
+   * logged but never raised, mirroring the other handlers in this interface.
+   * @param event Payload carrying the consultant + business user IDs, task
+   *              identity, and `old_status` / `new_status`.
+   */
+  onBusinessTaskStatusChanged(event: ITaskStatusChangedEvent): Promise<void>;
 }

@@ -14,6 +14,7 @@ export const NOTIFICATION_EVENTS = {
   PAYMENT_WITHDRAW_COMPLETED: 'payment.withdraw.completed',
   PAYMENT_WITHDRAW_REVERSED: 'payment.withdraw.reversed',
   CONSULTANT_PROJECT_JOINED: 'consultant.project.joined',
+  CONSULTANT_PROJECT_LEFT: 'consultant.project.left',
   // Onboarding lifecycle
   CONSULTANT_ONBOARDING_SUBMITTED: 'consultant.onboarding.submitted',
   CONSULTANT_ONBOARDING_APPROVED: 'consultant.onboarding.approved',
