@@ -61,8 +61,13 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
 
     // Partner-platform projects bubble to the top (TRUE > FALSE under DESC),
     // then most-recently-published, then id for a stable tiebreak across pages.
-    qb.orderBy('business.is_partner_platform', 'DESC')
-      .addOrderBy('project.published_at', 'DESC', 'NULLS LAST')
+    // NOTE: orderBy with skip/take + JOIN routes through TypeORM's distinct-id
+    // subquery, which resolves "alias.property" via findColumnWithPropertyPath —
+    // so the property segment MUST be the entity property name (camelCase),
+    // never the DB column name. Using snake_case here throws
+    // "Cannot read properties of undefined (reading 'databaseName')".
+    qb.orderBy('business.isPartnerPlatform', 'DESC')
+      .addOrderBy('project.publishedAt', 'DESC', 'NULLS LAST')
       .addOrderBy('project.id', 'ASC')
       .skip(params.skip)
       .take(params.take);
@@ -110,8 +115,10 @@ export class ProjectRepository extends AbstractRepository<Project> implements IP
 
     // Partner-platform projects sort first (TRUE > FALSE in Postgres DESC),
     // then most-recently-published, then id for a stable tiebreak.
-    qb.orderBy('business.is_partner_platform', 'DESC')
-      .addOrderBy('project.published_at', 'DESC', 'NULLS LAST')
+    // See findDiscoverableForConsultant for why these must be camelCase
+    // property names rather than snake_case column names.
+    qb.orderBy('business.isPartnerPlatform', 'DESC')
+      .addOrderBy('project.publishedAt', 'DESC', 'NULLS LAST')
       .addOrderBy('project.id', 'ASC')
       .skip(params.skip)
       .take(params.take);
