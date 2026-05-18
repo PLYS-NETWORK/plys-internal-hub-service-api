@@ -8,6 +8,8 @@ import { BusinessProfilesAdminController } from './business/business-profiles-ad
 import { BusinessProfilesAdminService } from './business/business-profiles-admin.service';
 import { ConsultantProfilesController } from './consultant/consultant-profiles.controller';
 import { ConsultantProfilesService } from './consultant/consultant-profiles.service';
+import { ConsultantProfilesAdminController } from './consultant/consultant-profiles-admin.controller';
+import { ConsultantProfilesAdminService } from './consultant/consultant-profiles-admin.service';
 import { ConsultantSkillsService } from './consultant/consultant-skills.service';
 
 @Module({
@@ -16,11 +18,13 @@ import { ConsultantSkillsService } from './consultant/consultant-skills.service'
     BusinessProfilesController,
     BusinessProfilesAdminController,
     ConsultantProfilesController,
+    ConsultantProfilesAdminController,
   ],
   providers: [
     BusinessProfilesService,
     BusinessProfilesAdminService,
     ConsultantProfilesService,
+    ConsultantProfilesAdminService,
     ConsultantSkillsService,
   ],
 })
