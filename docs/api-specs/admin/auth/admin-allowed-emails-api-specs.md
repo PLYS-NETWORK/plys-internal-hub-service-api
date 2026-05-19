@@ -32,20 +32,23 @@ This surface is distinct from the OTP flow at [`/admin/auth/*`](./auth-api-specs
   | Field | Type | Required | Notes |
   |-------|------|----------|-------|
   | `email` | `string` | yes | RFC-valid email, max 255. The service trims and lower-cases before storage and lookup. |
+  | `role` | `"ADMIN_PLATFORM" \| "TASK_REVIEWER"` | no | Role assigned to the user on first OTP login. Defaults to `ADMIN_PLATFORM`. Any other value → 422. Use `TASK_REVIEWER` when inviting an internal staff member who will only vote on the 3+1 task review queue. |
+- **Role is immutable after invite.** No endpoint mutates `admin_allowed_emails.role`. To re-assign a recipient, revoke the entry via `PATCH /admin/allowed-emails/:id/active` (`{ "value": false }`) and invite the email again with the new role.
 - **Behaviour:**
   - Normalise email (`trim().toLowerCase()`).
   - Lookup via the new `AdminAllowedEmailRepository.findByEmail` (case-insensitive, ignores `is_active`).
     - Hit + active → `409 ADMIN_ALLOWED_EMAIL_ALREADY_EXISTS`.
     - Hit + revoked → `409 ADMIN_ALLOWED_EMAIL_REVOKED`. The admin must explicitly re-activate via PATCH; this keeps the audit trail clean and avoids a silent re-grant.
     - Miss → continue.
-  - Inside `UnitOfWorkService.withTransaction`: insert the row (`is_active = true`, `created_by = requestContext.userId`) **and** await `EmailService.sendAdminInviteEmail`. If the email send throws, the transaction rolls back so a retry isn't blocked by a half-created row.
-  - The invitation email is sent from the Ployos sender address, subject `"You're invited to the Admin Hub"`, and contains a CTA pointing to `INTERNAL_HUB_URL` (env-driven). When the requester's email is known, the copy attributes the invite (`<invitedBy> has added your email to the admin allow-list…`).
+  - Inside `UnitOfWorkService.withTransaction`: insert the row (`is_active = true`, `role = dto.role ?? 'ADMIN_PLATFORM'`, `created_by = requestContext.userId`) **and** await `EmailService.sendAdminInviteEmail`. If the email send throws, the transaction rolls back so a retry isn't blocked by a half-created row.
+  - The invitation email is sent from the Ployos sender address, subject `"You're invited to the Admin Hub"`, and contains a CTA pointing to `INTERNAL_HUB_URL` (env-driven). When the requester's email is known, the copy attributes the invite (`<invitedBy> has added your email to the admin allow-list…`). The email copy is identical for both roles — the role is only enforced at first-OTP-login by `AdminAuthService.findOrCreateAdminUser`, which reads the `role` column off the allow-list row and writes it onto the newly provisioned `users` row.
 - **Response 201:** [`IAdminAllowedEmailResponse`](../../../../src/modules/admin-auth/dto/responses/interfaces/admin-allowed-email.response.interface.ts) — `last_login` is `null` on a fresh invite.
 
   ```ts
   {
     id: string,                 // UUID — admin_allowed_emails.id
     email: string,              // lowercased
+    role: string,               // "ADMIN_PLATFORM" | "TASK_REVIEWER"
     is_active: boolean,         // always true on a fresh invite
     created_at: string,         // ISO-8601
     last_login: string | null,  // null until the invited admin first logs in
@@ -72,11 +75,12 @@ This surface is distinct from the OTP flow at [`/admin/auth/*`](./auth-api-specs
   | `order_by` | `"ASC" \| "DESC"` | no | Default `DESC`. |
   | `is_active` | `boolean` | no | Strings `"true"` / `"1"` coerce to `true`; `"false"` / `"0"` coerce to `false`. |
   | `keywords` | `string` | no | Case-insensitive substring on `email`, length 1–80. Trimmed before validation. |
+  | `role` | `"ADMIN_PLATFORM" \| "TASK_REVIEWER"` | no | Exact-match filter on `admin_allowed_emails.role`. Whitelisted to invitable roles; anything outside → 422. Composes with `is_active` and `keywords`. |
 - **Behaviour:**
   - Builds a `QueryBuilder` on `admin_allowed_emails ae` with a manual `LEFT JOIN users u ON LOWER(u.email) = LOWER(ae.email) AND u.platform = 'ADMIN_PLATFORM' AND u.deleted_at IS NULL` so each entry can carry the linked admin's `last_login_at`. There is no FK between the two tables — the relation is keyed by lower-cased email + admin platform.
-  - Applies optional filters; default order is `ae.created_at DESC` with `addOrderBy('ae.id', 'ASC')` as a stable tie-breaker.
+  - Applies optional filters; the `role` filter adds `WHERE ae.role = :role` to **both** the count and data queries so pagination stays consistent. Default order is `ae.created_at DESC` with `addOrderBy('ae.id', 'ASC')` as a stable tie-breaker.
   - Uses `getRawAndEntities()` to read the joined `last_login_at` alongside the entity, plus a separate `getCount()` for total.
-  - Default behaviour returns active **and** revoked rows; pass `?is_active=true` to narrow.
+  - Default behaviour returns active **and** revoked rows across all invitable roles; pass `?is_active=true` and/or `?role=…` to narrow.
 - **Response 200:** `PageDto<IAdminAllowedEmailResponse>`
 
   ```ts
@@ -85,6 +89,7 @@ This surface is distinct from the OTP flow at [`/admin/auth/*`](./auth-api-specs
       {
         id: string,
         email: string,
+        role: string,               // "ADMIN_PLATFORM" | "TASK_REVIEWER"
         is_active: boolean,
         created_at: string,
         last_login: string | null   // joined from users.last_login_at; null until first login

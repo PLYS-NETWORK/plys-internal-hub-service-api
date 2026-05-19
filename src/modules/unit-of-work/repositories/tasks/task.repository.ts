@@ -1,6 +1,6 @@
 import { AbstractRepository } from '@common/repositories';
 import { Task } from '@database/entities';
-import { TASK_KANBAN_STATUSES, TaskKanbanStatus } from '@database/enums';
+import { TASK_KANBAN_STATUSES, TaskKanbanStatus, UserRole } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, SelectQueryBuilder } from 'typeorm';
@@ -926,5 +926,91 @@ export class TaskRepository extends AbstractRepository<Task> implements ITaskRep
     const out = new Map<string, number>();
     for (const row of rows) out.set(row.skill_id, Number(row.count));
     return out;
+  }
+
+  /** @inheritdoc */
+  public async lockTaskForReview(
+    taskId: string,
+    expectedStatuses: TaskKanbanStatus[],
+  ): Promise<Task | null> {
+    if (expectedStatuses.length === 0) return null;
+    const row = await this.createQueryBuilder('task')
+      .where('task.id = :taskId', { taskId })
+      .andWhere('task.kanban_status IN (:...expectedStatuses)', { expectedStatuses })
+      .andWhere('task.deleted_at IS NULL')
+      .setLock('pessimistic_write')
+      .getOne();
+    return row ?? null;
+  }
+
+  /** @inheritdoc */
+  public async incrementRevisionCount(taskId: string): Promise<number> {
+    const row = await this.createQueryBuilder()
+      .update()
+      .set({ revisionCount: () => '"revision_count" + 1' })
+      .where('id = :taskId', { taskId })
+      .returning(['revision_count'])
+      .execute();
+    const raw = (row.raw as Array<{ revision_count: number }> | undefined)?.[0];
+    return Number(raw?.revision_count ?? 0);
+  }
+
+  /** @inheritdoc */
+  public async pickEligibleReviewers(
+    taskId: string,
+    count: number,
+    excludeUserIds: string[],
+  ): Promise<string[]> {
+    if (count <= 0) return [];
+    // Round-robin: order by the user's most recent task_review assignment
+    // (NULLS FIRST surfaces reviewers who have never been assigned). Subquery
+    // computes the per-user max(assigned_at) without N+1.
+    const qb = this.repository.manager
+      .createQueryBuilder()
+      .select('u.id', 'id')
+      .from('users', 'u')
+      .leftJoin(
+        (subQuery: SelectQueryBuilder<Task>) =>
+          subQuery
+            .select('tr.reviewer_id', 'reviewer_id')
+            .addSelect('MAX(tr.assigned_at)', 'last_assigned_at')
+            .from('task_reviews', 'tr')
+            .where('tr.deleted_at IS NULL')
+            .groupBy('tr.reviewer_id'),
+        'last_review',
+        'last_review.reviewer_id = u.id',
+      )
+      .where('u.role = :role', { role: UserRole.TASK_REVIEWER })
+      .andWhere('u.is_active = TRUE')
+      .andWhere('u.deleted_at IS NULL')
+      // Exclude project members of the task's project (business stakeholders
+      // cannot review their own deliverables).
+      .andWhere(
+        `u.id NOT IN (
+          SELECT pm.user_id FROM project_members pm
+          INNER JOIN tasks t ON t.project_id = pm.project_id
+          WHERE t.id = :taskId AND pm.deleted_at IS NULL
+        )`,
+        { taskId },
+      )
+      // Exclude the task assignee's user id (consultant_profile.user_id).
+      .andWhere(
+        `u.id NOT IN (
+          SELECT cp.user_id FROM consultant_profiles cp
+          INNER JOIN tasks t ON t.assigned_to = cp.id
+          WHERE t.id = :taskIdAssignee
+        )`,
+        { taskIdAssignee: taskId },
+      )
+      .orderBy('last_review.last_assigned_at', 'ASC', 'NULLS FIRST')
+      .addOrderBy('u.id', 'ASC')
+      .limit(count);
+
+    if (excludeUserIds.length > 0) {
+      qb.andWhere('u.id NOT IN (:...excludeUserIds)', { excludeUserIds });
+    }
+
+    const rows = await qb.getRawMany<{ id: string }>();
+    return rows.map((r: { id: string }) => r.id);
   }
 }

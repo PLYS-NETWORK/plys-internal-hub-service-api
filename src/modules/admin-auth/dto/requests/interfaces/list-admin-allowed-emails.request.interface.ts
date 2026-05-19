@@ -1,4 +1,5 @@
 import type { Order } from '@common/dto/page-options.dto';
+import type { UserRole } from '@database/enums';
 
 /**
  * camelCase TS-internal shape of the admin allow-list list query.
@@ -12,4 +13,5 @@ export interface IListAdminAllowedEmailsRequest {
   readonly order_by?: Order;
   readonly isActive?: boolean;
   readonly keywords?: string;
+  readonly role?: UserRole.ADMIN_PLATFORM | UserRole.TASK_REVIEWER;
 }

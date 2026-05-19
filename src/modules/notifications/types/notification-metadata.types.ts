@@ -118,6 +118,24 @@ export interface IConsultantTaskStatusChangedMetadata {
   project_id: string;
   old_status: string;
   new_status: string;
+  // Populated when new_status=done: decimal string (post-platform-fee payout).
+  earned_amount?: string;
+  // Populated when new_status=revision_requested: consolidated reviewer feedback.
+  feedback_summary?: string;
+  // Populated on every review-workflow transition out of IN_REVIEW.
+  revision_count?: number;
+  revisions_remaining?: number;
+}
+
+/** Metadata for a TASK_REVIEWER_REVIEW_ASSIGNED notification. */
+export interface ITaskReviewerReviewAssignedMetadata {
+  review_id: string;
+  task_id: string;
+  task_code: string;
+  task_title: string;
+  project_id: string;
+  round_number: number;
+  is_arbiter: boolean;
 }
 
 export interface IConsultantOnboardingApprovedMetadata {
@@ -287,6 +305,7 @@ export type NotificationMetadataMap = {
   [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_FAILED]: IConsultantSkillExamFailedMetadata;
   [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_PASSED]: IConsultantSkillExamPassedMetadata;
   [NOTIFICATION_TYPES.CONSULTANT_ACCOUNT_BANNED]: IConsultantAccountBannedMetadata;
+  [NOTIFICATION_TYPES.TASK_REVIEWER_REVIEW_ASSIGNED]: ITaskReviewerReviewAssignedMetadata;
   [NOTIFICATION_TYPES.ADMIN_BUSINESS_ONBOARDED]: IAdminBusinessOnboardedMetadata;
   [NOTIFICATION_TYPES.ADMIN_PROJECT_PUBLISHED]: IAdminProjectPublishedMetadata;
   [NOTIFICATION_TYPES.ADMIN_BUSINESS_TOP_UP]: IAdminBusinessTopUpMetadata;

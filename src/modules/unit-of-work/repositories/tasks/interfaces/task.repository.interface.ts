@@ -397,4 +397,34 @@ export interface ITaskRepository extends AbstractRepository<Task> {
     consultantId: string,
     skillIds: string[],
   ): Promise<Map<string, number>>;
+
+  /**
+   * Locks a task for review-workflow transitions (vote resolution, completion,
+   * revision bounce-back). Caller MUST be inside a transaction. Returns null
+   * when the row is missing, soft-deleted, or in any status outside the
+   * provided whitelist (so the caller can short-circuit a stale vote).
+   *
+   * @param taskId          Target task.
+   * @param expectedStatuses Whitelist (typically IN_REVIEW or PENDING_APPROVAL).
+   */
+  lockTaskForReview(taskId: string, expectedStatuses: TaskKanbanStatus[]): Promise<Task | null>;
+
+  /**
+   * Atomically increments `revision_count` by 1 and returns the new value.
+   * Used by the completion service to enforce the 3-revision cap before
+   * deciding whether to escalate to a TaskDispute.
+   */
+  incrementRevisionCount(taskId: string): Promise<number>;
+
+  /**
+   * Picks `count` eligible reviewers for a task, round-robin biased toward
+   * those least recently assigned. Filters to users with role TASK_REVIEWER
+   * and `is_active = true`. Excludes:
+   *   - the task assignee (consultant cannot review own task);
+   *   - any user id in `excludeUserIds` (e.g. reviewers already assigned in
+   *     the current round, or project members on the business side).
+   *
+   * @returns Up to `count` user ids; may be empty if the pool is exhausted.
+   */
+  pickEligibleReviewers(taskId: string, count: number, excludeUserIds: string[]): Promise<string[]>;
 }

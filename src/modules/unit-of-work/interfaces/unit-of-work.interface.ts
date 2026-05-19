@@ -38,6 +38,7 @@ import {
   ITaskRepository,
   ITaskResultAttachmentRepository,
   ITaskResultRepository,
+  ITaskReviewRepository,
   IUserRepository,
   IUserSessionRepository,
   IUserSsoProviderRepository,
@@ -79,6 +80,7 @@ export interface IUnitOfWork {
   readonly taskHistory: ITaskHistoryRepository;
   readonly taskResults: ITaskResultRepository;
   readonly taskResultAttachments: ITaskResultAttachmentRepository;
+  readonly taskReviews: ITaskReviewRepository;
 
   // Domain 5 — AI
   readonly aiTaskSessions: IAiTaskSessionRepository;

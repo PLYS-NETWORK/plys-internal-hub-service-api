@@ -384,11 +384,17 @@ Authorization: Bearer <access_token>
 - **Request body:** none.
 
 - **Behaviour:**
-  1. Same access + ownership lock as `/unassign` — `lockTaskForOwner` with `expectedStatuses = ['in_progress']`.
+  1. Same access + ownership lock as `/unassign` — `lockTaskForOwner` with `expectedStatuses = ['in_progress', 'revision_requested']`. Accepting `revision_requested` lets the consultant resubmit after the 3+1 reviewers (or AI) bounced the task back with feedback.
   2. On null lock, same disambiguation path:
      - 404 `TASK_NOT_FOUND` / 403 `TASK_NOT_OWNED_BY_CONSULTANT` / 409 `TASK_INVALID_STATE_FOR_SUBMIT`.
-  3. Mutate: `kanban_status = 'in_review'`. **All other fields are preserved** (`assigned_to`, `assigned_at`, `due_date`, `started_at` stay untouched — review is part of the same work session).
-  4. After commit: invalidate caches + emit `TASK_STATUS_CHANGED` event → business owner gets a `BUSINESS_TASK_STATUS_CHANGED` notification to prompt review.
+  3. Mutate inside the transaction:
+     - `kanban_status = 'in_review'`.
+     - `last_review_round = last_review_round + 1` (so the new batch of `task_reviews` rows is scoped to a fresh round; the same reviewer may legitimately re-appear on a later round because the `(task_id, reviewer_id, round_number)` uniqueness key includes the round).
+     - **All other fields are preserved** (`assigned_to`, `assigned_at`, `due_date`, `started_at`, `revision_count` stay untouched — review is part of the same work session).
+  4. **After commit (best-effort, in this order):**
+     1. Invalidate caches.
+     2. Call [`TaskReviewAssignmentService.assignInitialReviewers`](../../../../src/modules/task-reviews/services/task-review-assignment.service.ts), which picks 2 eligible reviewers (round-robin over `users.role = 'TASK_REVIEWER'`, excluding the consultant + project members + anyone already on this round), inserts pending `task_reviews` rows for the new round, and fires `TASK_REVIEWER_REVIEW_ASSIGNED` events to those reviewers. If the eligible-reviewer pool is exhausted the assignment throws `503 TASK_REVIEW_INSUFFICIENT_REVIEWERS` internally — the error is **logged and swallowed**, so the caller's submit-for-review still returns 200 (the task is already in `IN_REVIEW` and an admin can manually assign reviewers).
+     3. Emit `TASK_STATUS_CHANGED` event → consultant receives `CONSULTANT_TASK_STATUS_CHANGED`, business owner receives `BUSINESS_TASK_STATUS_CHANGED` to prompt review.
 
 - **Response 200:** [`IConsultantTaskSummaryResponse`](../../../../src/modules/consultant-projects/dto/responses/interfaces/consultant-task-summary.response.interface.ts)
 
@@ -399,7 +405,7 @@ Authorization: Bearer <access_token>
     title: string,
     kanban_status: 'in_review',                    // always 'in_review' after success
     price: number,
-    due_date: string | null,                       // unchanged from prior IN_PROGRESS state
+    due_date: string | null,                       // unchanged from prior IN_PROGRESS / REVISION_REQUESTED state
     assigned_at: string,                           // unchanged
     started_at: string,                            // unchanged
     completed_at: string | null,
@@ -409,11 +415,13 @@ Authorization: Bearer <access_token>
 
 - **Errors (in addition to cross-cutting):**
 
-  | HTTP | error_code                      | When                                            |
-  | ---- | ------------------------------- | ----------------------------------------------- |
-  | 404  | `TASK_NOT_FOUND`                | Task missing or in a different project.         |
-  | 403  | `TASK_NOT_OWNED_BY_CONSULTANT`  | Task is assigned to a different consultant.     |
-  | 409  | `TASK_INVALID_STATE_FOR_SUBMIT` | Task is in any status other than `in_progress`. |
+  | HTTP | error_code                      | When                                                                    |
+  | ---- | ------------------------------- | ----------------------------------------------------------------------- |
+  | 404  | `TASK_NOT_FOUND`                | Task missing or in a different project.                                 |
+  | 403  | `TASK_NOT_OWNED_BY_CONSULTANT`  | Task is assigned to a different consultant.                             |
+  | 409  | `TASK_INVALID_STATE_FOR_SUBMIT` | Task is in any status other than `in_progress` or `revision_requested`. |
+
+> **Cross-reference:** Once submitted, the task enters the 3+1 review workflow handled by the [Admin TaskReviewsController](../../admin/task-reviews/task-reviews-api-specs.md).
 
 #### Example request
 

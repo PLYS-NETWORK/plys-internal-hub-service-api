@@ -1,4 +1,5 @@
 export enum UserRole {
   ADMIN_PLATFORM = 'ADMIN_PLATFORM',
+  TASK_REVIEWER = 'TASK_REVIEWER',
   USER = 'USER',
 }

@@ -45,7 +45,10 @@ export class AdminAllowedEmailsController {
       'the email is already active and `ADMIN_ALLOWED_EMAIL_REVOKED` if it ' +
       'previously existed but was revoked — the admin should re-activate via ' +
       'the toggle endpoint instead of inviting again. The create + email send ' +
-      'run in one transaction so an email-provider failure rolls the row back.',
+      'run in one transaction so an email-provider failure rolls the row back. ' +
+      'The `role` (default `ADMIN_PLATFORM`) is locked at invite time and ' +
+      'cannot be changed afterward — to re-assign, revoke the entry and ' +
+      'invite the email again with the new role.',
   })
   public async invite(
     @Body() dto: InviteAdminEmailDto,
@@ -60,10 +63,12 @@ export class AdminAllowedEmailsController {
     summary: 'List allow-list entries with last-login (Admin only)',
     description:
       'Returns active and revoked rows by default, paginated. Optional ' +
-      '`is_active` and `keywords` filters; `sort_by` accepts `created_at` ' +
-      '(default) or `email`; `order_by` defaults to `DESC`. Each item carries ' +
-      "the linked admin user's `last_login` (joined from `users.last_login_at`; " +
-      '`null` until first login).',
+      '`is_active`, `keywords`, and `role` filters; `role` accepts ' +
+      '`ADMIN_PLATFORM` or `TASK_REVIEWER` and composes with the other two. ' +
+      '`sort_by` accepts `created_at` (default) or `email`; `order_by` ' +
+      "defaults to `DESC`. Each item carries the linked admin user's " +
+      '`last_login` (joined from `users.last_login_at`; `null` until first ' +
+      'login) and the `role` recorded at invite time.',
   })
   public async list(
     @Query() filters: ListAdminAllowedEmailsDto,

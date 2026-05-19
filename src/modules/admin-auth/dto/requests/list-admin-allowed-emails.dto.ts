@@ -1,9 +1,11 @@
 import { PageOptionsDto } from '@common/dto/page-options.dto';
+import { UserRole } from '@database/enums';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose, Transform } from 'class-transformer';
 import { IsBoolean, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 import { IListAdminAllowedEmailsRequest } from './interfaces/list-admin-allowed-emails.request.interface';
+import { INVITABLE_ROLES } from './invite-admin-email.dto';
 
 /**
  * Whitelist of `sort_by` values accepted by `GET /admin/allowed-emails`.
@@ -62,4 +64,14 @@ export class ListAdminAllowedEmailsDto
   @MaxLength(KEYWORDS_MAX)
   @IsOptional()
   public readonly keywords?: string;
+
+  @Expose({ name: 'role' })
+  @ApiPropertyOptional({
+    name: 'role',
+    enum: INVITABLE_ROLES,
+    description: 'Exact-match filter on the row role. Only invitable roles are accepted.',
+  })
+  @IsIn(INVITABLE_ROLES as ReadonlyArray<string>)
+  @IsOptional()
+  public readonly role?: UserRole.ADMIN_PLATFORM | UserRole.TASK_REVIEWER;
 }

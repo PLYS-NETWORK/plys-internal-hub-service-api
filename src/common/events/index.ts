@@ -25,6 +25,11 @@ export const NOTIFICATION_EVENTS = {
   CONSULTANT_SKILL_EXAM_PASSED: 'consultant.skill_exam.passed',
   CONSULTANT_ACCOUNT_BANNED: 'consultant.account.banned',
   TASK_STATUS_CHANGED: 'task.status.changed',
+  // Fired when a task reviewer is auto-assigned (initial or arbiter slot).
+  TASK_REVIEWER_REVIEW_ASSIGNED: 'task.reviewer.review_assigned',
+  // Fired after a majority-PASS vote-resolution so the AI quality check runs
+  // asynchronously and finalises DONE / REVISION_REQUESTED.
+  TASK_AI_REVIEW_REQUESTED: 'task.ai_review.requested',
 } as const;
 
 export type NotificationEventName = (typeof NOTIFICATION_EVENTS)[keyof typeof NOTIFICATION_EVENTS];

@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class InitialSchema20260514000001 implements MigrationInterface {
-  public readonly name = 'InitialSchema20260514000001';
+export class InitialSchema20260520000001 implements MigrationInterface {
+  public readonly name = 'InitialSchema20260520000001';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // ─── users ────────────────────────────────────────────────────────────────
@@ -432,6 +432,10 @@ export class InitialSchema20260514000001 implements MigrationInterface {
     `);
 
     // ─── tasks ────────────────────────────────────────────────────────────────
+    // `revision_count` caps REVISION_REQUESTED bounce-backs at 3; the next
+    // failure escalates to a TaskDispute. `last_review_round` scopes
+    // `task_reviews` rows so the same reviewer can be assigned again on a
+    // later round without violating the (task, reviewer, round) unique key.
     await queryRunner.query(`
       CREATE TABLE "tasks" (
         "id"                  UUID          NOT NULL DEFAULT gen_random_uuid(),
@@ -455,6 +459,8 @@ export class InitialSchema20260514000001 implements MigrationInterface {
         "completed_at"        TIMESTAMPTZ,
         "billing_period_id"   UUID,
         "display_order"       INTEGER       NOT NULL DEFAULT 0,
+        "revision_count"      INT           NOT NULL DEFAULT 0,
+        "last_review_round"   INT           NOT NULL DEFAULT 0,
         "version"             INTEGER       NOT NULL DEFAULT 1,
         "created_at"          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
         "updated_at"          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
@@ -684,6 +690,43 @@ export class InitialSchema20260514000001 implements MigrationInterface {
     `);
     await queryRunner.query(
       `CREATE INDEX "idx_task_attachments_task_id" ON "task_attachments" ("task_id")`,
+    );
+
+    // ─── task_reviews ─────────────────────────────────────────────────────────
+    // One row per reviewer per round. `is_arbiter` flags the 3rd reviewer
+    // assigned to break a 1-1 split; their vote does NOT flip the outcome —
+    // any 1-1 split resolves to REVISION_REQUESTED regardless.
+    await queryRunner.query(`
+      CREATE TABLE "task_reviews" (
+        "id"            UUID         NOT NULL DEFAULT gen_random_uuid(),
+        "task_id"       UUID         NOT NULL,
+        "reviewer_id"   UUID         NOT NULL,
+        "round_number"  INT          NOT NULL,
+        "decision"      VARCHAR(15)  NOT NULL DEFAULT 'pending',
+        "is_arbiter"    BOOLEAN      NOT NULL DEFAULT FALSE,
+        "feedback"      TEXT,
+        "assigned_at"   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "voted_at"      TIMESTAMPTZ,
+        "created_at"    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "updated_at"    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+        "deleted_at"    TIMESTAMPTZ,
+        "created_by"    UUID,
+        "updated_by"    UUID,
+        "deleted_by"    UUID,
+        CONSTRAINT "pk_task_reviews" PRIMARY KEY ("id"),
+        CONSTRAINT "uq_task_reviews_task_reviewer_round"
+          UNIQUE ("task_id", "reviewer_id", "round_number"),
+        CONSTRAINT "fk_task_reviews_to_tasks"
+          FOREIGN KEY ("task_id") REFERENCES "tasks" ("id") ON DELETE CASCADE,
+        CONSTRAINT "fk_task_reviews_to_users"
+          FOREIGN KEY ("reviewer_id") REFERENCES "users" ("id") ON DELETE RESTRICT
+      )
+    `);
+    await queryRunner.query(
+      `CREATE INDEX "idx_task_reviews_task_round_decision" ON "task_reviews" ("task_id", "round_number", "decision")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "idx_task_reviews_reviewer_decision" ON "task_reviews" ("reviewer_id", "decision")`,
     );
 
     // ─── invoices ─────────────────────────────────────────────────────────────
@@ -1047,11 +1090,15 @@ export class InitialSchema20260514000001 implements MigrationInterface {
     `);
 
     // ─── admin_allowed_emails ─────────────────────────────────────────────────
+    // `role` tags the row with the UserRole to provision at first OTP login.
+    // Restricted in the application layer to invitable roles (ADMIN_PLATFORM
+    // or TASK_REVIEWER); the column stores either value as VARCHAR(20).
     await queryRunner.query(`
       CREATE TABLE "admin_allowed_emails" (
         "id"         UUID         NOT NULL DEFAULT gen_random_uuid(),
         "email"      VARCHAR(255) NOT NULL,
         "is_active"  BOOLEAN      NOT NULL DEFAULT TRUE,
+        "role"       VARCHAR(20)  NOT NULL DEFAULT 'ADMIN_PLATFORM',
         "created_by" UUID,
         "created_at" TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
         "updated_at" TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
@@ -1286,6 +1333,7 @@ export class InitialSchema20260514000001 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS "business_transactions" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "invoice_line_items" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "invoices" CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS "task_reviews" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "task_attachments" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "task_result_attachments" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "task_results" CASCADE`);

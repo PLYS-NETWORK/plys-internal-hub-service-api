@@ -156,8 +156,9 @@ interface IConsultantProjectJoinedMetadata {
 ## 5. `consultant_task_status_changed`
 
 **Trigger:** The kanban status of a task assigned to the consultant changes.
-This fires when the consultant themselves moves the task (IN_PROGRESS → IN_REVIEW, etc.) or when
-an external action (e.g. business approval) changes the status.
+This fires when the consultant themselves moves the task (IN_PROGRESS → IN_REVIEW, etc.), when
+the 3+1 review workflow resolves (DONE, REVISION_REQUESTED, or PENDING_APPROVAL on cap-escalation),
+or when an external action changes the status.
 
 | Field          | Value                                                |
 | -------------- | ---------------------------------------------------- |
@@ -176,12 +177,25 @@ interface IConsultantTaskStatusChangedMetadata {
   project_id: string;
   old_status: string; // TaskKanbanStatus value before the change
   new_status: string; // TaskKanbanStatus value after the change
+  // ── 3+1 review-workflow enrichment (optional, only on review-driven transitions) ──
+  earned_amount?: string; // Decimal string, only when new_status='done'. Equals task.consultant_payout.
+  feedback_summary?: string; // Consolidated reviewer + AI feedback, only when new_status='revision_requested'.
+  revision_count?: number; // Cumulative count of revision rounds incurred so far.
+  revisions_remaining?: number; // Rounds left before the 3-cap dispute escalation kicks in. 0 means next failure → dispute.
 }
 ```
 
 **Task kanban status values:** `to_do` · `assigned` · `in_progress` · `in_review` · `pending_approval` · `revision_requested` · `done` · `cancelled`
 
-**Cache invalidation hint:** Reload the kanban board for `project_id` and the task detail for `task_id`.
+**Review-workflow scenarios:**
+
+| `new_status`         | When                                                                                                  | Extra metadata populated                                                               |
+| -------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `done`               | Both initial reviewers voted PASS **and** the AI quality check returned PASS.                         | `earned_amount`. A `consultant_transactions.CREDIT_CLEARED` row is created atomically. |
+| `revision_requested` | Both initial reviewers voted FAIL, OR the round was 1-1 split (arbiter outcome), OR AI returned FAIL. | `feedback_summary`, `revision_count`, `revisions_remaining`.                           |
+| `pending_approval`   | The 3-revision cap has been exceeded. A `task_disputes` row was opened for admin adjudication.        | `feedback_summary`, `revision_count`, `revisions_remaining=0`.                         |
+
+**Cache invalidation hint:** Reload the kanban board for `project_id`, the task detail for `task_id`, and (when `earned_amount` is present) the consultant wallet / transactions panel so the credited balance and new ledger row appear immediately.
 
 ---
 
@@ -582,6 +596,12 @@ socket.on('notification.new', (n: NotificationPayload) => {
       qc.invalidateQueries({
         queryKey: ['consultant', 'tasks', n.metadata.task_id],
       });
+      // The 3+1 review workflow finalised — refresh wallet/transactions
+      // when an earnings credit landed.
+      if (n.metadata.new_status === 'done' && n.metadata.earned_amount) {
+        qc.invalidateQueries({ queryKey: ['consultant', 'wallet'] });
+        qc.invalidateQueries({ queryKey: ['consultant', 'transactions'] });
+      }
       break;
     case 'consultant_onboarding_approved':
       qc.invalidateQueries({ queryKey: ['consultant', 'onboarding', 'status'] });
