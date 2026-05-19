@@ -1,5 +1,7 @@
 export {
   IConsultantPerformanceAggregate,
+  IConsultantProjectTaskBreakdownRow,
+  IConsultantTaskActionItemRow,
   IProjectHealthAggregate,
   ITaskActionItemRow,
   ITaskCompletionRow,

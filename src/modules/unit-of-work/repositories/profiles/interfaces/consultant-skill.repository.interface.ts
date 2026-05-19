@@ -25,4 +25,21 @@ export interface IConsultantSkillRepository extends AbstractRepository<Consultan
    * @returns Rows sorted by `consultant_id` then `skill_name` ASC.
    */
   findByConsultantIds(consultantIds: string[]): Promise<IConsultantSkillRow[]>;
+
+  /**
+   * Returns the consultant's skill rows with the `skill` relation eagerly
+   * populated so callers can read `name` without a second round-trip. Used
+   * by the consultant dashboard skill-performance endpoint.
+   */
+  findByConsultantIdWithSkill(consultantId: string): Promise<ConsultantSkill[]>;
+
+  /**
+   * Counts the consultant's skill rows grouped by `proficiency_level`.
+   * Levels with zero matches are zero-filled. `null` proficiency rows are
+   * excluded — they represent skills the consultant declared but hasn't
+   * certified.
+   */
+  countByConsultantGroupedByProficiency(
+    consultantId: string,
+  ): Promise<Record<ProficiencyLevel, number>>;
 }

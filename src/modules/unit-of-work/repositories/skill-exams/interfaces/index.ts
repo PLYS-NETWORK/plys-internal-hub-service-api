@@ -24,6 +24,23 @@ export interface IConsultantSkillExamRepository extends AbstractRepository<Consu
    * operational-queues card.
    */
   countAwaitingReview(): Promise<number>;
+  /**
+   * Same as {@link findCurrentByConsultant} but with `skill` eagerly loaded so
+   * the consultant dashboard can render `active_skill_name` without a second
+   * round-trip.
+   */
+  findActiveByConsultantIdWithSkill(consultantId: string): Promise<ConsultantSkillExam | null>;
+  /**
+   * Total exams that reached the `PASSED` terminal status for a consultant.
+   * Source for the dashboard summary `exams.total_passed_skills`.
+   */
+  countPassedByConsultantId(consultantId: string): Promise<number>;
+  /**
+   * PASSED-exam counts grouped by `skill_id` for one consultant. Skills with
+   * zero passes are absent from the map. Powers skill-performance
+   * `total_passed_exams`.
+   */
+  countPassedByConsultantGroupedBySkill(consultantId: string): Promise<Map<string, number>>;
 }
 
 export interface IConsultantSkillExamQuestionRepository extends AbstractRepository<ConsultantSkillExamQuestion> {

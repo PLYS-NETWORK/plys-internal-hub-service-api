@@ -9,8 +9,10 @@ export {
 } from './business-transaction.repository.interface';
 export {
   IConsultantCompletedTaskRow,
+  IConsultantEarningsBucket,
   IConsultantEarningsTotals,
   IConsultantPaymentHistoryRow,
+  IConsultantPendingWithdrawalRow,
   IConsultantTransactionRepository,
   IPayoutsTrendPoint,
 } from './consultant-transaction.repository.interface';

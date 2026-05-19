@@ -43,4 +43,12 @@ export interface INotificationRepository extends AbstractRepository<Notification
    * @returns The number of rows that transitioned from unread to read.
    */
   markAllRead(userId: string): Promise<number>;
+
+  /**
+   * Returns the most recent unread notifications for a user, capped at
+   * `limit`. Sorted by (`created_at` DESC, `id` DESC) — same ordering as the
+   * cursor list but without pagination. Used by the consultant dashboard
+   * action-items endpoint's `recent_notifications` category.
+   */
+  findRecentUnreadByUserId(userId: string, limit: number): Promise<Notification[]>;
 }

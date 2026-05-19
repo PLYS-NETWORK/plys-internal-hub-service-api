@@ -7,6 +7,8 @@ import { EntityManager, SelectQueryBuilder } from 'typeorm';
 
 import {
   IConsultantPerformanceAggregate,
+  IConsultantProjectTaskBreakdownRow,
+  IConsultantTaskActionItemRow,
   IProjectHealthAggregate,
   ITaskActionItemRow,
   ITaskCompletionRow,
@@ -607,5 +609,322 @@ export class TaskRepository extends AbstractRepository<Task> implements ITaskRep
       .setLock('pessimistic_write')
       .getOne();
     return row ?? null;
+  }
+
+  /** @inheritdoc */
+  public async countByAssigneeGroupedByStatus(
+    consultantId: string,
+  ): Promise<Record<TaskKanbanStatus, number>> {
+    const out = {} as Record<TaskKanbanStatus, number>;
+    for (const status of TASK_KANBAN_STATUSES) out[status] = 0;
+
+    const rows = await this.createQueryBuilder('task')
+      .select('task.kanban_status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('task.assigned_to = :consultantId', { consultantId })
+      .andWhere('task.deleted_at IS NULL')
+      .groupBy('task.kanban_status')
+      .getRawMany<{ status: TaskKanbanStatus; count: string }>();
+
+    for (const row of rows) out[row.status] = Number(row.count);
+    return out;
+  }
+
+  /** @inheritdoc */
+  public async countCompletedByAssigneeBetween(
+    consultantId: string,
+    from: Date,
+    to: Date,
+  ): Promise<number> {
+    const row = await this.createQueryBuilder('task')
+      .select('COUNT(*)', 'count')
+      .where('task.assigned_to = :consultantId', { consultantId })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere(`task.kanban_status = '${TaskKanbanStatus.DONE}'`)
+      .andWhere('task.completed_at IS NOT NULL')
+      .andWhere('task.completed_at >= :from', { from })
+      .andWhere('task.completed_at <= :to', { to })
+      .getRawOne<{ count: string }>();
+    return Number(row?.count ?? 0);
+  }
+
+  /** @inheritdoc */
+  public async countOverdueByAssignee(consultantId: string): Promise<number> {
+    const row = await this.createQueryBuilder('task')
+      .select('COUNT(*)', 'count')
+      .where('task.assigned_to = :consultantId', { consultantId })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere('task.due_date IS NOT NULL')
+      .andWhere('task.due_date < NOW()')
+      .andWhere(
+        `task.kanban_status NOT IN ('${TaskKanbanStatus.DONE}', '${TaskKanbanStatus.CANCELLED}')`,
+      )
+      .getRawOne<{ count: string }>();
+    return Number(row?.count ?? 0);
+  }
+
+  /** @inheritdoc */
+  public async countRevisionRequestedByAssignee(consultantId: string): Promise<number> {
+    const row = await this.createQueryBuilder('task')
+      .select('COUNT(*)', 'count')
+      .where('task.assigned_to = :consultantId', { consultantId })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere(`task.kanban_status = '${TaskKanbanStatus.REVISION_REQUESTED}'`)
+      .getRawOne<{ count: string }>();
+    return Number(row?.count ?? 0);
+  }
+
+  /** @inheritdoc */
+  public async findOverdueByAssignee(
+    consultantId: string,
+    limit: number,
+  ): Promise<IConsultantTaskActionItemRow[]> {
+    const rows = await this.createQueryBuilder('task')
+      .innerJoin('task.project', 'project')
+      .select('task.id', 'task_id')
+      .addSelect('task.code', 'task_code')
+      .addSelect('task.title', 'title')
+      .addSelect('project.id', 'project_id')
+      .addSelect('project.title', 'project_title')
+      .addSelect('task.kanban_status', 'kanban_status')
+      .addSelect('task.due_date', 'due_date')
+      .addSelect('task.updated_at', 'updated_at')
+      .addSelect('EXTRACT(DAY FROM (NOW() - task.due_date))::int', 'days_overdue')
+      .where('task.assigned_to = :consultantId', { consultantId })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere('task.due_date IS NOT NULL')
+      .andWhere('task.due_date < NOW()')
+      .andWhere(
+        `task.kanban_status NOT IN ('${TaskKanbanStatus.DONE}', '${TaskKanbanStatus.CANCELLED}')`,
+      )
+      .orderBy('task.due_date', 'ASC')
+      .limit(limit)
+      .getRawMany<{
+        task_id: string;
+        task_code: string;
+        title: string;
+        project_id: string;
+        project_title: string;
+        kanban_status: string;
+        due_date: Date;
+        updated_at: Date;
+        days_overdue: number;
+      }>();
+    return rows.map((r) => ({
+      task_id: r.task_id,
+      task_code: r.task_code,
+      title: r.title,
+      project_id: r.project_id,
+      project_title: r.project_title,
+      kanban_status: r.kanban_status,
+      due_date: r.due_date,
+      updated_at: r.updated_at,
+      days_overdue: Number(r.days_overdue),
+    }));
+  }
+
+  /** @inheritdoc */
+  public async findAwaitingBusinessApprovalByAssignee(
+    consultantId: string,
+    limit: number,
+  ): Promise<IConsultantTaskActionItemRow[]> {
+    const rows = await this.createQueryBuilder('task')
+      .innerJoin('task.project', 'project')
+      .select('task.id', 'task_id')
+      .addSelect('task.code', 'task_code')
+      .addSelect('task.title', 'title')
+      .addSelect('project.id', 'project_id')
+      .addSelect('project.title', 'project_title')
+      .addSelect('task.kanban_status', 'kanban_status')
+      .addSelect('task.due_date', 'due_date')
+      .addSelect('task.updated_at', 'updated_at')
+      .where('task.assigned_to = :consultantId', { consultantId })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere(
+        `task.kanban_status IN ('${TaskKanbanStatus.IN_REVIEW}', '${TaskKanbanStatus.PENDING_APPROVAL}')`,
+      )
+      .orderBy('task.updated_at', 'ASC')
+      .limit(limit)
+      .getRawMany<{
+        task_id: string;
+        task_code: string;
+        title: string;
+        project_id: string;
+        project_title: string;
+        kanban_status: string;
+        due_date: Date | null;
+        updated_at: Date;
+      }>();
+    return rows.map((r) => ({
+      task_id: r.task_id,
+      task_code: r.task_code,
+      title: r.title,
+      project_id: r.project_id,
+      project_title: r.project_title,
+      kanban_status: r.kanban_status,
+      due_date: r.due_date,
+      updated_at: r.updated_at,
+      days_overdue: null,
+    }));
+  }
+
+  /** @inheritdoc */
+  public async findRevisionRequestedByAssignee(
+    consultantId: string,
+    limit: number,
+  ): Promise<IConsultantTaskActionItemRow[]> {
+    const rows = await this.createQueryBuilder('task')
+      .innerJoin('task.project', 'project')
+      .select('task.id', 'task_id')
+      .addSelect('task.code', 'task_code')
+      .addSelect('task.title', 'title')
+      .addSelect('project.id', 'project_id')
+      .addSelect('project.title', 'project_title')
+      .addSelect('task.kanban_status', 'kanban_status')
+      .addSelect('task.due_date', 'due_date')
+      .addSelect('task.updated_at', 'updated_at')
+      .where('task.assigned_to = :consultantId', { consultantId })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere(`task.kanban_status = '${TaskKanbanStatus.REVISION_REQUESTED}'`)
+      .orderBy('task.updated_at', 'DESC')
+      .limit(limit)
+      .getRawMany<{
+        task_id: string;
+        task_code: string;
+        title: string;
+        project_id: string;
+        project_title: string;
+        kanban_status: string;
+        due_date: Date | null;
+        updated_at: Date;
+      }>();
+    return rows.map((r) => ({
+      task_id: r.task_id,
+      task_code: r.task_code,
+      title: r.title,
+      project_id: r.project_id,
+      project_title: r.project_title,
+      kanban_status: r.kanban_status,
+      due_date: r.due_date,
+      updated_at: r.updated_at,
+      days_overdue: null,
+    }));
+  }
+
+  /** @inheritdoc */
+  public async avgCycleDaysByAssigneeBetween(
+    consultantId: string,
+    from: Date,
+    to: Date,
+  ): Promise<number | null> {
+    const row = await this.createQueryBuilder('task')
+      .select('AVG(EXTRACT(EPOCH FROM (task.completed_at - task.started_at)) / 86400)', 'avg_days')
+      .where('task.assigned_to = :consultantId', { consultantId })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere(`task.kanban_status = '${TaskKanbanStatus.DONE}'`)
+      .andWhere('task.completed_at IS NOT NULL')
+      .andWhere('task.started_at IS NOT NULL')
+      .andWhere('task.completed_at >= :from', { from })
+      .andWhere('task.completed_at <= :to', { to })
+      .getRawOne<{ avg_days: string | null }>();
+    return row?.avg_days !== null && row?.avg_days !== undefined ? Number(row.avg_days) : null;
+  }
+
+  /** @inheritdoc */
+  public async countOnTimeByAssigneeBetween(
+    consultantId: string,
+    from: Date,
+    to: Date,
+  ): Promise<{ onTime: number; total: number }> {
+    const row = await this.createQueryBuilder('task')
+      .select('COUNT(*)', 'total')
+      .addSelect('COUNT(*) FILTER (WHERE task.completed_at <= task.due_date)', 'on_time')
+      .where('task.assigned_to = :consultantId', { consultantId })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere(`task.kanban_status = '${TaskKanbanStatus.DONE}'`)
+      .andWhere('task.completed_at IS NOT NULL')
+      .andWhere('task.due_date IS NOT NULL')
+      .andWhere('task.completed_at >= :from', { from })
+      .andWhere('task.completed_at <= :to', { to })
+      .getRawOne<{ total: string; on_time: string }>();
+    return {
+      onTime: Number(row?.on_time ?? 0),
+      total: Number(row?.total ?? 0),
+    };
+  }
+
+  /** @inheritdoc */
+  public async countByAssigneeAndProjectIdsBreakdown(
+    consultantId: string,
+    projectIds: string[],
+  ): Promise<IConsultantProjectTaskBreakdownRow[]> {
+    if (projectIds.length === 0) return [];
+    const rows = await this.createQueryBuilder('task')
+      .select('task.project_id', 'project_id')
+      .addSelect('task.kanban_status', 'kanban_status')
+      .addSelect('COUNT(*)::int', 'count')
+      .addSelect(
+        `COUNT(*) FILTER (WHERE task.due_date IS NOT NULL AND task.due_date < NOW() AND task.kanban_status NOT IN ('${TaskKanbanStatus.DONE}', '${TaskKanbanStatus.CANCELLED}'))::int`,
+        'overdue_count',
+      )
+      .where('task.assigned_to = :consultantId', { consultantId })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere('task.project_id IN (:...projectIds)', { projectIds })
+      .groupBy('task.project_id')
+      .addGroupBy('task.kanban_status')
+      .getRawMany<{
+        project_id: string;
+        kanban_status: string;
+        count: number;
+        overdue_count: number;
+      }>();
+    return rows.map((r) => ({
+      project_id: r.project_id,
+      kanban_status: r.kanban_status,
+      count: Number(r.count),
+      overdue_count: Number(r.overdue_count),
+    }));
+  }
+
+  /** @inheritdoc */
+  public async findLatestActivityByAssigneeAndProjectIds(
+    consultantId: string,
+    projectIds: string[],
+  ): Promise<Map<string, Date>> {
+    if (projectIds.length === 0) return new Map();
+    const rows = await this.createQueryBuilder('task')
+      .select('task.project_id', 'project_id')
+      .addSelect('MAX(task.updated_at)', 'last_activity_at')
+      .where('task.assigned_to = :consultantId', { consultantId })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere('task.project_id IN (:...projectIds)', { projectIds })
+      .groupBy('task.project_id')
+      .getRawMany<{ project_id: string; last_activity_at: Date | null }>();
+    const out = new Map<string, Date>();
+    for (const row of rows) {
+      if (row.last_activity_at) out.set(row.project_id, row.last_activity_at);
+    }
+    return out;
+  }
+
+  /** @inheritdoc */
+  public async countDoneByAssigneeGroupedBySkill(
+    consultantId: string,
+    skillIds: string[],
+  ): Promise<Map<string, number>> {
+    if (skillIds.length === 0) return new Map();
+    const rows = await this.createQueryBuilder('task')
+      .innerJoin('project_required_skills', 'prs', 'prs.project_id = task.project_id')
+      .select('prs.skill_id', 'skill_id')
+      .addSelect('COUNT(*)::int', 'count')
+      .where('task.assigned_to = :consultantId', { consultantId })
+      .andWhere('task.deleted_at IS NULL')
+      .andWhere(`task.kanban_status = '${TaskKanbanStatus.DONE}'`)
+      .andWhere('prs.skill_id IN (:...skillIds)', { skillIds })
+      .groupBy('prs.skill_id')
+      .getRawMany<{ skill_id: string; count: number }>();
+    const out = new Map<string, number>();
+    for (const row of rows) out.set(row.skill_id, Number(row.count));
+    return out;
   }
 }

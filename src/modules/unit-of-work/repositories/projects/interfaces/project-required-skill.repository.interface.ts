@@ -15,4 +15,15 @@ export interface IProjectRequiredSkillRepository extends AbstractRepository<Proj
    * detail endpoint) that need the full Skill row, not just the id.
    */
   findWithSkillByProjectId(projectId: string): Promise<ProjectRequiredSkill[]>;
+
+  /**
+   * For each skill in `skillIds`, counts the projects where the consultant
+   * currently has an ACTIVE membership AND the project requires that skill.
+   * Skills with zero matches are absent from the map. Used by the consultant
+   * dashboard skill-performance `active_projects_count` column.
+   */
+  countActiveProjectsByConsultantGroupedBySkill(
+    consultantId: string,
+    skillIds: string[],
+  ): Promise<Map<string, number>>;
 }

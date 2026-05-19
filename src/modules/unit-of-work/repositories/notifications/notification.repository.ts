@@ -77,4 +77,16 @@ export class NotificationRepository
       .execute();
     return result.affected ?? 0;
   }
+
+  /** @inheritdoc */
+  public async findRecentUnreadByUserId(userId: string, limit: number): Promise<Notification[]> {
+    return this.repository
+      .createQueryBuilder('n')
+      .where('n.user_id = :userId', { userId })
+      .andWhere('n.is_read = false')
+      .orderBy('n.created_at', 'DESC')
+      .addOrderBy('n.id', 'DESC')
+      .limit(limit)
+      .getMany();
+  }
 }
