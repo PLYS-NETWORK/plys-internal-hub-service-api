@@ -14,6 +14,10 @@ export class AdminAllowedEmailResponseDto implements IAdminAllowedEmailResponse 
   public readonly email!: string;
 
   @Expose()
+  @ApiProperty({ example: 'ADMIN_PLATFORM', enum: ['ADMIN_PLATFORM', 'TASK_REVIEWER'] })
+  public readonly role!: string;
+
+  @Expose()
   @ApiProperty({ name: 'is_active', example: true })
   public readonly is_active!: boolean;
 

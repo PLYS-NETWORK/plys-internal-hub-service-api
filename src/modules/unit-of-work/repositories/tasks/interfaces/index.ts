@@ -1,5 +1,7 @@
 export {
   IConsultantPerformanceAggregate,
+  IConsultantProjectTaskBreakdownRow,
+  IConsultantTaskActionItemRow,
   IProjectHealthAggregate,
   ITaskActionItemRow,
   ITaskCompletionRow,
@@ -11,3 +13,8 @@ export { IBusinessDisputeRow, ITaskDisputeRepository } from './task-dispute.repo
 export { ITaskHistoryRepository } from './task-history.repository.interface';
 export { ITaskResultRepository } from './task-result.repository.interface';
 export { ITaskResultAttachmentRepository } from './task-result-attachment.repository.interface';
+export {
+  ICreateTaskReviewRow,
+  ITaskReviewDecisionTally,
+  ITaskReviewRepository,
+} from './task-review.repository.interface';

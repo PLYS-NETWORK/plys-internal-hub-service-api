@@ -1,3 +1,4 @@
+import { TaskReviewsModule } from '@modules/task-reviews/task-reviews.module';
 import { UnitOfWorkModule } from '@modules/unit-of-work/unit-of-work.module';
 import { Module } from '@nestjs/common';
 
@@ -23,7 +24,7 @@ import { ConsultantProjectTasksService } from './services/consultant-project-tas
  * imported here even though the services inject them.
  */
 @Module({
-  imports: [UnitOfWorkModule],
+  imports: [UnitOfWorkModule, TaskReviewsModule],
   controllers: [
     ConsultantExploreController,
     ConsultantJoinedProjectsController,

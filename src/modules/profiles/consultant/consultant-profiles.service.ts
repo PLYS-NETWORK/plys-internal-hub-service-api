@@ -1,5 +1,6 @@
 import { ERROR_CODES } from '@common/constants/error-codes';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { UrlResolverService } from '@common/modules/file-storage';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ConsultantProfile, ConsultantSkill } from '@database/entities';
@@ -20,6 +21,7 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly consultantSkillsService: ConsultantSkillsService,
+    private readonly urlResolver: UrlResolverService,
   ) {
     this.logger = new AppLogger(ConsultantProfilesService.name, requestContext);
   }
@@ -41,7 +43,7 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
 
     const skills = await this.consultantSkillsService.findByConsultantId(profile.id);
     this.logger.log(`getProfile — complete | userId: ${userId}, skills: ${skills.length}`);
-    return this.toResponseDto(profile, skills);
+    return await this.toResponseDto(profile, skills);
   }
 
   /** @inheritdoc */
@@ -90,13 +92,14 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
     this.logger.log(
       `updateProfile — complete | userId: ${userId}, profileId: ${updatedProfile.id}, skills: ${skills.length}`,
     );
-    return this.toResponseDto(updatedProfile, skills);
+    return await this.toResponseDto(updatedProfile, skills);
   }
 
-  private toResponseDto(
+  private async toResponseDto(
     profile: ConsultantProfile,
     skills: ConsultantSkill[],
-  ): ConsultantProfileResponseDto {
+  ): Promise<ConsultantProfileResponseDto> {
+    const avatarUrl = await this.urlResolver.resolve(profile.avatarUrl);
     return plainToInstance(
       ConsultantProfileResponseDto,
       {
@@ -105,7 +108,7 @@ export class ConsultantProfilesService implements IConsultantProfilesService {
         fullName: profile.fullName,
         bio: profile.bio,
         yearsOfExperience: profile.yearsOfExperience,
-        avatarUrl: profile.avatarUrl,
+        avatarUrl,
         addressLine: profile.addressLine,
         city: profile.city,
         stateProvince: profile.stateProvince,

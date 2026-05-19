@@ -441,6 +441,65 @@ interface IAdminConsultantProjectLeftMetadata {
 
 ---
 
+## 10. `task_reviewer_review_assigned`
+
+> **Audience exception:** This notification targets **a single reviewer**, not the broadcast admin audience. It fires for users with role `TASK_REVIEWER` (and, indirectly, admins observing via the same Socket channel for their own user id). Documented here because the reviewer's UI is hosted on the Internal Hub admin platform.
+
+**Trigger:** The 3+1 review workflow auto-assigns the reviewer to a task. Two flavours:
+
+- Initial assignment when a consultant submits a task for review (2 reviewers per submission, `is_arbiter = false`).
+- Arbiter assignment when the first two reviewers split 1-1 (`is_arbiter = true`).
+
+| Field          | Value                                            |
+| -------------- | ------------------------------------------------ |
+| `type`         | `task_reviewer_review_assigned`                  |
+| `entity_type`  | `task`                                           |
+| `entity_id`    | `metadata.task_id`                               |
+| `redirect_url` | `https://<internal-hub>/task-reviews/:review_id` |
+| `baseUrl`      | Internal Hub (`internalHubUrl`)                  |
+
+**Metadata:**
+
+```ts
+interface ITaskReviewerReviewAssignedMetadata {
+  review_id: string; // UUID — task_reviews.id; matches GET /admin/task-reviews/:reviewId
+  task_id: string;
+  task_code: string; // e.g. "WEB-12"
+  task_title: string;
+  project_id: string;
+  round_number: number; // matches tasks.last_review_round at assignment time
+  is_arbiter: boolean; // true → assigned to break a 1-1 split; the vote contributes feedback only
+}
+```
+
+**Sample payload (arbiter assignment):**
+
+```json
+{
+  "type": "task_reviewer_review_assigned",
+  "title": "New task review assigned",
+  "body": "You've been asked to break a tie on WEB-12 (\"Implement product detail page\"), round 1.",
+  "metadata": {
+    "review_id": "22222222-2222-2222-2222-222222222222",
+    "task_id": "11111111-1111-1111-1111-111111111111",
+    "task_code": "WEB-12",
+    "task_title": "Implement product detail page",
+    "project_id": "550e8400-e29b-41d4-a716-446655440000",
+    "round_number": 1,
+    "is_arbiter": true
+  },
+  "entity_type": "task",
+  "entity_id": "11111111-1111-1111-1111-111111111111",
+  "redirect_url": "https://internal-hub.ployos.com/task-reviews/22222222-2222-2222-2222-222222222222"
+}
+```
+
+**Cache invalidation hint:** Reload the pending-reviews queue (`GET /admin/task-reviews/pending`). The arbiter case can also surface in real time inside an open task-detail view — refresh `GET /admin/task-reviews/:review_id` for the affected task.
+
+**Behavioural note for the FE:** an arbiter cannot flip the outcome — any 1-1 split resolves to `REVISION_REQUESTED` regardless of how the arbiter votes. Surface this clearly in the arbiter UI so the reviewer understands their vote contributes feedback, not the verdict.
+
+---
+
 ## Retired admin events
 
 The following admin notifications referenced the now-removed `consultant-applications` schema and are no longer emitted or wired. Existing notification rows of these types are still readable, but no new ones will arrive:

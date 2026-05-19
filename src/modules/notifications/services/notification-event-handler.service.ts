@@ -16,6 +16,7 @@ import {
   IProjectPublishedEvent,
   IProjectUnpublishedEvent,
   ITaskPublishedEvent,
+  ITaskReviewerReviewAssignedEvent,
   ITaskStatusChangedEvent,
   NOTIFICATION_EVENTS,
 } from '@common/events';
@@ -171,6 +172,34 @@ export class NotificationEventHandlerService implements INotificationEventHandle
       this.onConsultantTaskStatusChanged(event),
       this.onBusinessTaskStatusChanged(event),
     ]);
+  }
+
+  @OnEvent(NOTIFICATION_EVENTS.TASK_REVIEWER_REVIEW_ASSIGNED, { async: true })
+  public async onTaskReviewerReviewAssigned(
+    event: ITaskReviewerReviewAssignedEvent,
+  ): Promise<void> {
+    this.logger.log(
+      `[${this.rid}] onTaskReviewerReviewAssigned — start | reviewId: ${event.review_id}`,
+    );
+    void this.dispatcher
+      .dispatch({
+        userId: event.reviewer_user_id,
+        type: NOTIFICATION_TYPES.TASK_REVIEWER_REVIEW_ASSIGNED,
+        metadata: {
+          review_id: event.review_id,
+          task_id: event.task_id,
+          task_code: event.task_code,
+          task_title: event.task_title,
+          project_id: event.project_id,
+          round_number: event.round_number,
+          is_arbiter: event.is_arbiter,
+        },
+      })
+      .catch((err: unknown) =>
+        this.logger.error(
+          `[${this.rid}] onTaskReviewerReviewAssigned — failed | reviewId: ${event.review_id} | error: ${String(err)}`,
+        ),
+      );
   }
 
   @OnEvent(NOTIFICATION_EVENTS.CONSULTANT_ONBOARDING_APPROVED, { async: true })
@@ -552,6 +581,11 @@ export class NotificationEventHandlerService implements INotificationEventHandle
           project_id: event.project_id,
           old_status: event.old_status,
           new_status: event.new_status,
+          // Review-workflow enrichment — surfaced on DONE / REVISION_REQUESTED.
+          earned_amount: event.earned_amount,
+          feedback_summary: event.feedback_summary,
+          revision_count: event.revision_count,
+          revisions_remaining: event.revisions_remaining,
         },
       })
       .catch((err: unknown) =>

@@ -1,3 +1,4 @@
+import { UrlResolverService } from '@common/modules/file-storage';
 import { AppLogger } from '@common/modules/logger';
 import { RedisService } from '@common/modules/redis/redis.service';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
@@ -54,6 +55,7 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
     private readonly redis: RedisService,
     requestContext: RequestContextService,
     private readonly access: BusinessAccessService,
+    private readonly urlResolver: UrlResolverService,
   ) {
     this.logger = new AppLogger(BusinessProjectOverviewService.name, requestContext);
   }
@@ -68,7 +70,11 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
     const cached = await this.redis.get(cacheKey);
     if (cached) {
       this.logger.log(`getOverview — cache hit | projectId: ${projectId}`);
-      return plainToInstance(OverviewResponseDto, JSON.parse(cached) as Record<string, unknown>, {
+      const parsed = JSON.parse(cached) as Record<string, unknown>;
+      // The cached payload holds the raw storage URLs (so the cache survives
+      // the 15-min S3 presign TTL); re-sign on the response boundary.
+      await this.resignTeamAvatars(parsed);
+      return plainToInstance(OverviewResponseDto, parsed, {
         excludeExtraneousValues: true,
       });
     }
@@ -207,6 +213,8 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
         rating: s.rating,
         is_required: requiredSkillSet.has(s.skill_id),
       }));
+      // Stored URL is preserved verbatim here; `resignTeamAvatars` runs at the
+      // response boundary so the cached payload outlives the 15-min S3 TTL.
       return {
         consultant_id: m.consultant_id,
         full_name: m.full_name,
@@ -270,6 +278,8 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
     };
 
     try {
+      // Cache the raw-URL payload — the response boundary re-signs avatars so
+      // a cached row stays valid past the 15-min S3 presign TTL.
       await this.redis.set(cacheKey, JSON.stringify(payload), PROJECT_OVERVIEW_CACHE_TTL_SECONDS);
     } catch (err: unknown) {
       this.logger.warn(
@@ -281,7 +291,24 @@ export class BusinessProjectOverviewService implements IBusinessProjectOverviewS
       `getOverview — complete | projectId: ${projectId}, members: ${team.length}, events: ${activity.length}, total_spent: ${money.total_spent}`,
     );
 
+    await this.resignTeamAvatars(payload);
     return plainToInstance(OverviewResponseDto, payload, { excludeExtraneousValues: true });
+  }
+
+  /**
+   * Mutates the `team[].avatar_url` array on a payload object so every value
+   * is freshly presigned. Runs at the response boundary on both the cache-hit
+   * and cache-miss paths — never on the cached value itself.
+   */
+  private async resignTeamAvatars(payload: Record<string, unknown>): Promise<void> {
+    const team = payload['team'];
+    if (!Array.isArray(team) || team.length === 0) return;
+    const resigned = await this.urlResolver.resolveMany(
+      team.map((m: { avatar_url?: string | null }) => m.avatar_url),
+    );
+    team.forEach((m: { avatar_url?: string | null }, idx) => {
+      m.avatar_url = resigned[idx];
+    });
   }
 
   // Active members joined to the consultant profile + user. Hand-rolled

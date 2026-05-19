@@ -30,6 +30,7 @@ import {
   IProjectPublishedMetadata,
   IProjectUnpublishedMetadata,
   ITaskPublishedMetadata,
+  ITaskReviewerReviewAssignedMetadata,
   ITopUpCompletedMetadata,
   ITopUpRefundedMetadata,
   IWithdrawCompletedMetadata,
@@ -351,6 +352,21 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
     getRedirectUrl: () => null,
     titleKey: 'notification.consultant_account_banned.title',
     bodyKey: 'notification.consultant_account_banned.body',
+  },
+
+  // ── Task reviewers ──────────────────────────────────────────────────────────
+  [NOTIFICATION_TYPES.TASK_REVIEWER_REVIEW_ASSIGNED]: {
+    entityType: NOTIFICATION_ENTITY_TYPES.TASK,
+    baseUrlKey: 'internalHubUrl',
+    getEntityId: (m: ITaskReviewerReviewAssignedMetadata) => m.task_id,
+    getRedirectUrl: (m, base) => `${base}/task-reviews/${m.review_id}`,
+    titleKey: 'notification.task_reviewer_review_assigned.title',
+    bodyKey: 'notification.task_reviewer_review_assigned.body',
+    bodyArgs: (m: ITaskReviewerReviewAssignedMetadata) => ({
+      code: m.task_code,
+      title: m.task_title,
+      round: m.round_number,
+    }),
   },
 
   // ── Admin ───────────────────────────────────────────────────────────────────

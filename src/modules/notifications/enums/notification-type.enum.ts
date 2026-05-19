@@ -37,6 +37,11 @@ export const NOTIFICATION_TYPES = {
   CONSULTANT_SKILL_EXAM_PASSED: 'consultant_skill_exam_passed',
   CONSULTANT_ACCOUNT_BANNED: 'consultant_account_banned',
 
+  // ── Task reviewers (internal staff with role TASK_REVIEWER) ─────────────────
+  // Fired when the 3+1 workflow auto-assigns a task to a reviewer. Includes
+  // arbiter assignments triggered by a 1-1 split.
+  TASK_REVIEWER_REVIEW_ASSIGNED: 'task_reviewer_review_assigned',
+
   // ── Admin (broadcast to all active admins) ──────────────────────────────────
   ADMIN_BUSINESS_ONBOARDED: 'admin_business_onboarded',
   ADMIN_PROJECT_PUBLISHED: 'admin_project_published',

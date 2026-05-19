@@ -1,5 +1,6 @@
 import { AbstractRepository } from '@common/repositories';
 import { ProjectMember } from '@database/entities';
+import { ProjectStatus } from '@database/enums';
 
 /** Consultant snapshot returned by team-performance roster lookups. */
 export interface IBusinessTeamConsultantRow {
@@ -94,4 +95,24 @@ export interface IProjectMemberRepository extends AbstractRepository<ProjectMemb
     projectIds: string[],
     limit: number,
   ): Promise<IBusinessTeamConsultantRow[]>;
+
+  /**
+   * Returns the project IDs where the given consultant currently has an
+   * ACTIVE membership. Universe lookup used by the consultant dashboard to
+   * scope downstream task / earnings aggregates. Empty array when the
+   * consultant has no active engagements.
+   */
+  findActiveProjectIdsByConsultantOnly(consultantId: string): Promise<string[]>;
+
+  /**
+   * Returns ACTIVE project memberships for the consultant with `project`
+   * eagerly populated. Optionally narrows by `project.status` and caps the
+   * result at `limit`. Sort: `joined_at DESC` then `project.id ASC` for
+   * stability. Soft-deleted projects are excluded.
+   */
+  findActiveByConsultantIdLightweight(
+    consultantId: string,
+    statusFilter: ProjectStatus | undefined,
+    limit: number,
+  ): Promise<ProjectMember[]>;
 }

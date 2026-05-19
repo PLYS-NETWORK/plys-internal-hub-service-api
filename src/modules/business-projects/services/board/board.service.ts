@@ -2,6 +2,7 @@ import { ERROR_CODES } from '@common/constants/error-codes';
 import { PageDto } from '@common/dto/page.dto';
 import { PageMetaDto } from '@common/dto/page-meta.dto';
 import { TranslatableException } from '@common/exceptions/translatable.exception';
+import { UrlResolverService } from '@common/modules/file-storage';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { computeWorkedSeconds, formatWorkedDuration } from '@common/utils/duration';
@@ -43,6 +44,7 @@ export class BoardService implements IBoardService {
     private readonly requestContext: RequestContextService,
     private readonly access: BusinessAccessService,
     private readonly cache: BoardCacheService,
+    private readonly urlResolver: UrlResolverService,
   ) {
     this.logger = new AppLogger(BoardService.name, requestContext);
   }
@@ -77,6 +79,9 @@ export class BoardService implements IBoardService {
       const cached = await this.cache.get<{ data: unknown[]; meta: PageMetaDto }>(cacheKey);
       if (cached) {
         this.logger.log(`listTasks — cache hit | key: ${cacheKey}, count: ${cached.data.length}`);
+        // Cache holds the raw storage URLs — re-sign at the response boundary
+        // so the cached payload outlives the 15-min S3 presign TTL.
+        await this.resignAssigneeAvatars(cached.data);
         const data = cached.data.map((entry) =>
           plainToInstance(BoardTaskResponseDto, entry, { excludeExtraneousValues: true }),
         );
@@ -158,7 +163,10 @@ export class BoardService implements IBoardService {
 
     const meta = new PageMetaDto({ pageOptionsDto: filters, itemCount });
     const result = new PageDto(data, meta);
+    // Cache holds the raw URLs produced by `mapRow`; re-sign on the response
+    // boundary so neither the cache nor the response carries an expired URL.
     await this.cache.set(cacheKey, result);
+    await this.resignAssigneeAvatars(data);
 
     this.logger.log(
       `listTasks — complete | projectId: ${projectId}, count: ${data.length}, total: ${itemCount}, cached: true`,
@@ -198,6 +206,10 @@ export class BoardService implements IBoardService {
     this.logger.log(
       `getTaskDetail — complete | taskId: ${taskId}, attachments: ${attachmentRows.length}`,
     );
+    const assigneeAvatar = task.assignee
+      ? await this.urlResolver.resolve(task.assignee.avatarUrl)
+      : null;
+
     return plainToInstance(
       BoardTaskDetailResponseDto,
       {
@@ -211,7 +223,7 @@ export class BoardService implements IBoardService {
           ? {
               consultant_id: task.assignee.id,
               full_name: task.assignee.fullName,
-              avatar_url: task.assignee.avatarUrl ?? null,
+              avatar_url: assigneeAvatar,
             }
           : null,
         total_time_worked: workedDuration,
@@ -236,6 +248,22 @@ export class BoardService implements IBoardService {
   }
 
   // ─── Helpers ───────────────────────────────────────────────────────────────
+
+  /**
+   * Mutates each entry's `assignee.avatar_url` so every value is freshly
+   * presigned. Runs at the response boundary on both cache-hit and cache-miss
+   * paths so cached payloads never serve an expired URL.
+   */
+  private async resignAssigneeAvatars(rows: ReadonlyArray<unknown>): Promise<void> {
+    const assignees = rows
+      .map((row) => (row as { assignee?: { avatar_url?: string | null } | null }).assignee)
+      .filter((a): a is { avatar_url?: string | null } => a !== null && a !== undefined);
+    if (assignees.length === 0) return;
+    const resigned = await this.urlResolver.resolveMany(assignees.map((a) => a.avatar_url));
+    assignees.forEach((a, idx) => {
+      a.avatar_url = resigned[idx];
+    });
+  }
 
   private mapRow(r: IBoardTaskRow): BoardTaskResponseDto {
     const totalSeconds = Number(r.worked_seconds ?? 0);

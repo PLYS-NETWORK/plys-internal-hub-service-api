@@ -7,6 +7,7 @@ import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { Project, Task } from '@database/entities';
 import { ProjectStatus, TaskKanbanStatus } from '@database/enums';
+import { TaskReviewAssignmentService } from '@modules/task-reviews/services/task-review-assignment.service';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -41,6 +42,7 @@ export class ConsultantProjectTasksService implements IConsultantProjectTasksSer
     private readonly access: ConsultantAccessService,
     private readonly cache: ConsultantJoinedCacheService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly reviewAssignment: TaskReviewAssignmentService,
   ) {
     this.logger = new AppLogger(ConsultantProjectTasksService.name, requestContext);
   }
@@ -197,24 +199,45 @@ export class ConsultantProjectTasksService implements IConsultantProjectTasksSer
       `[${this.rid}] submitForReview — start | projectId: ${projectId}, taskId: ${taskId}, consultantId: ${consultantId}`,
     );
 
-    const updated = await this.uow.withTransaction(async (tx) => {
+    // Accept IN_PROGRESS (initial submission) and REVISION_REQUESTED (re-submit
+    // after the 3+1 review bounced the task back). The new review round will
+    // pick fresh reviewers (the unique-per-round constraint allows reuse).
+    const { updated, previousStatus } = await this.uow.withTransaction(async (tx) => {
       const locked = await tx.tasks.lockTaskForOwner(projectId, taskId, consultantId, [
         TaskKanbanStatus.IN_PROGRESS,
+        TaskKanbanStatus.REVISION_REQUESTED,
       ]);
       if (!locked) {
         await this.diagnoseOwnerLockFailure(tx, projectId, taskId, consultantId, 'submit');
       }
       const target = locked as Task;
+      const oldStatus = target.kanbanStatus;
       target.kanbanStatus = TaskKanbanStatus.IN_REVIEW;
-      return tx.tasks.save(target);
+      target.lastReviewRound = (target.lastReviewRound ?? 0) + 1;
+      const saved = await tx.tasks.save(target);
+      return { updated: saved, previousStatus: oldStatus };
     });
 
     await this.cache.invalidateForConsultantProject(consultantId, projectId);
+
+    // Auto-assign 2 initial reviewers for the new round. Runs in its own
+    // transaction so the consultant's submit-for-review succeeds even if the
+    // reviewer pool is exhausted (the assignment service will throw, but the
+    // task is already in IN_REVIEW for admins to inspect).
+    try {
+      await this.reviewAssignment.assignInitialReviewers(updated.id);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `[${this.rid}] submitForReview — reviewer assignment failed | taskId: ${taskId}, error: ${message}`,
+      );
+    }
+
     await this.emitStatusChangedEvent(
       project,
       updated,
       consultantProfile.userId,
-      TaskKanbanStatus.IN_PROGRESS,
+      previousStatus,
       TaskKanbanStatus.IN_REVIEW,
     );
     this.logger.log(

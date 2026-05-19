@@ -1,6 +1,6 @@
 import { AbstractRepository } from '@common/repositories';
 import { ConsultantSkill } from '@database/entities';
-import { ProficiencyLevel } from '@database/enums';
+import { PROFICIENCY_LEVELS, ProficiencyLevel } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
@@ -47,5 +47,33 @@ export class ConsultantSkillRepository
         proficiency_level: ProficiencyLevel | null;
         rating: string | null;
       }>();
+  }
+
+  /** @inheritdoc */
+  public async findByConsultantIdWithSkill(consultantId: string): Promise<ConsultantSkill[]> {
+    return this.createQueryBuilder('cs')
+      .innerJoinAndSelect('cs.skill', 'skill')
+      .where('cs.consultant_id = :consultantId', { consultantId })
+      .orderBy('skill.name', 'ASC')
+      .getMany();
+  }
+
+  /** @inheritdoc */
+  public async countByConsultantGroupedByProficiency(
+    consultantId: string,
+  ): Promise<Record<ProficiencyLevel, number>> {
+    const out = {} as Record<ProficiencyLevel, number>;
+    for (const level of PROFICIENCY_LEVELS) out[level] = 0;
+
+    const rows = await this.createQueryBuilder('cs')
+      .select('cs.proficiency_level', 'proficiency_level')
+      .addSelect('COUNT(*)', 'count')
+      .where('cs.consultant_id = :consultantId', { consultantId })
+      .andWhere('cs.proficiency_level IS NOT NULL')
+      .groupBy('cs.proficiency_level')
+      .getRawMany<{ proficiency_level: ProficiencyLevel; count: string }>();
+
+    for (const row of rows) out[row.proficiency_level] = Number(row.count);
+    return out;
   }
 }

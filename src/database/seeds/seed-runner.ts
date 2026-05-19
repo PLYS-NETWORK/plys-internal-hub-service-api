@@ -103,7 +103,7 @@ async function seedAdminAllowedEmails(): Promise<void> {
       .createQueryBuilder()
       .insert()
       .into(AdminAllowedEmail)
-      .values({ email, isActive: true })
+      .values({ email, isActive: true, role: UserRole.ADMIN_PLATFORM })
       .orIgnore()
       .returning(['id'])
       .execute();

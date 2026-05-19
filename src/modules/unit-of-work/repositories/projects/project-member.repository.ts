@@ -1,6 +1,6 @@
 import { AbstractRepository } from '@common/repositories';
 import { ProjectMember } from '@database/entities';
-import { ProjectMemberStatus } from '@database/enums';
+import { ProjectMemberStatus, ProjectStatus } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
@@ -116,6 +116,35 @@ export class ProjectMemberRepository
       .andWhere('pm.project_id IN (:...projectIds)', { projectIds })
       .getRawMany<{ project_id: string }>();
     return new Set(rows.map((r) => r.project_id));
+  }
+
+  /** @inheritdoc */
+  public async findActiveProjectIdsByConsultantOnly(consultantId: string): Promise<string[]> {
+    const rows = await this.createQueryBuilder('pm')
+      .select('pm.project_id', 'project_id')
+      .where('pm.consultant_id = :consultantId', { consultantId })
+      .andWhere('pm.status = :status', { status: ProjectMemberStatus.ACTIVE })
+      .getRawMany<{ project_id: string }>();
+    return rows.map((r) => r.project_id);
+  }
+
+  /** @inheritdoc */
+  public async findActiveByConsultantIdLightweight(
+    consultantId: string,
+    statusFilter: ProjectStatus | undefined,
+    limit: number,
+  ): Promise<ProjectMember[]> {
+    const qb = this.createQueryBuilder('pm')
+      .innerJoinAndSelect('pm.project', 'project')
+      .where('pm.consultant_id = :consultantId', { consultantId })
+      .andWhere('pm.status = :status', { status: ProjectMemberStatus.ACTIVE })
+      .andWhere('project.deleted_at IS NULL');
+
+    if (statusFilter) {
+      qb.andWhere('project.status = :projectStatus', { projectStatus: statusFilter });
+    }
+
+    return qb.orderBy('pm.joined_at', 'DESC').addOrderBy('project.id', 'ASC').take(limit).getMany();
   }
 
   /** @inheritdoc */

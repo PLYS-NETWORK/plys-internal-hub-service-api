@@ -10,6 +10,7 @@
 export interface IAdminAllowedEmailResponse {
   readonly id: string;
   readonly email: string;
+  readonly role: string;
   readonly is_active: boolean;
   readonly created_at: Date;
   readonly last_login: Date | null;

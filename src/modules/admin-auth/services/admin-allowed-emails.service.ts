@@ -8,7 +8,7 @@ import { EnvironmentsService } from '@common/modules/environments';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { AdminAllowedEmail, User } from '@database/entities';
-import { ActivePlatform } from '@database/enums';
+import { ActivePlatform, UserRole } from '@database/enums';
 import { UnitOfWorkService } from '@modules/unit-of-work/unit-of-work.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
@@ -67,6 +67,7 @@ export class AdminAllowedEmailsService implements IAdminAllowedEmailsService {
 
     const invitedByEmail = this.requestContext.email ?? undefined;
     const createdBy = this.requestContext.userId ?? null;
+    const role = dto.role ?? UserRole.ADMIN_PLATFORM;
 
     // Atomic create + send. If the provider rejects the email, the row
     // insert is rolled back so a retry isn't blocked by a half-created row.
@@ -75,6 +76,7 @@ export class AdminAllowedEmailsService implements IAdminAllowedEmailsService {
         tx.adminAllowedEmails.create({
           email,
           isActive: true,
+          role,
           createdBy,
         }),
       );
@@ -95,7 +97,8 @@ export class AdminAllowedEmailsService implements IAdminAllowedEmailsService {
   ): Promise<PageDto<AdminAllowedEmailResponseDto>> {
     this.logger.log(
       `list — start | page: ${filters.page}, limit: ${filters.limit}, ` +
-        `is_active: ${filters.isActive ?? '<any>'}, keywords: ${filters.keywords ?? '<none>'}`,
+        `is_active: ${filters.isActive ?? '<any>'}, keywords: ${filters.keywords ?? '<none>'}, ` +
+        `role: ${filters.role ?? '<any>'}`,
     );
 
     const sortKey: AdminAllowedEmailSortable = filters.sort_by ?? 'created_at';
@@ -124,6 +127,10 @@ export class AdminAllowedEmailsService implements IAdminAllowedEmailsService {
     if (filters.keywords) {
       dataQb.andWhere('LOWER(ae.email) LIKE LOWER(:kw)', { kw: `%${filters.keywords}%` });
       countQb.andWhere('LOWER(ae.email) LIKE LOWER(:kw)', { kw: `%${filters.keywords}%` });
+    }
+    if (filters.role) {
+      dataQb.andWhere('ae.role = :role', { role: filters.role });
+      countQb.andWhere('ae.role = :role', { role: filters.role });
     }
 
     const itemCount = await countQb.getCount();
@@ -188,6 +195,7 @@ export class AdminAllowedEmailsService implements IAdminAllowedEmailsService {
       {
         id: row.id,
         email: row.email,
+        role: row.role,
         is_active: row.isActive,
         created_at: row.createdAt,
         last_login: lastLogin,

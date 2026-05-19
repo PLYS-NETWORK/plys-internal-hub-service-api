@@ -160,6 +160,8 @@ export class BusinessProfilesAdminService implements IBusinessProfilesAdminServi
   }
 
   private toDetailDto(profile: BusinessProfile): AdminBusinessProfileDetailResponseDto {
+    // `logo_url` is a manually-curated CDN URL — not an S3 upload — so it is
+    // passed through verbatim and not re-signed.
     return plainToInstance(
       AdminBusinessProfileDetailResponseDto,
       {

@@ -7,6 +7,7 @@ import {
 import { TranslatableException } from '@common/exceptions/translatable.exception';
 import { EmailService } from '@common/modules/email/email.service';
 import { EnvironmentsService } from '@common/modules/environments';
+import { UrlResolverService } from '@common/modules/file-storage';
 import { AppLogger } from '@common/modules/logger';
 import { RequestContextService } from '@common/modules/request-context/request-context.service';
 import { ConsultantOnboarding, User } from '@database/entities';
@@ -45,6 +46,7 @@ export class AdminConsultantOnboardingService implements IAdminConsultantOnboard
     private readonly emailService: EmailService,
     private readonly env: EnvironmentsService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly urlResolver: UrlResolverService,
   ) {
     this.logger = new AppLogger(AdminConsultantOnboardingService.name, requestContext);
   }
@@ -282,6 +284,15 @@ export class AdminConsultantOnboardingService implements IAdminConsultantOnboard
       ),
     );
 
+    // Re-sign the avatar/CV columns through the shared resolver so the admin
+    // always sees URLs signed *now* — see UrlResolverService for the root-cause
+    // analysis (upload-time presigned URLs persisted onto the profile expire
+    // 15 minutes after first upload).
+    const [avatarUrl, cvUrl] = await this.urlResolver.resolveMany([
+      profile?.avatarUrl,
+      profile?.cvUrl,
+    ]);
+
     return plainToInstance(
       OnboardingDetailResponseDto,
       {
@@ -293,8 +304,8 @@ export class AdminConsultantOnboardingService implements IAdminConsultantOnboard
         years_of_experience: profile?.yearsOfExperience ?? null,
         phone_number: profile?.phoneNumber ?? null,
         country_code: profile?.countryCode ?? null,
-        avatar_url: profile?.avatarUrl ?? null,
-        cv_url: profile?.cvUrl ?? null,
+        avatar_url: avatarUrl,
+        cv_url: cvUrl,
         status: onboarding.status,
         decision: onboarding.decision ?? null,
         rejection_note: onboarding.rejectionNote ?? null,

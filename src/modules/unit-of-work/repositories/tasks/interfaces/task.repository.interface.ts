@@ -54,6 +54,37 @@ export interface ITaskActionItemRow {
   days_overdue: number | null;
 }
 
+/**
+ * Consultant-side action-item row. Carries the kanban_status for callers that
+ * surface mixed statuses (overdue can be any non-DONE/non-CANCELLED status,
+ * pending-approval can be IN_REVIEW or PENDING_APPROVAL).
+ */
+export interface IConsultantTaskActionItemRow {
+  task_id: string;
+  task_code: string;
+  title: string;
+  project_id: string;
+  project_title: string;
+  kanban_status: string;
+  due_date: Date | null;
+  /** Last update timestamp; reflects entry into the current status. */
+  updated_at: Date;
+  /** Populated only when the row is overdue; null otherwise. */
+  days_overdue: number | null;
+}
+
+/**
+ * Aggregate row used by the consultant project-progress endpoint — one row per
+ * (project, status) pair limited to the caller's assigned tasks.
+ */
+export interface IConsultantProjectTaskBreakdownRow {
+  project_id: string;
+  kanban_status: string;
+  count: number;
+  /** True when the row is overdue. Computed Postgres-side. */
+  overdue_count: number;
+}
+
 export interface ITaskRepository extends AbstractRepository<Task> {
   /**
    * Counts tasks grouped by `kanban_status` across the given project IDs.
@@ -259,4 +290,141 @@ export interface ITaskRepository extends AbstractRepository<Task> {
     consultantId: string,
     expectedStatuses: TaskKanbanStatus[],
   ): Promise<Task | null>;
+
+  /**
+   * Counts the caller's assigned tasks (`assigned_to = consultantId`) grouped
+   * by `kanban_status`. DRAFT and CANCELLED are still zero-filled so the
+   * caller can read every bucket without merge logic. Used by the consultant
+   * dashboard summary `portfolio` + `throughput` blocks.
+   */
+  countByAssigneeGroupedByStatus(consultantId: string): Promise<Record<TaskKanbanStatus, number>>;
+
+  /**
+   * Count of DONE tasks whose `assigned_to = consultantId` and whose
+   * `completed_at` falls in the `[from, to]` window. Used by the dashboard
+   * `tasks_completed_mtd` throughput KPI.
+   */
+  countCompletedByAssigneeBetween(consultantId: string, from: Date, to: Date): Promise<number>;
+
+  /**
+   * Total overdue count for a single consultant. Filter:
+   * `assigned_to = consultantId AND due_date < NOW() AND kanban_status NOT IN
+   * (DONE, CANCELLED)`. Soft-deleted rows excluded.
+   */
+  countOverdueByAssignee(consultantId: string): Promise<number>;
+
+  /**
+   * Count of REVISION_REQUESTED rows currently assigned to the consultant.
+   * Surface metric for `performance.revisions_requested_count`.
+   */
+  countRevisionRequestedByAssignee(consultantId: string): Promise<number>;
+
+  /**
+   * Top-N overdue rows for the consultant action-items endpoint. Ordered by
+   * `due_date` ASC (oldest first — most urgent). Joins to project so the
+   * caller renders `project_title` without a second round-trip.
+   */
+  findOverdueByAssignee(
+    consultantId: string,
+    limit: number,
+  ): Promise<IConsultantTaskActionItemRow[]>;
+
+  /**
+   * Top-N caller-owned rows currently `IN_REVIEW` or `PENDING_APPROVAL` —
+   * waiting on the business side. Ordered by `updated_at` ASC (oldest first).
+   */
+  findAwaitingBusinessApprovalByAssignee(
+    consultantId: string,
+    limit: number,
+  ): Promise<IConsultantTaskActionItemRow[]>;
+
+  /**
+   * Top-N caller-owned rows in `REVISION_REQUESTED` — these are tasks the
+   * business has bounced back for changes. Ordered by `updated_at` DESC
+   * (most recent first — the consultant should see the latest revisions).
+   */
+  findRevisionRequestedByAssignee(
+    consultantId: string,
+    limit: number,
+  ): Promise<IConsultantTaskActionItemRow[]>;
+
+  /**
+   * Mean cycle time in days over DONE tasks assigned to this consultant
+   * whose `completed_at` falls in the window. `null` when no qualifying rows.
+   */
+  avgCycleDaysByAssigneeBetween(consultantId: string, from: Date, to: Date): Promise<number | null>;
+
+  /**
+   * On-time delivery counters for a single consultant in the window:
+   *   `total` = DONE rows in the window with `due_date IS NOT NULL`
+   *   `onTime` = subset where `completed_at <= due_date`
+   */
+  countOnTimeByAssigneeBetween(
+    consultantId: string,
+    from: Date,
+    to: Date,
+  ): Promise<{ onTime: number; total: number }>;
+
+  /**
+   * Per-(project, status) counts of the caller's assigned tasks across a
+   * project universe. `overdue_count` is a sub-count of rows where
+   * `due_date < NOW()` (regardless of status). Used by the consultant
+   * project-progress endpoint.
+   */
+  countByAssigneeAndProjectIdsBreakdown(
+    consultantId: string,
+    projectIds: string[],
+  ): Promise<IConsultantProjectTaskBreakdownRow[]>;
+
+  /**
+   * Latest `task.updated_at` across the caller's assigned tasks in each
+   * project. Powers the `last_activity_at` column in project-progress.
+   * Projects with no caller-owned tasks are absent from the result.
+   */
+  findLatestActivityByAssigneeAndProjectIds(
+    consultantId: string,
+    projectIds: string[],
+  ): Promise<Map<string, Date>>;
+
+  /**
+   * Count of DONE tasks where the caller is `assigned_to` and the project
+   * lists each given skill as a required skill. Joins through
+   * `project_required_skills`. Same multi-skill caveat as
+   * {@link IConsultantTransactionRepository.sumClearedEarningsByConsultantAndSkillId}.
+   * Skills with zero matches are absent from the map.
+   */
+  countDoneByAssigneeGroupedBySkill(
+    consultantId: string,
+    skillIds: string[],
+  ): Promise<Map<string, number>>;
+
+  /**
+   * Locks a task for review-workflow transitions (vote resolution, completion,
+   * revision bounce-back). Caller MUST be inside a transaction. Returns null
+   * when the row is missing, soft-deleted, or in any status outside the
+   * provided whitelist (so the caller can short-circuit a stale vote).
+   *
+   * @param taskId          Target task.
+   * @param expectedStatuses Whitelist (typically IN_REVIEW or PENDING_APPROVAL).
+   */
+  lockTaskForReview(taskId: string, expectedStatuses: TaskKanbanStatus[]): Promise<Task | null>;
+
+  /**
+   * Atomically increments `revision_count` by 1 and returns the new value.
+   * Used by the completion service to enforce the 3-revision cap before
+   * deciding whether to escalate to a TaskDispute.
+   */
+  incrementRevisionCount(taskId: string): Promise<number>;
+
+  /**
+   * Picks `count` eligible reviewers for a task, round-robin biased toward
+   * those least recently assigned. Filters to users with role TASK_REVIEWER
+   * and `is_active = true`. Excludes:
+   *   - the task assignee (consultant cannot review own task);
+   *   - any user id in `excludeUserIds` (e.g. reviewers already assigned in
+   *     the current round, or project members on the business side).
+   *
+   * @returns Up to `count` user ids; may be empty if the pool is exhausted.
+   */
+  pickEligibleReviewers(taskId: string, count: number, excludeUserIds: string[]): Promise<string[]>;
 }

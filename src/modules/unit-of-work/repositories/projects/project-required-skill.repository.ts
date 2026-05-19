@@ -1,5 +1,6 @@
 import { AbstractRepository } from '@common/repositories';
 import { ProjectRequiredSkill } from '@database/entities';
+import { ProjectMemberStatus } from '@database/enums';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
@@ -38,5 +39,33 @@ export class ProjectRequiredSkillRepository
       .where('prs.project_id = :projectId', { projectId })
       .orderBy('skill.name', 'ASC')
       .getMany();
+  }
+
+  /** @inheritdoc */
+  public async countActiveProjectsByConsultantGroupedBySkill(
+    consultantId: string,
+    skillIds: string[],
+  ): Promise<Map<string, number>> {
+    if (skillIds.length === 0) return new Map();
+    const rows = await this.createQueryBuilder('prs')
+      .innerJoin(
+        'project_members',
+        'pm',
+        'pm.project_id = prs.project_id AND pm.consultant_id = :consultantId AND pm.status = :memberStatus',
+        { consultantId, memberStatus: ProjectMemberStatus.ACTIVE },
+      )
+      .innerJoin(
+        'projects',
+        'project',
+        'project.id = prs.project_id AND project.deleted_at IS NULL',
+      )
+      .select('prs.skill_id', 'skill_id')
+      .addSelect('COUNT(DISTINCT prs.project_id)::int', 'count')
+      .where('prs.skill_id IN (:...skillIds)', { skillIds })
+      .groupBy('prs.skill_id')
+      .getRawMany<{ skill_id: string; count: number }>();
+    const out = new Map<string, number>();
+    for (const row of rows) out.set(row.skill_id, Number(row.count));
+    return out;
   }
 }

@@ -188,11 +188,17 @@ export class AdminAuthService implements IAdminAuthService {
     );
     if (existing) return existing;
 
+    // Role is determined by the whitelist entry: ADMIN_PLATFORM by default,
+    // TASK_REVIEWER when the platform admin invites the email under that role.
+    // assertEmailAllowed has already validated the row exists and is active.
+    const allowed = await this.uow.adminAllowedEmails.findActiveByEmail(email);
+    const role = allowed?.role ?? UserRole.ADMIN_PLATFORM;
+
     // Auto-provision admin user on first OTP request. No profile creation needed.
     const newUser = this.uow.users.create({
       email,
       platform: ActivePlatform.ADMIN_PLATFORM,
-      role: UserRole.ADMIN_PLATFORM,
+      role,
       isActive: true,
       passwordHash: null,
     });

@@ -54,6 +54,7 @@ import { ProjectAiContextModule } from './modules/project-ai-context/project-ai-
 import { ProjectChatSessionModule } from './modules/project-chat-session/project-chat-session.module';
 import { SkillsModule } from './modules/skills/skills.module';
 import { StatisticsModule } from './modules/statistics/statistics.module';
+import { TaskReviewsModule } from './modules/task-reviews/task-reviews.module';
 import { UnitOfWorkModule } from './modules/unit-of-work/unit-of-work.module';
 import { UsersModule } from './modules/users/users.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
@@ -128,6 +129,7 @@ import { WebhooksModule } from './modules/webhooks/webhooks.module';
     ProjectChatSessionModule,
     SkillsModule,
     StatisticsModule,
+    TaskReviewsModule,
     UsersModule,
     WebhooksModule,
   ],

@@ -166,6 +166,8 @@ export class BusinessProfilesService implements IBusinessProfilesService {
   }
 
   private toResponseDto(profile: BusinessProfile): BusinessProfileResponseDto {
+    // `logo_url` is a manually-curated CDN URL — not an S3 upload — so no
+    // re-signing is needed here.
     return plainToInstance(BusinessProfileResponseDto, profile, { excludeExtraneousValues: true });
   }
 }

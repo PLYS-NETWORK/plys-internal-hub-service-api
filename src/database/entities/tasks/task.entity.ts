@@ -180,6 +180,18 @@ export class Task extends AuditableEntity {
   @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
   public completedAt!: Date | null;
 
+  // Total number of times the task has bounced back to REVISION_REQUESTED.
+  // Hard-capped at 3; the next failure escalates to a TaskDispute instead of
+  // returning to REVISION_REQUESTED.
+  @Column({ name: 'revision_count', type: 'int', default: 0 })
+  public revisionCount!: number;
+
+  // Current review round; incremented every time the task is (re)submitted
+  // for review. Used to scope task_reviews rows so the same reviewer can be
+  // assigned again on a later round without violating the uniqueness rule.
+  @Column({ name: 'last_review_round', type: 'int', default: 0 })
+  public lastReviewRound!: number;
+
   // §H1 — TypeORM-managed optimistic lock counter.
   @VersionColumn()
   public readonly version!: number;

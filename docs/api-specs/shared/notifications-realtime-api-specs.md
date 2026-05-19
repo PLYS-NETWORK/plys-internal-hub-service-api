@@ -1,7 +1,7 @@
 # Notifications — Frontend Realtime Integration Guide
 
 > Source: [src/modules/notifications/notifications.gateway.ts](../../../src/modules/notifications/notifications.gateway.ts)
-> Companion REST spec: [notifications-api-specs.md](../business/notifications/notifications-api-specs.md)
+> Companion REST spec: [notifications-api-specs.md](../business/notifications/notifications-api-specs.md) (same controller is shared across business / consultant / admin frontends — gated on `@Roles(UserRole.USER, UserRole.ADMIN_PLATFORM)`).
 >
 > **Role-specific event catalogs (metadata shapes, redirect URLs, cache-invalidation hints):**
 >
@@ -19,6 +19,11 @@ shared Redis pub/sub fan-out. The FE connects ONE socket per user-session,
 listens to a small set of events, calls a REST GET on connect to back-fill any
 gap, and then renders live updates as they stream in.
 
+The gateway is **platform-agnostic** — every authenticated user (business,
+consultant, admin) can connect. The only gates are JWT validity + an active
+`user_sessions` row + opt-in device-binding (§7). The room name is purely
+`user:{userId}`, so each user receives exactly their own notifications.
+
 **Durability model:** Redis pub/sub is fire-and-forget — if the socket is
 disconnected when the publish fires, the live event is lost forever. The DB row
 is not. The FE catch-up step (§3) reconciles the gap on reconnect.
@@ -27,12 +32,14 @@ is not. The FE catch-up step (§3) reconciles the gap on reconnect.
 
 ## 2. Connecting the Socket.IO client
 
-- **URL:** `${API_BASE_URL}/ws/notifications` (e.g. `https://api.ployos.example/ws/notifications`).
+- **URL:** `${API_BASE_URL}/ws/notifications` (e.g. `https://api.ployos.example/ws/notifications`). The path component (`/ws/notifications`) is the Socket.IO namespace — pass the full URL as shown, not just the origin.
 - **Library:** `socket.io-client@4.x`.
-- **Auth shape:** the access token (the same Bearer JWT used for REST) plus the
-  optional device-id header value go on `auth`.
-- **Transports:** prefer `websocket` with `polling` as fallback (matches what
-  the gateway accepts).
+- **Auth transport:** the access token (the same Bearer JWT used for REST) can travel either:
+  - On `auth.token` — the recommended path for browser SPAs. Accepts the raw JWT or `"Bearer <jwt>"` (the gateway strips the prefix).
+  - On the standard `Authorization: Bearer <jwt>` HTTP header — for native clients that can't set `auth`.
+- **Device binding (opt-in):** if you pass `auth.deviceId`, the gateway compares it against the `deviceId` claim baked into the JWT and rejects on mismatch. Sending nothing (or a JWT minted without `deviceId`) skips the check.
+- **Transports:** prefer `websocket` with `polling` as fallback (matches what the gateway accepts).
+- **CORS:** the gateway uses its own CORS list (`ALLOWED_ORIGINS` env), not the HTTP `app.enableCors()` config — bring the origin you connect from up with the BE team if you see a handshake fail.
 
 ```ts
 import { io, Socket } from 'socket.io-client';
@@ -64,10 +71,10 @@ to re-bootstrap (§3) on the `connect` event.
 ## 3. Bootstrap — catching up after an offline gap
 
 Every time the socket connects (initial open OR a reconnect), the gateway emits
-`notification.connected` with the current unread count. Use that as the
-trigger to render the unread badge AND to fetch the unread list, since any
-notifications that fired while you were disconnected will not be replayed by
-Redis.
+`notification.connected` with the **current** unread count (read straight from
+Postgres — `COUNT(*) WHERE is_read = false`). Use that as the trigger to render
+the unread badge AND to fetch the unread list, since any notifications that
+fired while you were disconnected will not be replayed by Redis.
 
 ```ts
 socket.on('connect', () => {
@@ -77,10 +84,12 @@ socket.on('connect', () => {
 
 socket.on('notification.connected', async ({ unread_count }) => {
   setUnreadBadge(unread_count);
-  const page = await fetch(`${apiBase}/api/v1/notifications/me?unread=true&take=20`, {
+  // The REST response is wrapped by the standardized envelope, so the cursor
+  // page sits at `body.data`, and its rows at `body.data.data`.
+  const body = await fetch(`${apiBase}/api/v1/notifications/me?unread=true&take=20`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   }).then((r) => r.json());
-  hydrateBellList(page.data.data); // page.data.data === NotificationResponseDto[]
+  hydrateBellList(body.data.data); // body.data.data === NotificationResponseDto[]
 });
 
 socket.on('disconnect', () => {
@@ -97,14 +106,18 @@ socket.on('disconnect', () => {
 
 ## 4. Live event handlers
 
-Three outgoing events from the gateway. None of them carry the standardized
+The gateway emits exactly two outgoing events. Neither carries the standardized
 HTTP envelope — what you see is the raw payload.
 
-| Event                       | Payload                         | When                                                                                        |
-| --------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------- |
-| `notification.connected`    | `{ unread_count: number }`      | After successful handshake.                                                                 |
-| `notification.new`          | `NotificationPayload` (see §5). | Any time the dispatcher fires for the connected user.                                       |
-| `notification.unread-count` | `{ unread_count: number }`      | (Reserved for future server-emitted count refreshes — currently unused; treat as advisory.) |
+| Event                    | Payload                         | When                                                                            |
+| ------------------------ | ------------------------------- | ------------------------------------------------------------------------------- |
+| `notification.connected` | `{ unread_count: number }`      | Once, immediately after a successful handshake (initial connect AND reconnect). |
+| `notification.new`       | `NotificationPayload` (see §5). | Any time the dispatcher fires for the connected user.                           |
+
+There is **no** server-emitted `notification.unread-count` event today — count
+changes are inferred from the `notification.new` stream and from REST calls
+(e.g. after `PATCH /me/:id/read`). If you need a fresh count without listening
+for a new notification, call `GET /me/unread-count` (Redis-cached, 24 h TTL).
 
 ```ts
 socket.on('notification.new', (n: NotificationPayload) => {
@@ -152,7 +165,9 @@ type package or copy from the role-specific catalogs linked at the top of this d
 Every payload carries two redirect mechanisms; pick whichever fits your routing.
 
 1. **Pre-computed URL** — `n.redirect_url` is server-computed, deep-linked
-   into the correct tenant, and ready to navigate to.
+   into the correct tenant, and ready to navigate to. The base URL the server
+   uses is selected by notification type — `ployosUrl` for business, `lonaUrl`
+   for consultant, `internalHubUrl` for admin.
    ```ts
    if (n.redirect_url) router.push(n.redirect_url);
    ```
@@ -185,13 +200,15 @@ For the full per-type redirect URL patterns, see the role-specific catalogs link
 
 ## 7. Error handling
 
-| Server emits                                             | What happened                                                                                | FE should…                                                                                                                                                                  |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `error { code: "AUTH_TOKEN_INVALID" }` then disconnect   | Missing / malformed JWT, or session was revoked.                                             | Refresh the access token via `/auth/refresh`, reconnect. If refresh fails, redirect to login.                                                                               |
-| `error { code: "AUTH_TOKEN_EXPIRED" }` then disconnect   | Access token TTL elapsed.                                                                    | Same — refresh + reconnect.                                                                                                                                                 |
-| `error { code: "AUTH_DEVICE_MISMATCH" }` then disconnect | The handshake `auth.deviceId` doesn't match the JWT `deviceId` claim.                        | Surface "session was started on another device" UX.                                                                                                                         |
-| Disconnects with `reason="io server disconnect"`         | The session was revoked server-side (admin force-logout, password change on another device). | Redirect to login.                                                                                                                                                          |
-| `connect_error` event                                    | Transport-level failure (network, CORS, server down).                                        | Let Socket.IO retry. After ~30s of failures, surface a degraded-mode banner and start polling `GET /me/unread-count` every 30s as a safety net until the socket reconnects. |
+The gateway emits an `error` event with `{ code }` immediately before disconnecting whenever the handshake fails. Codes come from `ERROR_CODES` in [src/common/constants/error-codes.ts](../../../src/common/constants/error-codes.ts).
+
+| Server emits                                             | What happened                                                                                                                                                                                                  | FE should…                                                                                                                                                                  |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `error { code: "AUTH_TOKEN_INVALID" }` then disconnect   | One of: token missing, JWT signature failed, JWT payload had no `sessionId`, the matching `user_sessions` row is missing / already rotated (`used_at` set) / past its `expires_at`, or the gateway lost track. | Refresh the access token via `/auth/refresh`, reconnect. If refresh fails, redirect to login.                                                                               |
+| `error { code: "AUTH_TOKEN_EXPIRED" }` then disconnect   | Access token TTL elapsed (JWT verify threw `TokenExpiredError`).                                                                                                                                               | Same — refresh + reconnect.                                                                                                                                                 |
+| `error { code: "AUTH_DEVICE_MISMATCH" }` then disconnect | The handshake `auth.deviceId` was supplied AND the JWT also carries a `deviceId` claim AND the two strings don't match. Asymmetric: if either side is missing/empty the check is skipped.                      | Surface "session was started on another device" UX.                                                                                                                         |
+| Disconnects with `reason="io server disconnect"`         | The session was revoked server-side (admin force-logout, password change on another device, refresh-token replay detection).                                                                                   | Redirect to login.                                                                                                                                                          |
+| `connect_error` event                                    | Transport-level failure (network, CORS, server down).                                                                                                                                                          | Let Socket.IO retry. After ~30s of failures, surface a degraded-mode banner and start polling `GET /me/unread-count` every 30s as a safety net until the socket reconnects. |
 
 ```ts
 socket.on('connect_error', (err) => {
@@ -244,6 +261,12 @@ next reconnect will pick it up.
 **Q. Can I subscribe to a different user's notifications (e.g. as an admin)?**
 No. The gateway joins exactly one room — `user:{caller's own userId}` — based
 on the JWT. Cross-user subscription is not exposed.
+
+**Q. Do consultant and admin frontends use the same socket?**
+Yes. The gateway is platform-agnostic — admin, consultant, and business users all
+connect to `/ws/notifications` with their access JWT. The dispatcher only
+publishes notifications targeted at the recipient `userId`, so platforms never
+see each other's events.
 
 **Q. What's the latency budget?**
 End-to-end (DB write → live event on socket) is ~5-50 ms on a healthy single

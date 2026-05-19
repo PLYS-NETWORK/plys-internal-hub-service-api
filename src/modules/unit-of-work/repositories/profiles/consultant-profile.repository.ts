@@ -49,4 +49,20 @@ export class ConsultantProfileRepository
       .getRawOne<{ amount: string }>();
     return row?.amount ?? '0.00';
   }
+
+  /** @inheritdoc */
+  public async incrementAccountBalance(consultantId: string, amount: string): Promise<void> {
+    const numeric = Number(amount);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      throw new Error(`incrementAccountBalance: invalid amount ${amount}`);
+    }
+    const result = await this.createQueryBuilder()
+      .update()
+      .set({ accountBalance: () => `"account_balance" + ${numeric}` })
+      .where('id = :consultantId', { consultantId })
+      .execute();
+    if ((result.affected ?? 0) === 0) {
+      throw new Error(`incrementAccountBalance: consultant_profile ${consultantId} not found`);
+    }
+  }
 }
