@@ -1,0 +1,177 @@
+{
+  "generic": {
+    "bad_request": "Geçersiz istek",
+    "unauthorized": "Yetkisiz",
+    "forbidden": "Erişim engellendi",
+    "not_found": "Bulunamadı",
+    "conflict": "Çakışma",
+    "internal_server_error": "Bir hata oluştu",
+    "validation_failed": "Doğrulama başarısız"
+  },
+  "auth": {
+    "invalid_credentials": "Geçersiz kimlik bilgileri",
+    "token_expired": "Oturum süresi doldu",
+    "token_invalid": "Geçersiz oturum",
+    "device_mismatch": "Tanınmayan cihaz",
+    "email_not_verified": "E-posta doğrulanmadı",
+    "email_pending_verification": "Doğrulama e-postası zaten gönderildi. Lütfen gelen kutunuzu veya spam klasörünüzü kontrol edin.",
+    "account_locked": "Çok fazla başarısız giriş denemesi nedeniyle hesap geçici olarak kilitlendi. Lütfen daha sonra tekrar deneyin veya şifrenizi sıfırlayın.",
+    "reset_token_invalid": "Şifre sıfırlama kodu geçersiz",
+    "reset_token_expired": "Şifre sıfırlama kodunun süresi doldu",
+    "oauth_state_invalid": "Geçersiz OAuth geri çağrısı. Lütfen oturum açma işlemini baştan tekrarlayın.",
+    "rate_limited": "Çok fazla istek. Lütfen biraz bekleyip tekrar deneyin.",
+    "sso_exchange_invalid": "SSO değişim kodu geçersiz veya süresi dolmuş",
+    "sso_email_missing": "SSO sağlayıcısı bir e-posta adresi döndürmedi",
+    "api_key_invalid": "API anahtarı geçersiz veya eksik."
+  },
+  "business_profile": {
+    "not_found": "İşletme profili bulunamadı.",
+    "already_exists": "Bu kullanıcı için zaten bir işletme profili mevcut.",
+    "tax_id_already_exists": "Bu vergi numarasına sahip bir işletme profili seçilen ülke için zaten mevcut."
+  },
+  "consultant_profile": {
+    "not_found": "Danışman profili bulunamadı.",
+    "already_exists": "Bu kullanıcı için zaten bir danışman profili mevcut."
+  },
+  "project": {
+    "not_found": "Proje bulunamadı.",
+    "requires_tasks_for_configured": "Proje yapılandırılmış olarak işaretlenebilmesi için en az bir görev bulunmalıdır.",
+    "cannot_be_edited": "Proje mevcut durumunda düzenlenemez.",
+    "cannot_publish": "Bu proje mevcut durumunda yayınlanamaz.",
+    "insufficient_balance": "Bu projeyi yayınlamak için yeterli hesap bakiyesi yok.",
+    "invalid_task_price": "Proje yayınlanamaz — her görevin fiyatı sıfırdan büyük olmalıdır.",
+    "recall_transaction_not_found": "Geri çağırma iadesi için orijinal yayın işlemi bulunamadı.",
+    "cannot_be_deleted": "Yalnızca taslak, kurulum aşamasında veya yapılandırılmış projeler silinebilir.",
+    "invalid_status_transition": "Geçersiz proje durumu geçişi.",
+    "code_already_exists": "Bu kodla bir proje işletmenizde zaten mevcut.",
+    "already_member": "Bu projeye zaten aktif olarak katılmış durumdasınız.",
+    "membership_banned": "Bu projeye artık katılamazsınız.",
+    "full": "Bu proje danışman kapasitesine ulaşmış durumda.",
+    "not_joinable": "Bu proje şu anda yeni üye kabul etmiyor.",
+    "skill_match_insufficient": "Yetenekleriniz, bu projenin gerekli yeteneklerinin %50'sinden azını karşılıyor.",
+    "concurrent_limit_reached": "Eş zamanlı katılabileceğiniz proje sayısının üst sınırına ulaştınız.",
+    "not_member": "Bu projenin aktif bir üyesi değilsiniz.",
+    "leave_blocked_by_active_tasks": "Devam eden göreviniz olduğu sürece bu projeden ayrılamazsınız."
+  },
+  "task": {
+    "not_found": "Görev bulunamadı.",
+    "invalid_status_transition": "Geçersiz görev durumu geçişi.",
+    "already_assigned": "Bu görev zaten bir danışmana atanmış.",
+    "project_not_in_progress": "Görevler yalnızca devam eden projeler için yönetilebilir.",
+    "result_not_found": "Görev sonucu bulunamadı.",
+    "result_forbidden": "Bu sonuç üzerinde işlem yapma yetkiniz yok.",
+    "result_not_assignee": "Bu göreve atanan danışman dışında kimse görev sonuçlarını yönetemez.",
+    "result_file_not_owned": "Eklenen dosyalardan biri veya birkaçı size ait değil ya da mevcut değil.",
+    "result_empty_update": "Güncellemek için remarks veya file_ids alanlarından en az birini gönderin.",
+    "consultant_already_in_progress": "Devam eden bir göreviniz zaten var. Yeni bir göreve başlamadan önce onu tamamlayın veya durdurun.",
+    "attachment_not_found": "Görev eki bulunamadı.",
+    "attachment_forbidden": "Bu görevin eklerini yönetme yetkiniz yok.",
+    "attachment_file_not_owned": "Eklenen dosyalardan biri veya birkaçı size ait değil ya da mevcut değil.",
+    "attachment_invalid_status": "Bu durumdaki görevlerin ekleri değiştirilemez.",
+    "not_claimable": "Bu görev şu anda alınamaz.",
+    "not_owned_by_consultant": "Bu görev size atanmamış.",
+    "invalid_state_for_unassign": "Bu görev mevcut durumunda iade edilemez.",
+    "invalid_state_for_submit": "Bu görev mevcut durumunda incelemeye gönderilemez.",
+    "due_date_invalid": "Son teslim tarihi geçerli ve gelecekteki bir tarih olmalıdır."
+  },
+  "payment": {
+    "insufficient_balance": "Yetersiz hesap bakiyesi.",
+    "unsupported_platform": "Desteklenmeyen ödeme platformu.",
+    "checkout_failed": "Ödeme işlemi başarısız oldu.",
+    "transfer_failed": "Para transferi başarısız oldu.",
+    "transaction_not_found": "İşlem bulunamadı.",
+    "transaction_not_owned": "Bu işleme erişim yetkiniz yok.",
+    "transaction_not_pending": "Bu işlem mevcut durumunda değiştirilemez."
+  },
+  "database": {
+    "unique_violation": "Bu değerlere sahip bir kayıt zaten mevcut",
+    "foreign_key_violation": "Başvurulan kayıt bulunamadı",
+    "not_null_violation": "Zorunlu bir alan eksik"
+  },
+  "billing": {
+    "period_not_found": "Faturalama dönemi bulunamadı.",
+    "invoice_not_found": "Fatura bulunamadı.",
+    "invoice_already_paid": "Bu fatura zaten ödenmiş.",
+    "invoice_not_owned": "Bu faturaya erişim yetkiniz yok.",
+    "checkout_failed": "Fatura için ödeme oturumu oluşturulamadı."
+  },
+  "file": {
+    "not_found": "Dosya bulunamadı.",
+    "upload_failed": "Dosya yükleme başarısız oldu.",
+    "invalid_type": "Dosya türüne izin verilmiyor.",
+    "size_exceeded": "Dosya, izin verilen maksimum boyutu aşıyor.",
+    "storage_error": "Dosya depolama arka ucu başarısız oldu.",
+    "delete_failed": "Dosya silinemedi.",
+    "quota_exceeded": "Depolama kotanız aşıldı.",
+    "forbidden": "Bu dosyaya erişim yetkiniz yok.",
+    "dimensions_exceeded": "Görüntü boyutları izin verilen maksimumu aşıyor."
+  },
+  "notification": {
+    "not_found": "Bildirim bulunamadı.",
+    "forbidden": "Bu bildirime erişim yetkiniz yok."
+  },
+  "ai_provider_key": {
+    "not_configured": "Aktif bir AI sağlayıcı anahtarı yapılandırılmamış. Lütfen bir yönetici ile iletişime geçin.",
+    "not_found": "AI sağlayıcı anahtarı bulunamadı.",
+    "active_requires_replacement": "Bu sağlayıcı için aktif olan tek anahtar iptal edilemez. Önce bir yedek aktif edin.",
+    "cipher_failed": "AI sağlayıcı anahtarı şifrelenemedi veya çözülemedi."
+  },
+  "chat_session": {
+    "not_found": "Sohbet oturumu bulunamadı.",
+    "not_active": "Aktif olmayan bir sohbet oturumu güncellenemez.",
+    "mode_not_allowed": "Seçilen sohbet modu projenin mevcut durumunda kullanılamaz.",
+    "message_limit_exceeded": "Sohbet oturumu mesaj sınırına ulaştı; devam etmek için yeni bir oturum başlatın."
+  },
+  "ai_context": {
+    "not_found": "Bu proje için AI bağlamı henüz oluşturulmadı.",
+    "derived_html_forbidden": "AI bağlamından türetilen alanlar düz metin olmalıdır — HTML işaretleri kabul edilmez."
+  },
+  "idempotency": {
+    "body_mismatch": "Idempotency-Key farklı bir istek gövdesiyle yeniden kullanıldı."
+  },
+  "ai_sync": {
+    "task_rejected": "Toplu işlemdeki bir veya daha fazla görev, projenin mevcut durumunda uygulanamaz.",
+    "skill_not_found": "Bir veya daha fazla yetenek kimliği bulunamadı."
+  },
+  "project_status": {
+    "price_gate_failed": "Yapılandırıldı durumuna geçilemez: bir veya daha fazla görevin fiyatı = 0."
+  },
+  "admin": {
+    "otp_invalid": "Doğrulama kodu geçersiz veya süresi dolmuş.",
+    "otp_locked": "Çok fazla başarısız deneme nedeniyle hesabınız geçici olarak kilitlendi. Lütfen daha sonra tekrar deneyin.",
+    "resend_limit": "Çok fazla kod istediniz. Yeni bir kod istemeden önce lütfen bekleyin.",
+    "email_not_allowed": "Bu e-posta yönetici platformuna erişim için yetkili değil.",
+    "allowed_email_already_exists": "Bu e-posta zaten yönetici izin listesinde.",
+    "allowed_email_revoked": "Bu e-posta yönetici izin listesinde ama iptal edilmiş. Yeniden davet etmek yerine yeniden etkinleştirin.",
+    "allowed_email_not_found": "İzin listesi kaydı bulunamadı.",
+    "allowed_email_cannot_revoke_self": "Kendi yönetici izin listesi kaydınızın etkin durumunu değiştiremezsiniz."
+  },
+  "consultant_onboarding": {
+    "not_found": "Danışman onboarding kaydı bulunamadı.",
+    "blocked": "Hesabınız onboarding için {{blocked_until}} tarihine kadar engellendi. Lütfen bu tarihten sonra tekrar deneyin.",
+    "invalid_status": "Bu işlem mevcut onboarding durumunda izin verilmiyor.",
+    "incomplete_answers": "Göndermeden önce tüm onboarding sorularının yanıtlanması gerekir.",
+    "not_approved": "Onboarding'iniz henüz onaylanmadı. Beceri sınavlarına kayıt olamazsınız.",
+    "answers_coverage": "Gönderilen cevaplar, her aktif onboarding sorusunu tam olarak bir kez kapsamalıdır.",
+    "invalid_answer": "Bir cevap, soru türü için beklenen biçime uymuyor."
+  },
+  "onboarding_question": {
+    "not_found": "Onboarding sorusu bulunamadı.",
+    "invalid_options": "Soru seçenekleri tür için geçersiz. TEXT seçenek almaz; RADIO ve CHECKBOX en az iki benzersiz seçenek gerektirir.",
+    "type_change_forbidden": "Soru türü değiştirilemez.",
+    "reorder_set_mismatch": "Sıralama listesi her aktif soruyu tam olarak bir kez içermelidir. Pasif veya silinmiş id kabul edilmez."
+  },
+  "skill_exam": {
+    "not_found": "Beceri sınavı bulunamadı.",
+    "user_banned": "Hesabınız tekrarlanan yapay zeka içeriği ihlalleri nedeniyle kalıcı olarak devre dışı bırakıldı.",
+    "already_passed": "Bu beceri sınavını zaten geçtiniz.",
+    "already_in_progress": "Bu beceri için zaten devam eden bir sınavınız var.",
+    "cooldown_active": "Tekrar sınava giriş bekleme süreniz {{cooldown_until}} tarihine kadar aktif.",
+    "parallel_limit_reached": "Aynı anda yalnızca bir beceri sınavınız devam edebilir.",
+    "invalid_status": "Bu işlem mevcut beceri sınavı durumunda izin verilmiyor.",
+    "incomplete_answers": "Göndermeden önce 20 beceri sınavı sorusunun tamamı yanıtlanmalı.",
+    "not_ready": "Beceri sınavı soruları henüz hazır değil.",
+    "expired": "Bu beceri sınavının süresi doldu. 60 dakikalık pencere gönderim yapılmadan sona erdi.",
+    "taking_blocked": "{{blocked_until}} tarihinden sonra yeni sınav başlatabilirsiniz. 3 süresi dolmuş deneme nedeniyle 2 günlük duraklama uygulandı."
+  }
+}

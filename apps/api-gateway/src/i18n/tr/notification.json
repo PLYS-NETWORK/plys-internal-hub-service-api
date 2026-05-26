@@ -1,0 +1,144 @@
+{
+  "profile_updated": {
+    "title": "Profil güncellendi",
+    "body": "Profiliniz güncellendi. Değiştirilen alanlar: {fields}"
+  },
+  "password_changed": {
+    "title": "Şifre değiştirildi",
+    "body": "Şifreniz değiştirildi. Bu işlemi siz yapmadıysanız hesabınızı hemen güvene alın."
+  },
+  "project_published": {
+    "title": "Proje yayınlandı",
+    "body": "\"{title}\" ({code}) projeniz yayında ve başvurulara açık."
+  },
+  "project_unpublished": {
+    "title": "Proje yayından kaldırıldı",
+    "body": "\"{title}\" ({code}) projeniz tekrar yapılandırma moduna alındı."
+  },
+  "task_published": {
+    "title": "Görev yayınlandı",
+    "body": "\"{title}\" ({code}) görevi yayınlandı ve danışmanlara açık."
+  },
+  "project_consultant_joined": {
+    "title": "Bir danışman projenize katıldı",
+    "body": "{consultant}, \"{title}\" ({code}) projenize katıldı."
+  },
+  "project_consultant_left": {
+    "title": "Bir danışman projenizden ayrıldı",
+    "body": "{consultant}, \"{title}\" ({code}) projenizden ayrıldı."
+  },
+  "top_up_completed": {
+    "title": "Yükleme başarılı",
+    "body": "{amount} {currency} tutarındaki yüklemeniz hesabınıza eklendi."
+  },
+  "top_up_refunded": {
+    "title": "Yükleme iade edildi",
+    "body": "{amount} {currency} tutarındaki yüklemeniz orijinal ödeme yönteminize iade edildi."
+  },
+  "withdraw_completed": {
+    "title": "Para çekme gönderildi",
+    "body": "{amount} {currency} tutarındaki para çekme işleminiz tamamlandı."
+  },
+  "withdraw_reversed": {
+    "title": "Para çekme iade edildi",
+    "body": "{amount} {currency} tutarındaki para çekme işlemi iade edildi: {reason}. Tutar hesabınıza geri yansıtıldı."
+  },
+  "consultant_project_skill_match": {
+    "title": "Becerilerinizle eşleşen yeni proje",
+    "body": "Becerilerinizle eşleşen \"{title}\" ({code}) adlı yeni bir proje yayınlandı."
+  },
+  "consultant_project_joined": {
+    "title": "Projeye katıldınız",
+    "body": "\"{title}\" ({code}) projesine eklendi niz. Başlamak için panoya gidin."
+  },
+  "consultant_task_status_changed": {
+    "title": "Görev durumu güncellendi",
+    "body": "\"{title}\" ({code}) görevi {new_status} durumuna geçti."
+  },
+  "business_task_status_changed": {
+    "title": "Danışman görev durumunu güncelledi",
+    "body": "\"{title}\" ({code}) görevi atanan danışman tarafından {new_status} durumuna geçirildi."
+  },
+  "admin_business_onboarded": {
+    "title": "Yeni iş yeri kaydoldu",
+    "body": "{name} kayıt işlemini tamamladı ve proje yayınlamaya hazır."
+  },
+  "admin_project_published": {
+    "title": "Yeni proje yayınlandı",
+    "body": "{business}, \"{title}\" ({code}) projesini yayınladı."
+  },
+  "admin_business_top_up": {
+    "title": "İş yeri bakiye yüklemesi",
+    "body": "{business}, {amount} {currency} yükleme yaptı."
+  },
+  "admin_task_published": {
+    "title": "Görev yayınlandı",
+    "body": "{business} tarafından {project} projesindeki \"{title}\" ({code}) görevi yayınlandı."
+  },
+  "admin_consultant_onboarding_submitted": {
+    "title": "Onboarding gönderildi: {name}",
+    "body": "{name} onboarding mülakatını gönderdi ve değerlendirme bekliyor."
+  },
+  "consultant_onboarding_approved": {
+    "title": "Hesabınız doğrulandı",
+    "body": "Plys'e hoş geldiniz! Hesabınız doğrulandı — artık beceri kaydı yapabilir ve sınavlara girebilirsiniz."
+  },
+  "consultant_onboarding_rejected": {
+    "title": "Onboarding kararı: reddedildi",
+    "body": "Onboarding'iniz onaylanmadı. {blocked_until} tarihinden sonra tekrar başvurabilirsiniz. Sebep: {reason}"
+  },
+  "consultant_skill_exam_submitted": {
+    "title": "Beceri sınavı gönderildi",
+    "body": "{skill} sınavınız değerlendiriliyor. Sonuç hazır olduğunda sizi bilgilendireceğiz."
+  },
+  "consultant_skill_exam_failed": {
+    "low_score": {
+      "title": "Beceri sınavı sonucu: geçilemedi",
+      "body": "{skill} sınavınızda {final_score}% aldınız; geçme eşiği %80. {cooldown_until} tarihinden sonra tekrar deneyebilirsiniz."
+    },
+    "copyleaks": {
+      "title": "Beceri sınavı yapay zeka içeriği nedeniyle işaretlendi",
+      "body": "{skill} cevaplarınız işaretlendi. {cooldown_until} tarihinden sonra tekrar deneyebilirsiniz. Hesabınız kalıcı olarak devre dışı bırakılmadan önce {strikes_remaining} deneme hakkınız kaldı."
+    },
+    "expired": {
+      "title": "Beceri sınavının süresi doldu",
+      "body": "{skill} sınavının süresi göndermeden önce doldu. 3 süresi dolmuş denemeden sonra 2 gün boyunca yeni sınav başlatamazsınız."
+    }
+  },
+  "consultant_skill_exam_passed": {
+    "senior": {
+      "title": "Beceri sınavını kıdemli seviyesinde geçtiniz!",
+      "body": "Tebrikler — {skill} sınavını {final_score}% ile kıdemli seviyede geçtiniz."
+    },
+    "expert": {
+      "title": "Beceri sınavını uzman seviyesinde geçtiniz!",
+      "body": "Olağanüstü — {skill} sınavını {final_score}% ile uzman seviyesinde geçtiniz."
+    }
+  },
+  "consultant_account_banned": {
+    "title": "Hesap kalıcı olarak devre dışı bırakıldı",
+    "body": "Tekrarlanan yapay zeka içeriği ihlalleri nedeniyle hesabınız kalıcı olarak devre dışı bırakıldı. Bunun bir hata olduğunu düşünüyorsanız destek ekibiyle iletişime geçin."
+  },
+  "admin_skill_exam_result": {
+    "passed": {
+      "title": "Beceri sınavı geçildi: {consultant}",
+      "body": "{consultant} {skill} sınavını geçti ({score}%)."
+    },
+    "failed": {
+      "title": "Beceri sınavı {outcome}: {consultant}",
+      "body": "{consultant} {skill} sınavını geçemedi ({score}%) — sonuç: {outcome}."
+    }
+  },
+  "admin_consultant_banned": {
+    "title": "Danışman yasaklandı: {consultant}",
+    "body": "{consultant} {strikes} CopyLeaks ihlali ({reason}) sonrası yasaklandı."
+  },
+  "admin_consultant_project_joined": {
+    "title": "Danışman projeye katıldı: {consultant}",
+    "body": "{consultant}, {business} adlı iş yerinin \"{title}\" ({code}) projesine katıldı."
+  },
+  "admin_consultant_project_left": {
+    "title": "Danışman projeden ayrıldı: {consultant}",
+    "body": "{consultant}, {business} adlı iş yerinin \"{title}\" ({code}) projesinden ayrıldı."
+  }
+}

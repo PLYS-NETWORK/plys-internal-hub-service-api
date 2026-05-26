@@ -14,7 +14,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,35 +34,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: pnpm exec eslint "{src,apps,libs,test}/**/*.ts" --max-warnings=0
+        run: pnpm exec nx run-many -t lint --all
 
   typecheck:
     name: Type check
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Type check
-        run: pnpm exec tsc --noEmit -p tsconfig.json
-
-  build:
-    name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -83,8 +58,37 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Type check all apps
+        run: |
+          for app in api-gateway identity-service profiles-service projects-service finance-service platform-service; do
+            echo "==> tsc $app"
+            pnpm exec tsc --noEmit -p "apps/${app}/tsconfig.json"
+          done
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Build
-        run: pnpm build
+        run: pnpm exec nx run-many -t build --projects=libraries,api-gateway,identity-service,profiles-service,projects-service,finance-service,platform-service
 
   all-green:
     name: All checks

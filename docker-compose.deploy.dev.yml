@@ -1,0 +1,82 @@
+version: '3.8'
+
+# Dev VPS override — use GHCR images instead of local build.
+# Requires IMAGE_REGISTRY + per-service IMAGE_TAG_* in compose .env.
+
+x-app-image: &app-image
+  pull_policy: always
+
+services:
+  identity-service:
+    <<: *app-image
+    image: ${IMAGE_REGISTRY}/identity-service:${IMAGE_TAG_IDENTITY_SERVICE}
+    depends_on: !reset []
+    environment:
+      DEPLOY_ENV: dev
+    env_file:
+      - .env.dev
+
+  profiles-service:
+    <<: *app-image
+    image: ${IMAGE_REGISTRY}/profiles-service:${IMAGE_TAG_PROFILES_SERVICE}
+    depends_on: !reset []
+    environment:
+      DEPLOY_ENV: dev
+    env_file:
+      - .env.dev
+
+  projects-service:
+    <<: *app-image
+    image: ${IMAGE_REGISTRY}/projects-service:${IMAGE_TAG_PROJECTS_SERVICE}
+    depends_on: !reset []
+    environment:
+      DEPLOY_ENV: dev
+    env_file:
+      - .env.dev
+
+  finance-service:
+    <<: *app-image
+    image: ${IMAGE_REGISTRY}/finance-service:${IMAGE_TAG_FINANCE_SERVICE}
+    depends_on: !reset []
+    environment:
+      DEPLOY_ENV: dev
+    env_file:
+      - .env.dev
+
+  platform-service:
+    <<: *app-image
+    image: ${IMAGE_REGISTRY}/platform-service:${IMAGE_TAG_PLATFORM_SERVICE}
+    depends_on: !reset []
+    environment:
+      DEPLOY_ENV: dev
+    env_file:
+      - .env.dev
+
+  api-gateway:
+    <<: *app-image
+    image: ${IMAGE_REGISTRY}/api-gateway:${IMAGE_TAG_API_GATEWAY}
+    depends_on: !reset
+      - identity-service
+      - profiles-service
+      - projects-service
+      - finance-service
+      - platform-service
+    environment:
+      DEPLOY_ENV: dev
+    env_file:
+      - .env.dev
+    ports:
+      - '3000:3000'
+
+  migrate:
+    image: ${IMAGE_REGISTRY}/migrate:${IMAGE_TAG_MIGRATE}
+    depends_on: !reset []
+    environment:
+      DEPLOY_ENV: dev
+    env_file:
+      - .env.dev
+
+  postgres:
+    profiles: [local-infra]
+  redis:
+    profiles: [local-infra]

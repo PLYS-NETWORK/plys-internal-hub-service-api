@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package projects.v1;
+
+import "common/v1/http.proto";
+
+service BusinessProjects {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service ConsultantProjects {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service Explore {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service TaskReviews {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service AiProviderKeys {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service ProjectAiContext {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service ChatSessions {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}

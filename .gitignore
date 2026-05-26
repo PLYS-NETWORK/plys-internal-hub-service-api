@@ -4,11 +4,17 @@ node_modules/
 # build output
 dist/
 build/
+.nx/
+.claude/
+.cursorrules
+.changeset/
 
 # environment
 .env
 .env.*
 !.env.example
+!.env.dev
+!.env.prod
 
 # logs
 logs/
@@ -31,3 +37,11 @@ Thumbs.db
 
 # TypeScript incremental build
 *.tsbuildinfo
+
+# Co-located TS emit (packages use src/ as entry; apps emit to dist/)
+packages/**/src/**/*.js
+packages/**/src/**/*.js.map
+packages/**/src/**/*.d.ts
+apps/**/src/**/*.js
+apps/**/src/**/*.js.map
+apps/**/src/**/*.d.ts

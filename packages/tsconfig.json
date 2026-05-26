@@ -1,0 +1,31 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@plys/libraries/proto": ["proto/index.ts"],
+      "@plys/libraries/shared-kernel": ["shared-kernel/index.ts"],
+      "@plys/libraries/database": ["database/index.ts"],
+      "@plys/libraries/database/*": ["database/*"],
+      "@plys/libraries/config": ["config/index.ts"],
+      "@plys/libraries/config/*": ["config/*"],
+      "@plys/libraries/common-nest/*": ["common-nest/*"],
+      "@plys/libraries/unit-of-work/*": ["unit-of-work/*"],
+      "@plys/libraries/ai-provider-key": ["ai-provider-key/index.ts"],
+      "@plys/libraries/profiles-port": ["profiles-port/index.ts"]
+    }
+  },
+  "include": [
+    "proto/**/*.ts",
+    "shared-kernel/**/*.ts",
+    "database/**/*.ts",
+    "config/**/*.ts",
+    "common-nest/**/*.ts",
+    "unit-of-work/**/*.ts",
+    "ai-provider-key/**/*.ts",
+    "profiles-port/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "**/*spec.ts"]
+}

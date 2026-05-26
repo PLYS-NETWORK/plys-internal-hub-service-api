@@ -1,0 +1,12 @@
+{
+  "is_email": "{property} geçerli bir e-posta olmalıdır",
+  "is_not_empty": "{property} boş olmamalıdır",
+  "is_string": "{property} bir metin olmalıdır",
+  "is_number": "{property} bir sayı olmalıdır",
+  "is_uuid": "{property} geçerli bir UUID olmalıdır",
+  "min_length": "{property} en az {constraints.0} karakter olmalıdır",
+  "max_length": "{property} en fazla {constraints.0} karakter olmalıdır",
+  "min": "{property} en az {constraints.0} olmalıdır",
+  "max": "{property} en fazla {constraints.0} olmalıdır",
+  "is_in": "{property} şunlardan biri olmalıdır: {constraints.0}"
+}

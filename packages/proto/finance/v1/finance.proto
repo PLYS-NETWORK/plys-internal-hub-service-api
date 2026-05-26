@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package finance.v1;
+
+import "common/v1/http.proto";
+
+service Payments {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service Billing {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service Webhooks {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "assets": [
+      {
+        "include": "../../../packages/proto/**/*.proto",
+        "outDir": "dist",
+        "watchAssets": true
+      },
+      {
+        "include": "../../packages/common-nest/i18n/**/*.json",
+        "outDir": "dist/i18n",
+        "watchAssets": true
+      },
+      {
+        "include": "../../packages/common-nest/modules/email/**/*.ejs",
+        "outDir": "dist",
+        "watchAssets": true
+      }
+    ],
+    "plugins": [
+      {
+        "name": "@nestjs/swagger",
+        "options": {
+          "introspectComments": true,
+          "classValidatorShim": true
+        }
+      }
+    ]
+  }
+}

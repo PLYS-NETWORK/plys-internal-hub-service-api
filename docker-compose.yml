@@ -1,13 +1,21 @@
 version: '3.8'
 
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  pgdata:
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: marketplace_postgres
+    networks: [internal]
     environment:
       POSTGRES_USER: ${DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
-      POSTGRES_DB: ${DB_NAME:-marketplace}
+      POSTGRES_DB: ${DB_DATABASE:-marketplace}
     ports:
       - '${DB_PORT:-5432}:5432'
     volumes:
@@ -18,5 +26,14 @@ services:
       timeout: 5s
       retries: 5
 
-volumes:
-  pgdata:
+  redis:
+    image: redis:7-alpine
+    container_name: marketplace_redis
+    networks: [internal]
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5

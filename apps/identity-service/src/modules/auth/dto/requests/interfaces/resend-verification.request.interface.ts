@@ -1,0 +1,6 @@
+import { ActivePlatform } from '@plys/libraries/database/enums';
+
+export interface IResendVerificationRequest {
+  readonly email: string;
+  readonly active_platform: ActivePlatform;
+}

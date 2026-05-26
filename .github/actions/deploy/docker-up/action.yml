@@ -1,0 +1,151 @@
+name: 'Docker compose deploy on VPS'
+description: 'Pull images, run migrations, reload PM2 per-service stack'
+
+inputs:
+  host:
+    description: 'VPS host'
+    required: true
+  username:
+    description: 'VPS username'
+    required: true
+  key:
+    description: 'SSH private key'
+    required: true
+  port:
+    description: 'SSH port'
+    required: true
+  deploy-env:
+    description: 'dev or prod'
+    required: true
+  app-dir:
+    description: 'PM2 app directory on VPS (parent of current/)'
+    required: true
+  ghcr-token:
+    description: 'GHCR pull token for VPS'
+    required: true
+  service:
+    description: 'all or a single runtime service name'
+    required: false
+    default: 'all'
+  image-tag:
+    description: 'Image tag to set (required for single-service deploy when patching on VPS)'
+    required: false
+    default: ''
+  image-registry:
+    description: 'GHCR registry prefix (used when patching tags on VPS)'
+    required: false
+    default: ''
+  run-migrations:
+    description: 'Run DB migrations before restart'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Deploy on VPS
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ inputs.host }}
+        username: ${{ inputs.username }}
+        key: ${{ inputs.key }}
+        port: ${{ inputs.port }}
+        script: |
+          set -euo pipefail
+
+          DEPLOY_ENV="${{ inputs.deploy-env }}"
+          APP_DIR="${{ inputs.app-dir }}"
+          DEPLOY_DIR="${APP_DIR}/current"
+          LOG_DIR="${APP_DIR}/logs"
+          SERVICE="${{ inputs.service }}"
+          IMAGE_TAG="${{ inputs.image-tag }}"
+          IMAGE_REGISTRY="${{ inputs.image-registry }}"
+          RUN_MIGRATIONS="${{ inputs.run-migrations }}"
+
+          COMPOSE_FILES="-f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.deploy.${DEPLOY_ENV}.yml"
+
+          cd "$DEPLOY_DIR"
+          mkdir -p "$LOG_DIR"
+
+          echo "==> Logging in to GHCR..."
+          echo "${{ inputs.ghcr-token }}" | docker login ghcr.io -u github --password-stdin
+
+          if [ "$SERVICE" = "all" ]; then
+            if [ -f .env ]; then
+              if [ -n "$IMAGE_TAG" ] && [ -n "$IMAGE_REGISTRY" ]; then
+                node scripts/patch-image-tag.mjs \
+                  --file .env \
+                  --service all \
+                  --tag "$IMAGE_TAG" \
+                  --registry "$IMAGE_REGISTRY"
+              fi
+            else
+              echo "ERROR: ${DEPLOY_DIR}/.env not found — upload deploy bundle first."
+              exit 1
+            fi
+
+            echo "==> Pulling all images..."
+            docker compose $COMPOSE_FILES pull
+
+            if [ "$RUN_MIGRATIONS" = "true" ]; then
+              echo "==> Running migrations..."
+              docker compose $COMPOSE_FILES --profile migrate run --rm migrate
+            fi
+
+            echo "==> Reloading all PM2 apps..."
+            pm2 startOrReload "ecosystem.${DEPLOY_ENV}.config.js"
+            pm2 save
+          else
+            if [ -z "$IMAGE_TAG" ] || [ -z "$IMAGE_REGISTRY" ]; then
+              echo "ERROR: image-tag and image-registry are required for single-service deploy."
+              exit 1
+            fi
+
+            if [ -f .env.patch ]; then
+              if [ -f .env ]; then
+                while IFS= read -r line || [ -n "$line" ]; do
+                  case "$line" in
+                    ''|\#*) continue ;;
+                    *=*)
+                      key="${line%%=*}"
+                      sed -i "/^${key}=/d" .env
+                      echo "$line" >> .env
+                      ;;
+                  esac
+                done < .env.patch
+                rm -f .env.patch
+              else
+                mv .env.patch .env
+              fi
+            fi
+
+            if [ ! -f .env ]; then
+              echo "ERROR: ${DEPLOY_DIR}/.env not found — upload deploy bundle first."
+              exit 1
+            fi
+
+            node scripts/patch-image-tag.mjs \
+              --file .env \
+              --service "$SERVICE" \
+              --tag "$IMAGE_TAG" \
+              --registry "$IMAGE_REGISTRY"
+
+            echo "==> Pulling ${SERVICE}..."
+            docker compose $COMPOSE_FILES pull "$SERVICE"
+
+            if [ "$RUN_MIGRATIONS" = "true" ]; then
+              echo "==> Running migrations..."
+              docker compose $COMPOSE_FILES --profile migrate run --rm migrate
+            fi
+
+            PM2_NAME="internal-hub-be-${DEPLOY_ENV}-${SERVICE}"
+            echo "==> Restarting PM2 app ${PM2_NAME}..."
+            if pm2 describe "$PM2_NAME" > /dev/null 2>&1; then
+              pm2 restart "$PM2_NAME"
+            else
+              pm2 start "ecosystem.${DEPLOY_ENV}.config.js" --only "$PM2_NAME"
+              pm2 save
+            fi
+          fi
+
+          echo "✓ Deployed ${SERVICE} to ${DEPLOY_ENV}"

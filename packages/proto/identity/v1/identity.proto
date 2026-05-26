@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package identity.v1;
+
+import "common/v1/http.proto";
+
+// Session validation for api-gateway JWT middleware (replaces direct DB lookup).
+service IdentityService {
+  rpc ValidateSession(ValidateSessionRequest) returns (ValidateSessionResponse);
+}
+
+service Auth {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service AdminAuth {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service Users {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service AdminAllowedEmails {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+message ValidateSessionRequest {
+  string session_id = 1;
+  optional string device_id = 2;
+}
+
+message ValidateSessionResponse {
+  bool valid = 1;
+  string user_id = 2;
+  string email = 3;
+  string role = 4;
+  string active_platform = 5;
+  optional string business_id = 6;
+  optional string timezone = 7;
+}

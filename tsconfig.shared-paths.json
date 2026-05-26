@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@plys/libraries/proto": ["packages/proto/index.ts"],
+      "@plys/libraries/shared-kernel": ["packages/shared-kernel/index.ts"],
+      "@plys/libraries/database": ["packages/database/index.ts"],
+      "@plys/libraries/database/*": ["packages/database/*"],
+      "@plys/libraries/config": ["packages/config/index.ts"],
+      "@plys/libraries/config/*": ["packages/config/*"],
+      "@plys/libraries/common-nest/*": ["packages/common-nest/*"],
+      "@plys/libraries/unit-of-work/*": ["packages/unit-of-work/*"],
+      "@plys/libraries/ai-provider-key": ["packages/ai-provider-key/index.ts"],
+      "@plys/libraries/profiles-port": ["packages/profiles-port/index.ts"]
+    }
+  }
+}

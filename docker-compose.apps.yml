@@ -1,0 +1,127 @@
+version: '3.8'
+
+x-app-common: &app-common
+  restart: unless-stopped
+  networks: [internal]
+
+services:
+  identity-service:
+    <<: *app-common
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: identity-service
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  profiles-service:
+    <<: *app-common
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: profiles-service
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  projects-service:
+    <<: *app-common
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: projects-service
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  finance-service:
+    <<: *app-common
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: finance-service
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  platform-service:
+    <<: *app-common
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: platform-service
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  api-gateway:
+    <<: *app-common
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: api-gateway
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-.env.example}
+    ports:
+      - '${PORT:-3000}:3000'
+    depends_on:
+      - identity-service
+      - profiles-service
+      - projects-service
+      - finance-service
+      - platform-service
+
+  migrate:
+    profiles: [migrate]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: migrate
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'

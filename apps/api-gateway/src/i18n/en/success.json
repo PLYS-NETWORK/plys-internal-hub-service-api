@@ -1,0 +1,84 @@
+{
+  "ok": "OK",
+  "created": "Created successfully",
+  "updated": "Updated successfully",
+  "deleted": "Deleted successfully",
+  "verification_resent": "Verification email sent. Please check your inbox.",
+  "business_profile": {
+    "created": "Business profile created successfully.",
+    "updated": "Business profile updated successfully.",
+    "partner_platform_updated": "Partner-platform flag updated.",
+    "payment_credit_updated": "Payment-credit flag updated."
+  },
+  "consultant_profile": {
+    "created": "Consultant profile created successfully.",
+    "updated": "Consultant profile updated successfully.",
+    "verified": "Consultant profile verified successfully."
+  },
+  "project": {
+    "created": "Project created successfully.",
+    "updated": "Project updated successfully.",
+    "status_updated": "Project status updated successfully.",
+    "published": "Project published successfully.",
+    "re_published": "Project reverted to configured for re-publish.",
+    "deleted": "Project deleted successfully."
+  },
+  "membership": {
+    "applied": "You have successfully joined the project.",
+    "left": "You have left the project."
+  },
+  "task": {
+    "created": "Task created successfully.",
+    "result_created": "Result created successfully.",
+    "result_updated": "Result updated successfully.",
+    "result_deleted": "Result deleted successfully.",
+    "attachment_created": "Attachments uploaded successfully.",
+    "attachment_updated": "Attachment updated successfully.",
+    "attachment_deleted": "Attachment deleted successfully.",
+    "assigned": "Task assigned successfully.",
+    "unassigned": "Task unassigned successfully.",
+    "submitted_for_review": "Task submitted for review."
+  },
+  "billing": {
+    "invoice_checkout_initiated": "Invoice payment initiated."
+  },
+  "payment": {
+    "top_up_resumed": "Top-up resumed.",
+    "top_up_cancelled": "Top-up cancelled.",
+    "withdraw_cancelled": "Withdrawal successfully cancelled."
+  },
+  "notification": {
+    "read": "Notification marked as read.",
+    "read_all": "All notifications marked as read."
+  },
+  "admin": {
+    "allowed_email_invited": "Invitation sent to the admin email.",
+    "allowed_email_active_updated": "Allow-list entry updated."
+  },
+  "consultant_application": {
+    "profile_submitted": "Profile submitted. Your interview questions are being prepared.",
+    "answer_saved": "Answer saved.",
+    "interview_submitted": "Interview submitted successfully. You will be notified when your application is reviewed.",
+    "evaluation_started": "Evaluation pipeline started.",
+    "manual_evaluation_submitted": "Manual evaluation submitted.",
+    "decided": "Application decision recorded."
+  },
+  "consultant_onboarding": {
+    "profile_submitted": "Onboarding profile submitted. Please answer the interview questions to finish.",
+    "interview_submitted": "Onboarding submitted. We will notify you once an admin reviews it.",
+    "approved": "Onboarding approved.",
+    "rejected": "Onboarding rejected."
+  },
+  "onboarding_question": {
+    "created": "Onboarding question created.",
+    "updated": "Onboarding question updated.",
+    "active_updated": "Question status updated.",
+    "deleted": "Onboarding question removed.",
+    "reordered": "Active onboarding questions reordered."
+  },
+  "skill_exam": {
+    "started": "Skill exam started. Questions are being generated.",
+    "answer_saved": "Answer saved.",
+    "submitted": "Skill exam submitted. You will be notified once evaluation is complete."
+  }
+}

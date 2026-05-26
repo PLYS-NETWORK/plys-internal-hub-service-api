@@ -5,6 +5,36 @@ on:
     branches:
       - develop
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy (default: develop)'
+        required: false
+        default: 'develop'
+      service:
+        description: 'Service to deploy (all = full stack)'
+        type: choice
+        options:
+          - all
+          - api-gateway
+          - identity-service
+          - profiles-service
+          - projects-service
+          - finance-service
+          - platform-service
+        default: all
+      run_migrations:
+        description: 'Run DB migrations before restart (uncheck for single-service hotfix deploys)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository }}
+  DEPLOY_ENV: dev
+  APP_DIR: /apps/internal-hub-be/dev
 
 jobs:
   deploy:
@@ -13,44 +43,115 @@ jobs:
     environment: dev
 
     steps:
-      # Always deploy `develop` — the dev environment tracks that branch
-      # regardless of which branch the manual trigger was launched from.
       - name: Checkout code
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
         with:
-          ref: develop
+          ref: ${{ github.event.inputs.branch || github.ref }}
 
-      - name: Setup Node + pnpm
-        uses: ./.github/actions/deploy-dev/setup
+      - name: Resolve deploy parameters
+        id: deploy
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            SERVICE="all"
+            RUN_MIGRATIONS="true"
+          else
+            SERVICE="${{ github.event.inputs.service }}"
+            RUN_MIGRATIONS="${{ github.event.inputs.run_migrations }}"
+          fi
+          echo "service=${SERVICE}" >> "$GITHUB_OUTPUT"
+          echo "run_migrations=${RUN_MIGRATIONS}" >> "$GITHUB_OUTPUT"
+          if [ "$SERVICE" = "all" ]; then
+            echo "build_services=all" >> "$GITHUB_OUTPUT"
+          else
+            echo "build_services=${SERVICE}" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Install & Build
-        uses: ./.github/actions/deploy-dev/install-build
+      - name: Resolve image tag
+        id: meta
+        shell: bash
+        run: |
+          BRANCH="${{ github.event.inputs.branch || github.ref_name }}"
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          SAFE_BRANCH="${BRANCH//\//-}"
+          echo "tag=${SAFE_BRANCH}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
 
-      - name: Prepare deploy package
-        uses: ./.github/actions/deploy-dev/package
+      - name: Build and push Docker images
+        uses: ./.github/actions/docker/build-push
+        with:
+          image-tag: ${{ steps.meta.outputs.tag }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+          services: ${{ steps.deploy.outputs.build_services }}
+          include-migrate: ${{ steps.deploy.outputs.run_migrations == 'true' && 'true' || 'false' }}
+
+      - name: Render .env.dev
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          SSO_TOKEN_ENCRYPTION_KEY: ${{ secrets.SSO_TOKEN_ENCRYPTION_KEY }}
+          PUBLIC_ENDPOINT_API_KEY: ${{ secrets.PUBLIC_ENDPOINT_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          POLAR_ACCESS_TOKEN: ${{ secrets.POLAR_ACCESS_TOKEN }}
+          POLAR_WEBHOOK_SECRET: ${{ secrets.POLAR_WEBHOOK_SECRET }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          AWS_S3_ACCESS_KEY_ID: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
+          AWS_S3_SECRET_ACCESS_KEY: ${{ secrets.AWS_S3_SECRET_ACCESS_KEY }}
+          COPYLEAKS_API_KEY: ${{ secrets.COPYLEAKS_API_KEY }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          AI_KEYS_MASTER_KEY_v1: ${{ secrets.AI_KEYS_MASTER_KEY_v1 }}
+          FE_BFF_SECRET_v1: ${{ secrets.FE_BFF_SECRET_v1 }}
+        run: node scripts/render-deploy-env.mjs --deploy-env dev --output deploy/.env.dev
+
+      - name: Prepare deploy bundle
+        uses: ./.github/actions/deploy/prepare-bundle
+        with:
+          deploy-env: dev
+          image-tag: ${{ steps.meta.outputs.tag }}
+          image-registry: ${{ env.IMAGE_REGISTRY }}
+          rendered-env-path: deploy/.env.dev
+          service: ${{ steps.deploy.outputs.service }}
 
       - name: Upload to VPS
-        uses: ./.github/actions/deploy-dev/upload
+        uses: ./.github/actions/deploy/upload-bundle
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
+          target-dir: ${{ env.APP_DIR }}/current
 
-      - name: Restart app on VPS
-        uses: ./.github/actions/deploy-dev/restart
+      - name: Deploy on VPS
+        uses: ./.github/actions/deploy/docker-up
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
+          deploy-env: dev
+          app-dir: ${{ env.APP_DIR }}
+          ghcr-token: ${{ secrets.GHCR_PULL_TOKEN }}
+          service: ${{ steps.deploy.outputs.service }}
+          image-tag: ${{ steps.meta.outputs.tag }}
+          image-registry: ${{ env.IMAGE_REGISTRY }}
+          run-migrations: ${{ steps.deploy.outputs.run_migrations }}
 
       - name: Health check
-        uses: ./.github/actions/deploy-dev/health-check
+        run: |
+          sleep 15
+          curl --fail --silent --max-time 15 https://api-dev.lona.my/v1/health \
+            | grep '"status":"ok"' \
+            || (echo "Health check failed" && exit 1)
+          echo "Health check passed"
 
       - name: Deployment summary
         if: success()
-        uses: ./.github/actions/deploy-dev/summary
-        with:
-          branch: develop
-          actor: ${{ github.actor }}
+        run: |
+          echo "## Dev deployment succeeded" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Branch: \`${{ github.event.inputs.branch || github.ref_name }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Service: \`${{ steps.deploy.outputs.service }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Image tag: \`${{ steps.meta.outputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Migrations: \`${{ steps.deploy.outputs.run_migrations }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Actor: @${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"

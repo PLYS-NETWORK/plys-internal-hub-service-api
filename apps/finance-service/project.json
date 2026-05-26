@@ -1,0 +1,31 @@
+{
+  "name": "finance-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/finance-service/src",
+  "projectType": "application",
+  "tags": ["scope:app", "type:service", "domain:finance"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "nest build",
+        "cwd": "apps/finance-service"
+      },
+      "dependsOn": ["^build"]
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "NODE_ENV=development nest start --watch",
+        "cwd": "apps/finance-service"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint \"src/**/*.ts\" --max-warnings=0",
+        "cwd": "apps/finance-service"
+      }
+    }
+  }
+}

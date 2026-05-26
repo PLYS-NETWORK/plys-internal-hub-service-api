@@ -1,0 +1,192 @@
+{
+  "generic": {
+    "bad_request": "Bad request",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Forbidden",
+    "not_found": "Not found",
+    "conflict": "Conflict",
+    "internal_server_error": "Something went wrong",
+    "validation_failed": "Validation failed"
+  },
+  "auth": {
+    "invalid_credentials": "Invalid credentials",
+    "token_expired": "Token expired",
+    "token_invalid": "Token invalid",
+    "token_already_used": "Token has already been used",
+    "device_mismatch": "Unrecognized device",
+    "email_not_verified": "Email is not verified",
+    "email_already_registered": "Email is already registered",
+    "email_pending_verification": "A verification email has already been sent. Please check your inbox or spam folder.",
+    "user_not_found": "User not found",
+    "account_inactive": "Account is inactive",
+    "account_locked": "Account temporarily locked due to too many failed login attempts. Try again later or reset your password.",
+    "reset_token_invalid": "Password reset code is invalid",
+    "reset_token_expired": "Password reset code has expired",
+    "oauth_state_invalid": "Invalid OAuth callback. Please retry the sign-in flow from the start.",
+    "rate_limited": "Too many requests. Please slow down and try again in a moment.",
+    "sso_exchange_invalid": "SSO exchange code is invalid or has expired",
+    "sso_email_missing": "SSO provider did not return an email address",
+    "api_key_invalid": "Invalid or missing API key."
+  },
+  "business_profile": {
+    "not_found": "Business profile not found.",
+    "already_exists": "A business profile already exists for this user.",
+    "tax_id_already_exists": "A business profile with this tax ID already exists for the selected country."
+  },
+  "consultant_profile": {
+    "not_found": "Consultant profile not found.",
+    "already_exists": "A consultant profile already exists for this user."
+  },
+  "project": {
+    "not_found": "Project not found.",
+    "requires_tasks_for_configured": "Project must have at least one task before it can be marked as configured.",
+    "cannot_be_edited": "Project cannot be edited in its current status.",
+    "cannot_publish": "This project cannot be published in its current state.",
+    "insufficient_balance": "Insufficient account balance to publish this project.",
+    "invalid_task_price": "Project cannot be published — every task must have a price greater than zero.",
+    "minimum_tasks_not_met": "Project cannot be published — a minimum of 5 tasks is required.",
+    "minimum_cost_not_met": "Project cannot be published — the total project cost must be at least $150.",
+    "recall_transaction_not_found": "Original publication transaction not found for recall refund.",
+    "cannot_be_deleted": "Only draft, setting-up, or configured projects can be deleted.",
+    "invalid_status_transition": "Invalid project status transition.",
+    "code_already_exists": "A project with this code already exists for your business.",
+    "already_member": "You are already an active member of this project.",
+    "membership_banned": "You can no longer join this project.",
+    "full": "This project has already reached its consultant capacity.",
+    "not_joinable": "This project is not accepting new members in its current state.",
+    "skill_match_insufficient": "Your skills match less than 50% of this project's required skills.",
+    "concurrent_limit_reached": "You have reached the maximum number of concurrent projects.",
+    "not_member": "You are not an active member of this project.",
+    "leave_blocked_by_active_tasks": "You cannot leave this project while you have tasks still in progress."
+  },
+  "task": {
+    "not_found": "Task not found.",
+    "invalid_status_transition": "Invalid task status transition.",
+    "already_assigned": "This task is already assigned to a consultant.",
+    "project_not_in_progress": "Tasks can only be managed for in-progress projects.",
+    "result_not_found": "Task result not found.",
+    "result_forbidden": "You do not have permission to perform this action on this result.",
+    "result_not_assignee": "Only the consultant assigned to this task can manage its results.",
+    "result_file_not_owned": "One or more attached files do not belong to you or do not exist.",
+    "result_empty_update": "Provide remarks or file_ids to update.",
+    "consultant_already_in_progress": "You already have a task in progress. Complete or pause it before starting another.",
+    "attachment_not_found": "Task attachment not found.",
+    "attachment_forbidden": "You do not have permission to manage attachments on this task.",
+    "attachment_file_not_owned": "One or more attached files do not belong to you or do not exist.",
+    "attachment_invalid_status": "Attachments cannot be modified for tasks in this status.",
+    "not_claimable": "This task cannot be claimed right now.",
+    "not_owned_by_consultant": "You are not assigned to this task.",
+    "invalid_state_for_unassign": "This task cannot be unassigned in its current state.",
+    "invalid_state_for_submit": "This task cannot be submitted for review in its current state.",
+    "due_date_invalid": "Due date must be a valid future date."
+  },
+  "payment": {
+    "insufficient_balance": "Insufficient account balance.",
+    "unsupported_platform": "Unsupported payment platform.",
+    "checkout_failed": "Payment checkout failed.",
+    "transfer_failed": "Payment transfer failed.",
+    "transaction_not_found": "Transaction not found.",
+    "transaction_not_owned": "You do not have access to this transaction.",
+    "transaction_not_pending": "This transaction cannot be modified in its current state."
+  },
+  "database": {
+    "unique_violation": "A record with these values already exists",
+    "foreign_key_violation": "Referenced record does not exist",
+    "not_null_violation": "A required field is missing"
+  },
+  "billing": {
+    "period_not_found": "Billing period not found.",
+    "invoice_not_found": "Invoice not found.",
+    "invoice_already_paid": "This invoice has already been paid.",
+    "invoice_not_owned": "You do not have access to this invoice.",
+    "checkout_failed": "Failed to create payment session for invoice."
+  },
+  "file": {
+    "not_found": "File not found.",
+    "upload_failed": "File upload failed.",
+    "invalid_type": "File type is not allowed.",
+    "size_exceeded": "File exceeds the maximum allowed size.",
+    "storage_error": "File storage backend failed.",
+    "delete_failed": "Failed to delete file.",
+    "quota_exceeded": "Your storage quota has been exceeded.",
+    "forbidden": "You do not have permission to access this file.",
+    "dimensions_exceeded": "Image dimensions exceed the maximum allowed."
+  },
+  "notification": {
+    "not_found": "Notification not found.",
+    "forbidden": "You do not have access to this notification."
+  },
+  "ai_provider_key": {
+    "not_configured": "No active AI provider key is configured. Please contact an administrator.",
+    "not_found": "AI provider key not found.",
+    "active_requires_replacement": "Cannot revoke the only active key for this provider. Activate a replacement first.",
+    "cipher_failed": "Failed to encrypt or decrypt an AI provider key."
+  },
+  "chat_session": {
+    "not_found": "Chat session not found.",
+    "not_active": "Cannot modify a chat session that is not active.",
+    "mode_not_allowed": "Selected chat mode is not allowed for the project's current status.",
+    "message_limit_exceeded": "Chat session has reached its message cap; start a new session to continue."
+  },
+  "ai_context": {
+    "not_found": "AI context not initialised for this project.",
+    "derived_html_forbidden": "Derived AI context fields must be plain text — HTML markers are not accepted."
+  },
+  "idempotency": {
+    "body_mismatch": "Idempotency-Key reused with a different request body."
+  },
+  "ai_sync": {
+    "task_rejected": "One or more tasks in the batch could not be applied for the project's current status.",
+    "skill_not_found": "One or more skill IDs do not exist."
+  },
+  "project_status": {
+    "price_gate_failed": "Cannot transition to configured: one or more tasks have price = 0."
+  },
+  "admin": {
+    "otp_invalid": "The verification code is invalid or has expired.",
+    "otp_locked": "Your account has been temporarily locked due to too many failed attempts. Please try again later.",
+    "resend_limit": "You have requested too many codes. Please wait before requesting a new one.",
+    "email_not_allowed": "This email is not authorized to access the admin platform.",
+    "allowed_email_already_exists": "This email is already on the admin allow-list.",
+    "allowed_email_revoked": "This email is on the admin allow-list but has been revoked. Re-activate it instead of inviting again.",
+    "allowed_email_not_found": "Allow-list entry not found.",
+    "allowed_email_cannot_revoke_self": "You cannot change the active status of your own admin allow-list entry."
+  },
+  "consultant_application": {
+    "not_found": "Consultant application not found.",
+    "blocked": "Your account is blocked from applying until {{blocked_until}}. Please try again after that date.",
+    "invalid_status": "This action is not allowed for the current application status.",
+    "already_active": "You already have an active application in progress.",
+    "interview_not_ready": "Your interview questions are not ready yet. Please wait for them to be generated.",
+    "already_submitted": "Your interview has already been submitted.",
+    "incomplete_answers": "All 30 interview questions must be answered before submitting."
+  },
+  "consultant_onboarding": {
+    "not_found": "Consultant onboarding not found.",
+    "blocked": "Your account is blocked from onboarding until {{blocked_until}}. Please try again after that date.",
+    "invalid_status": "This action is not allowed for the current onboarding status.",
+    "incomplete_answers": "All onboarding questions must be answered before submitting.",
+    "not_approved": "Your onboarding has not been approved yet. You cannot register skill exams.",
+    "answers_coverage": "Submitted answers must cover every active onboarding question exactly once.",
+    "invalid_answer": "An answer does not match the expected shape for its question type."
+  },
+  "onboarding_question": {
+    "not_found": "Onboarding question not found.",
+    "invalid_options": "Question options are invalid for the chosen type. TEXT must have no options; RADIO and CHECKBOX need at least two options with unique values.",
+    "type_change_forbidden": "Question type cannot be changed.",
+    "reorder_set_mismatch": "Reorder list must contain every active question exactly once. Inactive or soft-deleted ids are not allowed."
+  },
+  "skill_exam": {
+    "not_found": "Skill exam not found.",
+    "user_banned": "Your account has been permanently disabled due to repeated AI-generated content violations.",
+    "already_passed": "You have already passed this skill exam.",
+    "already_in_progress": "You already have an in-progress exam for this skill.",
+    "cooldown_active": "Your retake cooldown is active until {{cooldown_until}}.",
+    "parallel_limit_reached": "You may have only one skill exam in progress at a time.",
+    "invalid_status": "This action is not allowed for the current skill exam status.",
+    "incomplete_answers": "All 20 skill exam questions must be answered before submitting.",
+    "not_ready": "Skill exam questions are not ready yet.",
+    "expired": "This skill exam has expired. The 60-minute window elapsed before submission.",
+    "taking_blocked": "You can take another exam after {{blocked_until}}. The 2-day pause is triggered by 3 expired attempts."
+  }
+}
