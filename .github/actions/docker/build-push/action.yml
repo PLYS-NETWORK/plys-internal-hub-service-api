@@ -47,13 +47,15 @@ runs:
           fi
         fi
 
+        REGISTRY="$(echo "${{ inputs.registry }}" | tr '[:upper:]' '[:lower:]')"
+
         for SERVICE in $BUILD_LIST; do
           echo "==> Building ${SERVICE}..."
           docker buildx build \
             --platform linux/amd64 \
             --build-arg SERVICE="${SERVICE}" \
-            --tag "${{ inputs.registry }}/${SERVICE}:${{ inputs.image-tag }}" \
-            --tag "${{ inputs.registry }}/${SERVICE}:latest" \
+            --tag "${REGISTRY}/${SERVICE}:${{ inputs.image-tag }}" \
+            --tag "${REGISTRY}/${SERVICE}:latest" \
             --push \
             .
         done
