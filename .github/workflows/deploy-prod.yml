@@ -33,7 +33,6 @@ permissions:
   packages: write
 
 env:
-  IMAGE_REGISTRY: ghcr.io/${{ github.repository }}
   DEPLOY_ENV: prod
   APP_DIR: /apps/internal-hub-be/prod
 
@@ -62,6 +61,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch }}
+
+      - name: Set image registry
+        uses: ./.github/actions/deploy/set-image-registry
 
       - name: Resolve deploy parameters
         id: deploy

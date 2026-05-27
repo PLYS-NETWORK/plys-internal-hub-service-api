@@ -59,7 +59,7 @@ runs:
           LOG_DIR="${APP_DIR}/logs"
           SERVICE="${{ inputs.service }}"
           IMAGE_TAG="${{ inputs.image-tag }}"
-          IMAGE_REGISTRY="${{ inputs.image-registry }}"
+          IMAGE_REGISTRY="$(echo "${{ inputs.image-registry }}" | tr '[:upper:]' '[:lower:]')"
           RUN_MIGRATIONS="${{ inputs.run-migrations }}"
 
           COMPOSE_FILES="-f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.deploy.${DEPLOY_ENV}.yml"

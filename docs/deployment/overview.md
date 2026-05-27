@@ -44,16 +44,16 @@ If `ALLOWED_ORIGINS` is also injected as a GitHub secret at deploy time, update 
 
 Compose image tags live in **`current/.env`** on the VPS (not committed):
 
-| Variable                     | Service                                |
-| ---------------------------- | -------------------------------------- |
-| `IMAGE_REGISTRY`             | GHCR prefix, e.g. `ghcr.io/owner/repo` |
-| `IMAGE_TAG_API_GATEWAY`      | api-gateway                            |
-| `IMAGE_TAG_IDENTITY_SERVICE` | identity-service                       |
-| `IMAGE_TAG_PROFILES_SERVICE` | profiles-service                       |
-| `IMAGE_TAG_PROJECTS_SERVICE` | projects-service                       |
-| `IMAGE_TAG_FINANCE_SERVICE`  | finance-service                        |
-| `IMAGE_TAG_PLATFORM_SERVICE` | platform-service                       |
-| `IMAGE_TAG_MIGRATE`          | migrate (one-shot)                     |
+| Variable                     | Service                                           |
+| ---------------------------- | ------------------------------------------------- |
+| `IMAGE_REGISTRY`             | GHCR prefix, lowercase, e.g. `ghcr.io/owner/repo` |
+| `IMAGE_TAG_API_GATEWAY`      | api-gateway                                       |
+| `IMAGE_TAG_IDENTITY_SERVICE` | identity-service                                  |
+| `IMAGE_TAG_PROFILES_SERVICE` | profiles-service                                  |
+| `IMAGE_TAG_PROJECTS_SERVICE` | projects-service                                  |
+| `IMAGE_TAG_FINANCE_SERVICE`  | finance-service                                   |
+| `IMAGE_TAG_PLATFORM_SERVICE` | platform-service                                  |
+| `IMAGE_TAG_MIGRATE`          | migrate (one-shot)                                |
 
 Full deploy sets all tags to the same SHA. Single-service deploy updates only one tag.
 

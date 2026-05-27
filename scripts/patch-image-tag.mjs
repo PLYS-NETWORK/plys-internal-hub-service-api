@@ -69,7 +69,8 @@ function main() {
     : [];
 
   if (registry) {
-    upsertEnvLine(lines, 'IMAGE_REGISTRY', registry);
+    // Docker requires lowercase repository paths (GitHub org names may be mixed case).
+    upsertEnvLine(lines, 'IMAGE_REGISTRY', registry.toLowerCase());
   }
 
   if (service === 'all') {

@@ -128,6 +128,7 @@ Ensure `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `REDIS_HOST`, etc. point to your ext
 CI writes `current/.env` on the VPS with:
 
 ```env
+# Lowercase only — e.g. ghcr.io/plys-network/plys-internal-hub-service-api (CI normalizes automatically).
 IMAGE_REGISTRY=ghcr.io/<github-owner>/<repo-name>
 IMAGE_TAG_API_GATEWAY=develop-abc123
 ...

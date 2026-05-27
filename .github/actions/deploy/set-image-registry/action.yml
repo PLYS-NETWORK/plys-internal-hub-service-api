@@ -1,0 +1,14 @@
+name: 'Set GHCR image registry'
+description: 'Export IMAGE_REGISTRY=ghcr.io/<owner>/<repo> in lowercase (required by Docker)'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set IMAGE_REGISTRY
+      shell: bash
+      run: |
+        set -euo pipefail
+        REPO_LC="$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
+        REGISTRY="ghcr.io/${REPO_LC}"
+        echo "IMAGE_REGISTRY=${REGISTRY}" >> "$GITHUB_ENV"
+        echo "Using image registry: ${REGISTRY}"
