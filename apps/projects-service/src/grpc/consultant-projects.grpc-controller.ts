@@ -3,7 +3,7 @@ import { ConsultantExploreController } from '@modules/consultant-projects/contro
 import { ConsultantJoinedProjectsController } from '@modules/consultant-projects/controllers/consultant-joined-projects.controller';
 import { ConsultantMembershipController } from '@modules/consultant-projects/controllers/consultant-membership.controller';
 import { ConsultantProjectTasksController } from '@modules/consultant-projects/controllers/consultant-project-tasks.controller';
-import { Injectable } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import {
   createControllerBridgeHandlers,
@@ -12,7 +12,7 @@ import {
 } from '@plys/libraries/common-nest/grpc';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 
-@Injectable()
+@Controller()
 export class ConsultantProjectsGrpcController extends GrpcBridgeBase {
   protected readonly handlers: Record<
     string,

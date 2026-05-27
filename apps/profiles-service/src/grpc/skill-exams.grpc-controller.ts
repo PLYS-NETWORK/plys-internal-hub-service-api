@@ -1,7 +1,7 @@
 import { Metadata } from '@grpc/grpc-js';
 import { AdminConsultantSkillExamController } from '@modules/admin-consultant-skill-exam/controllers/admin-consultant-skill-exam.controller';
 import { ConsultantSkillExamController } from '@modules/consultant-skill-exam/controllers/consultant-skill-exam.controller';
-import { Injectable } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import {
   createControllerBridgeHandlers,
@@ -10,7 +10,7 @@ import {
 } from '@plys/libraries/common-nest/grpc';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 
-@Injectable()
+@Controller()
 export class SkillExamsGrpcController extends GrpcBridgeBase {
   protected readonly handlers: Record<
     string,

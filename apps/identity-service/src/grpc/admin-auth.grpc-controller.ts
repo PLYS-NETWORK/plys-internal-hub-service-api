@@ -3,7 +3,7 @@ import { AdminRequestOtpDto, AdminVerifyOtpDto } from '@modules/admin-auth/dto/r
 import { AdminAuthService } from '@modules/admin-auth/services/admin-auth.service';
 import { AuthResponseDto } from '@modules/auth/dto/responses/auth-response.dto';
 import { ISessionContext } from '@modules/auth/interfaces/auth-service.interface';
-import { Injectable } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import {
   buildSuccessResponse,
@@ -12,7 +12,7 @@ import {
 } from '@plys/libraries/common-nest/grpc';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 
-@Injectable()
+@Controller()
 export class AdminAuthGrpcController extends GrpcBridgeBase {
   protected readonly handlers: Record<
     string,

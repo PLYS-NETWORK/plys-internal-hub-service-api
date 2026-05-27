@@ -1,5 +1,3 @@
-import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-type.enum';
-import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
@@ -9,6 +7,7 @@ import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 import { maskEmailForLog } from '@plys/libraries/common-nest/utils/mask-email.util';
 import { ActivePlatform, AuthTokenType } from '@plys/libraries/database/enums';
+import { NOTIFICATION_TYPES, NotificationDispatcherService } from '@plys/libraries/notifications';
 import { IUnitOfWork } from '@plys/libraries/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@plys/libraries/unit-of-work/unit-of-work.service';
 import * as bcrypt from 'bcryptjs';

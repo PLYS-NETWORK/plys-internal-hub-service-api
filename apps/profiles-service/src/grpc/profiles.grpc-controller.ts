@@ -3,7 +3,7 @@ import { BusinessProfilesController } from '@modules/profiles/business/business-
 import { BusinessProfilesAdminController } from '@modules/profiles/business/business-profiles-admin.controller';
 import { ConsultantProfilesController } from '@modules/profiles/consultant/consultant-profiles.controller';
 import { ConsultantProfilesAdminController } from '@modules/profiles/consultant/consultant-profiles-admin.controller';
-import { Injectable } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import {
   createControllerBridgeHandlers,
@@ -12,7 +12,7 @@ import {
 } from '@plys/libraries/common-nest/grpc';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 
-@Injectable()
+@Controller()
 export class ProfilesGrpcController extends GrpcBridgeBase {
   protected readonly handlers: Record<
     string,

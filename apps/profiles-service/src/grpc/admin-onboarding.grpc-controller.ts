@@ -1,7 +1,7 @@
 import { Metadata } from '@grpc/grpc-js';
 import { AdminConsultantOnboardingController } from '@modules/admin-consultant-onboarding/controllers/admin-consultant-onboarding.controller';
 import { AdminOnboardingQuestionsController } from '@modules/admin-onboarding-questions/controllers/admin-onboarding-questions.controller';
-import { Injectable } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import {
   createControllerBridgeHandlers,
@@ -10,7 +10,7 @@ import {
 } from '@plys/libraries/common-nest/grpc';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 
-@Injectable()
+@Controller()
 export class AdminOnboardingGrpcController extends GrpcBridgeBase {
   protected readonly handlers: Record<
     string,

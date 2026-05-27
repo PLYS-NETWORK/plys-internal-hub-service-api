@@ -1,11 +1,11 @@
 import { Metadata } from '@grpc/grpc-js';
-import { Injectable } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { GrpcBridgeBase, IHttpResponse } from '@plys/libraries/common-nest/grpc';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 
 /** Placeholder bridge — UsersController has no HTTP routes yet. */
-@Injectable()
+@Controller()
 export class UsersGrpcController extends GrpcBridgeBase {
   protected readonly handlers = {};
 

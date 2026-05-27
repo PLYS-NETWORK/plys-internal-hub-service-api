@@ -13,11 +13,13 @@ import { JwtModule } from '@nestjs/jwt';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AiProviderKeyModule } from '@plys/libraries/ai-provider-key';
+import { AwsS3Module } from '@plys/libraries/common-nest/modules/aws-s3';
 import { EmailModule } from '@plys/libraries/common-nest/modules/email';
 import {
   EnvironmentsModule,
   EnvironmentsService,
 } from '@plys/libraries/common-nest/modules/environments';
+import { FileStorageModule } from '@plys/libraries/common-nest/modules/file-storage';
 import { I18nModule } from '@plys/libraries/common-nest/modules/i18n';
 import { appWinstonOptions } from '@plys/libraries/common-nest/modules/logger';
 import { RedisModule } from '@plys/libraries/common-nest/modules/redis';
@@ -74,6 +76,8 @@ import {
     I18nModule,
     RequestContextModule,
     RedisModule,
+    AwsS3Module,
+    FileStorageModule,
     EmailModule,
     AiProviderKeyModule,
     ProfilesUnitOfWorkModule,

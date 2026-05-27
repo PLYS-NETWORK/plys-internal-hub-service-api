@@ -1,7 +1,7 @@
 import { Metadata } from '@grpc/grpc-js';
 import { ChatSessionsController } from '@modules/project-chat-session/controllers/chat-sessions.controller';
 import { ProjectSessionsController } from '@modules/project-chat-session/controllers/project-sessions.controller';
-import { Injectable } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import {
   createControllerBridgeHandlers,
@@ -10,7 +10,7 @@ import {
 } from '@plys/libraries/common-nest/grpc';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 
-@Injectable()
+@Controller()
 export class ChatSessionsGrpcController extends GrpcBridgeBase {
   protected readonly handlers: Record<
     string,

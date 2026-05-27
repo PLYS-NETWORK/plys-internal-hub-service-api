@@ -1,5 +1,5 @@
 import { Metadata } from '@grpc/grpc-js';
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Controller, HttpStatus } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { AiProviderKeyAdminController } from '@plys/libraries/ai-provider-key';
 import { AiProviderKeyBffController } from '@plys/libraries/ai-provider-key';
@@ -11,7 +11,7 @@ import {
 } from '@plys/libraries/common-nest/grpc';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 
-@Injectable()
+@Controller()
 export class AiProviderKeysGrpcController extends GrpcBridgeBase {
   protected readonly handlers: Record<
     string,

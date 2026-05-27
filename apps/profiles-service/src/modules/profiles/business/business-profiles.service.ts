@@ -1,11 +1,10 @@
-import { NOTIFICATION_TYPES } from '@modules/notifications/enums/notification-type.enum';
-import { NotificationDispatcherService } from '@modules/notifications/services/notification-dispatcher.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
 import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 import { BusinessProfile } from '@plys/libraries/database/entities';
+import { NOTIFICATION_TYPES, NotificationDispatcherService } from '@plys/libraries/notifications';
 import { ProfilesUnitOfWorkService } from '@plys/libraries/unit-of-work/profiles-unit-of-work.service';
 import { plainToInstance } from 'class-transformer';
 

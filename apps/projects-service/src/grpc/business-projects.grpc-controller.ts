@@ -6,7 +6,7 @@ import { BusinessProjectOverviewController } from '@modules/business-projects/co
 import { BusinessProjectsController } from '@modules/business-projects/controllers/projects.controller';
 import { SettingsController } from '@modules/business-projects/controllers/settings.controller';
 import { TaskAttachmentsController } from '@modules/business-projects/controllers/task-attachments.controller';
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Controller, HttpStatus } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import {
   buildSuccessResponse,
@@ -17,7 +17,7 @@ import {
 } from '@plys/libraries/common-nest/grpc';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 
-@Injectable()
+@Controller()
 export class BusinessProjectsGrpcController extends GrpcBridgeBase {
   protected readonly handlers: Record<
     string,

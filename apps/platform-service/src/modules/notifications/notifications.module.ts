@@ -1,6 +1,7 @@
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+import { I18nModule } from '@plys/libraries/common-nest/modules/i18n';
 import { NotificationRealtimeModule } from '@plys/libraries/common-nest/modules/notifications-realtime';
 import { RedisModule } from '@plys/libraries/common-nest/modules/redis';
 import { RequestContextModule } from '@plys/libraries/common-nest/modules/request-context';
@@ -22,6 +23,7 @@ import { NotificationsService } from './services/notifications.service';
     RedisModule,
     RequestContextModule,
     NotificationRealtimeModule,
+    I18nModule,
     // Standalone JwtModule registration (matches AuthModule's pattern) — secret
     // and claim options are passed per-call inside the gateway. Registering here
     // (instead of importing AuthModule) avoids a circular dependency once

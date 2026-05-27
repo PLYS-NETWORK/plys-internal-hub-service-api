@@ -3,7 +3,7 @@ import { AdminPaymentsController } from '@modules/payments/admin/admin-payments.
 import { BusinessPaymentsController } from '@modules/payments/business/business-payments.controller';
 import { ConsultantPaymentsController } from '@modules/payments/consultant/consultant-payments.controller';
 import { PaymentsController } from '@modules/payments/payments.controller';
-import { Injectable } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import {
   createControllerBridgeHandlers,
@@ -12,7 +12,7 @@ import {
 } from '@plys/libraries/common-nest/grpc';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 
-@Injectable()
+@Controller()
 export class PaymentsGrpcController extends GrpcBridgeBase {
   protected readonly handlers: Record<
     string,

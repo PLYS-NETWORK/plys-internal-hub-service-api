@@ -1,7 +1,7 @@
 import { Metadata } from '@grpc/grpc-js';
 import { FilesController } from '@modules/files/files.controller';
 import { FilesService } from '@modules/files/files.service';
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Controller, HttpStatus } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import {
   buildRedirectResponse,
@@ -25,7 +25,7 @@ interface IUploadRequestBody {
   purpose?: string;
 }
 
-@Injectable()
+@Controller()
 export class FilesGrpcController extends GrpcBridgeBase {
   protected readonly handlers: Record<
     string,

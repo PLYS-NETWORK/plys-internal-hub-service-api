@@ -1,6 +1,6 @@
 import { Metadata } from '@grpc/grpc-js';
 import { HealthController } from '@modules/health/health.controller';
-import { Injectable } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import {
   createControllerBridgeHandlers,
@@ -17,7 +17,7 @@ interface IHealthCheckResponse {
   status: number;
 }
 
-@Injectable()
+@Controller()
 export class HealthGrpcController extends GrpcBridgeBase {
   protected readonly handlers: Record<
     string,

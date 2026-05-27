@@ -1,6 +1,6 @@
 import { Metadata } from '@grpc/grpc-js';
 import { ExploreController } from '@modules/explore/explore.controller';
-import { Injectable } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import {
   createControllerBridgeHandlers,
@@ -9,7 +9,7 @@ import {
 } from '@plys/libraries/common-nest/grpc';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 
-@Injectable()
+@Controller()
 export class ExploreGrpcController extends GrpcBridgeBase {
   protected readonly handlers: Record<
     string,

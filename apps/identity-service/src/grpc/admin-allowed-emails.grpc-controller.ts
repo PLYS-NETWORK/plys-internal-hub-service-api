@@ -4,7 +4,7 @@ import { ListAdminAllowedEmailsDto } from '@modules/admin-auth/dto/requests/list
 import { SetBooleanFlagDto } from '@modules/admin-auth/dto/requests/set-boolean-flag.dto';
 import { AdminAllowedEmailResponseDto } from '@modules/admin-auth/dto/responses/admin-allowed-email-response.dto';
 import { AdminAllowedEmailsService } from '@modules/admin-auth/services/admin-allowed-emails.service';
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Controller, HttpStatus } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { PageDto } from '@plys/libraries/common-nest/dto/page.dto';
 import {
@@ -14,7 +14,7 @@ import {
 } from '@plys/libraries/common-nest/grpc';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 
-@Injectable()
+@Controller()
 export class AdminAllowedEmailsGrpcController extends GrpcBridgeBase {
   protected readonly handlers: Record<
     string,

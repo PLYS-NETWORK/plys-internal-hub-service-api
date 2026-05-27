@@ -16,7 +16,7 @@ import { ISessionContext } from '@modules/auth/interfaces/auth-service.interface
 import { OAuthStateStore } from '@modules/auth/services/oauth-state-store.service';
 import { SsoCodeStore } from '@modules/auth/services/sso-code-store.service';
 import { GoogleProfile } from '@modules/auth/strategies/google.strategy';
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Controller, HttpStatus } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import {
   buildRedirectResponse,
@@ -29,7 +29,7 @@ import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environ
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 import { ActivePlatform, SsoProvider } from '@plys/libraries/database/enums';
 
-@Injectable()
+@Controller()
 export class AuthGrpcController extends GrpcBridgeBase {
   protected readonly handlers: Record<
     string,
