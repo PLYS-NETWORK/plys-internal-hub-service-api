@@ -111,17 +111,25 @@ runs:
               docker compose $COMPOSE_FILES --profile migrate run --rm migrate
             fi
 
-            echo "==> Reloading backend PM2 apps..."
-            for svc in identity-service profiles-service projects-service finance-service platform-service; do
-              PM2_BACKEND="internal-hub-be-${DEPLOY_ENV}-${svc}"
-              pm2 startOrReload "ecosystem.${DEPLOY_ENV}.config.js" --only "$PM2_BACKEND"
-            done
+            echo "==> Starting backend containers (detached)..."
+            docker compose $COMPOSE_FILES up -d --remove-orphans \
+              identity-service profiles-service projects-service finance-service platform-service
 
-            node scripts/wait-for-grpc-backends.mjs --env-file ".env.${DEPLOY_ENV}"
+            if ! node scripts/wait-for-grpc-backends.mjs --env-file ".env.${DEPLOY_ENV}"; then
+              echo "ERROR: gRPC backends did not become ready"
+              echo "--- pm2 status ---"
+              pm2 status || true
+              echo "--- docker compose ps ---"
+              docker compose $COMPOSE_FILES ps -a || true
+              for svc in identity-service profiles-service projects-service finance-service platform-service; do
+                echo "--- logs: ${svc} (last 40 lines) ---"
+                docker compose $COMPOSE_FILES logs --tail 40 "$svc" 2>&1 || true
+              done
+              exit 1
+            fi
 
-            PM2_GATEWAY="internal-hub-be-${DEPLOY_ENV}-api-gateway"
-            echo "==> Reloading api-gateway..."
-            pm2 startOrReload "ecosystem.${DEPLOY_ENV}.config.js" --only "$PM2_GATEWAY"
+            echo "==> Reloading PM2 apps..."
+            pm2 startOrReload "ecosystem.${DEPLOY_ENV}.config.js"
             pm2 save
           else
             if [ -z "$IMAGE_TAG" ] || [ -z "$IMAGE_REGISTRY" ]; then

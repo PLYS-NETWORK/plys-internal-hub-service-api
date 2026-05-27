@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# PM2 entry: start one compose service; api-gateway waits for backend gRPC ports first.
+# PM2 entry: start one compose service detached, then follow logs (keeps PM2 alive).
+# api-gateway waits for backend gRPC ports before starting.
 set -euo pipefail
 
 SERVICE="${1:?service name required}"
@@ -11,4 +12,5 @@ if [[ "$SERVICE" == "api-gateway" ]]; then
   node scripts/wait-for-grpc-backends.mjs --env-file ".env.${DEPLOY_ENV}"
 fi
 
-exec docker compose "${COMPOSE_ARGS[@]}" up --no-deps --remove-orphans "$SERVICE"
+docker compose "${COMPOSE_ARGS[@]}" up -d --no-deps --remove-orphans "$SERVICE"
+exec docker compose "${COMPOSE_ARGS[@]}" logs -f "$SERVICE"

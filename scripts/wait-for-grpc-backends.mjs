@@ -43,6 +43,17 @@ function parseArgs(argv) {
   return { envFile, timeoutMs, intervalMs };
 }
 
+function stripEnvValue(value) {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
 function loadEnvFile(filePath) {
   const resolved = path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath);
   if (!fs.existsSync(resolved)) {
@@ -55,7 +66,7 @@ function loadEnvFile(filePath) {
     if (!trimmed || trimmed.startsWith('#')) continue;
     const eq = trimmed.indexOf('=');
     if (eq <= 0) continue;
-    out[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
+    out[trimmed.slice(0, eq).trim()] = stripEnvValue(trimmed.slice(eq + 1));
   }
   return out;
 }
@@ -142,6 +153,9 @@ async function waitForTargets(targets, timeoutMs, intervalMs) {
   }
   const summary = targets.map((t) => `${t.name}@${t.host}:${t.port}`).join(', ');
   console.error(`Timed out after ${timeoutMs}ms waiting for gRPC backends: ${summary}`);
+  console.error(
+    'Backends never opened their gRPC ports — check container logs (secret validation, DB/Redis, i18n).',
+  );
   process.exit(1);
 }
 
