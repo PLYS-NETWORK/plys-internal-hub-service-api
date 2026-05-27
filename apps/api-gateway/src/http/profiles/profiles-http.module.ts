@@ -4,6 +4,8 @@ import { AdminOnboardingQuestionsController } from '@modules/admin-onboarding-qu
 import { BusinessOnboardingController } from '@modules/business-onboarding/controllers/business-onboarding.controller';
 import { ConsultantOnboardingController } from '@modules/consultant-onboarding/controllers/consultant-onboarding.controller';
 import { ConsultantSkillExamController } from '@modules/consultant-skill-exam/controllers/consultant-skill-exam.controller';
+import { NotBannedGuard } from '@modules/consultant-skill-exam/guards/not-banned.guard';
+import { OnboardingApprovedGuard } from '@modules/consultant-skill-exam/guards/onboarding-approved.guard';
 import { BusinessProfilesController } from '@modules/profiles/business/business-profiles.controller';
 import { BusinessProfilesAdminController } from '@modules/profiles/business/business-profiles-admin.controller';
 import { ConsultantProfilesController } from '@modules/profiles/consultant/consultant-profiles.controller';
@@ -12,10 +14,15 @@ import { Module } from '@nestjs/common';
 
 import { ProfilesClientsModule } from '@/clients/profiles';
 
+import { GatewayHttpAuthModule } from '../shared/gateway-http-auth.module';
+import {
+  GatewayNotBannedGuard,
+  GatewayOnboardingApprovedGuard,
+} from '../shared/gateway-skill-exam.guards';
 import { PROFILES_HTTP_PROVIDERS } from './profiles-http.providers';
 
 @Module({
-  imports: [ProfilesClientsModule],
+  imports: [ProfilesClientsModule, GatewayHttpAuthModule],
   controllers: [
     BusinessProfilesController,
     BusinessProfilesAdminController,
@@ -28,6 +35,10 @@ import { PROFILES_HTTP_PROVIDERS } from './profiles-http.providers';
     ConsultantSkillExamController,
     AdminConsultantSkillExamController,
   ],
-  providers: PROFILES_HTTP_PROVIDERS,
+  providers: [
+    ...PROFILES_HTTP_PROVIDERS,
+    { provide: NotBannedGuard, useClass: GatewayNotBannedGuard },
+    { provide: OnboardingApprovedGuard, useClass: GatewayOnboardingApprovedGuard },
+  ],
 })
 export class ProfilesHttpModule {}

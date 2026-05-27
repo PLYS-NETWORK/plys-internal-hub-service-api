@@ -22,10 +22,11 @@ import { AiProviderKeyBffController } from '@plys/libraries/ai-provider-key';
 
 import { ProjectsClientsModule } from '@/clients/projects';
 
+import { GatewayHttpAuthModule } from '../shared/gateway-http-auth.module';
 import { PROJECTS_HTTP_PROVIDERS } from './projects-http.providers';
 
 @Module({
-  imports: [ProjectsClientsModule],
+  imports: [ProjectsClientsModule, GatewayHttpAuthModule],
   controllers: [
     BusinessProjectsController,
     BusinessProjectOverviewController,

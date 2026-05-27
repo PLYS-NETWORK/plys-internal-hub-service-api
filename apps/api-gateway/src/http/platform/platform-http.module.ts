@@ -5,21 +5,17 @@ import { AdminStatisticsController } from '@modules/statistics/admin/admin-stati
 import { BusinessDashboardController } from '@modules/statistics/business/dashboard/business-dashboard.controller';
 import { ConsultantDashboardController } from '@modules/statistics/consultant/dashboard/consultant-dashboard.controller';
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
 import { FileContentValidator } from '@plys/libraries/common-nest/modules/file-storage';
 
 import { PlatformClientsModule } from '@/clients/platform';
 
+import { GatewayHttpAuthModule } from '../shared/gateway-http-auth.module';
 import { PlatformFilesController } from './files.controller';
 import { NotificationsGateway } from './notifications.gateway';
 import { PLATFORM_HTTP_PROVIDERS } from './platform-http.providers';
 
 @Module({
-  imports: [
-    PlatformClientsModule,
-    // Jwt secret/options are passed per-call in NotificationsGateway (same pattern as platform-service).
-    JwtModule.register({}),
-  ],
+  imports: [PlatformClientsModule, GatewayHttpAuthModule],
   controllers: [
     PlatformFilesController,
     SkillsController,
