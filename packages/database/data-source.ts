@@ -1,7 +1,8 @@
-import { resolveEnvFilePath } from '@plys/libraries/config/env-file.config';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { DataSource } from 'typeorm';
+
+import { resolveEnvFilePath } from '../config/env-file.config';
 
 // Load the env file matching DEPLOY_ENV (.env.prod / .env.dev / .env.local)
 // from the current working directory. Must run before AppDataSource is constructed

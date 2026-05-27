@@ -36,7 +36,7 @@ ENV SERVICE=${SERVICE}
 
 # migrate runs TypeORM migrations + seeds then exits
 CMD if [ "$SERVICE" = "migrate" ]; then \
-      node ./node_modules/typeorm/cli.js migration:run -d packages/dist/database/data-source.js && \
+      node ./packages/node_modules/typeorm/cli.js migration:run -d packages/dist/database/data-source.js && \
       node packages/dist/database/seeds/seed-runner.js; \
     else \
       node apps/${SERVICE}/dist/main.js; \
