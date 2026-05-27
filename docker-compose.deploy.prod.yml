@@ -65,11 +65,17 @@ services:
       - '3000:3000'
 
   migrate:
-    <<: *vps-prod-base
-    image: ${IMAGE_REGISTRY}/migrate:${IMAGE_TAG_MIGRATE}
-    depends_on: !reset []
+    # Host Postgres listens on 127.0.0.1 — bridge/host.docker.internal cannot reach it.
+    pull_policy: always
+    network_mode: host
+    volumes:
+      - ./.env.prod:/app/.env.prod:ro
     env_file: !reset
       - .env.prod
+    environment:
+      DEPLOY_ENV: prod
+    image: ${IMAGE_REGISTRY}/migrate:${IMAGE_TAG_MIGRATE}
+    depends_on: !reset []
 
   postgres:
     profiles: [local-infra]
