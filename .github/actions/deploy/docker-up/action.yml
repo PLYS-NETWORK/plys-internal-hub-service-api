@@ -111,8 +111,17 @@ runs:
               docker compose $COMPOSE_FILES --profile migrate run --rm migrate
             fi
 
-            echo "==> Reloading all PM2 apps..."
-            pm2 startOrReload "ecosystem.${DEPLOY_ENV}.config.js"
+            echo "==> Reloading backend PM2 apps..."
+            for svc in identity-service profiles-service projects-service finance-service platform-service; do
+              PM2_BACKEND="internal-hub-be-${DEPLOY_ENV}-${svc}"
+              pm2 startOrReload "ecosystem.${DEPLOY_ENV}.config.js" --only "$PM2_BACKEND"
+            done
+
+            node scripts/wait-for-grpc-backends.mjs --env-file ".env.${DEPLOY_ENV}"
+
+            PM2_GATEWAY="internal-hub-be-${DEPLOY_ENV}-api-gateway"
+            echo "==> Reloading api-gateway..."
+            pm2 startOrReload "ecosystem.${DEPLOY_ENV}.config.js" --only "$PM2_GATEWAY"
             pm2 save
           else
             if [ -z "$IMAGE_TAG" ] || [ -z "$IMAGE_REGISTRY" ]; then

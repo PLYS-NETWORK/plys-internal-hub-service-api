@@ -36,6 +36,9 @@ runs:
         cp "ecosystem.${{ inputs.deploy-env }}.config.js" deploy-package/
         mkdir -p deploy-package/scripts
         cp scripts/patch-image-tag.mjs deploy-package/scripts/
+        cp scripts/wait-for-grpc-backends.mjs deploy-package/scripts/
+        cp scripts/start-compose-service.sh deploy-package/scripts/
+        chmod +x deploy-package/scripts/start-compose-service.sh
 
         cp "${{ inputs.rendered-env-path }}" "deploy-package/.env.${{ inputs.deploy-env }}"
 

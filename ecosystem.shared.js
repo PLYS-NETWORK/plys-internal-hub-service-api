@@ -9,7 +9,7 @@ const RUNTIME_SERVICES = [
   'platform-service',
 ];
 
-const BASE_COMPOSE_FILES = ['docker-compose.yml', 'docker-compose.apps.yml'];
+const BACKEND_SERVICES = RUNTIME_SERVICES.filter((service) => service !== 'api-gateway');
 
 /**
  * @param {object} options
@@ -20,18 +20,14 @@ const BASE_COMPOSE_FILES = ['docker-compose.yml', 'docker-compose.apps.yml'];
  */
 function buildEcosystem({ env, cwd, logDir, deployComposeFile }) {
   const prefix = `internal-hub-be-${env}`;
-  const composeArgs = BASE_COMPOSE_FILES.flatMap((file) => ['-f', file]).concat([
-    '-f',
-    deployComposeFile,
-  ]);
 
   return {
     apps: RUNTIME_SERVICES.map((service) => ({
       name: `${prefix}-${service}`,
       cwd,
-      script: 'docker',
-      args: ['compose', ...composeArgs, 'up', '--no-deps', '--remove-orphans', service],
-      interpreter: 'none',
+      script: 'scripts/start-compose-service.sh',
+      args: [service, env],
+      interpreter: 'bash',
       autorestart: true,
       max_restarts: 10,
       min_uptime: '10s',
@@ -49,5 +45,6 @@ function buildEcosystem({ env, cwd, logDir, deployComposeFile }) {
 
 module.exports = {
   RUNTIME_SERVICES,
+  BACKEND_SERVICES,
   buildEcosystem,
 };
