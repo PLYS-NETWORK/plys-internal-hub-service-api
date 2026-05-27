@@ -18,5 +18,12 @@ import { ConsultantSkillsService } from './consultant/consultant-skills.service'
     ConsultantProfilesAdminService,
     ConsultantSkillsService,
   ],
+  exports: [
+    BusinessProfilesService,
+    BusinessProfilesAdminService,
+    ConsultantProfilesService,
+    ConsultantProfilesAdminService,
+    ConsultantSkillsService,
+  ],
 })
 export class ProfilesModule {}

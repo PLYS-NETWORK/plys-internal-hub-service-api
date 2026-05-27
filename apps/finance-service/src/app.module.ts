@@ -1,5 +1,10 @@
+import { BillingController } from '@modules/billing/billing.controller';
 import { BillingModule } from '@modules/billing/billing.module';
 import { PaymentsModule } from '@modules/payments';
+import { AdminPaymentsController } from '@modules/payments/admin/admin-payments.controller';
+import { BusinessPaymentsController } from '@modules/payments/business/business-payments.controller';
+import { ConsultantPaymentsController } from '@modules/payments/consultant/consultant-payments.controller';
+import { PaymentsController } from '@modules/payments/payments.controller';
 import { WebhooksModule } from '@modules/webhooks/webhooks.module';
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
@@ -26,7 +31,13 @@ import { NotificationsModule } from '@plys/libraries/notifications';
 import { UnitOfWorkModule } from '@plys/libraries/unit-of-work/unit-of-work.module';
 import { WinstonModule } from 'nest-winston';
 
-import { GrpcModule } from './grpc';
+import {
+  BillingGrpcController,
+  GrpcModule,
+  HealthGrpcController,
+  PaymentsGrpcController,
+  WebhooksGrpcController,
+} from './grpc';
 
 @Module({
   imports: [
@@ -73,5 +84,16 @@ import { GrpcModule } from './grpc';
     GrpcModule,
   ],
   providers: [AuditSubscriber],
+  controllers: [
+    HealthGrpcController,
+    PaymentsGrpcController,
+    BillingGrpcController,
+    WebhooksGrpcController,
+    PaymentsController,
+    BusinessPaymentsController,
+    ConsultantPaymentsController,
+    AdminPaymentsController,
+    BillingController,
+  ],
 })
 export class AppModule {}

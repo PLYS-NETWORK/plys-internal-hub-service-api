@@ -9,6 +9,6 @@ import { BillingSettlementService } from './services/billing-settlement.service'
   imports: [UnitOfWorkModule],
   controllers: [],
   providers: [BillingSettlementService, BillingInvoiceService, BillingAdminService],
-  exports: [BillingInvoiceService, BillingSettlementService],
+  exports: [BillingInvoiceService, BillingSettlementService, BillingAdminService],
 })
 export class BillingModule {}

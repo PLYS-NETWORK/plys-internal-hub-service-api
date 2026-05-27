@@ -21,5 +21,11 @@ import { PaymentsService } from './payments.service';
     BusinessWithdrawStrategy,
     ConsultantWithdrawStrategy,
   ],
+  exports: [
+    PaymentsService,
+    BusinessPaymentsService,
+    ConsultantPaymentsService,
+    AdminPaymentsService,
+  ],
 })
 export class PaymentsModule {}

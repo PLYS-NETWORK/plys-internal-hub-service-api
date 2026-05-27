@@ -7,5 +7,6 @@ import { SkillsService } from './skills.service';
   imports: [UnitOfWorkModule],
   controllers: [],
   providers: [SkillsService],
+  exports: [SkillsService],
 })
 export class SkillsModule {}

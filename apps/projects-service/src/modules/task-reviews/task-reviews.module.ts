@@ -20,6 +20,11 @@ import { TaskReviewVotingService } from './services/task-review-voting.service';
     AiQualityCheckService,
     TaskAiReviewHandler,
   ],
-  exports: [TaskReviewAssignmentService, TaskCompletionService],
+  exports: [
+    TaskReviewAssignmentService,
+    TaskCompletionService,
+    TaskReviewQueryService,
+    TaskReviewVotingService,
+  ],
 })
 export class TaskReviewsModule {}

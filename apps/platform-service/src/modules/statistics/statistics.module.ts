@@ -53,5 +53,21 @@ import {
     ConsultantProjectProgressService,
     ConsultantSkillPerformanceService,
   ],
+  exports: [
+    BusinessDashboardSummaryService,
+    BusinessActionItemsService,
+    BusinessSpendTrendService,
+    BusinessProjectHealthService,
+    BusinessTeamPerformanceService,
+    AdminDashboardSummaryService,
+    AdminUsersBreakdownService,
+    AdminGrowthTrendService,
+    AdminOperationalQueuesService,
+    ConsultantDashboardSummaryService,
+    ConsultantActionItemsService,
+    ConsultantEarningsTrendService,
+    ConsultantProjectProgressService,
+    ConsultantSkillPerformanceService,
+  ],
 })
 export class StatisticsModule {}

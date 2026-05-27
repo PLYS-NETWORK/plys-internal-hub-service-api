@@ -51,6 +51,21 @@ import { TaskAttachmentsService } from './services/task-attachments.service';
     TaskAttachmentsService,
     BoardMilestonesService,
   ],
-  exports: [BusinessAccessService, BoardCacheService, ProjectStatusService],
+  exports: [
+    BusinessAccessService,
+    BoardCacheService,
+    ProjectStatusService,
+    BusinessProjectsService,
+    ProjectPublishService,
+    ProjectRepublishService,
+    BusinessProjectOverviewService,
+    BacklogsService,
+    SettingsService,
+    BoardService,
+    BoardHistoryService,
+    BoardResultsService,
+    TaskAttachmentsService,
+    BoardMilestonesService,
+  ],
 })
 export class BusinessProjectsModule {}

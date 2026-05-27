@@ -13,5 +13,6 @@ import { AiBootstrapService } from './ai-bootstrap.service';
   imports: [ProjectsUnitOfWorkModule, BusinessProjectsModule, ProjectChatSessionModule],
   controllers: [],
   providers: [AiBootstrapService],
+  exports: [AiBootstrapService],
 })
 export class AiBootstrapModule {}

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { RequestContextModule } from '@plys/libraries/common-nest/modules/request-context';
 
 import { ProjectsUnitOfWorkService } from './projects-unit-of-work.service';
 import {
@@ -96,6 +97,7 @@ const repositories = [
 ];
 
 @Module({
+  imports: [RequestContextModule],
   providers: [
     ProjectsUnitOfWorkService,
     TransactionNumberService,

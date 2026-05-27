@@ -1,8 +1,15 @@
 import { FilesModule } from '@modules/files';
+import { FilesController } from '@modules/files/files.controller';
+import { HealthController } from '@modules/health/health.controller';
 import { HealthModule } from '@modules/health/health.module';
 import { HousekeepingModule } from '@modules/housekeeping/housekeeping.module';
+import { NotificationsController } from '@modules/notifications/notifications.controller';
 import { NotificationsModule } from '@modules/notifications/notifications.module';
+import { SkillsController } from '@modules/skills/skills.controller';
 import { SkillsModule } from '@modules/skills/skills.module';
+import { AdminStatisticsController } from '@modules/statistics/admin/admin-statistics.controller';
+import { BusinessDashboardController } from '@modules/statistics/business/dashboard/business-dashboard.controller';
+import { ConsultantDashboardController } from '@modules/statistics/consultant/dashboard/consultant-dashboard.controller';
 import { StatisticsModule } from '@modules/statistics/statistics.module';
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
@@ -28,7 +35,14 @@ import { getTypeOrmConfig } from '@plys/libraries/database/typeorm.config';
 import { UnitOfWorkModule } from '@plys/libraries/unit-of-work/unit-of-work.module';
 import { WinstonModule } from 'nest-winston';
 
-import { GrpcModule } from './grpc';
+import {
+  FilesGrpcController,
+  GrpcModule,
+  HealthGrpcController,
+  NotificationsGrpcController,
+  SkillsGrpcController,
+  StatisticsGrpcController,
+} from './grpc';
 
 @Module({
   imports: [
@@ -77,5 +91,19 @@ import { GrpcModule } from './grpc';
     GrpcModule,
   ],
   providers: [AuditSubscriber],
+  controllers: [
+    HealthGrpcController,
+    FilesGrpcController,
+    SkillsGrpcController,
+    StatisticsGrpcController,
+    NotificationsGrpcController,
+    FilesController,
+    SkillsController,
+    AdminStatisticsController,
+    BusinessDashboardController,
+    ConsultantDashboardController,
+    NotificationsController,
+    HealthController,
+  ],
 })
 export class AppModule {}

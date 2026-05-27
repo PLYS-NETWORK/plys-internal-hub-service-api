@@ -31,5 +31,13 @@ import { ConsultantProjectTasksService } from './services/consultant-project-tas
     ConsultantMembershipService,
     ConsultantProjectTasksService,
   ],
+  exports: [
+    ConsultantAccessService,
+    ConsultantExploreService,
+    ConsultantJoinedCacheService,
+    ConsultantJoinedProjectsService,
+    ConsultantMembershipService,
+    ConsultantProjectTasksService,
+  ],
 })
 export class ConsultantProjectsModule {}

@@ -36,6 +36,6 @@ import { NotificationsService } from './services/notifications.service';
     NotificationEventHandlerService,
     SkillMatchNotificationProcessor,
   ],
-  exports: [NotificationDispatcherService],
+  exports: [NotificationDispatcherService, NotificationsService],
 })
 export class NotificationsModule {}

@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { AwsS3Module } from '@plys/libraries/common-nest/modules/aws-s3';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
 
 import { STORAGE_PROVIDER } from './constants';
@@ -29,6 +30,7 @@ import { FileContentValidator } from './validators';
  */
 @Global()
 @Module({
+  imports: [AwsS3Module],
   providers: [
     FileContentValidator,
     LocalStorageProvider,

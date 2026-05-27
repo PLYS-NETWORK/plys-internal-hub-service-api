@@ -14,5 +14,6 @@ import { ExploreService } from './services/explore.service';
   imports: [ProjectsUnitOfWorkModule],
   controllers: [],
   providers: [PublicEndpointApiKeyGuard, ExploreService],
+  exports: [ExploreService, PublicEndpointApiKeyGuard],
 })
 export class ExploreModule {}
