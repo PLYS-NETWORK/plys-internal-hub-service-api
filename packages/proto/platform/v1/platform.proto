@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package platform.v1;
+
+import "common/v1/http.proto";
+
+service Files {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service Skills {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service Statistics {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service Notifications {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service Health {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}

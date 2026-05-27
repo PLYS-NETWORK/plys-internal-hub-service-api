@@ -1,0 +1,66 @@
+name: 'Prepare deploy bundle'
+description: 'Assemble docker compose bundle for VPS upload'
+
+inputs:
+  deploy-env:
+    description: 'dev or prod'
+    required: true
+  image-tag:
+    description: 'Docker image tag'
+    required: true
+  image-registry:
+    description: 'GHCR registry prefix'
+    required: true
+  rendered-env-path:
+    description: 'Path to rendered .env.dev or .env.prod'
+    required: true
+  service:
+    description: 'all or a single service name'
+    required: false
+    default: 'all'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Prepare deploy bundle
+      shell: bash
+      run: |
+        set -euo pipefail
+        rm -rf deploy-package
+        mkdir -p deploy-package
+
+        cp docker-compose.yml deploy-package/
+        cp docker-compose.apps.yml deploy-package/
+        cp "docker-compose.deploy.${{ inputs.deploy-env }}.yml" deploy-package/
+        cp ecosystem.shared.js deploy-package/
+        cp "ecosystem.${{ inputs.deploy-env }}.config.js" deploy-package/
+        mkdir -p deploy-package/scripts
+        cp scripts/patch-image-tag.mjs deploy-package/scripts/
+
+        cp "${{ inputs.rendered-env-path }}" "deploy-package/.env.${{ inputs.deploy-env }}"
+
+        SERVICE="${{ inputs.service }}"
+        ENV_TARGET="deploy-package/.env"
+        if [ "$SERVICE" != "all" ]; then
+          ENV_TARGET="deploy-package/.env.patch"
+        fi
+
+        if [ "$SERVICE" = "all" ]; then
+          node scripts/patch-image-tag.mjs \
+            --file "$ENV_TARGET" \
+            --service all \
+            --tag "${{ inputs.image-tag }}" \
+            --registry "${{ inputs.image-registry }}"
+        else
+          node scripts/patch-image-tag.mjs \
+            --file "$ENV_TARGET" \
+            --service "$SERVICE" \
+            --tag "${{ inputs.image-tag }}" \
+            --registry "${{ inputs.image-registry }}"
+        fi
+
+        echo "Deploy bundle ready:"
+        ls -la deploy-package/
+        echo "--- compose env ---"
+        cat deploy-package/.env 2>/dev/null || true
+        cat deploy-package/.env.patch 2>/dev/null || true

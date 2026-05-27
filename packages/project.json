@@ -1,0 +1,30 @@
+{
+  "name": "libraries",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:infra"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p tsconfig.json",
+        "cwd": "packages"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "NODE_OPTIONS=--max-old-space-size=8192 eslint \"**/*.ts\" --max-warnings=0 --ignore-pattern \"**/dist/**\" --ignore-pattern \"**/node_modules/**\"",
+        "cwd": "packages"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "jest --config jest.config.js",
+        "cwd": "packages"
+      }
+    }
+  }
+}

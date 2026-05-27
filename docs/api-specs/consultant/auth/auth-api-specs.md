@@ -496,7 +496,7 @@ Initiate the Google OAuth redirect flow. The server stores a CSRF-bound state no
 Google OAuth callback. Validates the CSRF state nonce, runs `ssoLogin`, then **redirects the browser to the frontend** with a single-use exchange `code` (no tokens in the URL):
 
 ```
-<LONA_URL>/auth/sso/callback?code=<single-use-exchange-code>
+<LONAOS_URL>/auth/sso/callback?code=<single-use-exchange-code>
 ```
 
 The frontend then POSTs the code to [`/auth/sso/exchange`](#post-authssoexchange) to receive tokens. The code is valid **once** for a short TTL (~60 seconds).

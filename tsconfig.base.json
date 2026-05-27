@@ -1,0 +1,36 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2021",
+    "sourceMap": true,
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "strictBindCallApply": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "types": ["node"],
+    "paths": {
+      "@plys/libraries/proto": ["packages/proto/index.ts"],
+      "@plys/libraries/shared-kernel": ["packages/shared-kernel/index.ts"],
+      "@plys/libraries/database": ["packages/database/index.ts"],
+      "@plys/libraries/database/*": ["packages/database/*"],
+      "@plys/libraries/config": ["packages/config/index.ts"],
+      "@plys/libraries/config/*": ["packages/config/*"],
+      "@plys/libraries/common-nest/*": ["packages/common-nest/*"],
+      "@plys/libraries/unit-of-work/*": ["packages/unit-of-work/*"],
+      "@plys/libraries/ai-provider-key": ["packages/ai-provider-key/index.ts"],
+      "@plys/libraries/notifications": ["packages/notifications/index.ts"],
+      "@plys/libraries/profiles-port": ["packages/profiles-port/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp", "dist"]
+}

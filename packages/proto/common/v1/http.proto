@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package common.v1;
+
+// Generic HTTP-shaped request envelope for gRPC bridge dispatch.
+message HttpRequest {
+  string operation = 1;
+  bytes body = 2;
+  map<string, string> path_params = 3;
+  map<string, string> query_params = 4;
+}
+
+// Generic HTTP-shaped response envelope returned by gRPC bridge handlers.
+message HttpResponse {
+  int32 status_code = 1;
+  bytes body = 2;
+  string error_code = 3;
+  string message_key = 4;
+  map<string, string> headers = 5;
+  map<string, string> cookies = 6;
+}

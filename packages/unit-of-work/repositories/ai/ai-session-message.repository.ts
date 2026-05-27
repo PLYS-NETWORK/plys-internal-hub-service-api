@@ -1,0 +1,24 @@
+import { Injectable } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { AbstractRepository } from '@plys/libraries/common-nest/repositories';
+import { AiSessionMessage } from '@plys/libraries/database/entities';
+import { EntityManager } from 'typeorm';
+
+import { IAiSessionMessageRepository } from './interfaces';
+
+@Injectable()
+export class AiSessionMessageRepository
+  extends AbstractRepository<AiSessionMessage>
+  implements IAiSessionMessageRepository
+{
+  constructor(
+    @InjectEntityManager()
+    manager: EntityManager,
+  ) {
+    super(AiSessionMessage, manager);
+  }
+
+  public withManager(manager: EntityManager): this {
+    return new AiSessionMessageRepository(manager) as this;
+  }
+}

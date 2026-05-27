@@ -11,21 +11,45 @@ on:
         description: 'Branch to deploy (default: main)'
         required: false
         default: 'main'
+      service:
+        description: 'Service to deploy (all = full stack)'
+        type: choice
+        options:
+          - all
+          - api-gateway
+          - identity-service
+          - profiles-service
+          - projects-service
+          - finance-service
+          - platform-service
+        default: all
+      run_migrations:
+        description: 'Run DB migrations before restart (uncheck for single-service hotfix deploys)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository }}
+  DEPLOY_ENV: prod
+  APP_DIR: /apps/internal-hub-be/prod
 
 jobs:
   guard:
     name: Confirm deployment
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4.2.2
-
       - name: Validate confirmation
-        uses: ./.github/actions/deploy-prod/guard
-        with:
-          confirm: ${{ github.event.inputs.confirm }}
-          branch: ${{ github.event.inputs.branch }}
-          actor: ${{ github.actor }}
+        shell: bash
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "deploy" ]; then
+            echo 'Confirmation failed — type "deploy" to proceed.'
+            exit 1
+          fi
+          echo "Production deploy confirmed by ${{ github.actor }} (branch: ${{ github.event.inputs.branch }})"
 
   deploy:
     name: Build & Deploy to Production
@@ -35,49 +59,107 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch }}
 
-      - name: Setup Node + pnpm
-        uses: ./.github/actions/deploy-prod/setup
+      - name: Resolve deploy parameters
+        id: deploy
+        shell: bash
+        run: |
+          echo "service=${{ github.event.inputs.service }}" >> "$GITHUB_OUTPUT"
+          echo "run_migrations=${{ github.event.inputs.run_migrations }}" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event.inputs.service }}" = "all" ]; then
+            echo "build_services=all" >> "$GITHUB_OUTPUT"
+          else
+            echo "build_services=${{ github.event.inputs.service }}" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Install & Build
-        uses: ./.github/actions/deploy-prod/install-build
+      - name: Resolve image tag
+        id: meta
+        shell: bash
+        run: |
+          BRANCH="${{ github.event.inputs.branch }}"
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          SAFE_BRANCH="${BRANCH//\//-}"
+          echo "tag=${SAFE_BRANCH}-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
 
-      - name: Prepare deploy package
-        uses: ./.github/actions/deploy-prod/package
-
-      - name: Backup current deployment
-        uses: ./.github/actions/deploy-prod/backup
+      - name: Build and push Docker images
+        uses: ./.github/actions/docker/build-push
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_SSH_PORT }}
+          image-tag: ${{ steps.meta.outputs.tag }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+          services: ${{ steps.deploy.outputs.build_services }}
+          include-migrate: ${{ steps.deploy.outputs.run_migrations == 'true' && 'true' || 'false' }}
+
+      - name: Render .env.prod
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          SSO_TOKEN_ENCRYPTION_KEY: ${{ secrets.SSO_TOKEN_ENCRYPTION_KEY }}
+          PUBLIC_ENDPOINT_API_KEY: ${{ secrets.PUBLIC_ENDPOINT_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          POLAR_ACCESS_TOKEN: ${{ secrets.POLAR_ACCESS_TOKEN }}
+          POLAR_WEBHOOK_SECRET: ${{ secrets.POLAR_WEBHOOK_SECRET }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          AWS_S3_ACCESS_KEY_ID: ${{ secrets.AWS_S3_ACCESS_KEY_ID }}
+          AWS_S3_SECRET_ACCESS_KEY: ${{ secrets.AWS_S3_SECRET_ACCESS_KEY }}
+          COPYLEAKS_API_KEY: ${{ secrets.COPYLEAKS_API_KEY }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          AI_KEYS_MASTER_KEY_v1: ${{ secrets.AI_KEYS_MASTER_KEY_v1 }}
+          FE_BFF_SECRET_v1: ${{ secrets.FE_BFF_SECRET_v1 }}
+        run: node scripts/render-deploy-env.mjs --deploy-env prod --output deploy/.env.prod
+
+      - name: Prepare deploy bundle
+        uses: ./.github/actions/deploy/prepare-bundle
+        with:
+          deploy-env: prod
+          image-tag: ${{ steps.meta.outputs.tag }}
+          image-registry: ${{ env.IMAGE_REGISTRY }}
+          rendered-env-path: deploy/.env.prod
+          service: ${{ steps.deploy.outputs.service }}
 
       - name: Upload to VPS
-        uses: ./.github/actions/deploy-prod/upload
+        uses: ./.github/actions/deploy/upload-bundle
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
+          target-dir: ${{ env.APP_DIR }}/current
 
-      - name: Restart app on VPS
-        uses: ./.github/actions/deploy-prod/restart
+      - name: Deploy on VPS
+        uses: ./.github/actions/deploy/docker-up
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
+          deploy-env: prod
+          app-dir: ${{ env.APP_DIR }}
+          ghcr-token: ${{ secrets.GHCR_PULL_TOKEN }}
+          service: ${{ steps.deploy.outputs.service }}
+          image-tag: ${{ steps.meta.outputs.tag }}
+          image-registry: ${{ env.IMAGE_REGISTRY }}
+          run-migrations: ${{ steps.deploy.outputs.run_migrations }}
 
       - name: Health check
-        uses: ./.github/actions/deploy-prod/health-check
+        run: |
+          sleep 15
+          curl --fail --silent --max-time 15 https://api.lona.my/v1/health \
+            | grep '"status":"ok"' \
+            || (echo "Health check failed" && exit 1)
+          echo "Health check passed"
 
       - name: Deployment summary
         if: success()
-        uses: ./.github/actions/deploy-prod/summary
-        with:
-          branch: ${{ github.event.inputs.branch }}
-          actor: ${{ github.actor }}
+        run: |
+          echo "## Production deployment succeeded" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Branch: \`${{ github.event.inputs.branch }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Service: \`${{ steps.deploy.outputs.service }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Image tag: \`${{ steps.meta.outputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Migrations: \`${{ steps.deploy.outputs.run_migrations }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Actor: @${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"

@@ -1,6 +1,7 @@
 # Notifications — Frontend Realtime Integration Guide
 
-> Source: [src/modules/notifications/notifications.gateway.ts](../../../src/modules/notifications/notifications.gateway.ts)
+> Source: [apps/api-gateway/src/http/platform/notifications.gateway.ts](../../../apps/api-gateway/src/http/platform/notifications.gateway.ts)
+> Live emit: [packages/common-nest/modules/notifications-realtime/notification-realtime-emitter.service.ts](../../../packages/common-nest/modules/notifications-realtime/notification-realtime-emitter.service.ts)
 > Companion REST spec: [notifications-api-specs.md](../business/notifications/notifications-api-specs.md) (same controller is shared across business / consultant / admin frontends — gated on `@Roles(UserRole.USER, UserRole.ADMIN_PLATFORM)`).
 >
 > **Role-specific event catalogs (metadata shapes, redirect URLs, cache-invalidation hints):**
@@ -14,32 +15,40 @@
 ## 1. Architecture in one paragraph
 
 The backend persists every notification in Postgres (the source of truth) and
-publishes a `notification.new` Socket.IO event to the recipient's room over a
-shared Redis pub/sub fan-out. The FE connects ONE socket per user-session,
-listens to a small set of events, calls a REST GET on connect to back-fill any
-gap, and then renders live updates as they stream in.
+delivers a `notification.new` Socket.IO event to the recipient's room. **Ployos,
+Lonaos, and Plys Internal Hub** all connect to the same namespace
+(`/ws/notifications`) on api-gateway with their platform JWT.
+
+Cross-instance scaling uses **`@socket.io/redis-adapter`** on api-gateway.
+platform-service emits live events with **`@socket.io/redis-emitter`** directly
+into the recipient's Socket.IO room — there is no global `notif:user:*` Redis
+pub/sub fan-out on the gateway anymore.
+
+The FE connects ONE socket per user-session, listens to a small set of events,
+calls a REST GET on connect to back-fill any gap, and then renders live updates
+as they stream in.
 
 The gateway is **platform-agnostic** — every authenticated user (business,
 consultant, admin) can connect. The only gates are JWT validity + an active
-`user_sessions` row + opt-in device-binding (§7). The room name is purely
+`user_sessions` row (+ opt-in device-binding in §7). The room name is purely
 `user:{userId}`, so each user receives exactly their own notifications.
 
-**Durability model:** Redis pub/sub is fire-and-forget — if the socket is
-disconnected when the publish fires, the live event is lost forever. The DB row
-is not. The FE catch-up step (§3) reconciles the gap on reconnect.
+**Durability model:** Live delivery is fire-and-forget — if the socket is
+disconnected when the emit fires, the live event is lost. The DB row is not.
+The FE catch-up step (§3) reconciles the gap on reconnect.
 
 ---
 
 ## 2. Connecting the Socket.IO client
 
-- **URL:** `${API_BASE_URL}/ws/notifications` (e.g. `https://api.ployos.example/ws/notifications`). The path component (`/ws/notifications`) is the Socket.IO namespace — pass the full URL as shown, not just the origin.
+- **URL:** `${API_BASE_URL}/ws/notifications` (e.g. `https://api.example/ws/notifications`). The path component (`/ws/notifications`) is the Socket.IO namespace — pass the full URL as shown, not just the origin.
 - **Library:** `socket.io-client@4.x`.
 - **Auth transport:** the access token (the same Bearer JWT used for REST) can travel either:
   - On `auth.token` — the recommended path for browser SPAs. Accepts the raw JWT or `"Bearer <jwt>"` (the gateway strips the prefix).
   - On the standard `Authorization: Bearer <jwt>` HTTP header — for native clients that can't set `auth`.
 - **Device binding (opt-in):** if you pass `auth.deviceId`, the gateway compares it against the `deviceId` claim baked into the JWT and rejects on mismatch. Sending nothing (or a JWT minted without `deviceId`) skips the check.
 - **Transports:** prefer `websocket` with `polling` as fallback (matches what the gateway accepts).
-- **CORS:** the gateway uses its own CORS list (`ALLOWED_ORIGINS` env), not the HTTP `app.enableCors()` config — bring the origin you connect from up with the BE team if you see a handshake fail.
+- **CORS:** uses the same origin policy as HTTP (`ALLOWED_ORIGINS` + optional `CORS_ALLOW_LOCALHOST` on dev). List the deployed frontend origin (Ployos, Lonaos, or Internal Hub URL). On the **dev VPS**, set `CORS_ALLOW_LOCALHOST=true` to connect from a local SPA (`http://localhost:*`) without adding every port to `ALLOWED_ORIGINS`.
 
 ```ts
 import { io, Socket } from 'socket.io-client';
@@ -71,10 +80,11 @@ to re-bootstrap (§3) on the `connect` event.
 ## 3. Bootstrap — catching up after an offline gap
 
 Every time the socket connects (initial open OR a reconnect), the gateway emits
-`notification.connected` with the **current** unread count (read straight from
-Postgres — `COUNT(*) WHERE is_read = false`). Use that as the trigger to render
-the unread badge AND to fetch the unread list, since any notifications that
-fired while you were disconnected will not be replayed by Redis.
+`notification.connected` with the **current** unread count. The gateway reads
+`notif:unread:{userId}` from Redis when the cache is warm; otherwise it falls
+back to a Postgres `COUNT(*)`. Use the event as the trigger to render the unread
+badge AND to fetch the unread list, since any notifications that fired while you
+were disconnected will not be replayed over the socket.
 
 ```ts
 socket.on('connect', () => {
@@ -84,12 +94,10 @@ socket.on('connect', () => {
 
 socket.on('notification.connected', async ({ unread_count }) => {
   setUnreadBadge(unread_count);
-  // The REST response is wrapped by the standardized envelope, so the cursor
-  // page sits at `body.data`, and its rows at `body.data.data`.
   const body = await fetch(`${apiBase}/api/v1/notifications/me?unread=true&take=20`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   }).then((r) => r.json());
-  hydrateBellList(body.data.data); // body.data.data === NotificationResponseDto[]
+  hydrateBellList(body.data.data);
 });
 
 socket.on('disconnect', () => {
@@ -97,34 +105,27 @@ socket.on('disconnect', () => {
 });
 ```
 
-> **Tip:** the live `notification.new` events that arrive AFTER your fetch
-> completes should be merged at the top of the list. If a `notification.new`
-> arrives while the fetch is in-flight, deduplicate by `id` so you don't render
-> the same row twice.
+> **Tip:** merge live `notification.new` events after your fetch completes and
+> deduplicate by `id`.
 
 ---
 
 ## 4. Live event handlers
-
-The gateway emits exactly two outgoing events. Neither carries the standardized
-HTTP envelope — what you see is the raw payload.
 
 | Event                    | Payload                         | When                                                                            |
 | ------------------------ | ------------------------------- | ------------------------------------------------------------------------------- |
 | `notification.connected` | `{ unread_count: number }`      | Once, immediately after a successful handshake (initial connect AND reconnect). |
 | `notification.new`       | `NotificationPayload` (see §5). | Any time the dispatcher fires for the connected user.                           |
 
-There is **no** server-emitted `notification.unread-count` event today — count
-changes are inferred from the `notification.new` stream and from REST calls
-(e.g. after `PATCH /me/:id/read`). If you need a fresh count without listening
-for a new notification, call `GET /me/unread-count` (Redis-cached, 24 h TTL).
+There is **no** server-emitted `notification.unread-count` event — count changes
+are inferred from the `notification.new` stream and from REST calls.
 
 ```ts
 socket.on('notification.new', (n: NotificationPayload) => {
-  prependToBellList(n); // dedupe by n.id
+  prependToBellList(n);
   setUnreadBadge((c) => c + 1);
-  showToast(n); // optional UX: toast on important types
-  refetchAffectedQueries(n); // §6
+  showToast(n);
+  refetchAffectedQueries(n);
 });
 ```
 
@@ -132,11 +133,9 @@ socket.on('notification.new', (n: NotificationPayload) => {
 
 ## 5. TypeScript types (copy-paste source of truth)
 
-Mirrors [src/modules/notifications/types/notification-metadata.types.ts](../../../src/modules/notifications/types/notification-metadata.types.ts).
-The discriminated union type lets TypeScript narrow `metadata` automatically when you `switch` on `n.type`.
+Mirrors [apps/platform-service/src/modules/notifications/types/notification-metadata.types.ts](../../../apps/platform-service/src/modules/notifications/types/notification-metadata.types.ts).
 
 ```ts
-// The discriminated-union the FE consumes.
 export type NotificationPayload = {
   [K in NotificationType]: {
     id: string;
@@ -155,71 +154,38 @@ export type NotificationPayload = {
 }[NotificationType];
 ```
 
-For the full `NotificationMetadataMap` and per-type metadata interfaces, import from the shared
-type package or copy from the role-specific catalogs linked at the top of this document.
-
 ---
 
 ## 6. Redirect rules
 
-Every payload carries two redirect mechanisms; pick whichever fits your routing.
+Every payload carries two redirect mechanisms:
 
-1. **Pre-computed URL** — `n.redirect_url` is server-computed, deep-linked
-   into the correct tenant, and ready to navigate to. The base URL the server
-   uses is selected by notification type — `ployosUrl` for business, `lonaUrl`
-   for consultant, `internalHubUrl` for admin.
-   ```ts
-   if (n.redirect_url) router.push(n.redirect_url);
-   ```
-2. **Generic mapping** — `(n.entity_type, n.entity_id)` pair. Use this when
-   the FE owns routing and prefers to compose URLs locally.
-   ```ts
-   const ROUTE_BY_ENTITY: Record<string, (id: string) => string> = {
-     project: (id) => `/projects/${id}`,
-     task: (id) => `/tasks/${id}`,
-     application: (id) => `/applications/${id}`,
-     transaction: () => `/billing/transactions`,
-     user: () => `/settings`,
-   };
-   const target = ROUTE_BY_ENTITY[n.entity_type]?.(n.entity_id);
-   if (target) router.push(target);
-   ```
+1. **Pre-computed URL** — `n.redirect_url` is server-computed. Base URL is selected by notification type — `ployosUrl` for business, `lonaosUrl` for consultant (Lonaos), `internalHubUrl` for admin.
+2. **Generic mapping** — `(n.entity_type, n.entity_id)` pair for client-composed routes.
 
-**Recommendation:** prefer `redirect_url` when present, fall back to the
-mapping when it is `null`.
-
-```ts
-function redirect(n: NotificationPayload, router: AppRouter): void {
-  router.push(n.redirect_url ?? ROUTE_BY_ENTITY[n.entity_type]?.(n.entity_id) ?? '/');
-}
-```
-
-For the full per-type redirect URL patterns, see the role-specific catalogs linked at the top.
+**Recommendation:** prefer `redirect_url` when present, fall back to entity mapping when `null`.
 
 ---
 
 ## 7. Error handling
 
-The gateway emits an `error` event with `{ code }` immediately before disconnecting whenever the handshake fails. Codes come from `ERROR_CODES` in [src/common/constants/error-codes.ts](../../../src/common/constants/error-codes.ts).
-
-| Server emits                                             | What happened                                                                                                                                                                                                  | FE should…                                                                                                                                                                  |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `error { code: "AUTH_TOKEN_INVALID" }` then disconnect   | One of: token missing, JWT signature failed, JWT payload had no `sessionId`, the matching `user_sessions` row is missing / already rotated (`used_at` set) / past its `expires_at`, or the gateway lost track. | Refresh the access token via `/auth/refresh`, reconnect. If refresh fails, redirect to login.                                                                               |
-| `error { code: "AUTH_TOKEN_EXPIRED" }` then disconnect   | Access token TTL elapsed (JWT verify threw `TokenExpiredError`).                                                                                                                                               | Same — refresh + reconnect.                                                                                                                                                 |
-| `error { code: "AUTH_DEVICE_MISMATCH" }` then disconnect | The handshake `auth.deviceId` was supplied AND the JWT also carries a `deviceId` claim AND the two strings don't match. Asymmetric: if either side is missing/empty the check is skipped.                      | Surface "session was started on another device" UX.                                                                                                                         |
-| Disconnects with `reason="io server disconnect"`         | The session was revoked server-side (admin force-logout, password change on another device, refresh-token replay detection).                                                                                   | Redirect to login.                                                                                                                                                          |
-| `connect_error` event                                    | Transport-level failure (network, CORS, server down).                                                                                                                                                          | Let Socket.IO retry. After ~30s of failures, surface a degraded-mode banner and start polling `GET /me/unread-count` every 30s as a safety net until the socket reconnects. |
+| Server emits                                                    | What happened                                                                      | FE should…                                                                       |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `error { code: "AUTH_TOKEN_INVALID" }` then disconnect          | Token missing, JWT invalid, or session revoked                                     | Refresh token via `/auth/refresh`, reconnect; redirect to login if refresh fails |
+| `error { code: "AUTH_TOKEN_EXPIRED" }` then disconnect          | Access token TTL elapsed                                                           | Same as above                                                                    |
+| `error { code: "AUTH_DEVICE_MISMATCH" }` then disconnect        | Handshake `deviceId` mismatches JWT claim                                          | Surface device-mismatch UX                                                       |
+| `error { code: "WS_CONNECT_RATE_LIMITED" }` then disconnect     | Too many handshake attempts from this IP (`WS_CONNECT_RATE_LIMIT`, default 30/min) | Back off reconnect; surface rate-limit message                                   |
+| `error { code: "WS_MAX_CONNECTIONS_EXCEEDED" }` then disconnect | Oldest tab evicted when user exceeds `WS_MAX_CONNECTIONS_PER_USER` (default 10)    | Expected on heavy multi-tab use; reconnect or close extra tabs                   |
+| `connect_error`                                                 | Transport failure (network, CORS, server down)                                     | Let Socket.IO retry; fall back to polling `GET /me/unread-count` after ~30s      |
 
 ```ts
-socket.on('connect_error', (err) => {
-  // Logged + surfaced after a threshold; not on every retry.
-});
-
 socket.on('error', (payload: { code: string }) => {
   if (payload.code === 'AUTH_TOKEN_EXPIRED' || payload.code === 'AUTH_TOKEN_INVALID') {
     refreshAccessTokenAndReconnect();
   } else if (payload.code === 'AUTH_DEVICE_MISMATCH') {
     redirectToLogin('device-mismatch');
+  } else if (payload.code === 'WS_CONNECT_RATE_LIMITED') {
+    showRateLimitBanner();
   }
 });
 ```
@@ -228,58 +194,55 @@ socket.on('error', (payload: { code: string }) => {
 
 ## 8. Testing checklist for FE engineers
 
-1. **Initial connect**
-   - On login, the socket connects within 1s.
-   - `notification.connected` arrives once.
-   - The unread badge matches `unread_count`.
-2. **Live delivery**
-   - Trigger a notification-generating action via REST in another tab — `notification.new` arrives in <500 ms.
-   - Toast renders. List prepends. Badge increments.
-3. **Read transitions**
-   - Click a notification → `PATCH /me/:id/read` → row's `is_read` flips to `true` and badge decrements (also live across other tabs — each tab's socket reflects the update on its next REST refresh).
-4. **Mark all read**
-   - `PATCH /me/read-all` → badge goes to 0; list still renders, items now styled as read.
-5. **Multi-tab**
-   - Open the app in two browser tabs; trigger a notification once.
-   - Both tabs' sockets receive `notification.new` (each tab's socket joins the same `user:{userId}` room independently).
-6. **Offline gap**
-   - Close the tab. Trigger a notification via REST. Re-open the tab.
-   - On reconnect, `notification.connected.unread_count` reflects the new count, and the unread fetch returns the missed row.
-7. **Error paths**
-   - Connect with a stale JWT — server emits `error AUTH_TOKEN_INVALID` then disconnects; FE refresh-and-reconnect succeeds.
-   - Stop the API server — `connect_error` fires repeatedly; after threshold, FE shows degraded banner and falls back to polling.
+1. **Initial connect** — socket connects; `notification.connected` arrives; badge matches count.
+2. **Live delivery** — trigger notification in another tab; `notification.new` in <500 ms.
+3. **Multi-tab** — both tabs receive the same event (same `user:{userId}` room).
+4. **Offline gap** — disconnect, trigger notification, reconnect; bootstrap fetch returns missed row.
+5. **Rate limit** — rapid reconnect storm surfaces `WS_CONNECT_RATE_LIMITED` (staging only).
+6. **Three clients** — Ployos, Lonaos, and Internal Hub each connect with their JWT; only own notifications arrive.
 
 ---
 
 ## 9. FAQ
 
 **Q. Why didn't I get a `notification.new` for the row that's clearly in the DB?**
-The socket was disconnected at the moment the dispatcher published. Redis pub/sub
-doesn't replay. The row is in Postgres — the bootstrap `GET /me?unread=true` on the
-next reconnect will pick it up.
+The socket was disconnected at emit time. The row is in Postgres — bootstrap
+`GET /me?unread=true` on reconnect picks it up.
 
-**Q. Can I subscribe to a different user's notifications (e.g. as an admin)?**
-No. The gateway joins exactly one room — `user:{caller's own userId}` — based
-on the JWT. Cross-user subscription is not exposed.
-
-**Q. Do consultant and admin frontends use the same socket?**
-Yes. The gateway is platform-agnostic — admin, consultant, and business users all
-connect to `/ws/notifications` with their access JWT. The dispatcher only
-publishes notifications targeted at the recipient `userId`, so platforms never
-see each other's events.
-
-**Q. What's the latency budget?**
-End-to-end (DB write → live event on socket) is ~5-50 ms on a healthy single
-region; multi-region adds ~Redis-to-Redis RTT. The FE should not assume sub-100 ms.
+**Q. Do Ployos, Lonaos, and Internal Hub use the same socket?**
+Yes. All three connect to `/ws/notifications` with their access JWT. Events are
+targeted by recipient `userId` only.
 
 **Q. How is multi-instance scaling handled?**
-The dispatcher publishes to Redis once. Every API instance has its own
-`psubscribe('notif:user:*')` listener; whichever one currently holds the
-recipient's socket forwards the event to that socket. Empty rooms on other
-instances no-op cheaply.
+api-gateway uses `@socket.io/redis-adapter` so rooms sync across replicas.
+platform-service emits via `@socket.io/redis-emitter` into the recipient room.
+No gateway-wide `psubscribe` pattern.
 
-**Q. What if I lose the access token (refresh fails)?**
-Redirect to login. The socket cannot recover from an expired refresh token.
+**Q. What's the latency budget?**
+End-to-end (DB write → live event) is ~5–50 ms on a healthy single region.
 
 **Q. Which notification types does my platform receive?**
-See the role-specific catalogs linked at the top of this document.
+See the role-specific catalogs linked at the top.
+
+---
+
+## 10. Backend mitigations (reference)
+
+| Former risk                        | Status    | Implementation                                                  |
+| ---------------------------------- | --------- | --------------------------------------------------------------- |
+| Global Redis pub/sub fan-out       | Resolved  | redis-emitter targeted room emit from platform-service          |
+| Multi-instance gateway             | Resolved  | `@socket.io/redis-adapter` in api-gateway `main.ts`             |
+| Per-connect identity gRPC          | Mitigated | `ws:session:valid:{sessionId}` Redis cache (30s TTL)            |
+| Unread count gRPC on every connect | Mitigated | Read `notif:unread:{userId}` from Redis first                   |
+| WS CORS drift                      | Resolved  | `EnvironmentsService.allowedOrigins` in gateway `afterInit`     |
+| No WS rate limiting                | Resolved  | `WS_CONNECT_RATE_LIMIT`, `WS_MAX_CONNECTIONS_PER_USER` env vars |
+| Wrong consultant redirects         | Resolved  | `baseUrlKey: 'lonaosUrl'` on all consultant notification types  |
+| Fire-and-forget delivery           | Accepted  | Postgres + FE bootstrap (by design)                             |
+| Multi-tab duplication              | Accepted  | Multiple sockets per user in same room (intended)               |
+
+Env vars (see `.env.example`):
+
+- `WS_MAX_CONNECTIONS_PER_USER` (default `10`)
+- `WS_CONNECT_RATE_LIMIT` (default `30` handshakes per IP per minute)
+- `ALLOWED_ORIGINS` — must list Ployos, Lonaos, and Internal Hub frontend origins (not API hostnames)
+- `CORS_ALLOW_LOCALHOST=true` — dev VPS only; allows local SPAs to connect without listing localhost ports

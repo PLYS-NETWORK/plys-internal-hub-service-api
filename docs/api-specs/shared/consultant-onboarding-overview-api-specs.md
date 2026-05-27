@@ -9,11 +9,11 @@ End-to-end consultant vetting flow under the **admin-managed onboarding-question
 
 ## Audiences
 
-| File                                                                                          | Audience              | Covers                                                                                 |
-| --------------------------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------- |
-| [consultant](../consultant/onboarding/onboarding-api-specs.md)                                | Consultant (Lona app) | Basic profile (Step 1) + active-question fetch + bulk answer submission (Step 2)       |
-| [admin](../admin/consultant-onboarding/consultant-onboarding-api-specs.md)                    | Internal Hub admin    | Onboarding review (list, detail, decide APPROVE / REJECT)                              |
-| [admin-onboarding-questions](../admin/onboarding-questions/onboarding-questions-api-specs.md) | Internal Hub admin    | CRUD + active/inactive toggle + soft delete + bulk reorder on the global question bank |
+| File                                                                                          | Audience                | Covers                                                                                 |
+| --------------------------------------------------------------------------------------------- | ----------------------- | -------------------------------------------------------------------------------------- |
+| [consultant](../consultant/onboarding/onboarding-api-specs.md)                                | Consultant (Lonaos app) | Basic profile (Step 1) + active-question fetch + bulk answer submission (Step 2)       |
+| [admin](../admin/consultant-onboarding/consultant-onboarding-api-specs.md)                    | Internal Hub admin      | Onboarding review (list, detail, decide APPROVE / REJECT)                              |
+| [admin-onboarding-questions](../admin/onboarding-questions/onboarding-questions-api-specs.md) | Internal Hub admin      | CRUD + active/inactive toggle + soft delete + bulk reorder on the global question bank |
 
 ## Pipeline at a glance
 

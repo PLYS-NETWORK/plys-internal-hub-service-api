@@ -1,6 +1,6 @@
 # Notifications — Consultant Event Catalog
 
-> Audience: Lona (consultant platform) frontend engineers.
+> Audience: Lonaos (consultant platform) frontend engineers.
 > All types below are delivered to the **specific consultant** the event concerns.
 > Companion guides: [Integration Guide](../../shared/notifications-realtime-api-specs.md) · [REST API](../../business/notifications/notifications-api-specs.md)
 
@@ -104,12 +104,12 @@ live, not instantly. The processor walks every matching consultant in 100-row pa
 query does not order by `has_notification_priority`**, so delivery order between consultants is
 effectively undefined within a batch.
 
-| Field          | Value                                 |
-| -------------- | ------------------------------------- |
-| `type`         | `consultant_project_skill_match`      |
-| `entity_type`  | `project`                             |
-| `entity_id`    | `metadata.project_id`                 |
-| `redirect_url` | `https://<lona>/projects/:project_id` |
+| Field          | Value                                   |
+| -------------- | --------------------------------------- |
+| `type`         | `consultant_project_skill_match`        |
+| `entity_type`  | `project`                               |
+| `entity_id`    | `metadata.project_id`                   |
+| `redirect_url` | `https://<lonaos>/projects/:project_id` |
 
 **Metadata:**
 
@@ -131,12 +131,12 @@ optionally prepend it to the discovery feed or badge the "New projects" indicato
 
 **Trigger:** The consultant is successfully added as an active member of a project.
 
-| Field          | Value                                 |
-| -------------- | ------------------------------------- |
-| `type`         | `consultant_project_joined`           |
-| `entity_type`  | `project`                             |
-| `entity_id`    | `metadata.project_id`                 |
-| `redirect_url` | `https://<lona>/projects/:project_id` |
+| Field          | Value                                   |
+| -------------- | --------------------------------------- |
+| `type`         | `consultant_project_joined`             |
+| `entity_type`  | `project`                               |
+| `entity_id`    | `metadata.project_id`                   |
+| `redirect_url` | `https://<lonaos>/projects/:project_id` |
 
 **Metadata:**
 
@@ -160,12 +160,12 @@ This fires when the consultant themselves moves the task (IN_PROGRESS → IN_REV
 the 3+1 review workflow resolves (DONE, REVISION_REQUESTED, or PENDING_APPROVAL on cap-escalation),
 or when an external action changes the status.
 
-| Field          | Value                                                |
-| -------------- | ---------------------------------------------------- |
-| `type`         | `consultant_task_status_changed`                     |
-| `entity_type`  | `task`                                               |
-| `entity_id`    | `metadata.task_id`                                   |
-| `redirect_url` | `https://<lona>/projects/:project_id/tasks/:task_id` |
+| Field          | Value                                                  |
+| -------------- | ------------------------------------------------------ |
+| `type`         | `consultant_task_status_changed`                       |
+| `entity_type`  | `task`                                                 |
+| `entity_id`    | `metadata.task_id`                                     |
+| `redirect_url` | `https://<lonaos>/projects/:project_id/tasks/:task_id` |
 
 **Metadata:**
 
@@ -209,7 +209,7 @@ Emitted from `AdminConsultantOnboardingService.decide` AFTER the DB transaction 
 | `type`         | `consultant_onboarding_approved` |
 | `entity_type`  | `onboarding`                     |
 | `entity_id`    | `metadata.onboarding_id`         |
-| `redirect_url` | `https://<lona>/skill-exams`     |
+| `redirect_url` | `https://<lonaos>/skill-exams`   |
 
 **Metadata:**
 
@@ -229,7 +229,7 @@ interface IConsultantOnboardingApprovedMetadata {
   "metadata": { "onboarding_id": "550e8400-e29b-41d4-a716-446655440000" },
   "entity_type": "onboarding",
   "entity_id": "550e8400-e29b-41d4-a716-446655440000",
-  "redirect_url": "https://lona.plys.dev/skill-exams"
+  "redirect_url": "https://lonaos.plys.dev/skill-exams"
 }
 ```
 
@@ -245,12 +245,12 @@ The consultant is **blocked from re-onboarding for 3 months** — login, registe
 all return `403 CONSULTANT_ONBOARDING_BLOCKED` while the block is active. See
 [auth](../auth/auth-api-specs.md) for the auth gate.
 
-| Field          | Value                                                   |
-| -------------- | ------------------------------------------------------- |
-| `type`         | `consultant_onboarding_rejected`                        |
-| `entity_type`  | `onboarding`                                            |
-| `entity_id`    | `metadata.onboarding_id`                                |
-| `redirect_url` | `https://<lona>/onboarding/blocked` (rejection landing) |
+| Field          | Value                                                     |
+| -------------- | --------------------------------------------------------- |
+| `type`         | `consultant_onboarding_rejected`                          |
+| `entity_type`  | `onboarding`                                              |
+| `entity_id`    | `metadata.onboarding_id`                                  |
+| `redirect_url` | `https://<lonaos>/onboarding/blocked` (rejection landing) |
 
 **Metadata:**
 
@@ -278,7 +278,7 @@ interface IConsultantOnboardingRejectedMetadata {
   },
   "entity_type": "onboarding",
   "entity_id": "550e8400-e29b-41d4-a716-446655440000",
-  "redirect_url": "https://lona.plys.dev/onboarding/blocked"
+  "redirect_url": "https://lonaos.plys.dev/onboarding/blocked"
 }
 ```
 
@@ -288,14 +288,14 @@ interface IConsultantOnboardingRejectedMetadata {
 
 ## 8. `consultant_skill_exam_submitted`
 
-**Trigger:** Consultant finalises a skill exam attempt (`status → SUBMITTED`). Confirms that the evaluation pipeline (Copyleaks → AI eval) has been kicked off — the consultant should not expect terminal status for a few minutes. The Lona UI surfaces this as the `PENDING_REVIEW` `consultant_view_status` returned by the skill-exam endpoints.
+**Trigger:** Consultant finalises a skill exam attempt (`status → SUBMITTED`). Confirms that the evaluation pipeline (Copyleaks → AI eval) has been kicked off — the consultant should not expect terminal status for a few minutes. The Lonaos UI surfaces this as the `PENDING_REVIEW` `consultant_view_status` returned by the skill-exam endpoints.
 
-| Field          | Value                                 |
-| -------------- | ------------------------------------- |
-| `type`         | `consultant_skill_exam_submitted`     |
-| `entity_type`  | `skill_exam`                          |
-| `entity_id`    | `metadata.exam_id`                    |
-| `redirect_url` | `https://<lona>/skill-exams/:exam_id` |
+| Field          | Value                                   |
+| -------------- | --------------------------------------- |
+| `type`         | `consultant_skill_exam_submitted`       |
+| `entity_type`  | `skill_exam`                            |
+| `entity_id`    | `metadata.exam_id`                      |
+| `redirect_url` | `https://<lonaos>/skill-exams/:exam_id` |
 
 **Metadata:**
 
@@ -323,7 +323,7 @@ interface IConsultantSkillExamSubmittedMetadata {
 | `type`         | `consultant_skill_exam_passed` |
 | `entity_type`  | `skill_exam`                   |
 | `entity_id`    | `metadata.exam_id`             |
-| `redirect_url` | `https://<lona>/skills`        |
+| `redirect_url` | `https://<lonaos>/skills`      |
 
 **Metadata:**
 
@@ -390,12 +390,12 @@ interface IConsultantSkillExamPassedMetadata {
 
 `metadata.fail_reason` discriminates the three cases — title and body copy are picked from the reason. `metadata.cooldown_until` is `null` for the EXPIRED branch (no per-skill cooldown) and a non-null ISO timestamp for the other two. `metadata.strikes_remaining` is computed as `Math.max(0, 3 - strike_count)` in the event handler.
 
-| Field          | Value                                 |
-| -------------- | ------------------------------------- |
-| `type`         | `consultant_skill_exam_failed`        |
-| `entity_type`  | `skill_exam`                          |
-| `entity_id`    | `metadata.exam_id`                    |
-| `redirect_url` | `https://<lona>/skill-exams/:exam_id` |
+| Field          | Value                                   |
+| -------------- | --------------------------------------- |
+| `type`         | `consultant_skill_exam_failed`          |
+| `entity_type`  | `skill_exam`                            |
+| `entity_id`    | `metadata.exam_id`                      |
+| `redirect_url` | `https://<lonaos>/skill-exams/:exam_id` |
 
 **Metadata:**
 
@@ -489,14 +489,14 @@ interface IConsultantSkillExamFailedMetadata {
 
 **Trigger:** The consultant successfully changes their own password through `POST /auth/change-password`. Dispatched from [basic-auth.service.ts](../../../../src/modules/auth/services/basic-auth.service.ts) on the same code path as business password changes — there is no consultant-specific variant. The same dispatch revokes every _other_ `user_sessions` row, so the live socket on the device that initiated the change stays connected, while every other device receives `error AUTH_TOKEN_INVALID` and is forced to re-authenticate.
 
-| Field          | Value                                                                                                                             |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `type`         | `password_changed`                                                                                                                |
-| `entity_type`  | `user`                                                                                                                            |
-| `entity_id`    | recipient `user_id`                                                                                                               |
-| `redirect_url` | `<ployos>/settings/security` — the dispatcher config has no `baseUrlKey: 'lonaUrl'` for this type, so it defaults to `ployosUrl`. |
+| Field          | Value                                                                                                                               |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `type`         | `password_changed`                                                                                                                  |
+| `entity_type`  | `user`                                                                                                                              |
+| `entity_id`    | recipient `user_id`                                                                                                                 |
+| `redirect_url` | `<ployos>/settings/security` — the dispatcher config has no `baseUrlKey: 'lonaosUrl'` for this type, so it defaults to `ployosUrl`. |
 
-> The `redirect_url` currently routes to the Ployos base URL because no consultant-specific override is wired up. The FE may prefer the entity-mapping fallback (`user → /settings/security` on Lona) instead of following the link verbatim.
+> The `redirect_url` currently routes to the Ployos base URL because no consultant-specific override is wired up. The FE may prefer the entity-mapping fallback (`user → /settings/security` on Lonaos) instead of following the link verbatim.
 
 **Metadata:**
 

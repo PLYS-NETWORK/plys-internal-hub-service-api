@@ -1,0 +1,144 @@
+{
+  "profile_updated": {
+    "title": "Profile updated",
+    "body": "Your profile was updated. Changed: {fields}"
+  },
+  "password_changed": {
+    "title": "Password changed",
+    "body": "Your password was changed. If this wasn't you, secure your account immediately."
+  },
+  "project_published": {
+    "title": "Project published",
+    "body": "Your project \"{title}\" ({code}) is now live and accepting applications."
+  },
+  "project_unpublished": {
+    "title": "Project unpublished",
+    "body": "Your project \"{title}\" ({code}) is back in configuration mode."
+  },
+  "task_published": {
+    "title": "Task published",
+    "body": "Task \"{title}\" ({code}) has been published and is now open for consultants."
+  },
+  "project_consultant_joined": {
+    "title": "Consultant joined your project",
+    "body": "{consultant} joined your project \"{title}\" ({code})."
+  },
+  "project_consultant_left": {
+    "title": "Consultant left your project",
+    "body": "{consultant} left your project \"{title}\" ({code})."
+  },
+  "top_up_completed": {
+    "title": "Top-up successful",
+    "body": "Your top-up of {amount} {currency} was credited to your account."
+  },
+  "top_up_refunded": {
+    "title": "Top-up refunded",
+    "body": "Your top-up of {amount} {currency} has been refunded to your original payment method."
+  },
+  "withdraw_completed": {
+    "title": "Withdrawal sent",
+    "body": "Your withdrawal of {amount} {currency} has been processed."
+  },
+  "withdraw_reversed": {
+    "title": "Withdrawal reversed",
+    "body": "Your withdrawal of {amount} {currency} was reversed: {reason}. The amount has been credited back."
+  },
+  "consultant_project_skill_match": {
+    "title": "New project matching your skills",
+    "body": "A new project \"{title}\" ({code}) matching your skills has been published."
+  },
+  "consultant_project_joined": {
+    "title": "You joined a project",
+    "body": "You have been added to project \"{title}\" ({code}). Head to the board to get started."
+  },
+  "consultant_task_status_changed": {
+    "title": "Task status updated",
+    "body": "Task \"{title}\" ({code}) moved to {new_status}."
+  },
+  "business_task_status_changed": {
+    "title": "Task status updated by consultant",
+    "body": "Task \"{title}\" ({code}) was moved to {new_status} by the assigned consultant."
+  },
+  "admin_business_onboarded": {
+    "title": "New business registered",
+    "body": "{name} has completed onboarding and is ready to post projects."
+  },
+  "admin_project_published": {
+    "title": "New project published",
+    "body": "{business} published project \"{title}\" ({code})."
+  },
+  "admin_business_top_up": {
+    "title": "Business top-up received",
+    "body": "{business} topped up {amount} {currency}."
+  },
+  "admin_task_published": {
+    "title": "Task published",
+    "body": "Task \"{title}\" ({code}) in project {project} was published by {business}."
+  },
+  "admin_consultant_onboarding_submitted": {
+    "title": "Onboarding submitted: {name}",
+    "body": "{name} has submitted their onboarding interview and is awaiting review."
+  },
+  "consultant_onboarding_approved": {
+    "title": "Your account has been verified",
+    "body": "Welcome to Plys! Your account is verified — you can now register skills and take exams."
+  },
+  "consultant_onboarding_rejected": {
+    "title": "Onboarding decision: not approved",
+    "body": "Your onboarding was not approved. You can re-apply after {blocked_until}. Reason: {reason}"
+  },
+  "consultant_skill_exam_submitted": {
+    "title": "Skill exam submitted",
+    "body": "Your {skill} exam is being evaluated. We'll notify you when it's done."
+  },
+  "consultant_skill_exam_failed": {
+    "low_score": {
+      "title": "Skill exam result: did not pass",
+      "body": "Your {skill} exam scored {final_score}%, below the 80% pass threshold. You can retake after {cooldown_until}."
+    },
+    "copyleaks": {
+      "title": "Skill exam flagged for AI-generated content",
+      "body": "Your {skill} answers were flagged. You may retake after {cooldown_until}. {strikes_remaining} attempt(s) remain before your account is permanently disabled."
+    },
+    "expired": {
+      "title": "Skill exam expired",
+      "body": "Your {skill} exam timer ran out before you submitted. After 3 expired attempts you will be paused from taking exams for 2 days."
+    }
+  },
+  "consultant_skill_exam_passed": {
+    "senior": {
+      "title": "Skill exam passed — senior!",
+      "body": "Nice work — you passed {skill} with {final_score}% as senior."
+    },
+    "expert": {
+      "title": "Skill exam passed — expert!",
+      "body": "Outstanding — you passed {skill} with {final_score}% as expert."
+    }
+  },
+  "consultant_account_banned": {
+    "title": "Account permanently disabled",
+    "body": "Your account has been permanently disabled after repeated AI-generated content violations. If you believe this is in error, contact support."
+  },
+  "admin_skill_exam_result": {
+    "passed": {
+      "title": "Skill exam passed: {consultant}",
+      "body": "{consultant} passed the {skill} exam ({score}%)."
+    },
+    "failed": {
+      "title": "Skill exam {outcome}: {consultant}",
+      "body": "{consultant} did not pass the {skill} exam ({score}%) — outcome: {outcome}."
+    }
+  },
+  "admin_consultant_banned": {
+    "title": "Consultant banned: {consultant}",
+    "body": "{consultant} was banned after {strikes} CopyLeaks strikes ({reason})."
+  },
+  "admin_consultant_project_joined": {
+    "title": "Consultant joined project: {consultant}",
+    "body": "{consultant} joined project \"{title}\" ({code}) owned by {business}."
+  },
+  "admin_consultant_project_left": {
+    "title": "Consultant left project: {consultant}",
+    "body": "{consultant} left project \"{title}\" ({code}) owned by {business}."
+  }
+}

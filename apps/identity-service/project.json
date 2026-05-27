@@ -1,0 +1,38 @@
+{
+  "name": "identity-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/identity-service/src",
+  "projectType": "application",
+  "tags": ["scope:app", "type:service", "domain:identity"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "nest build",
+        "cwd": "apps/identity-service"
+      },
+      "dependsOn": ["^build"]
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "NODE_ENV=development nest start --watch",
+        "cwd": "apps/identity-service"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint \"src/**/*.ts\" --max-warnings=0",
+        "cwd": "apps/identity-service"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "jest --config jest.config.js",
+        "cwd": "apps/identity-service"
+      }
+    }
+  }
+}

@@ -1,0 +1,59 @@
+name: 'Build and push Docker images'
+description: 'Build service images and push to GHCR'
+
+inputs:
+  image-tag:
+    description: 'Docker image tag'
+    required: true
+  registry:
+    description: 'Container registry prefix (default ghcr.io/owner/repo)'
+    required: true
+  services:
+    description: 'Space-separated service names, or "all" for all 7 images (6 services + migrate)'
+    required: false
+    default: 'all'
+  include-migrate:
+    description: 'When deploying a single service, also build/push the migrate image'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Log in to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and push service images
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        ALL_SERVICES="api-gateway identity-service profiles-service projects-service finance-service platform-service migrate"
+        REQUESTED="${{ inputs.services }}"
+
+        if [ "$REQUESTED" = "all" ]; then
+          BUILD_LIST="$ALL_SERVICES"
+        else
+          BUILD_LIST="$REQUESTED"
+          if [ "${{ inputs.include-migrate }}" = "true" ]; then
+            BUILD_LIST="$BUILD_LIST migrate"
+          fi
+        fi
+
+        for SERVICE in $BUILD_LIST; do
+          echo "==> Building ${SERVICE}..."
+          docker buildx build \
+            --platform linux/amd64 \
+            --build-arg SERVICE="${SERVICE}" \
+            --tag "${{ inputs.registry }}/${SERVICE}:${{ inputs.image-tag }}" \
+            --tag "${{ inputs.registry }}/${SERVICE}:latest" \
+            --push \
+            .
+        done
