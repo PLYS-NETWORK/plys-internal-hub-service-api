@@ -80,8 +80,9 @@ Add these secrets to **each environment** (values differ per env):
 | `DB_PASSWORD`                                       | PostgreSQL password                                                     |
 | `JWT_ACCESS_SECRET`                                 | `jwt_hmac_sha256` — `openssl rand -base64 48`                           |
 | `JWT_REFRESH_SECRET`                                | `jwt_hmac_sha256` — `openssl rand -base64 48` (must differ from access) |
-| `SSO_TOKEN_ENCRYPTION_KEY`                          | `openssl rand -base64 32`                                               |
 | `PUBLIC_ENDPOINT_API_KEY`                           | `openssl rand -base64 32`                                               |
+| `GRPC_SERVICE_SECRET`                               | `jwt_hmac_sha256` — `openssl rand -base64 48` (shared across services)  |
+| `SSO_TOKEN_ENCRYPTION_KEY`                          | Optional until SSO is enabled — `openssl rand -base64 32`               |
 | `RESEND_API_KEY`                                    | Resend dashboard                                                        |
 | `POLAR_ACCESS_TOKEN` / `POLAR_WEBHOOK_SECRET`       | Polar dashboard                                                         |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`       | Stripe dashboard                                                        |

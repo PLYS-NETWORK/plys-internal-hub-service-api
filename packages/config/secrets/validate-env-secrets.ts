@@ -52,7 +52,7 @@ export function validateEnvSecrets(env: NodeJS.ProcessEnv): IEnvSecretsValidatio
     }
   }
 
-  validateStrictDeploySecrets(env, strict, issues);
+  validateStrictDeploySecrets(env, strict, issues, warnings);
   validateJwtPairSecrets(env, strict, issues);
   validateVersionedAesSecretSet({
     env,
@@ -86,6 +86,7 @@ function validateStrictDeploySecrets(
   env: NodeJS.ProcessEnv,
   strict: boolean,
   issues: ISecretValidationIssue[],
+  warnings: ISecretValidationWarning[],
 ): void {
   if (!strict) {
     return;
@@ -99,16 +100,19 @@ function validateStrictDeploySecrets(
     });
   }
 
-  const requiredInStrict = [
-    'PUBLIC_ENDPOINT_API_KEY',
-    'GRPC_SERVICE_SECRET',
-    'SSO_TOKEN_ENCRYPTION_KEY',
-  ] as const;
+  const requiredInStrict = ['PUBLIC_ENDPOINT_API_KEY', 'GRPC_SERVICE_SECRET'] as const;
 
   for (const envVar of requiredInStrict) {
     if ((env[envVar] ?? '').length === 0) {
       issues.push({ envVar, message: 'must not be empty in dev/prod' });
     }
+  }
+
+  if ((env.SSO_TOKEN_ENCRYPTION_KEY ?? '').length === 0) {
+    warnings.push({
+      envVar: 'SSO_TOKEN_ENCRYPTION_KEY',
+      message: 'not configured — SSO provider token encryption will fail when SSO is enabled',
+    });
   }
 }
 

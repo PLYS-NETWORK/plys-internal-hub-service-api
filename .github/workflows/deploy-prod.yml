@@ -103,6 +103,7 @@ jobs:
           JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
           SSO_TOKEN_ENCRYPTION_KEY: ${{ secrets.SSO_TOKEN_ENCRYPTION_KEY }}
           PUBLIC_ENDPOINT_API_KEY: ${{ secrets.PUBLIC_ENDPOINT_API_KEY }}
+          GRPC_SERVICE_SECRET: ${{ secrets.GRPC_SERVICE_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           POLAR_ACCESS_TOKEN: ${{ secrets.POLAR_ACCESS_TOKEN }}
           POLAR_WEBHOOK_SECRET: ${{ secrets.POLAR_WEBHOOK_SECRET }}

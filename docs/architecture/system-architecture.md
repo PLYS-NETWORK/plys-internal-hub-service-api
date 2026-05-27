@@ -268,7 +268,8 @@ Startup validation (`packages/config/secrets/validate-env-secrets.ts`) enforces:
 - JWT secrets length and distinct access/refresh keys
 - `ALLOWED_ORIGINS` must be set (no wildcard default)
 - `DB_PASSWORD` must not be the local default
-- Required secrets: `PUBLIC_ENDPOINT_API_KEY`, `GRPC_SERVICE_SECRET`, `SSO_TOKEN_ENCRYPTION_KEY`
+- Required secrets: `PUBLIC_ENDPOINT_API_KEY`, `GRPC_SERVICE_SECRET`
+- Optional until SSO is enabled: `SSO_TOKEN_ENCRYPTION_KEY`
 - Versioned AES keys for AI master and BFF secrets when configured
 
 `JWT_STRICT_CLAIMS` defaults to **on** in dev/prod unless explicitly disabled.
