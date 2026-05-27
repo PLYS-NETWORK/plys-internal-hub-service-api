@@ -24,14 +24,12 @@ import { SubmitSkillExamAnswerDto } from '../dto/requests/submit-skill-exam-answ
 import { SkillExamDetailResponseDto } from '../dto/responses/skill-exam-detail-response.dto';
 import { SkillExamEligibilityResponseDto } from '../dto/responses/skill-exam-eligibility-response.dto';
 import { SkillExamSummaryResponseDto } from '../dto/responses/skill-exam-summary-response.dto';
-import { NotBannedGuard } from '../guards/not-banned.guard';
-import { OnboardingApprovedGuard } from '../guards/onboarding-approved.guard';
 import { ConsultantSkillExamService } from '../services/consultant-skill-exam.service';
 
 @ApiTags('Consultant Skill Exams')
 @ApiBearerAuth()
 @Controller('consultant/skill-exams')
-@UseGuards(RolesGuard, PlatformGuard, NotBannedGuard, OnboardingApprovedGuard)
+@UseGuards(RolesGuard, PlatformGuard)
 @Roles(UserRole.USER)
 @Platform(ActivePlatform.CONSULTANT)
 @Throttle(THROTTLE_DEFAULT)

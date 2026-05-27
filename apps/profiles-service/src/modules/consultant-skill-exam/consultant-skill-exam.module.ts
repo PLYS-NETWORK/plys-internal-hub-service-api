@@ -6,8 +6,6 @@ import { ServerAiModule } from '@plys/libraries/common-nest/modules/server-ai/se
 import { ProfilesUnitOfWorkModule } from '@plys/libraries/unit-of-work/profiles-unit-of-work.module';
 
 import { SKILL_EXAM_QUEUE } from './consultant-skill-exam.constants';
-import { NotBannedGuard } from './guards/not-banned.guard';
-import { OnboardingApprovedGuard } from './guards/onboarding-approved.guard';
 import { SkillExamProcessor } from './processors/skill-exam.processor';
 import { ConsultantSkillExamService } from './services/consultant-skill-exam.service';
 import { SkillExamAiEvaluationService } from './services/skill-exam-ai-evaluation.service';
@@ -48,8 +46,6 @@ import { SkillExamExpirySweeperService } from './services/skill-exam-expiry-swee
     // 5-min cron that EXPIRES stale IN_PROGRESS exams. See service file for why
     // both lazy + sweep are needed.
     SkillExamExpirySweeperService,
-    OnboardingApprovedGuard,
-    NotBannedGuard,
   ],
   exports: [ConsultantSkillExamService, SkillExamAiEvaluationService, SkillExamCopyleaksService],
 })

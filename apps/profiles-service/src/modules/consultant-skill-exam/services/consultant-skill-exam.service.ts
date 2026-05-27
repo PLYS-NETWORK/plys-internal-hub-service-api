@@ -40,6 +40,7 @@ import { SkillExamDetailResponseDto } from '../dto/responses/skill-exam-detail-r
 import { SkillExamEligibilityResponseDto } from '../dto/responses/skill-exam-eligibility-response.dto';
 import { SkillExamSummaryResponseDto } from '../dto/responses/skill-exam-summary-response.dto';
 import { IConsultantSkillExamService } from '../interfaces/consultant-skill-exam.service.interface';
+import { assertSkillExamAccessAllowed } from '../utils/skill-exam-access.util';
 
 @Injectable()
 export class ConsultantSkillExamService implements IConsultantSkillExamService {
@@ -62,6 +63,7 @@ export class ConsultantSkillExamService implements IConsultantSkillExamService {
   /** @inheritdoc */
   public async getCurrent(): Promise<SkillExamSummaryResponseDto | null> {
     const userId = this.requestContext.userId!;
+    await assertSkillExamAccessAllowed(this.uow, userId);
     this.logger.log(`[${this.rid}] getCurrent — start | userId: ${userId}`);
 
     const profile = await this.uow.consultantProfiles.findByUserId(userId);
@@ -131,6 +133,7 @@ export class ConsultantSkillExamService implements IConsultantSkillExamService {
   /** @inheritdoc */
   public async start(dto: StartSkillExamDto): Promise<SkillExamSummaryResponseDto> {
     const userId = this.requestContext.userId!;
+    await assertSkillExamAccessAllowed(this.uow, userId);
     this.logger.log(`[${this.rid}] start — start | userId: ${userId} | skillId: ${dto.skill_id}`);
 
     return this.uow.withTransaction(async (tx) => {
@@ -253,6 +256,7 @@ export class ConsultantSkillExamService implements IConsultantSkillExamService {
 
   /** @inheritdoc */
   public async getDetail(examId: string): Promise<SkillExamDetailResponseDto> {
+    await assertSkillExamAccessAllowed(this.uow, this.requestContext.userId!);
     let exam = await this.loadOwnedExam(examId);
 
     // Lazy expiry on read so the UI sees the EXPIRED transition immediately.
@@ -289,6 +293,7 @@ export class ConsultantSkillExamService implements IConsultantSkillExamService {
 
   /** @inheritdoc */
   public async submitAnswer(examId: string, dto: SubmitSkillExamAnswerDto): Promise<void> {
+    await assertSkillExamAccessAllowed(this.uow, this.requestContext.userId!);
     this.logger.log(
       `[${this.rid}] submitAnswer — start | examId: ${examId} | questionId: ${dto.exam_question_id}`,
     );
@@ -359,6 +364,7 @@ export class ConsultantSkillExamService implements IConsultantSkillExamService {
 
   /** @inheritdoc */
   public async submit(examId: string): Promise<void> {
+    await assertSkillExamAccessAllowed(this.uow, this.requestContext.userId!);
     this.logger.log(`[${this.rid}] submit — start | examId: ${examId}`);
 
     // Lazy expiry — refuse the submit if the deadline already passed.
