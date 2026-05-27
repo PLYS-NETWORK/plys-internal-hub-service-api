@@ -13,7 +13,7 @@ services:
     depends_on: !reset []
     environment:
       DEPLOY_ENV: dev
-    env_file:
+    env_file: !reset
       - .env.dev
 
   profiles-service:
@@ -22,7 +22,7 @@ services:
     depends_on: !reset []
     environment:
       DEPLOY_ENV: dev
-    env_file:
+    env_file: !reset
       - .env.dev
 
   projects-service:
@@ -31,7 +31,7 @@ services:
     depends_on: !reset []
     environment:
       DEPLOY_ENV: dev
-    env_file:
+    env_file: !reset
       - .env.dev
 
   finance-service:
@@ -40,7 +40,7 @@ services:
     depends_on: !reset []
     environment:
       DEPLOY_ENV: dev
-    env_file:
+    env_file: !reset
       - .env.dev
 
   platform-service:
@@ -49,7 +49,7 @@ services:
     depends_on: !reset []
     environment:
       DEPLOY_ENV: dev
-    env_file:
+    env_file: !reset
       - .env.dev
 
   api-gateway:
@@ -63,7 +63,7 @@ services:
       - platform-service
     environment:
       DEPLOY_ENV: dev
-    env_file:
+    env_file: !reset
       - .env.dev
     ports:
       - '3000:3000'
@@ -73,7 +73,7 @@ services:
     depends_on: !reset []
     environment:
       DEPLOY_ENV: dev
-    env_file:
+    env_file: !reset
       - .env.dev
 
   postgres:
