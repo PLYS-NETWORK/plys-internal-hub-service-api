@@ -2,58 +2,52 @@ version: '3.8'
 
 # Dev VPS override — use GHCR images instead of local build.
 # Requires IMAGE_REGISTRY + per-service IMAGE_TAG_* in compose .env.
+#
+# Mount .env.dev into /app so runtime (TypeORM CLI, Nest ConfigModule) can load it.
+# DB_HOST/REDIS_HOST=127.0.0.1 in .env.dev targets the VPS host; override to
+# host.docker.internal so containers can reach services on the host loopback.
 
-x-app-image: &app-image
+x-vps-dev-service: &vps-dev-service
   pull_policy: always
+  extra_hosts:
+    - 'host.docker.internal:host-gateway'
+  volumes:
+    - ./.env.dev:/app/.env.dev:ro
+  env_file: !reset
+    - .env.dev
+  environment:
+    DEPLOY_ENV: dev
+    DB_HOST: host.docker.internal
+    REDIS_HOST: host.docker.internal
 
 services:
   identity-service:
-    <<: *app-image
+    <<: *vps-dev-service
     image: ${IMAGE_REGISTRY}/identity-service:${IMAGE_TAG_IDENTITY_SERVICE}
     depends_on: !reset []
-    environment:
-      DEPLOY_ENV: dev
-    env_file: !reset
-      - .env.dev
 
   profiles-service:
-    <<: *app-image
+    <<: *vps-dev-service
     image: ${IMAGE_REGISTRY}/profiles-service:${IMAGE_TAG_PROFILES_SERVICE}
     depends_on: !reset []
-    environment:
-      DEPLOY_ENV: dev
-    env_file: !reset
-      - .env.dev
 
   projects-service:
-    <<: *app-image
+    <<: *vps-dev-service
     image: ${IMAGE_REGISTRY}/projects-service:${IMAGE_TAG_PROJECTS_SERVICE}
     depends_on: !reset []
-    environment:
-      DEPLOY_ENV: dev
-    env_file: !reset
-      - .env.dev
 
   finance-service:
-    <<: *app-image
+    <<: *vps-dev-service
     image: ${IMAGE_REGISTRY}/finance-service:${IMAGE_TAG_FINANCE_SERVICE}
     depends_on: !reset []
-    environment:
-      DEPLOY_ENV: dev
-    env_file: !reset
-      - .env.dev
 
   platform-service:
-    <<: *app-image
+    <<: *vps-dev-service
     image: ${IMAGE_REGISTRY}/platform-service:${IMAGE_TAG_PLATFORM_SERVICE}
     depends_on: !reset []
-    environment:
-      DEPLOY_ENV: dev
-    env_file: !reset
-      - .env.dev
 
   api-gateway:
-    <<: *app-image
+    <<: *vps-dev-service
     image: ${IMAGE_REGISTRY}/api-gateway:${IMAGE_TAG_API_GATEWAY}
     depends_on: !reset
       - identity-service
@@ -61,20 +55,13 @@ services:
       - projects-service
       - finance-service
       - platform-service
-    environment:
-      DEPLOY_ENV: dev
-    env_file: !reset
-      - .env.dev
     ports:
       - '3000:3000'
 
   migrate:
+    <<: *vps-dev-service
     image: ${IMAGE_REGISTRY}/migrate:${IMAGE_TAG_MIGRATE}
     depends_on: !reset []
-    environment:
-      DEPLOY_ENV: dev
-    env_file: !reset
-      - .env.dev
 
   postgres:
     profiles: [local-infra]

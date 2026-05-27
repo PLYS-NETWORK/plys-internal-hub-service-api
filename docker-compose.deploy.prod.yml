@@ -3,57 +3,47 @@ version: '3.8'
 # Production VPS override — use GHCR images instead of local build.
 # Requires IMAGE_REGISTRY + per-service IMAGE_TAG_* in compose .env.
 
-x-app-image: &app-image
+x-vps-prod-service: &vps-prod-service
   pull_policy: always
+  extra_hosts:
+    - 'host.docker.internal:host-gateway'
+  volumes:
+    - ./.env.prod:/app/.env.prod:ro
+  env_file: !reset
+    - .env.prod
+  environment:
+    DEPLOY_ENV: prod
+    DB_HOST: host.docker.internal
+    REDIS_HOST: host.docker.internal
 
 services:
   identity-service:
-    <<: *app-image
+    <<: *vps-prod-service
     image: ${IMAGE_REGISTRY}/identity-service:${IMAGE_TAG_IDENTITY_SERVICE}
     depends_on: !reset []
-    environment:
-      DEPLOY_ENV: prod
-    env_file: !reset
-      - .env.prod
 
   profiles-service:
-    <<: *app-image
+    <<: *vps-prod-service
     image: ${IMAGE_REGISTRY}/profiles-service:${IMAGE_TAG_PROFILES_SERVICE}
     depends_on: !reset []
-    environment:
-      DEPLOY_ENV: prod
-    env_file: !reset
-      - .env.prod
 
   projects-service:
-    <<: *app-image
+    <<: *vps-prod-service
     image: ${IMAGE_REGISTRY}/projects-service:${IMAGE_TAG_PROJECTS_SERVICE}
     depends_on: !reset []
-    environment:
-      DEPLOY_ENV: prod
-    env_file: !reset
-      - .env.prod
 
   finance-service:
-    <<: *app-image
+    <<: *vps-prod-service
     image: ${IMAGE_REGISTRY}/finance-service:${IMAGE_TAG_FINANCE_SERVICE}
     depends_on: !reset []
-    environment:
-      DEPLOY_ENV: prod
-    env_file: !reset
-      - .env.prod
 
   platform-service:
-    <<: *app-image
+    <<: *vps-prod-service
     image: ${IMAGE_REGISTRY}/platform-service:${IMAGE_TAG_PLATFORM_SERVICE}
     depends_on: !reset []
-    environment:
-      DEPLOY_ENV: prod
-    env_file: !reset
-      - .env.prod
 
   api-gateway:
-    <<: *app-image
+    <<: *vps-prod-service
     image: ${IMAGE_REGISTRY}/api-gateway:${IMAGE_TAG_API_GATEWAY}
     depends_on: !reset
       - identity-service
@@ -61,20 +51,13 @@ services:
       - projects-service
       - finance-service
       - platform-service
-    environment:
-      DEPLOY_ENV: prod
-    env_file: !reset
-      - .env.prod
     ports:
       - '3000:3000'
 
   migrate:
+    <<: *vps-prod-service
     image: ${IMAGE_REGISTRY}/migrate:${IMAGE_TAG_MIGRATE}
     depends_on: !reset []
-    environment:
-      DEPLOY_ENV: prod
-    env_file: !reset
-      - .env.prod
 
   postgres:
     profiles: [local-infra]
