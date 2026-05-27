@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class InitialSchema20260520000001 implements MigrationInterface {
-  public readonly name = 'InitialSchema20260520000001';
+export class InitialSchema20260528000001 implements MigrationInterface {
+  public readonly name = 'InitialSchema20260528000001';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // ─── users ────────────────────────────────────────────────────────────────
@@ -496,6 +496,9 @@ export class InitialSchema20260520000001 implements MigrationInterface {
     await queryRunner.query(`CREATE INDEX "idx_tasks_due_date"        ON "tasks" ("due_date")`);
     await queryRunner.query(`CREATE INDEX "idx_tasks_started_at"      ON "tasks" ("started_at")`);
     await queryRunner.query(`CREATE INDEX "idx_tasks_completed_at"    ON "tasks" ("completed_at")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_tasks_assigned_kanban" ON "tasks" ("assigned_to", "kanban_status")`,
+    );
 
     // ─── ai_task_sessions ─────────────────────────────────────────────────────
     await queryRunner.query(`
@@ -767,6 +770,9 @@ export class InitialSchema20260520000001 implements MigrationInterface {
       `CREATE INDEX "idx_invoices_business_id" ON "invoices" ("business_id")`,
     );
     await queryRunner.query(`CREATE INDEX "idx_invoices_status" ON "invoices" ("status")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_invoices_status_notified" ON "invoices" ("status", "notified_at")`,
+    );
 
     // ─── invoice_line_items ───────────────────────────────────────────────────
     await queryRunner.query(`
@@ -882,13 +888,19 @@ export class InitialSchema20260520000001 implements MigrationInterface {
       )
     `);
     await queryRunner.query(
-      `CREATE INDEX "idx_consultant_txn_consultant_created" ON "consultant_transactions" ("consultant_id")`,
+      `CREATE INDEX "idx_consultant_txn_consultant_created" ON "consultant_transactions" ("consultant_id", "created_at")`,
     );
     await queryRunner.query(
       `CREATE INDEX "idx_consultant_txn_project"            ON "consultant_transactions" ("project_id")`,
     );
     await queryRunner.query(
       `CREATE INDEX "idx_consultant_txn_task"               ON "consultant_transactions" ("task_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "idx_consultant_txn_type_status_created" ON "consultant_transactions" ("type", "status", "created_at")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "idx_consultant_txn_consultant_type_created" ON "consultant_transactions" ("consultant_id", "type", "created_at")`,
     );
 
     // ─── webhook_events ───────────────────────────────────────────────────────
@@ -1329,6 +1341,10 @@ export class InitialSchema20260520000001 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS "project_chat_session" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "notifications" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "webhook_events" CASCADE`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_consultant_txn_consultant_type_created"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_consultant_txn_type_status_created"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_invoices_status_notified"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_tasks_assigned_kanban"`);
     await queryRunner.query(`DROP TABLE IF EXISTS "consultant_transactions" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "business_transactions" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "invoice_line_items" CASCADE`);
