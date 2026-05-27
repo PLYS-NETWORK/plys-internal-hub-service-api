@@ -22,11 +22,15 @@ FROM deps AS build
 COPY . .
 RUN pnpm exec nx run-many -t build \
   --projects=libraries,api-gateway,identity-service,profiles-service,projects-service,finance-service,platform-service
+RUN node scripts/build-notifications-runtime-shim.mjs
 RUN node scripts/patch-packages-exports-for-runtime.mjs
+RUN node scripts/verify-docker-runtime-modules.mjs
 
 # ─── Runtime base ─────────────────────────────────────────────────────────────
 FROM base AS runtime
 ENV NODE_ENV=production
+# Runtime module resolution — see scripts/docker-entrypoint.sh (dynamic per-app node_modules).
+ENV NODE_PATH=/app/node_modules:/app/packages/node_modules
 
 COPY --from=build /app/package.json /app/pnpm-workspace.yaml ./
 COPY --from=build /app/node_modules ./node_modules
