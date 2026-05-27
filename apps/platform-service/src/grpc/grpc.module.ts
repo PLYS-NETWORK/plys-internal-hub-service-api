@@ -37,12 +37,5 @@ import { StatisticsGrpcController } from './statistics.grpc-controller';
     controllerProvider(NotificationsController),
     controllerProvider(HealthController),
   ],
-  exports: [
-    FilesGrpcController,
-    SkillsGrpcController,
-    StatisticsGrpcController,
-    NotificationsGrpcController,
-    HealthGrpcController,
-  ],
 })
 export class GrpcModule {}

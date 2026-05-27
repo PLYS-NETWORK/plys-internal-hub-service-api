@@ -10,12 +10,18 @@ import { Module } from '@nestjs/common';
 import { controllerProvider } from '@plys/libraries/common-nest/grpc';
 
 import { BillingGrpcController } from './billing.grpc-controller';
+import { HealthGrpcController } from './health.grpc-controller';
 import { PaymentsGrpcController } from './payments.grpc-controller';
 import { WebhooksGrpcController } from './webhooks.grpc-controller';
 
 @Module({
   imports: [PaymentsModule, BillingModule, WebhooksModule],
-  controllers: [PaymentsGrpcController, BillingGrpcController, WebhooksGrpcController],
+  controllers: [
+    HealthGrpcController,
+    PaymentsGrpcController,
+    BillingGrpcController,
+    WebhooksGrpcController,
+  ],
   providers: [
     controllerProvider(PaymentsController),
     controllerProvider(BusinessPaymentsController),
@@ -23,6 +29,5 @@ import { WebhooksGrpcController } from './webhooks.grpc-controller';
     controllerProvider(AdminPaymentsController),
     controllerProvider(BillingController),
   ],
-  exports: [PaymentsGrpcController, BillingGrpcController, WebhooksGrpcController],
 })
 export class GrpcModule {}

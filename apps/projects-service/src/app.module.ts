@@ -29,17 +29,7 @@ import { NotificationsModule } from '@plys/libraries/notifications';
 import { ProjectsUnitOfWorkModule } from '@plys/libraries/unit-of-work/projects-unit-of-work.module';
 import { WinstonModule } from 'nest-winston';
 
-import {
-  AiProviderKeysGrpcController,
-  BusinessProjectsGrpcController,
-  ChatSessionsGrpcController,
-  ConsultantProjectsGrpcController,
-  ExploreGrpcController,
-  GrpcModule,
-  HealthGrpcController,
-  ProjectAiContextGrpcController,
-  TaskReviewsGrpcController,
-} from './grpc';
+import { GrpcModule } from './grpc';
 
 @Module({
   imports: [
@@ -89,15 +79,5 @@ import {
     GrpcModule,
   ],
   providers: [AuditSubscriber],
-  controllers: [
-    HealthGrpcController,
-    BusinessProjectsGrpcController,
-    ConsultantProjectsGrpcController,
-    ExploreGrpcController,
-    TaskReviewsGrpcController,
-    AiProviderKeysGrpcController,
-    ProjectAiContextGrpcController,
-    ChatSessionsGrpcController,
-  ],
 })
 export class AppModule {}

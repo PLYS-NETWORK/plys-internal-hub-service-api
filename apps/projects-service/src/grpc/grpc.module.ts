@@ -34,6 +34,7 @@ import { BusinessProjectsGrpcController } from './business-projects.grpc-control
 import { ChatSessionsGrpcController } from './chat-sessions.grpc-controller';
 import { ConsultantProjectsGrpcController } from './consultant-projects.grpc-controller';
 import { ExploreGrpcController } from './explore.grpc-controller';
+import { HealthGrpcController } from './health.grpc-controller';
 import { ProjectAiContextGrpcController } from './project-ai-context.grpc-controller';
 import { TaskReviewsGrpcController } from './task-reviews.grpc-controller';
 
@@ -49,6 +50,7 @@ import { TaskReviewsGrpcController } from './task-reviews.grpc-controller';
     ProjectChatSessionModule,
   ],
   controllers: [
+    HealthGrpcController,
     BusinessProjectsGrpcController,
     ConsultantProjectsGrpcController,
     ExploreGrpcController,
@@ -79,15 +81,6 @@ import { TaskReviewsGrpcController } from './task-reviews.grpc-controller';
     controllerProvider(AiBootstrapController),
     controllerProvider(ProjectSessionsController),
     controllerProvider(ChatSessionsController),
-  ],
-  exports: [
-    BusinessProjectsGrpcController,
-    ConsultantProjectsGrpcController,
-    ExploreGrpcController,
-    TaskReviewsGrpcController,
-    AiProviderKeysGrpcController,
-    ProjectAiContextGrpcController,
-    ChatSessionsGrpcController,
   ],
 })
 export class GrpcModule {}

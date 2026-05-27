@@ -21,6 +21,7 @@ import { controllerProvider } from '@plys/libraries/common-nest/grpc';
 import { AdminOnboardingGrpcController } from './admin-onboarding.grpc-controller';
 import { BusinessOnboardingGrpcController } from './business-onboarding.grpc-controller';
 import { ConsultantOnboardingGrpcController } from './consultant-onboarding.grpc-controller';
+import { HealthGrpcController } from './health.grpc-controller';
 import { ProfilesGrpcController } from './profiles.grpc-controller';
 import { SkillExamsGrpcController } from './skill-exams.grpc-controller';
 
@@ -35,6 +36,7 @@ import { SkillExamsGrpcController } from './skill-exams.grpc-controller';
     AdminConsultantSkillExamModule,
   ],
   controllers: [
+    HealthGrpcController,
     ProfilesGrpcController,
     BusinessOnboardingGrpcController,
     ConsultantOnboardingGrpcController,
@@ -52,13 +54,6 @@ import { SkillExamsGrpcController } from './skill-exams.grpc-controller';
     controllerProvider(AdminOnboardingQuestionsController),
     controllerProvider(ConsultantSkillExamController),
     controllerProvider(AdminConsultantSkillExamController),
-  ],
-  exports: [
-    ProfilesGrpcController,
-    BusinessOnboardingGrpcController,
-    ConsultantOnboardingGrpcController,
-    AdminOnboardingGrpcController,
-    SkillExamsGrpcController,
   ],
 })
 export class GrpcModule {}

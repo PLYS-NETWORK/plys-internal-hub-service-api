@@ -26,13 +26,7 @@ import { NotificationsModule } from '@plys/libraries/notifications';
 import { UnitOfWorkModule } from '@plys/libraries/unit-of-work/unit-of-work.module';
 import { WinstonModule } from 'nest-winston';
 
-import {
-  BillingGrpcController,
-  GrpcModule,
-  HealthGrpcController,
-  PaymentsGrpcController,
-  WebhooksGrpcController,
-} from './grpc';
+import { GrpcModule } from './grpc';
 
 @Module({
   imports: [
@@ -79,11 +73,5 @@ import {
     GrpcModule,
   ],
   providers: [AuditSubscriber],
-  controllers: [
-    HealthGrpcController,
-    PaymentsGrpcController,
-    BillingGrpcController,
-    WebhooksGrpcController,
-  ],
 })
 export class AppModule {}

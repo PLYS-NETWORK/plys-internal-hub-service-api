@@ -29,15 +29,7 @@ import { NotificationsModule } from '@plys/libraries/notifications';
 import { ProfilesUnitOfWorkModule } from '@plys/libraries/unit-of-work/profiles-unit-of-work.module';
 import { WinstonModule } from 'nest-winston';
 
-import {
-  AdminOnboardingGrpcController,
-  BusinessOnboardingGrpcController,
-  ConsultantOnboardingGrpcController,
-  GrpcModule,
-  HealthGrpcController,
-  ProfilesGrpcController,
-  SkillExamsGrpcController,
-} from './grpc';
+import { GrpcModule } from './grpc';
 
 @Module({
   imports: [
@@ -86,14 +78,6 @@ import {
     ConsultantSkillExamModule,
     AdminConsultantSkillExamModule,
     GrpcModule,
-  ],
-  controllers: [
-    HealthGrpcController,
-    ProfilesGrpcController,
-    BusinessOnboardingGrpcController,
-    ConsultantOnboardingGrpcController,
-    AdminOnboardingGrpcController,
-    SkillExamsGrpcController,
   ],
 })
 export class AppModule {}

@@ -28,14 +28,7 @@ import { getTypeOrmConfig } from '@plys/libraries/database/typeorm.config';
 import { UnitOfWorkModule } from '@plys/libraries/unit-of-work/unit-of-work.module';
 import { WinstonModule } from 'nest-winston';
 
-import {
-  FilesGrpcController,
-  GrpcModule,
-  HealthGrpcController,
-  NotificationsGrpcController,
-  SkillsGrpcController,
-  StatisticsGrpcController,
-} from './grpc';
+import { GrpcModule } from './grpc';
 
 @Module({
   imports: [
@@ -84,12 +77,5 @@ import {
     GrpcModule,
   ],
   providers: [AuditSubscriber],
-  controllers: [
-    HealthGrpcController,
-    FilesGrpcController,
-    SkillsGrpcController,
-    StatisticsGrpcController,
-    NotificationsGrpcController,
-  ],
 })
 export class AppModule {}
