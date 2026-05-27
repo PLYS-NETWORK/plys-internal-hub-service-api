@@ -2,6 +2,17 @@ import { registerAs } from '@nestjs/config';
 
 import { assertEnvSecretsValid } from './secrets/validate-env-secrets';
 
+/** host:port for gRPC clients — explicit *_GRPC_URL wins; else GRPC_HOST + *_GRPC_PORT. */
+function resolveGrpcUrl(
+  url: string | undefined,
+  port: string | undefined,
+  defaultPort: string,
+): string {
+  if (url) return url;
+  const host = process.env.GRPC_HOST ?? '127.0.0.1';
+  return `${host}:${port ?? defaultPort}`;
+}
+
 function collectVersionedKeys(prefix: string): Record<number, string> {
   const out: Record<number, string> = {};
   const pattern = new RegExp(`^${prefix}_v(\\d+)$`);
@@ -141,19 +152,35 @@ export default registerAs('app', () => {
       },
     },
     identity: {
-      grpcUrl: process.env.IDENTITY_GRPC_URL ?? '127.0.0.1:5001',
+      grpcUrl: resolveGrpcUrl(
+        process.env.IDENTITY_GRPC_URL,
+        process.env.IDENTITY_GRPC_PORT,
+        '5001',
+      ),
     },
     profiles: {
-      grpcUrl: process.env.PROFILES_GRPC_URL ?? '127.0.0.1:5002',
+      grpcUrl: resolveGrpcUrl(
+        process.env.PROFILES_GRPC_URL,
+        process.env.PROFILES_GRPC_PORT,
+        '5002',
+      ),
     },
     projects: {
-      grpcUrl: process.env.PROJECTS_GRPC_URL ?? '127.0.0.1:5003',
+      grpcUrl: resolveGrpcUrl(
+        process.env.PROJECTS_GRPC_URL,
+        process.env.PROJECTS_GRPC_PORT,
+        '5003',
+      ),
     },
     finance: {
-      grpcUrl: process.env.FINANCE_GRPC_URL ?? '127.0.0.1:5004',
+      grpcUrl: resolveGrpcUrl(process.env.FINANCE_GRPC_URL, process.env.FINANCE_GRPC_PORT, '5004'),
     },
     platform: {
-      grpcUrl: process.env.PLATFORM_GRPC_URL ?? '127.0.0.1:5005',
+      grpcUrl: resolveGrpcUrl(
+        process.env.PLATFORM_GRPC_URL,
+        process.env.PLATFORM_GRPC_PORT,
+        '5005',
+      ),
     },
   };
 });

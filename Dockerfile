@@ -39,5 +39,5 @@ CMD if [ "$SERVICE" = "migrate" ]; then \
       node ./packages/node_modules/typeorm/cli.js migration:run -d packages/dist/database/data-source.js && \
       node packages/dist/database/seeds/seed-runner.js; \
     else \
-      node apps/${SERVICE}/dist/main.js; \
+      node apps/${SERVICE}/dist/apps/${SERVICE}/src/main.js; \
     fi

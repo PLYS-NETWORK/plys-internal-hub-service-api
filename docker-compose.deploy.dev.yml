@@ -4,18 +4,15 @@ version: '3.8'
 # Requires IMAGE_REGISTRY + per-service IMAGE_TAG_* in compose .env.
 #
 # env_file: !reset MUST be set per service (not in YAML anchors — anchors drop the tag).
-# Mount .env.dev into /app for Nest/TypeORM runtime. Override loopback hosts for Docker.
+# network_mode: host — Postgres/Redis/gRPC on 127.0.0.1 (see GRPC_HOST in .env.dev).
 
 x-vps-dev-base: &vps-dev-base
   pull_policy: always
-  extra_hosts:
-    - 'host.docker.internal:host-gateway'
+  network_mode: host
   volumes:
     - ./.env.dev:/app/.env.dev:ro
   environment:
     DEPLOY_ENV: dev
-    DB_HOST: host.docker.internal
-    REDIS_HOST: host.docker.internal
 
 services:
   identity-service:
@@ -64,19 +61,9 @@ services:
       - platform-service
     env_file: !reset
       - .env.dev
-    ports:
-      - '3000:3000'
 
   migrate:
-    # Host Postgres listens on 127.0.0.1 — bridge/host.docker.internal cannot reach it.
-    pull_policy: always
-    network_mode: host
-    volumes:
-      - ./.env.dev:/app/.env.dev:ro
-    env_file: !reset
-      - .env.dev
-    environment:
-      DEPLOY_ENV: dev
+    <<: *vps-dev-base
     image: ${IMAGE_REGISTRY}/migrate:${IMAGE_TAG_MIGRATE}
     depends_on: !reset []
 

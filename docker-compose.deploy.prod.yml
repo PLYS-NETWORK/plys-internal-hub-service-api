@@ -5,14 +5,11 @@ version: '3.8'
 
 x-vps-prod-base: &vps-prod-base
   pull_policy: always
-  extra_hosts:
-    - 'host.docker.internal:host-gateway'
+  network_mode: host
   volumes:
     - ./.env.prod:/app/.env.prod:ro
   environment:
     DEPLOY_ENV: prod
-    DB_HOST: host.docker.internal
-    REDIS_HOST: host.docker.internal
 
 services:
   identity-service:
@@ -61,19 +58,9 @@ services:
       - platform-service
     env_file: !reset
       - .env.prod
-    ports:
-      - '3000:3000'
 
   migrate:
-    # Host Postgres listens on 127.0.0.1 — bridge/host.docker.internal cannot reach it.
-    pull_policy: always
-    network_mode: host
-    volumes:
-      - ./.env.prod:/app/.env.prod:ro
-    env_file: !reset
-      - .env.prod
-    environment:
-      DEPLOY_ENV: prod
+    <<: *vps-prod-base
     image: ${IMAGE_REGISTRY}/migrate:${IMAGE_TAG_MIGRATE}
     depends_on: !reset []
 
