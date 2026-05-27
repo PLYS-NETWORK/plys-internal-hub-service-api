@@ -53,6 +53,12 @@ runs:
         script: |
           set -euo pipefail
 
+          # Non-interactive SSH does not load shell rc files — init nvm (node) and pnpm (pm2).
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+          export PNPM_HOME="$HOME/.local/share/pnpm"
+          export PATH="$PNPM_HOME:$PATH"
+
           DEPLOY_ENV="${{ inputs.deploy-env }}"
           APP_DIR="${{ inputs.app-dir }}"
           DEPLOY_DIR="${APP_DIR}/current"
