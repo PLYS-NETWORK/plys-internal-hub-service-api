@@ -8,6 +8,7 @@ build/
 .claude/
 .cursorrules
 .changeset/
+.cursor/
 
 # environment
 .env
