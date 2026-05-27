@@ -21,6 +21,7 @@ FROM deps AS build
 COPY . .
 RUN pnpm exec nx run-many -t build \
   --projects=libraries,api-gateway,identity-service,profiles-service,projects-service,finance-service,platform-service
+RUN node scripts/patch-packages-exports-for-runtime.mjs
 
 # ─── Runtime base ─────────────────────────────────────────────────────────────
 FROM base AS runtime
