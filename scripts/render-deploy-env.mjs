@@ -32,8 +32,8 @@ function parseArgs(argv) {
   };
 }
 
-function loadSecretKeys() {
-  const listPath = path.join(root, 'scripts', 'env-secrets.list');
+function loadSecretKeys(filename) {
+  const listPath = path.join(root, 'scripts', filename);
   return fs
     .readFileSync(listPath, 'utf8')
     .split('\n')
@@ -60,13 +60,22 @@ if (!fs.existsSync(templatePath)) {
 }
 
 let content = fs.readFileSync(templatePath, 'utf8');
-const secretKeys = loadSecretKeys();
+const requiredSecretKeys = loadSecretKeys('env-secrets.list');
+const optionalSecretKeys = loadSecretKeys('env-secrets-optional.list');
 const missing = [];
 
-for (const key of secretKeys) {
+for (const key of requiredSecretKeys) {
   const value = process.env[key];
   if (value === undefined || value === '') {
     missing.push(key);
+    continue;
+  }
+  content = setEnvLine(content, key, value);
+}
+
+for (const key of optionalSecretKeys) {
+  const value = process.env[key];
+  if (value === undefined || value === '') {
     continue;
   }
   content = setEnvLine(content, key, value);

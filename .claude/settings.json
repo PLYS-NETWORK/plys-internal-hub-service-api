@@ -1,5 +1,0 @@
-{
-  "permissions": {
-    "allow": ["Bash(grep -E \"\\\\.ts$\")", "Bash(npm run *)", "Bash(xargs cat)"]
-  }
-}
