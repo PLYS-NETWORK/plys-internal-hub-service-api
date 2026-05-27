@@ -59,6 +59,9 @@ runs:
             --registry "${{ inputs.image-registry }}"
         fi
 
+        # Compose interpolation file (.env) — apps.yml defaults ENV_FILE to .env.example.
+        echo "ENV_FILE=.env.${{ inputs.deploy-env }}" >> "deploy-package/.env"
+
         echo "Deploy bundle ready:"
         ls -la deploy-package/
         echo "--- compose env ---"

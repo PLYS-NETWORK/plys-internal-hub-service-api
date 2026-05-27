@@ -73,6 +73,17 @@ runs:
           cd "$DEPLOY_DIR"
           mkdir -p "$LOG_DIR"
 
+          ensure_compose_env_file() {
+            local compose_env_file=".env.${DEPLOY_ENV}"
+            if [ -f .env ]; then
+              if grep -q '^ENV_FILE=' .env; then
+                sed -i "s/^ENV_FILE=.*/ENV_FILE=${compose_env_file}/" .env
+              else
+                echo "ENV_FILE=${compose_env_file}" >> .env
+              fi
+            fi
+          }
+
           echo "==> Logging in to GHCR..."
           echo "${{ inputs.ghcr-token }}" | docker login ghcr.io -u github --password-stdin
 
@@ -89,6 +100,8 @@ runs:
               echo "ERROR: ${DEPLOY_DIR}/.env not found — upload deploy bundle first."
               exit 1
             fi
+
+            ensure_compose_env_file
 
             echo "==> Pulling all images..."
             docker compose $COMPOSE_FILES pull
@@ -129,6 +142,8 @@ runs:
               echo "ERROR: ${DEPLOY_DIR}/.env not found — upload deploy bundle first."
               exit 1
             fi
+
+            ensure_compose_env_file
 
             node scripts/patch-image-tag.mjs \
               --file .env \
