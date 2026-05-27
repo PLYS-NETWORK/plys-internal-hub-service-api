@@ -178,6 +178,12 @@ importers:
       '@polar-sh/sdk':
         specifier: ^0.47.0
         version: 0.47.1
+      '@socket.io/redis-adapter':
+        specifier: ^8.3.0
+        version: 8.3.0(socket.io-adapter@2.5.6)
+      '@socket.io/redis-emitter':
+        specifier: ^5.1.0
+        version: 5.1.0
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -574,6 +580,9 @@ importers:
       '@plys/libraries':
         specifier: workspace:*
         version: link:../../packages
+      '@socket.io/redis-emitter':
+        specifier: ^5.1.0
+        version: 5.1.0
       bull:
         specifier: ^4.16.5
         version: 4.16.5

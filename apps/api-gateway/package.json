@@ -44,6 +44,8 @@
     "@nestjs/websockets": "^11.1.19",
     "@plys/libraries": "workspace:*",
     "@polar-sh/sdk": "^0.47.0",
+    "@socket.io/redis-adapter": "^8.3.0",
+    "@socket.io/redis-emitter": "^5.1.0",
     "@grpc/grpc-js": "^1.13.0",
     "@grpc/proto-loader": "^0.7.15",
     "bcryptjs": "^3.0.3",
