@@ -1,6 +1,8 @@
 export type { IGrpcServiceBootstrapOptions } from './grpc-bootstrap.util';
+export type { IGrpcBootstrapApplication } from './grpc-bootstrap.util';
 export {
   connectDomainGrpcMicroservice,
+  createGrpcHostApplication,
   resolveProtoPath,
   startGrpcOnlyService,
 } from './grpc-bootstrap.util';

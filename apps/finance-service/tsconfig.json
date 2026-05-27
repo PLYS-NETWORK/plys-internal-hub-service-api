@@ -13,7 +13,7 @@
       "@plys/libraries/common-nest/*": ["../../packages/common-nest/*"],
       "@plys/libraries/unit-of-work/*": ["../../packages/unit-of-work/*"],
       "@modules/billing/*": ["src/modules/billing/*"],
-      "@modules/payments": ["src/modules/payments/index.ts"],
+      "@modules/payments": ["src/modules/payments/payments.module"],
       "@modules/payments/*": ["src/modules/payments/*"],
       "@modules/webhooks/*": ["src/modules/webhooks/*"],
       "@modules/notifications/*": ["../platform-service/src/modules/notifications/*"]

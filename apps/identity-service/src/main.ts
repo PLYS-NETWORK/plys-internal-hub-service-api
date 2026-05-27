@@ -1,6 +1,6 @@
-import { NestFactory } from '@nestjs/core';
 import {
   connectDomainGrpcMicroservice,
+  createGrpcHostApplication,
   startGrpcOnlyService,
 } from '@plys/libraries/common-nest/grpc';
 import { GRPC_PACKAGES, IDENTITY_PROTO_PATH } from '@plys/libraries/proto';
@@ -9,7 +9,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await createGrpcHostApplication(AppModule, { bufferLogs: true });
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   connectDomainGrpcMicroservice(app, {

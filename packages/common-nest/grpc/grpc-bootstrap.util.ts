@@ -1,7 +1,10 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+import { Type } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { GRPC_PACKAGES, HEALTH_PROTO_PATH, HTTP_PROTO_PATH } from '@plys/libraries/proto';
 
 export interface IGrpcServiceBootstrapOptions {
@@ -12,10 +15,20 @@ export interface IGrpcServiceBootstrapOptions {
   protoDirName: string;
 }
 
-interface IGrpcBootstrapApplication {
+export interface IGrpcBootstrapApplication {
   connectMicroservice(options: MicroserviceOptions): unknown;
   startAllMicroservices(): Promise<unknown>;
   init(): Promise<unknown>;
+}
+
+/** Nest 11 requires an HTTP platform adapter even for gRPC-only services (no HTTP listen). */
+export async function createGrpcHostApplication(
+  module: Type<unknown>,
+  options?: { bufferLogs?: boolean },
+): Promise<NestFastifyApplication> {
+  return NestFactory.create(module, new FastifyAdapter(), {
+    bufferLogs: options?.bufferLogs ?? false,
+  });
 }
 
 export function resolveProtoPath(candidates: string[]): string {

@@ -54,6 +54,21 @@ function extractRequires(source) {
   return [...reqs];
 }
 
+function findTypeScriptRuntimeRequires(scanRoots) {
+  const hits = [];
+  for (const scanRoot of scanRoots) {
+    for (const file of walkJsFiles(scanRoot)) {
+      const source = fs.readFileSync(file, 'utf8');
+      for (const request of extractRequires(source)) {
+        if (request.endsWith('.ts')) {
+          hits.push({ fromFile: file, request });
+        }
+      }
+    }
+  }
+  return hits;
+}
+
 function resolvePlysExport(subpath) {
   const pkgPath = path.join(root, 'packages/package.json');
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
@@ -146,6 +161,15 @@ for (const scanRoot of scanRoots) {
       if (failure) failures.push(failure);
     }
   }
+}
+
+const tsRequires = findTypeScriptRuntimeRequires(scanRoots);
+for (const hit of tsRequires) {
+  failures.push({
+    fromFile: hit.fromFile,
+    request: hit.request,
+    reason: 'compiled output must not require .ts paths — fix tsconfig path alias target',
+  });
 }
 
 if (failures.length > 0) {

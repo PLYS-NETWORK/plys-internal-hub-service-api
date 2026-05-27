@@ -12,7 +12,7 @@
       "@plys/libraries/config/*": ["../../packages/config/*"],
       "@plys/libraries/common-nest/*": ["../../packages/common-nest/*"],
       "@plys/libraries/unit-of-work/*": ["../../packages/unit-of-work/*"],
-      "@modules/files": ["src/modules/files/index.ts"],
+      "@modules/files": ["src/modules/files/files.module"],
       "@modules/files/*": ["src/modules/files/*"],
       "@modules/skills/*": ["src/modules/skills/*"],
       "@modules/statistics/*": ["src/modules/statistics/*"],
