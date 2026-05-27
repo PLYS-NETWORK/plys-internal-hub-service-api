@@ -102,7 +102,7 @@ services:
     env_file:
       - ${ENV_FILE:-.env.example}
     ports:
-      - '${PORT:-3000}:3000'
+      - '${PORT:-3000}:${PORT:-3000}'
     depends_on:
       - identity-service
       - profiles-service

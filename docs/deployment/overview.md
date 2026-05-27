@@ -38,6 +38,7 @@ For first-time VPS and GitHub setup, see [setup.md](./setup.md).
 
 | Variable               | Dev                    | Prod    | Purpose                                                                                                                    |
 | ---------------------- | ---------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                 | `4001`                 | `4000`  | api-gateway HTTP listen port on VPS (`network_mode: host`)                                                                 |
 | `CORS_ALLOW_LOCALHOST` | `true` (in `.env.dev`) | ignored | When `DEPLOY_ENV=dev`, allows `http://localhost:*` and `http://127.0.0.1:*` without listing each port in `ALLOWED_ORIGINS` |
 
 If `ALLOWED_ORIGINS` is also injected as a GitHub secret at deploy time, update the secret to match the frontend-only list above.

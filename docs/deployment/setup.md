@@ -52,11 +52,11 @@ sudo ufw allow 443/tcp
 sudo ufw enable
 ```
 
-The API gateway listens on port 3000 inside Docker; expose it via reverse proxy (nginx/Caddy) on 443.
+The API gateway listens on the host loopback port from `PORT` in `.env.dev` / `.env.prod` (dev **4001**, prod **4000**); expose it via reverse proxy (nginx/Caddy) on 443.
 
 ### 1.4 Reverse proxy (outline)
 
-Point `https://api-dev.lona.my` → `http://127.0.0.1:3000`. Use TLS termination at the proxy (Let's Encrypt).
+Point `https://api-dev.lona.my` → `http://127.0.0.1:4001` and `https://api.lona.my` → `http://127.0.0.1:4000`. Use TLS termination at the proxy (Let's Encrypt).
 
 ---
 
@@ -195,13 +195,13 @@ See [overview.md](./overview.md#rollback).
 
 ## 6. Troubleshooting
 
-| Symptom                            | Check                                                       |
-| ---------------------------------- | ----------------------------------------------------------- |
-| `pull access denied`               | `GHCR_PULL_TOKEN` valid; `docker login ghcr.io` on VPS      |
-| PM2 app errored                    | `pm2 logs <name>`; verify `.env` has all `IMAGE_TAG_*` keys |
-| Health check fails                 | `docker ps`; gateway container up; reverse proxy → :3000    |
-| Migration failed                   | Run migrate manually; check `DB_*` in `.env.dev` on VPS     |
-| Single deploy broke other services | Other services keep old tags — only target PM2 app restarts |
+| Symptom                            | Check                                                                         |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| `pull access denied`               | `GHCR_PULL_TOKEN` valid; `docker login ghcr.io` on VPS                        |
+| PM2 app errored                    | `pm2 logs <name>`; verify `.env` has all `IMAGE_TAG_*` keys                   |
+| Health check fails                 | `docker ps`; gateway container up; reverse proxy → dev `:4001` / prod `:4000` |
+| Migration failed                   | Run migrate manually; check `DB_*` in `.env.dev` on VPS                       |
+| Single deploy broke other services | Other services keep old tags — only target PM2 app restarts                   |
 
 ---
 
