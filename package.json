@@ -5,7 +5,7 @@
   "description": "Plys marketplace monorepo — API gateway and microservices",
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nx run-many -t build --projects=api-gateway,identity-service,profiles-service,projects-service,finance-service,platform-service,libraries",
+    "build": "nx run libraries:build && nx run-many -t build --projects=api-gateway,identity-service,profiles-service,projects-service,finance-service,platform-service",
     "lint": "nx run-many -t lint --all",
     "test": "nx run-many -t test --all",
     "affected": "nx affected -t lint test build",

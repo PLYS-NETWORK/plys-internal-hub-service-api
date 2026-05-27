@@ -7,6 +7,7 @@ import {
   IHttpRequest,
   IHttpResponse,
 } from '@plys/libraries/common-nest/grpc';
+import { Observable } from 'rxjs';
 
 export abstract class GrpcDispatchClientBase implements IGrpcDispatchClient, OnModuleInit {
   private grpcService!: IGrpcDispatchClient;
@@ -19,7 +20,7 @@ export abstract class GrpcDispatchClientBase implements IGrpcDispatchClient, OnM
     this.grpcService = this.clientGrpc.getService<IGrpcDispatchClient>(this.grpcServiceName);
   }
 
-  public dispatch(request: IHttpRequest, metadata?: Metadata): Promise<IHttpResponse> {
+  public dispatch(request: IHttpRequest, metadata?: Metadata): Observable<IHttpResponse> {
     return this.grpcService.dispatch(request, metadata);
   }
 

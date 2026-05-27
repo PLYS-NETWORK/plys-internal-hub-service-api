@@ -69,6 +69,9 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      CI: true
+      NX_DAEMON: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -87,8 +90,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm exec nx run-many -t build --projects=libraries,api-gateway,identity-service,profiles-service,projects-service,finance-service,platform-service
+      - name: Build shared libraries
+        run: pnpm exec nx run libraries:build
+
+      - name: Build apps
+        run: pnpm exec nx run-many -t build --projects=api-gateway,identity-service,profiles-service,projects-service,finance-service,platform-service
 
   all-green:
     name: All checks

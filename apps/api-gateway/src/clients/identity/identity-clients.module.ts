@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
 import { IdentitySessionClient } from '@plys/libraries/common-nest/modules/identity-client';
 
 import { createGrpcClientModuleOptions } from '../base/create-grpc-client-module.util';
