@@ -15,6 +15,7 @@ services:
   identity-service:
     <<: *vps-prod-base
     image: ${IMAGE_REGISTRY}/identity-service:${IMAGE_TAG_IDENTITY_SERVICE}
+    networks: !reset
     depends_on: !reset []
     env_file: !reset
       - .env.prod
@@ -22,6 +23,7 @@ services:
   profiles-service:
     <<: *vps-prod-base
     image: ${IMAGE_REGISTRY}/profiles-service:${IMAGE_TAG_PROFILES_SERVICE}
+    networks: !reset
     depends_on: !reset []
     env_file: !reset
       - .env.prod
@@ -29,6 +31,7 @@ services:
   projects-service:
     <<: *vps-prod-base
     image: ${IMAGE_REGISTRY}/projects-service:${IMAGE_TAG_PROJECTS_SERVICE}
+    networks: !reset
     depends_on: !reset []
     env_file: !reset
       - .env.prod
@@ -36,6 +39,7 @@ services:
   finance-service:
     <<: *vps-prod-base
     image: ${IMAGE_REGISTRY}/finance-service:${IMAGE_TAG_FINANCE_SERVICE}
+    networks: !reset
     depends_on: !reset []
     env_file: !reset
       - .env.prod
@@ -43,6 +47,7 @@ services:
   platform-service:
     <<: *vps-prod-base
     image: ${IMAGE_REGISTRY}/platform-service:${IMAGE_TAG_PLATFORM_SERVICE}
+    networks: !reset
     depends_on: !reset []
     env_file: !reset
       - .env.prod
@@ -50,6 +55,8 @@ services:
   api-gateway:
     <<: *vps-prod-base
     image: ${IMAGE_REGISTRY}/api-gateway:${IMAGE_TAG_API_GATEWAY}
+    networks: !reset
+    ports: !reset
     depends_on: !reset
       - identity-service
       - profiles-service
@@ -62,6 +69,7 @@ services:
   migrate:
     <<: *vps-prod-base
     image: ${IMAGE_REGISTRY}/migrate:${IMAGE_TAG_MIGRATE}
+    networks: !reset
     depends_on: !reset []
 
   postgres:

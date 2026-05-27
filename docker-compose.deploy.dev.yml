@@ -4,6 +4,8 @@ version: '3.8'
 # Requires IMAGE_REGISTRY + per-service IMAGE_TAG_* in compose .env.
 #
 # env_file: !reset MUST be set per service (not in YAML anchors — anchors drop the tag).
+# networks: !reset MUST be set per service — apps.yml sets networks: [internal], which
+#   conflicts with network_mode: host below.
 # network_mode: host — Postgres/Redis/gRPC on 127.0.0.1 (see GRPC_HOST in .env.dev).
 
 x-vps-dev-base: &vps-dev-base
@@ -18,6 +20,7 @@ services:
   identity-service:
     <<: *vps-dev-base
     image: ${IMAGE_REGISTRY}/identity-service:${IMAGE_TAG_IDENTITY_SERVICE}
+    networks: !reset
     depends_on: !reset []
     env_file: !reset
       - .env.dev
@@ -25,6 +28,7 @@ services:
   profiles-service:
     <<: *vps-dev-base
     image: ${IMAGE_REGISTRY}/profiles-service:${IMAGE_TAG_PROFILES_SERVICE}
+    networks: !reset
     depends_on: !reset []
     env_file: !reset
       - .env.dev
@@ -32,6 +36,7 @@ services:
   projects-service:
     <<: *vps-dev-base
     image: ${IMAGE_REGISTRY}/projects-service:${IMAGE_TAG_PROJECTS_SERVICE}
+    networks: !reset
     depends_on: !reset []
     env_file: !reset
       - .env.dev
@@ -39,6 +44,7 @@ services:
   finance-service:
     <<: *vps-dev-base
     image: ${IMAGE_REGISTRY}/finance-service:${IMAGE_TAG_FINANCE_SERVICE}
+    networks: !reset
     depends_on: !reset []
     env_file: !reset
       - .env.dev
@@ -46,6 +52,7 @@ services:
   platform-service:
     <<: *vps-dev-base
     image: ${IMAGE_REGISTRY}/platform-service:${IMAGE_TAG_PLATFORM_SERVICE}
+    networks: !reset
     depends_on: !reset []
     env_file: !reset
       - .env.dev
@@ -53,6 +60,8 @@ services:
   api-gateway:
     <<: *vps-dev-base
     image: ${IMAGE_REGISTRY}/api-gateway:${IMAGE_TAG_API_GATEWAY}
+    networks: !reset
+    ports: !reset
     depends_on: !reset
       - identity-service
       - profiles-service
@@ -65,6 +74,7 @@ services:
   migrate:
     <<: *vps-dev-base
     image: ${IMAGE_REGISTRY}/migrate:${IMAGE_TAG_MIGRATE}
+    networks: !reset
     depends_on: !reset []
 
   postgres:
