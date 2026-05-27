@@ -5,6 +5,6 @@ export interface IResendConfig {
   /** Verified sender address for the Ployos (business) brand. */
   readonly resendPloyosEmail: string;
 
-  /** Verified sender address for the Lona (consultant) brand. */
-  readonly resendLonaEmail: string;
+  /** Verified sender address for the Lonaos (consultant) brand. */
+  readonly resendLonaosEmail: string;
 }

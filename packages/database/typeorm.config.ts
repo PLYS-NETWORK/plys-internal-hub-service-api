@@ -23,5 +23,8 @@ export function getTypeOrmConfig(envService: IDatabaseEnv): TypeOrmModuleOptions
     // is created and applied migrations are recorded in both development and production.
     migrationsRun: !envService.isLocal,
     migrationsTableName: 'migrations',
+    extra: {
+      max: parseInt(process.env.DB_POOL_MAX ?? '10', 10),
+    },
   };
 }

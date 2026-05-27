@@ -1,6 +1,5 @@
 import { AdminAuthModule } from '@modules/admin-auth/admin-auth.module';
 import { AuthModule } from '@modules/auth/auth.module';
-import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { UsersModule } from '@modules/users/users.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
@@ -19,6 +18,7 @@ import { RequestContextModule } from '@plys/libraries/common-nest/modules/reques
 import configuration from '@plys/libraries/config/configuration';
 import { resolveEnvFilePath } from '@plys/libraries/config/env-file.config';
 import { getTypeOrmConfig } from '@plys/libraries/database/typeorm.config';
+import { NotificationsModule } from '@plys/libraries/notifications';
 import { UnitOfWorkModule } from '@plys/libraries/unit-of-work/unit-of-work.module';
 import { WinstonModule } from 'nest-winston';
 

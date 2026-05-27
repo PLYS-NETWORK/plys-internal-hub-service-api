@@ -14,7 +14,7 @@ export class SkillExamSummaryResponseDto implements ISkillExamSummaryResponse {
   @Expose() @ApiProperty() public readonly status!: string;
 
   // Consultant-facing logical status — collapses SUBMITTED/RUNNING_COPYLEAKS/RUNNING_AI_EVAL
-  // into a single PENDING_REVIEW value so the Lona UI can render a steady waiting state.
+  // into a single PENDING_REVIEW value so the Lonaos UI can render a steady waiting state.
   @Expose()
   @ApiProperty({ name: 'consultant_view_status' })
   public readonly consultant_view_status!: string;

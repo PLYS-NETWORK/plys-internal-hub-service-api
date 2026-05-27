@@ -1,5 +1,4 @@
 import { BillingModule } from '@modules/billing/billing.module';
-import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { PaymentsModule } from '@modules/payments';
 import { WebhooksModule } from '@modules/webhooks/webhooks.module';
 import { BullModule } from '@nestjs/bull';
@@ -23,6 +22,7 @@ import configuration from '@plys/libraries/config/configuration';
 import { resolveEnvFilePath } from '@plys/libraries/config/env-file.config';
 import { AuditSubscriber } from '@plys/libraries/database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from '@plys/libraries/database/typeorm.config';
+import { NotificationsModule } from '@plys/libraries/notifications';
 import { UnitOfWorkModule } from '@plys/libraries/unit-of-work/unit-of-work.module';
 import { WinstonModule } from 'nest-winston';
 

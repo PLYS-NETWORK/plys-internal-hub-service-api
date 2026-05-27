@@ -52,7 +52,7 @@ import {
  * a valid (entity_type='user', entity_id=<userId>) pair.
  */
 /** Which base URL the dispatcher should pass into `getRedirectUrl`. */
-export type NotificationBaseUrlKey = 'ployosUrl' | 'internalHubUrl' | 'lonaUrl';
+export type NotificationBaseUrlKey = 'ployosUrl' | 'internalHubUrl' | 'lonaosUrl';
 
 /**
  * i18n key resolver — either a static key or a function that picks the key
@@ -239,6 +239,7 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
 
   // ── Consultant ──────────────────────────────────────────────────────────────
   [NOTIFICATION_TYPES.CONSULTANT_PROJECT_SKILL_MATCH]: {
+    baseUrlKey: 'lonaosUrl',
     entityType: NOTIFICATION_ENTITY_TYPES.PROJECT,
     getEntityId: (m: IConsultantProjectSkillMatchMetadata) => m.project_id,
     getRedirectUrl: (m, base) => `${base}/projects/${m.project_id}`,
@@ -250,6 +251,7 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
     }),
   },
   [NOTIFICATION_TYPES.CONSULTANT_PROJECT_JOINED]: {
+    baseUrlKey: 'lonaosUrl',
     entityType: NOTIFICATION_ENTITY_TYPES.PROJECT,
     getEntityId: (m: IConsultantProjectJoinedMetadata) => m.project_id,
     getRedirectUrl: (m, base) => `${base}/projects/${m.project_id}`,
@@ -261,6 +263,7 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
     }),
   },
   [NOTIFICATION_TYPES.CONSULTANT_TASK_STATUS_CHANGED]: {
+    baseUrlKey: 'lonaosUrl',
     entityType: NOTIFICATION_ENTITY_TYPES.TASK,
     getEntityId: (m: IConsultantTaskStatusChangedMetadata) => m.task_id,
     getRedirectUrl: (m, base) => `${base}/projects/${m.project_id}/tasks/${m.task_id}`,
@@ -273,6 +276,7 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
     }),
   },
   [NOTIFICATION_TYPES.CONSULTANT_ONBOARDING_APPROVED]: {
+    baseUrlKey: 'lonaosUrl',
     entityType: NOTIFICATION_ENTITY_TYPES.ONBOARDING,
     getEntityId: (m: IConsultantOnboardingApprovedMetadata) => m.onboarding_id,
     getRedirectUrl: (_m, base) => `${base}/skill-exams`,
@@ -280,6 +284,7 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
     bodyKey: 'notification.consultant_onboarding_approved.body',
   },
   [NOTIFICATION_TYPES.CONSULTANT_ONBOARDING_REJECTED]: {
+    baseUrlKey: 'lonaosUrl',
     entityType: NOTIFICATION_ENTITY_TYPES.ONBOARDING,
     getEntityId: (m: IConsultantOnboardingRejectedMetadata) => m.onboarding_id,
     // Rejected consultants cannot log back in for 3 months — `redirect_url` points to the public
@@ -293,6 +298,7 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
     }),
   },
   [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_SUBMITTED]: {
+    baseUrlKey: 'lonaosUrl',
     entityType: NOTIFICATION_ENTITY_TYPES.SKILL_EXAM,
     getEntityId: (m: IConsultantSkillExamSubmittedMetadata) => m.exam_id,
     getRedirectUrl: (m, base) => `${base}/skill-exams/${m.exam_id}`,
@@ -304,6 +310,7 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
   // a single notification row renders LOW_SCORE / COPYLEAKS_FAILED / EXPIRED copy
   // without splitting into separate NotificationType values.
   [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_FAILED]: {
+    baseUrlKey: 'lonaosUrl',
     entityType: NOTIFICATION_ENTITY_TYPES.SKILL_EXAM,
     getEntityId: (m: IConsultantSkillExamFailedMetadata) => m.exam_id,
     getRedirectUrl: (m, base) => `${base}/skill-exams/${m.exam_id}`,
@@ -330,6 +337,7 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
     }),
   },
   [NOTIFICATION_TYPES.CONSULTANT_SKILL_EXAM_PASSED]: {
+    baseUrlKey: 'lonaosUrl',
     entityType: NOTIFICATION_ENTITY_TYPES.SKILL_EXAM,
     getEntityId: (m: IConsultantSkillExamPassedMetadata) => m.exam_id,
     getRedirectUrl: (_m, base) => `${base}/skills`,
@@ -347,6 +355,7 @@ export const NOTIFICATION_TYPE_CONFIG: ConfigMap = Object.freeze({
     }),
   },
   [NOTIFICATION_TYPES.CONSULTANT_ACCOUNT_BANNED]: {
+    baseUrlKey: 'lonaosUrl',
     entityType: NOTIFICATION_ENTITY_TYPES.USER,
     getEntityId: (_m: IConsultantAccountBannedMetadata, userId: string) => userId,
     getRedirectUrl: () => null,

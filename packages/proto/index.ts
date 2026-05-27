@@ -50,4 +50,6 @@ export const GRPC_METADATA_KEYS = {
   PATH: 'x-path',
   METHOD: 'x-method',
   IDEMPOTENCY_KEY: 'idempotency-key',
+  /** Shared secret proving the caller is the trusted API gateway. */
+  SERVICE_AUTH: 'x-grpc-service-auth',
 } as const;

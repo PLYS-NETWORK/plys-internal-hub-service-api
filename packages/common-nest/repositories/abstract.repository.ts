@@ -67,6 +67,19 @@ export abstract class AbstractRepository<T extends ObjectLiteral> {
     });
   }
 
+  /** Batch lookup by primary keys — avoids N+1 `findById` loops in list hydration. */
+  public async findByIds(ids: readonly string[]): Promise<T[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+    const uniqueIds = [...new Set(ids)];
+    return this.repository
+      .createQueryBuilder('entity')
+      .where('entity.id IN (:...ids)', { ids: uniqueIds })
+      .withDeleted()
+      .getMany();
+  }
+
   // ─── TypeORM Repository proxies ───────────────────────────────────────────
 
   public find(options?: FindManyOptions<T>): Promise<T[]> {

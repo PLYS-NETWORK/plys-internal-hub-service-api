@@ -71,7 +71,7 @@ export class AuthGrpcController extends GrpcBridgeBase {
   private async register(
     request: Parameters<GrpcBridgeBase['dispatch']>[0],
   ): Promise<IHttpResponse> {
-    const dto = this.parseJsonBody<RegisterDto>(request);
+    const dto = await this.parseAndValidateBody(request, RegisterDto);
     const context = this.buildSessionContext(request);
     await this.authService.register(dto, context);
     return buildSuccessResponse({ messageKey: 'success.created', data: null }, HttpStatus.CREATED);
@@ -95,7 +95,7 @@ export class AuthGrpcController extends GrpcBridgeBase {
   }
 
   private async login(request: Parameters<GrpcBridgeBase['dispatch']>[0]): Promise<IHttpResponse> {
-    const dto = this.parseJsonBody<LoginDto>(request);
+    const dto = await this.parseAndValidateBody(request, LoginDto);
     const context = this.buildSessionContext(request);
     const data = await this.authService.login(dto, context);
     return buildSuccessResponse({ messageKey: 'success.ok', data });
@@ -162,7 +162,7 @@ export class AuthGrpcController extends GrpcBridgeBase {
     const code = await this.ssoCodeStore.issue(data);
     const baseUrl =
       stateRecord.activePlatform === ActivePlatform.CONSULTANT
-        ? this.env.lonaUrl
+        ? this.env.lonaosUrl
         : this.env.ployosUrl;
     const redirectUrl = new URL('/auth/sso/callback', baseUrl);
     redirectUrl.searchParams.set('code', code);

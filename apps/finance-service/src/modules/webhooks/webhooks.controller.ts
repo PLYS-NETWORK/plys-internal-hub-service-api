@@ -13,13 +13,13 @@ import { THROTTLE_WEBHOOK } from '@plys/libraries/common-nest/constants';
 import { Public } from '@plys/libraries/common-nest/decorators/public.decorator';
 import { FastifyRequest } from 'fastify';
 
-import { WebhookProcessorService } from './webhook-processor.service';
+import { WebhookQueueService } from './queues/webhook-queue.service';
 
 @ApiTags('Webhooks')
 @Controller('webhooks')
 @Throttle(THROTTLE_WEBHOOK)
 export class WebhooksController {
-  constructor(private readonly webhookProcessorService: WebhookProcessorService) {}
+  constructor(private readonly webhookQueueService: WebhookQueueService) {}
 
   @Post('polar')
   @HttpCode(HttpStatus.OK)
@@ -42,7 +42,7 @@ export class WebhooksController {
       'webhook-signature': webhookSignature,
     };
 
-    await this.webhookProcessorService.processPolarWebhook(rawBody, headers);
+    await this.webhookQueueService.enqueuePolarWebhook(rawBody, headers);
     return { received: true };
   }
 
@@ -59,7 +59,7 @@ export class WebhooksController {
       throw new Error('Raw body not available. Ensure rawBody is enabled in NestFactory.create.');
     }
 
-    await this.webhookProcessorService.processStripeWebhook(rawBody, {
+    await this.webhookQueueService.enqueueStripeWebhook(rawBody, {
       'stripe-signature': stripeSignature,
     });
     return { received: true };

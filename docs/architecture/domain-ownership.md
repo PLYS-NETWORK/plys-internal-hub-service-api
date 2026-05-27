@@ -40,12 +40,13 @@ Shared package: `@plys/ai-provider-key` (not projects-service).
 
 ## Packages
 
-| Package                    | Purpose                                         |
-| -------------------------- | ----------------------------------------------- |
-| `@plys/profiles-port`      | `IProfilesReader`, `IProfilesLedger`, DI tokens |
-| `@plys/ai-provider-key`    | AI provider key CRUD + BFF envelope (shared)    |
-| `ProfilesUnitOfWorkModule` | Profile-domain repos (profiles-service)         |
-| `ProjectsUnitOfWorkModule` | Project-domain repos (projects-service)         |
+| Package                         | Purpose                                         |
+| ------------------------------- | ----------------------------------------------- |
+| `@plys/profiles-port`           | `IProfilesReader`, `IProfilesLedger`, DI tokens |
+| `@plys/ai-provider-key`         | AI provider key CRUD + BFF envelope (shared)    |
+| `@plys/libraries/notifications` | NotificationsModule re-export for cross-app use |
+| `ProfilesUnitOfWorkModule`      | Profile-domain repos (profiles-service)         |
+| `ProjectsUnitOfWorkModule`      | Project-domain repos (projects-service)         |
 
 ## Compile-time coupling rules
 

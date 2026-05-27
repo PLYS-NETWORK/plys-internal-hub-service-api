@@ -31,6 +31,10 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.configService.getOrThrow<string[]>('app.allowedOrigins');
   }
 
+  public get corsAllowLocalhost(): boolean {
+    return this.configService.getOrThrow<boolean>('app.corsAllowLocalhost');
+  }
+
   public get dbHost(): string {
     return this.configService.getOrThrow<string>('app.db.host');
   }
@@ -108,6 +112,10 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.configService.getOrThrow<string>('app.security.publicEndpointApiKey');
   }
 
+  public get grpcServiceSecret(): string {
+    return this.configService.getOrThrow<string>('app.security.grpcServiceSecret');
+  }
+
   public get resendApiKey(): string {
     return this.configService.getOrThrow<string>('app.resend.apiKey');
   }
@@ -116,8 +124,8 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.configService.getOrThrow<string>('app.resend.ployosEmail');
   }
 
-  public get resendLonaEmail(): string {
-    return this.configService.getOrThrow<string>('app.resend.lonaEmail');
+  public get resendLonaosEmail(): string {
+    return this.configService.getOrThrow<string>('app.resend.lonaosEmail');
   }
 
   public get paymentProcessor(): string {
@@ -177,9 +185,9 @@ export class EnvironmentsService implements IEnvironmentsService {
     return this.configService.getOrThrow<string>('app.ployosUrl');
   }
 
-  /** Base URL for the Consultant platform frontend (Lona). */
-  public get lonaUrl(): string {
-    return this.configService.getOrThrow<string>('app.lonaUrl');
+  /** Base URL for the Consultant platform frontend (Lonaos). */
+  public get lonaosUrl(): string {
+    return this.configService.getOrThrow<string>('app.lonaosUrl');
   }
 
   /** Base URL for the Admin internal hub frontend. */
@@ -209,6 +217,14 @@ export class EnvironmentsService implements IEnvironmentsService {
 
   public get redisTlsEnabled(): boolean {
     return this.configService.getOrThrow<boolean>('app.redis.tlsEnabled');
+  }
+
+  public get wsMaxConnectionsPerUser(): number {
+    return this.configService.getOrThrow<number>('app.websocket.maxConnectionsPerUser');
+  }
+
+  public get wsConnectRateLimitPerMinute(): number {
+    return this.configService.getOrThrow<number>('app.websocket.connectRateLimitPerMinute');
   }
 
   public get copyleaksApiKey(): string {

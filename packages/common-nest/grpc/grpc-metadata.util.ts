@@ -8,6 +8,8 @@ import { RequestContextService } from '@plys/libraries/common-nest/modules/reque
 import { ActivePlatform, UserRole } from '@plys/libraries/database/enums';
 import { GRPC_METADATA_KEYS } from '@plys/libraries/proto';
 
+import { resolveGrpcServiceSecret } from './grpc-service-auth.util';
+
 function readMetadataValue(metadata: Metadata, key: string): string | undefined {
   const values = metadata.get(key);
   if (!values.length) {
@@ -47,6 +49,11 @@ export function buildMetadataFromRequestContext(requestContext: RequestContextSe
     if (value !== null && value !== undefined && value !== '') {
       metadata.set(key, value);
     }
+  }
+
+  const serviceAuth = resolveGrpcServiceSecret();
+  if (serviceAuth.length > 0) {
+    metadata.set(GRPC_METADATA_KEYS.SERVICE_AUTH, serviceAuth);
   }
 
   return metadata;

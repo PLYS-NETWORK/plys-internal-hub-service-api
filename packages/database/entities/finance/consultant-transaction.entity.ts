@@ -24,7 +24,9 @@ import { Invoice } from './invoice.entity';
 @Entity('consultant_transactions')
 @Unique('uq_consultant_transactions_processor_event_id', ['processorEventId'])
 @Unique('uq_consultant_transactions_number', ['transactionNumber'])
-@Index('idx_consultant_txn_consultant_created', ['consultantId'])
+@Index('idx_consultant_txn_consultant_created', ['consultantId', 'createdAt'])
+@Index('idx_consultant_txn_type_status_created', ['type', 'status', 'createdAt'])
+@Index('idx_consultant_txn_consultant_type_created', ['consultantId', 'type', 'createdAt'])
 @Index('idx_consultant_txn_project', ['projectId'])
 @Index('idx_consultant_txn_task', ['taskId'])
 export class ConsultantTransaction extends TraceableEntity {

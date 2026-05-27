@@ -15,7 +15,14 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "eslint \"**/*.ts\" --max-warnings=0 --ignore-pattern \"**/dist/**\" --ignore-pattern \"**/node_modules/**\"",
+        "command": "NODE_OPTIONS=--max-old-space-size=8192 eslint \"**/*.ts\" --max-warnings=0 --ignore-pattern \"**/dist/**\" --ignore-pattern \"**/node_modules/**\"",
+        "cwd": "packages"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "jest --config jest.config.js",
         "cwd": "packages"
       }
     }

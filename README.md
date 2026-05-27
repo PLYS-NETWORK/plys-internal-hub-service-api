@@ -1,6 +1,6 @@
 # Plys Marketplace Monorepo
 
-Backend for a two-sided marketplace connecting **businesses** (project owners on **Ployos**) and **consultants** (freelance professionals on **Lona**).
+Backend for a two-sided marketplace connecting **businesses** (project owners on **Ployos**) and **consultants** (freelance professionals on **Lonaos**).
 
 This repository is an **Nx + pnpm monorepo**. The HTTP edge is `apps/api-gateway`; domain logic runs in five gRPC microservices. Shared code lives in `@plys/libraries` under `packages/`.
 
@@ -38,7 +38,7 @@ This repository is an **Nx + pnpm monorepo**. The HTTP edge is `apps/api-gateway
 
 ### High-level flow
 
-Clients (Ployos / Lona frontends) talk only to the **API gateway** over REST and WebSocket. The gateway forwards requests to backend services over **gRPC**. All services share one PostgreSQL schema and Redis cluster during the current migration phase.
+Clients (Ployos, Lonaos, and Plys Internal Hub) talk only to the **API gateway** over REST and WebSocket. The gateway forwards requests to backend services over **gRPC**. All services share one PostgreSQL schema and Redis cluster during the current migration phase.
 
 ```mermaid
 flowchart LR
@@ -92,6 +92,7 @@ packages/                  # @plys/libraries (single package, subpath exports)
 ├── unit-of-work/          # Repository layer + domain UoW modules
 ├── shared-kernel/         # Cross-service constants
 ├── ai-provider-key/       # AI provider key CRUD + BFF envelope
+├── notifications/         # NotificationsModule re-export (cross-app)
 └── profiles-port/         # Profiles reader/ledger port interfaces
 
 docker-compose.yml         # Local postgres + redis
@@ -105,20 +106,21 @@ Import shared code via subpaths, e.g. `@plys/libraries/database`, `@plys/librari
 
 - **Unit of Work** — repository access goes through `UnitOfWorkService` (or domain-specific UoW modules). Services do not inject TypeORM repositories directly. Transactions use `uow.withTransaction(...)`.
 - **Request context** — `RequestContextService` (AsyncLocalStorage) holds user identity (`userId`, `userRole`, `activePlatform`). No `@CurrentUser()` decorator; no `userId` parameters passed between layers.
-- **Two-platform model** — `ActivePlatform.BUSINESS` (Ployos) and `ActivePlatform.CONSULTANT` (Lona). `PlatformGuard` enforces platform scope per endpoint.
+- **Platform model** — `ActivePlatform.BUSINESS` (Ployos), `ActivePlatform.CONSULTANT` (Lonaos), and admin roles on Plys Internal Hub. `PlatformGuard` enforces platform scope per endpoint.
 - **Standardized response** — `TransformResponseInterceptor` wraps every HTTP response in `{ status_code, message, error_code, data, timestamp, path }`. Controllers return `{ messageKey, data }`.
 - **snake_case API** — JSON keys use `snake_case`. `@Expose({ name: 'camelKey' })` maps entity properties at the HTTP boundary.
 - **i18n keys in DB** — skill names, categories, and industries are stored as i18n keys (e.g. `skill_react`). Translation happens per request locale.
 
 ### Further reading
 
-| Doc                                                                            | Contents                                      |
-| ------------------------------------------------------------------------------ | --------------------------------------------- |
-| [docs/README.md](docs/README.md)                                               | Documentation index                           |
-| [docs/deployment/overview.md](docs/deployment/overview.md)                     | Docker, env files, CI/CD, PM2 per-service ops |
-| [docs/deployment/setup.md](docs/deployment/setup.md)                           | First-time VPS + GitHub setup guide           |
-| [docs/architecture/domain-ownership.md](docs/architecture/domain-ownership.md) | Table ownership and bounded contexts          |
-| [docs/architecture/versioning.md](docs/architecture/versioning.md)             | `@plys/libraries` semver via Changesets       |
+| Doc                                                                                  | Contents                                      |
+| ------------------------------------------------------------------------------------ | --------------------------------------------- |
+| [docs/README.md](docs/README.md)                                                     | Documentation index                           |
+| [docs/deployment/overview.md](docs/deployment/overview.md)                           | Docker, env files, CI/CD, PM2 per-service ops |
+| [docs/deployment/setup.md](docs/deployment/setup.md)                                 | First-time VPS + GitHub setup guide           |
+| [docs/architecture/system-architecture.md](docs/architecture/system-architecture.md) | Services, gRPC bridge, security, data layer   |
+| [docs/architecture/domain-ownership.md](docs/architecture/domain-ownership.md)       | Table ownership and bounded contexts          |
+| [docs/architecture/versioning.md](docs/architecture/versioning.md)                   | `@plys/libraries` semver via Changesets       |
 
 ---
 

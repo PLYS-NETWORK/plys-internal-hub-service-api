@@ -7,6 +7,7 @@ import { EmailService } from '@plys/libraries/common-nest/modules/email/email.se
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
 import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
+import { maskEmailForLog } from '@plys/libraries/common-nest/utils/mask-email.util';
 import { ActivePlatform, AuthTokenType } from '@plys/libraries/database/enums';
 import { IUnitOfWork } from '@plys/libraries/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@plys/libraries/unit-of-work/unit-of-work.service';
@@ -251,13 +252,15 @@ export class BasicAuthService implements IBasicAuthService {
   // ─── Login ───────────────────────────────────────────────────────────────
 
   public async login(dto: LoginDto, context: ISessionContext): Promise<AuthResponseDto> {
-    this.logger.log(`login — start | email: ${dto.email}, platform: ${dto.active_platform}`);
+    this.logger.log(
+      `login — start | email: ${this.emailForLog(dto.email)}, platform: ${dto.active_platform}`,
+    );
 
     const user = await this.uow.users.findUserByEmailAndPlatform(dto.email, dto.active_platform);
 
     // Use generic "invalid credentials" to prevent user enumeration
     if (!user) {
-      this.logger.warn(`login — user not found | email: ${dto.email}`);
+      this.logger.warn(`login — user not found | email: ${this.emailForLog(dto.email)}`);
       throw new TranslatableException({
         messageKey: 'error.auth.invalid_credentials',
         errorCode: ERROR_CODES.AUTH_INVALID_CREDENTIALS,
@@ -529,7 +532,9 @@ export class BasicAuthService implements IBasicAuthService {
    * for the user so all devices are signed out.
    */
   public async resetPassword(dto: ResetPasswordDto): Promise<void> {
-    this.logger.log(`resetPassword — start | email: ${dto.email}, platform: ${dto.activePlatform}`);
+    this.logger.log(
+      `resetPassword — start | email: ${this.emailForLog(dto.email)}, platform: ${dto.activePlatform}`,
+    );
 
     const user = await this.uow.users.findUserByEmailAndPlatform(dto.email, dto.activePlatform);
     if (!user || !user.isActive) {
@@ -633,11 +638,15 @@ export class BasicAuthService implements IBasicAuthService {
 
   /**
    * Returns the base frontend URL for the given platform.
-   * BUSINESS → PLOYOS_URL, CONSULTANT → LONA_URL, ADMIN → PLOYOS_URL (fallback).
+   * BUSINESS → PLOYOS_URL, CONSULTANT → LONAOS_URL, ADMIN → PLOYOS_URL (fallback).
    */
   private getPlatformUrl(platform: ActivePlatform): string {
     return platform === ActivePlatform.CONSULTANT
-      ? this.envService.lonaUrl
+      ? this.envService.lonaosUrl
       : this.envService.ployosUrl;
+  }
+
+  private emailForLog(email: string): string {
+    return this.envService.isProduction ? maskEmailForLog(email) : email;
   }
 }

@@ -1,5 +1,5 @@
 import { Metadata } from '@grpc/grpc-js';
-import { WebhookProcessorService } from '@modules/webhooks/webhook-processor.service';
+import { WebhookQueueService } from '@modules/webhooks/queues/webhook-queue.service';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import {
@@ -18,7 +18,7 @@ export class WebhooksGrpcController extends GrpcBridgeBase {
 
   constructor(
     requestContext: RequestContextService,
-    private readonly webhookProcessorService: WebhookProcessorService,
+    private readonly webhookQueueService: WebhookQueueService,
   ) {
     super(requestContext);
     this.handlers = {
@@ -26,7 +26,7 @@ export class WebhooksGrpcController extends GrpcBridgeBase {
         const rawBody = Buffer.isBuffer(request.body)
           ? request.body
           : Buffer.from(request.body ?? []);
-        await this.webhookProcessorService.processPolarWebhook(rawBody, {
+        await this.webhookQueueService.enqueuePolarWebhook(rawBody, {
           'webhook-id': request.queryParams?.webhookId ?? '',
           'webhook-timestamp': request.queryParams?.webhookTimestamp ?? '',
           'webhook-signature': request.queryParams?.webhookSignature ?? '',
@@ -40,7 +40,7 @@ export class WebhooksGrpcController extends GrpcBridgeBase {
         const rawBody = Buffer.isBuffer(request.body)
           ? request.body
           : Buffer.from(request.body ?? []);
-        await this.webhookProcessorService.processStripeWebhook(rawBody, {
+        await this.webhookQueueService.enqueueStripeWebhook(rawBody, {
           'stripe-signature': request.queryParams?.stripeSignature ?? '',
         });
         return buildSuccessResponse(

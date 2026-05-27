@@ -19,10 +19,20 @@ function collectVersionedKeys(prefix: string): Record<number, string> {
 export default registerAs('app', () => {
   assertEnvSecretsValid(process.env);
 
+  const deployEnv = process.env.DEPLOY_ENV ?? 'local';
+  const isStrictDeploy = deployEnv === 'dev' || deployEnv === 'prod';
+  const allowedOriginsRaw = process.env.ALLOWED_ORIGINS?.split(',').filter(
+    (origin) => origin.length > 0,
+  );
+  if (isStrictDeploy && (!allowedOriginsRaw || allowedOriginsRaw.length === 0)) {
+    throw new Error('ALLOWED_ORIGINS must be set in dev/prod (comma-separated, no wildcard)');
+  }
+
   return {
     port: parseInt(process.env.PORT ?? '3000', 10),
     nodeEnv: process.env.NODE_ENV ?? 'development',
-    allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') ?? ['*'],
+    allowedOrigins: allowedOriginsRaw ?? ['*'],
+    corsAllowLocalhost: deployEnv === 'dev' && process.env.CORS_ALLOW_LOCALHOST === 'true',
     db: {
       host: process.env.DB_HOST ?? 'localhost',
       port: parseInt(process.env.DB_PORT ?? '5432', 10),
@@ -37,7 +47,9 @@ export default registerAs('app', () => {
       refreshExpiration: process.env.JWT_REFRESH_EXPIRATION ?? '7d',
       issuer: process.env.JWT_ISSUER ?? 'marketplace-api',
       audience: process.env.JWT_AUDIENCE ?? 'marketplace-clients',
-      strictClaims: process.env.JWT_STRICT_CLAIMS === 'true',
+      strictClaims:
+        process.env.JWT_STRICT_CLAIMS === 'true' ||
+        (isStrictDeploy && process.env.JWT_STRICT_CLAIMS !== 'false'),
     },
     security: {
       ssoTokenEncryptionKey: process.env.SSO_TOKEN_ENCRYPTION_KEY ?? '',
@@ -46,11 +58,12 @@ export default registerAs('app', () => {
       loginLockoutWindowMin: parseInt(process.env.LOGIN_LOCKOUT_WINDOW_MIN ?? '15', 10),
       throttleRedisPrefix: process.env.THROTTLE_REDIS_PREFIX ?? 'throttle:',
       publicEndpointApiKey: process.env.PUBLIC_ENDPOINT_API_KEY ?? '',
+      grpcServiceSecret: process.env.GRPC_SERVICE_SECRET ?? '',
     },
     resend: {
       apiKey: process.env.RESEND_API_KEY ?? '',
       ployosEmail: process.env.RESEND_PLOYOS_EMAIL,
-      lonaEmail: process.env.RESEND_LONA_EMAIL,
+      lonaosEmail: process.env.RESEND_LONAOS_EMAIL,
     },
     payment: {
       processor: process.env.PAYMENT_PROCESSOR ?? 'polar',
@@ -74,7 +87,7 @@ export default registerAs('app', () => {
         process.env.GOOGLE_CALLBACK_URL ?? 'http://localhost:3000/api/v1/auth/sso/google/callback',
     },
     ployosUrl: process.env.PLOYOS_URL ?? 'http://localhost:3000',
-    lonaUrl: process.env.LONA_URL ?? 'http://localhost:3001',
+    lonaosUrl: process.env.LONAOS_URL ?? 'http://localhost:3001',
     internalHubUrl: process.env.INTERNAL_HUB_URL ?? 'http://localhost:3002',
     redis: {
       host: process.env.REDIS_HOST ?? 'localhost',
@@ -83,6 +96,10 @@ export default registerAs('app', () => {
       db: parseInt(process.env.REDIS_DB ?? '0', 10),
       keyPrefix: process.env.REDIS_KEY_PREFIX ?? 'app:',
       tlsEnabled: process.env.REDIS_TLS_ENABLED === 'true',
+    },
+    websocket: {
+      maxConnectionsPerUser: parseInt(process.env.WS_MAX_CONNECTIONS_PER_USER ?? '10', 10),
+      connectRateLimitPerMinute: parseInt(process.env.WS_CONNECT_RATE_LIMIT ?? '30', 10),
     },
     copyleaks: {
       apiKey: process.env.COPYLEAKS_API_KEY ?? '',

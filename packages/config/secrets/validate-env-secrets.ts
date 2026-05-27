@@ -43,8 +43,16 @@ export function validateEnvSecrets(env: NodeJS.ProcessEnv): IEnvSecretsValidatio
       if (result.issue) issues.push(result.issue);
       if (result.warning) warnings.push(result.warning);
     }
+
+    if (def.type === SecretType.Aes256GcmKeyBase64) {
+      const issue = validateAes256GcmKeyBase64(value, def.envVar);
+      if (issue) {
+        issues.push({ envVar: def.envVar, message: issue.message });
+      }
+    }
   }
 
+  validateStrictDeploySecrets(env, strict, issues);
   validateJwtPairSecrets(env, strict, issues);
   validateVersionedAesSecretSet({
     env,
@@ -72,6 +80,36 @@ export function validateEnvSecrets(env: NodeJS.ProcessEnv): IEnvSecretsValidatio
   });
 
   return { issues, warnings };
+}
+
+function validateStrictDeploySecrets(
+  env: NodeJS.ProcessEnv,
+  strict: boolean,
+  issues: ISecretValidationIssue[],
+): void {
+  if (!strict) {
+    return;
+  }
+
+  const dbPassword = env.DB_PASSWORD ?? 'password';
+  if (dbPassword === 'password') {
+    issues.push({
+      envVar: 'DB_PASSWORD',
+      message: 'must not use the default local password in dev/prod',
+    });
+  }
+
+  const requiredInStrict = [
+    'PUBLIC_ENDPOINT_API_KEY',
+    'GRPC_SERVICE_SECRET',
+    'SSO_TOKEN_ENCRYPTION_KEY',
+  ] as const;
+
+  for (const envVar of requiredInStrict) {
+    if ((env[envVar] ?? '').length === 0) {
+      issues.push({ envVar, message: 'must not be empty in dev/prod' });
+    }
+  }
 }
 
 function validateJwtPairSecrets(

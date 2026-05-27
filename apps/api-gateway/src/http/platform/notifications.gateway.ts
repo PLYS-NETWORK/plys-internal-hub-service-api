@@ -1,6 +1,6 @@
 import { Metadata } from '@grpc/grpc-js';
 import { UnreadCountResponseDto } from '@modules/notifications/dto/responses';
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
   OnGatewayConnection,
@@ -15,19 +15,24 @@ import { JwtPayload } from '@plys/libraries/common-nest/interfaces/jwt-payload.i
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
 import { IdentitySessionClient } from '@plys/libraries/common-nest/modules/identity-client';
 import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
+import {
+  NOTIFICATION_EVENT_CONNECTED,
+  NOTIFICATION_UNREAD_COUNT_KEY_PREFIX,
+  NOTIFICATION_WS_NAMESPACE,
+  notificationRoomForUser,
+  WS_CONNECT_RATE_KEY_PREFIX,
+  WS_CONNECT_RATE_WINDOW_SECONDS,
+  WS_SESSION_VALID_KEY_PREFIX,
+  WS_SESSION_VALID_TTL_SECONDS,
+} from '@plys/libraries/common-nest/modules/notifications-realtime';
 import { RedisService } from '@plys/libraries/common-nest/modules/redis/redis.service';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
+import { createCorsOriginDelegate } from '@plys/libraries/common-nest/utils/cors-origin.util';
 import { ActivePlatform } from '@plys/libraries/database/enums';
 import { GRPC_METADATA_KEYS } from '@plys/libraries/proto';
 import type { Server, Socket } from 'socket.io';
 
 import { NotificationsClient } from '@/clients/platform';
-
-const REDIS_PATTERN = 'notif:user:*';
-const REDIS_CHANNEL_PREFIX = 'notif:user:';
-const ROOM_PREFIX = 'user:';
-
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(',').map((s) => s.trim()) ?? ['*'];
 
 interface ISocketAuthPayload {
   userId: string;
@@ -41,27 +46,29 @@ interface ISocketAuthPayload {
 declare module 'socket.io' {
   interface SocketData {
     auth?: ISocketAuthPayload;
+    connectedAt?: number;
   }
 }
 
 /**
  * Socket.IO gateway for live notification delivery. Runs on api-gateway (sole HTTP
- * entry) and fans out Redis pub/sub messages published by platform-service workers.
+ * entry). Cross-instance fan-out uses `@socket.io/redis-adapter`; platform-service
+ * emits via `@socket.io/redis-emitter`.
  */
 @Injectable()
 @WebSocketGateway({
-  namespace: '/ws/notifications',
-  cors: { origin: ALLOWED_ORIGINS, credentials: true },
+  namespace: NOTIFICATION_WS_NAMESPACE,
+  cors: { origin: true, credentials: true },
   transports: ['websocket', 'polling'],
 })
 export class NotificationsGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect, OnModuleDestroy
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
   @WebSocketServer()
   private server!: Server;
 
   private readonly logger: AppLogger;
-  private subscribed = false;
+  private activeConnections = 0;
 
   constructor(
     private readonly jwtService: JwtService,
@@ -74,36 +81,40 @@ export class NotificationsGateway
     this.logger = new AppLogger(NotificationsGateway.name, requestContext);
   }
 
-  public async afterInit(server: Server): Promise<void> {
+  public afterInit(server: Server): void {
     this.server = server;
-    if (this.subscribed) {
-      return;
+    if (server.engine?.opts) {
+      server.engine.opts.cors = {
+        origin: createCorsOriginDelegate(this.env.allowedOrigins, this.env.corsAllowLocalhost),
+        credentials: true,
+      };
     }
-    try {
-      await this.redis.psubscribe(REDIS_PATTERN, (channel: string, message: string) => {
-        this.handleRedisMessage(channel, message);
-      });
-      this.subscribed = true;
-      this.logger.log(`afterInit — Redis subscribed | pattern: ${REDIS_PATTERN}`);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger.error(`afterInit — psubscribe failed | error: ${msg}`);
-    }
+    this.logger.log(`afterInit — WS ready | namespace: ${NOTIFICATION_WS_NAMESPACE}`);
   }
 
   public async handleConnection(client: Socket): Promise<void> {
     try {
+      if (!(await this.checkConnectRateLimit(client))) {
+        return;
+      }
+
       const auth = await this.authenticate(client);
       if (!auth) {
         return;
       }
-      client.data.auth = auth;
-      await client.join(ROOM_PREFIX + auth.userId);
 
-      const unread = await this.fetchUnreadCount(auth);
-      client.emit('notification.connected', { unread_count: unread });
+      await this.enforceUserConnectionCap(client, auth.userId);
+
+      client.data.auth = auth;
+      client.data.connectedAt = Date.now();
+      await client.join(notificationRoomForUser(auth.userId));
+
+      const unread = await this.resolveUnreadCount(auth);
+      client.emit(NOTIFICATION_EVENT_CONNECTED, { unread_count: unread });
+
+      this.activeConnections += 1;
       this.logger.log(
-        `handleConnection — connected | userId: ${auth.userId}, sessionId: ${auth.sessionId}, unread: ${unread}`,
+        `handleConnection — connected | userId: ${auth.userId}, sessionId: ${auth.sessionId}, unread: ${unread}, active: ${this.activeConnections}`,
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -115,20 +126,54 @@ export class NotificationsGateway
 
   public handleDisconnect(client: Socket): void {
     const userId = client.data.auth?.userId;
+    if (client.data.auth) {
+      this.activeConnections = Math.max(0, this.activeConnections - 1);
+    }
     this.logger.log(
-      `handleDisconnect | userId: ${userId ?? 'unauthenticated'}, socketId: ${client.id}`,
+      `handleDisconnect | userId: ${userId ?? 'unauthenticated'}, socketId: ${client.id}, active: ${this.activeConnections}`,
     );
   }
 
-  public async onModuleDestroy(): Promise<void> {
-    if (this.subscribed) {
-      try {
-        await this.redis.punsubscribe(REDIS_PATTERN);
-      } catch {
-        // best-effort
-      }
-      this.subscribed = false;
+  private async checkConnectRateLimit(client: Socket): Promise<boolean> {
+    const ip = this.resolveClientIp(client);
+    const key = `${WS_CONNECT_RATE_KEY_PREFIX}${ip}`;
+    const count = await this.redis.incr(key);
+    if (count === 1) {
+      await this.redis.expire(key, WS_CONNECT_RATE_WINDOW_SECONDS);
     }
+    if (count > this.env.wsConnectRateLimitPerMinute) {
+      this.logger.warn(`checkConnectRateLimit — rejected | ip: ${ip}, count: ${count}`);
+      client.emit('error', { code: ERROR_CODES.WS_CONNECT_RATE_LIMITED });
+      client.disconnect(true);
+      return false;
+    }
+    return true;
+  }
+
+  private async enforceUserConnectionCap(client: Socket, userId: string): Promise<void> {
+    const roomName = notificationRoomForUser(userId);
+    const socketsInRoom = await client.nsp.in(roomName).fetchSockets();
+    const max = this.env.wsMaxConnectionsPerUser;
+    if (socketsInRoom.length < max) {
+      return;
+    }
+
+    let oldest = socketsInRoom[0];
+    for (const socket of socketsInRoom) {
+      const socketData = socket.data as { connectedAt?: number };
+      const oldestData = oldest.data as { connectedAt?: number };
+      const connectedAt = socketData.connectedAt ?? 0;
+      const oldestAt = oldestData.connectedAt ?? 0;
+      if (connectedAt < oldestAt) {
+        oldest = socket;
+      }
+    }
+
+    oldest.emit('error', { code: ERROR_CODES.WS_MAX_CONNECTIONS_EXCEEDED });
+    oldest.disconnect(true);
+    this.logger.warn(
+      `enforceUserConnectionCap — evicted oldest socket | userId: ${userId}, roomSize: ${socketsInRoom.length}, max: ${max}`,
+    );
   }
 
   private async authenticate(client: Socket): Promise<ISocketAuthPayload | null> {
@@ -174,24 +219,44 @@ export class NotificationsGateway
       return null;
     }
 
-    const session = await this.identitySession.validateSession(
-      payload.sessionId,
-      handshakeDeviceId ?? payload.deviceId,
-    );
-    if (!session) {
-      client.emit('error', { code: ERROR_CODES.AUTH_TOKEN_INVALID });
-      client.disconnect(true);
-      return null;
+    const sessionCacheKey = `${WS_SESSION_VALID_KEY_PREFIX}${payload.sessionId}`;
+    const sessionCached = await this.redis.get(sessionCacheKey);
+
+    let businessId = payload.businessId ?? null;
+    if (!sessionCached) {
+      const session = await this.identitySession.validateSession(
+        payload.sessionId,
+        handshakeDeviceId ?? payload.deviceId,
+      );
+      if (!session) {
+        client.emit('error', { code: ERROR_CODES.AUTH_TOKEN_INVALID });
+        client.disconnect(true);
+        return null;
+      }
+      businessId = payload.businessId ?? session.businessId;
+      await this.redis.set(sessionCacheKey, '1', WS_SESSION_VALID_TTL_SECONDS);
     }
 
     return {
       userId: payload.sub,
       sessionId: payload.sessionId,
       activePlatform: payload.activePlatform,
-      businessId: payload.businessId ?? session.businessId,
+      businessId,
       email: payload.email,
       role: String(payload.role),
     };
+  }
+
+  private async resolveUnreadCount(auth: ISocketAuthPayload): Promise<number> {
+    const cacheKey = `${NOTIFICATION_UNREAD_COUNT_KEY_PREFIX}${auth.userId}`;
+    const cached = await this.redis.get(cacheKey);
+    if (cached !== null) {
+      const parsed = parseInt(cached, 10);
+      if (!Number.isNaN(parsed)) {
+        return parsed;
+      }
+    }
+    return this.fetchUnreadCount(auth);
   }
 
   private async fetchUnreadCount(auth: ISocketAuthPayload): Promise<number> {
@@ -218,6 +283,14 @@ export class NotificationsGateway
     return metadata;
   }
 
+  private resolveClientIp(client: Socket): string {
+    const forwarded = client.handshake.headers['x-forwarded-for'];
+    if (typeof forwarded === 'string' && forwarded.length > 0) {
+      return forwarded.split(',')[0]?.trim() ?? client.handshake.address;
+    }
+    return client.handshake.address;
+  }
+
   private extractToken(client: Socket): string | null {
     const fromAuth = this.coerceString(client.handshake.auth?.token);
     if (fromAuth) {
@@ -233,24 +306,5 @@ export class NotificationsGateway
 
   private coerceString(value: unknown): string | null {
     return typeof value === 'string' && value.length > 0 ? value : null;
-  }
-
-  private handleRedisMessage(channel: string, message: string): void {
-    if (!channel.startsWith(REDIS_CHANNEL_PREFIX)) {
-      return;
-    }
-    const userId = channel.slice(REDIS_CHANNEL_PREFIX.length);
-    if (!userId) {
-      return;
-    }
-    let payload: unknown;
-    try {
-      payload = JSON.parse(message);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger.error(`handleRedisMessage — invalid JSON | channel: ${channel} | error: ${msg}`);
-      return;
-    }
-    this.server.to(ROOM_PREFIX + userId).emit('notification.new', payload);
   }
 }

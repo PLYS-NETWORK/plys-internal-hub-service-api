@@ -101,6 +101,7 @@ export class StripePaymentProvider implements IPaymentProvider {
 
     return {
       type: this.mapEventType(event.type),
+      rawType: event.type,
       data: event.data.object as unknown as Record<string, unknown>,
       processorEventId: event.id,
     };

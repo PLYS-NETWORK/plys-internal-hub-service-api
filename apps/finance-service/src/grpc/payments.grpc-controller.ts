@@ -5,6 +5,11 @@ import { ConsultantPaymentsController } from '@modules/payments/consultant/consu
 import { PaymentsController } from '@modules/payments/payments.controller';
 import { Injectable } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
+import {
+  createControllerBridgeHandlers,
+  GrpcBridgeBase,
+  IHttpResponse,
+} from '@plys/libraries/common-nest/grpc';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 
 @Injectable()

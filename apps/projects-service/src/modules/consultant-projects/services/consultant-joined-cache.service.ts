@@ -94,7 +94,7 @@ export class ConsultantJoinedCacheService implements IConsultantJoinedCacheServi
     ];
     try {
       for (const pattern of patterns) {
-        const keys = await this.redis.keys(pattern);
+        const keys = await this.redis.scanKeys(pattern);
         for (const key of keys) await this.redis.del(key);
       }
     } catch (err: unknown) {

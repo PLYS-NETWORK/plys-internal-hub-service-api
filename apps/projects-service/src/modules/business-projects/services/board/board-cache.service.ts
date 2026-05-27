@@ -79,7 +79,7 @@ export class BoardCacheService {
   public async invalidateProject(projectId: string): Promise<void> {
     const namespacePattern = `${KEY_NAMESPACE}:${projectId}:*`;
     const fullyQualifiedPattern = `${this.keyPrefix}${namespacePattern}`;
-    const matched = await this.redis.keys(fullyQualifiedPattern);
+    const matched = await this.redis.scanKeys(fullyQualifiedPattern);
     if (matched.length === 0) return;
 
     // Strip the prefix so RedisService.del re-prepends it without doubling.

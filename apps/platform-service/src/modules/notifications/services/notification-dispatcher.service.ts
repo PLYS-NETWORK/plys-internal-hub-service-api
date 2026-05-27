@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
 import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
+import { NotificationRealtimeEmitterService } from '@plys/libraries/common-nest/modules/notifications-realtime';
+import { NOTIFICATION_UNREAD_COUNT_KEY_PREFIX } from '@plys/libraries/common-nest/modules/notifications-realtime/notification-realtime.constants';
 import { RedisService } from '@plys/libraries/common-nest/modules/redis/redis.service';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 import { Notification } from '@plys/libraries/database/entities';
@@ -20,8 +22,6 @@ import {
 } from '../interfaces/notification-dispatcher-service.interface';
 import { NotificationMetadataMap } from '../types/notification-metadata.types';
 
-const REDIS_CHANNEL_PREFIX = 'notif:user:';
-const UNREAD_COUNT_KEY_PREFIX = 'notif:unread:';
 const UNREAD_COUNT_TTL_SECONDS = 60 * 60 * 24; // 24h
 
 @Injectable()
@@ -32,6 +32,7 @@ export class NotificationDispatcherService implements INotificationDispatcherSer
     private readonly uow: UnitOfWorkService,
     private readonly requestContext: RequestContextService,
     private readonly redis: RedisService,
+    private readonly realtimeEmitter: NotificationRealtimeEmitterService,
     private readonly env: EnvironmentsService,
     private readonly i18n: I18nService,
   ) {
@@ -89,7 +90,7 @@ export class NotificationDispatcherService implements INotificationDispatcherSer
 
       // Live push — best-effort; the row in Postgres is the source of truth.
       try {
-        await this.redis.publish(REDIS_CHANNEL_PREFIX + input.userId, JSON.stringify(dto));
+        this.realtimeEmitter.emitToUser(input.userId, dto);
       } catch (publishErr: unknown) {
         const msg = publishErr instanceof Error ? publishErr.message : String(publishErr);
         this.logger.warn(
@@ -116,7 +117,7 @@ export class NotificationDispatcherService implements INotificationDispatcherSer
 
   private resolveBaseUrl(key: NotificationBaseUrlKey | undefined): string {
     if (key === 'internalHubUrl') return this.env.internalHubUrl;
-    if (key === 'lonaUrl') return this.env.lonaUrl;
+    if (key === 'lonaosUrl') return this.env.lonaosUrl;
     return this.env.ployosUrl;
   }
 
@@ -142,7 +143,7 @@ export class NotificationDispatcherService implements INotificationDispatcherSer
    * for a user always issues a definitive COUNT(*) before caching the result.
    */
   private async bumpUnreadCount(userId: string): Promise<void> {
-    const key = UNREAD_COUNT_KEY_PREFIX + userId;
+    const key = NOTIFICATION_UNREAD_COUNT_KEY_PREFIX + userId;
     if (await this.redis.exists(key)) {
       await this.redis.incr(key);
       await this.redis.expire(key, UNREAD_COUNT_TTL_SECONDS);

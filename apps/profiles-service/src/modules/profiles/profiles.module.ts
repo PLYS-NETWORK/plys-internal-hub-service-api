@@ -1,5 +1,5 @@
-import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { Module } from '@nestjs/common';
+import { NotificationsModule } from '@plys/libraries/notifications';
 import { ProfilesUnitOfWorkModule } from '@plys/libraries/unit-of-work/profiles-unit-of-work.module';
 
 import { BusinessProfilesService } from './business/business-profiles.service';

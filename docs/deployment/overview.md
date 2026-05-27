@@ -25,6 +25,23 @@ For first-time VPS and GitHub setup, see [setup.md](./setup.md).
 | `.env.prod`    | yes | Prod VPS (`DEPLOY_ENV=prod`) |
 | `.env.local`   | no  | Local dev secrets            |
 
+### Frontend URLs and CORS (committed in `.env.dev` / `.env.prod`)
+
+| Variable           | Dev example                                                       | Prod example                                          |
+| ------------------ | ----------------------------------------------------------------- | ----------------------------------------------------- |
+| `PLOYOS_URL`       | `https://dev.ployos.com`                                          | `https://ployos.com`                                  |
+| `LONAOS_URL`       | `https://dev.lona.run`                                            | `https://lona.run`                                    |
+| `INTERNAL_HUB_URL` | `https://dev.lona.my`                                             | `https://lona.my`                                     |
+| `ALLOWED_ORIGINS`  | `https://dev.ployos.com,https://dev.lona.run,https://dev.lona.my` | `https://ployos.com,https://lona.run,https://lona.my` |
+
+`ALLOWED_ORIGINS` lists **browser page origins** (the three clients above), not API hostnames (`api-dev.lona.my` / `api.lona.my`).
+
+| Variable               | Dev                    | Prod    | Purpose                                                                                                                    |
+| ---------------------- | ---------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `CORS_ALLOW_LOCALHOST` | `true` (in `.env.dev`) | ignored | When `DEPLOY_ENV=dev`, allows `http://localhost:*` and `http://127.0.0.1:*` without listing each port in `ALLOWED_ORIGINS` |
+
+If `ALLOWED_ORIGINS` is also injected as a GitHub secret at deploy time, update the secret to match the frontend-only list above.
+
 Compose image tags live in **`current/.env`** on the VPS (not committed):
 
 | Variable                     | Service                                |
@@ -108,21 +125,24 @@ node scripts/render-deploy-env.mjs --deploy-env dev --output deploy/.env.dev
 
 Per environment (`dev` / `production`):
 
-| Secret                                                   | Purpose                                    |
-| -------------------------------------------------------- | ------------------------------------------ |
-| `DB_PASSWORD`                                            | PostgreSQL                                 |
-| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET`               | Auth                                       |
-| `SSO_TOKEN_ENCRYPTION_KEY`                               | SSO                                        |
-| `PUBLIC_ENDPOINT_API_KEY`                                | Explore API                                |
-| `RESEND_API_KEY`                                         | Email                                      |
-| `POLAR_*` / `STRIPE_*`                                   | Payments                                   |
-| `GOOGLE_CLIENT_SECRET`                                   | OAuth                                      |
-| `AWS_S3_*`                                               | File storage                               |
-| `COPYLEAKS_API_KEY`                                      | Plagiarism                                 |
-| `REDIS_PASSWORD`                                         | Redis                                      |
-| `AI_KEYS_MASTER_KEY_v1` / `FE_BFF_SECRET_v1`             | AI key vault                               |
-| `VPS_HOST` / `VPS_USER` / `VPS_SSH_KEY` / `VPS_SSH_PORT` | SSH deploy                                 |
-| `GHCR_PULL_TOKEN`                                        | VPS docker pull (PAT with `read:packages`) |
+| Secret                                                   | Purpose                                                                        |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `DB_PASSWORD`                                            | PostgreSQL                                                                     |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET`               | Auth                                                                           |
+| `SSO_TOKEN_ENCRYPTION_KEY`                               | SSO                                                                            |
+| `PUBLIC_ENDPOINT_API_KEY`                                | BFF-gated public routes (register, explore, AI keys)                           |
+| `GRPC_SERVICE_SECRET`                                    | Gateway ↔ microservice gRPC auth                                               |
+| `ALLOWED_ORIGINS`                                        | CORS frontend origins (required in dev/prod; comma-separated; see table above) |
+| `CORS_ALLOW_LOCALHOST`                                   | Dev only — allow localhost origins without listing them (set in `.env.dev`)    |
+| `RESEND_API_KEY`                                         | Email                                                                          |
+| `POLAR_*` / `STRIPE_*`                                   | Payments                                                                       |
+| `GOOGLE_CLIENT_SECRET`                                   | OAuth                                                                          |
+| `AWS_S3_*`                                               | File storage                                                                   |
+| `COPYLEAKS_API_KEY`                                      | Plagiarism                                                                     |
+| `REDIS_PASSWORD`                                         | Redis                                                                          |
+| `AI_KEYS_MASTER_KEY_v1` / `FE_BFF_SECRET_v1`             | AI key vault                                                                   |
+| `VPS_HOST` / `VPS_USER` / `VPS_SSH_KEY` / `VPS_SSH_PORT` | SSH deploy                                                                     |
+| `GHCR_PULL_TOKEN`                                        | VPS docker pull (PAT with `read:packages`)                                     |
 
 Non-secret config lives in committed `.env.dev` / `.env.prod`.
 

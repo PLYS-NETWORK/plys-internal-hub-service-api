@@ -8,10 +8,10 @@ Per-skill, fully automated competency exam. The consultant registers a skill, AI
 
 ## Audiences
 
-| File                                                             | Audience              | Covers                                                                 |
-| ---------------------------------------------------------------- | --------------------- | ---------------------------------------------------------------------- |
-| [consultant](../consultant/skill-exams/skill-exams-api-specs.md) | Consultant (Lona app) | Register, view current exam, eligibility, submit answers, submit exam. |
-| [admin](../admin/skill-exams/skill-exams-api-specs.md)           | Internal Hub admin    | Read-only list + detail of every skill exam across consultants.        |
+| File                                                             | Audience                | Covers                                                                 |
+| ---------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------- |
+| [consultant](../consultant/skill-exams/skill-exams-api-specs.md) | Consultant (Lonaos app) | Register, view current exam, eligibility, submit answers, submit exam. |
+| [admin](../admin/skill-exams/skill-exams-api-specs.md)           | Internal Hub admin      | Read-only list + detail of every skill exam across consultants.        |
 
 ## Pipeline at a glance
 
@@ -75,7 +75,7 @@ After every PASS the server recomputes the consultant's `avgRating` across all `
 
 ## Consultant-view status (logical surface)
 
-Internal `status` walks through `SUBMITTED → RUNNING_COPYLEAKS → RUNNING_AI_EVAL` — to keep the Lona UI simple, every response also includes `consultant_view_status` which collapses those three into `PENDING_REVIEW`:
+Internal `status` walks through `SUBMITTED → RUNNING_COPYLEAKS → RUNNING_AI_EVAL` — to keep the Lonaos UI simple, every response also includes `consultant_view_status` which collapses those three into `PENDING_REVIEW`:
 
 | Underlying `status`    | `consultant_view_status` |
 | ---------------------- | ------------------------ |

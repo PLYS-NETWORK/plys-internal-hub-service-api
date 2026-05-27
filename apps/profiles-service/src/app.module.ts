@@ -4,7 +4,6 @@ import { AdminOnboardingQuestionsModule } from '@modules/admin-onboarding-questi
 import { BusinessOnboardingModule } from '@modules/business-onboarding/business-onboarding.module';
 import { ConsultantOnboardingModule } from '@modules/consultant-onboarding/consultant-onboarding.module';
 import { ConsultantSkillExamModule } from '@modules/consultant-skill-exam/consultant-skill-exam.module';
-import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { ProfilesModule } from '@modules/profiles/profiles.module';
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
@@ -26,6 +25,7 @@ import { RequestContextModule } from '@plys/libraries/common-nest/modules/reques
 import configuration from '@plys/libraries/config/configuration';
 import { resolveEnvFilePath } from '@plys/libraries/config/env-file.config';
 import { getTypeOrmConfig } from '@plys/libraries/database/typeorm.config';
+import { NotificationsModule } from '@plys/libraries/notifications';
 import { ProfilesUnitOfWorkModule } from '@plys/libraries/unit-of-work/profiles-unit-of-work.module';
 import { WinstonModule } from 'nest-winston';
 

@@ -26,6 +26,13 @@
         "command": "eslint \"src/**/*.ts\" --max-warnings=0",
         "cwd": "apps/profiles-service"
       }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "jest --config jest.config.js",
+        "cwd": "apps/profiles-service"
+      }
     }
   }
 }

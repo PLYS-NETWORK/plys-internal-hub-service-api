@@ -92,16 +92,13 @@ export class WebhookProcessorService {
    */
   public async processStripeWebhook(
     payload: Buffer,
-    _headers: Record<string, string>,
+    headers: Record<string, string>,
   ): Promise<void> {
     this.logger.log(`processStripeWebhook — start`);
 
-    // Use Stripe provider to construct the event
-    // Note: This would need a separate method or the PaymentService to handle Stripe specifically
-    // For now, we'll handle account.updated events for Stripe Connect
-    const raw = JSON.parse(payload.toString('utf8')) as Record<string, unknown>;
-    const eventId = raw['id'] as string;
-    const eventType = raw['type'] as string;
+    const event = this.paymentService.constructStripeWebhookEvent(payload, headers);
+    const eventId = event.processorEventId;
+    const eventType = event.rawType;
 
     // Check for idempotency
     const existingEvent = await this.uow.webhookEvents.findOne({
@@ -118,13 +115,13 @@ export class WebhookProcessorService {
       processor: PaymentProcessor.STRIPE,
       eventId,
       eventType,
-      payload: raw,
+      payload: { type: eventType, data: event.data },
       status: WebhookStatus.PROCESSING,
     });
     await this.uow.webhookEvents.save(webhookEvent);
 
     try {
-      await this.processStripeEvent(eventType, raw);
+      await this.processStripeEvent(eventType, event.data);
 
       webhookEvent.status = WebhookStatus.PROCESSED;
       webhookEvent.processedAt = new Date();
@@ -367,9 +364,8 @@ export class WebhookProcessorService {
    * record and crediting the balance back (append-only ledger pattern).
    */
   private async handleTransferFailed(data: Record<string, unknown>): Promise<void> {
-    const dataObj = data['data'] as Record<string, unknown> | undefined;
-    const transfer = dataObj?.['object'] as Record<string, unknown> | undefined;
-    const transferId = transfer?.['id'] as string | undefined;
+    // `constructStripeWebhookEvent` passes `event.data.object` — the transfer itself.
+    const transferId = data['id'] as string | undefined;
 
     if (!transferId) {
       this.logger.warn(`handleTransferFailed — no transfer ID in event`);
@@ -474,9 +470,8 @@ export class WebhookProcessorService {
   }
 
   private async handleStripeAccountUpdated(data: Record<string, unknown>): Promise<void> {
-    const dataObj = data['data'] as Record<string, unknown> | undefined;
-    const account = dataObj?.['object'] as Record<string, unknown> | undefined;
-    const accountId = account?.['id'] as string | undefined;
+    // `constructStripeWebhookEvent` passes `event.data.object` — the account itself.
+    const accountId = data['id'] as string | undefined;
 
     if (!accountId) {
       this.logger.warn(`handleStripeAccountUpdated — no account ID in event`);
@@ -484,8 +479,8 @@ export class WebhookProcessorService {
     }
 
     // Check if account is fully onboarded
-    const chargesEnabled = account?.['charges_enabled'] as boolean | undefined;
-    const payoutsEnabled = account?.['payouts_enabled'] as boolean | undefined;
+    const chargesEnabled = data['charges_enabled'] as boolean | undefined;
+    const payoutsEnabled = data['payouts_enabled'] as boolean | undefined;
 
     if (!chargesEnabled || !payoutsEnabled) {
       this.logger.log(

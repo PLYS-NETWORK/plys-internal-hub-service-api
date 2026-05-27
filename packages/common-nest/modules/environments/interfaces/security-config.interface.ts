@@ -27,4 +27,10 @@ export interface ISecurityConfig {
    * via `getOrThrow`; the guard rejects requests when missing or mismatched.
    */
   readonly publicEndpointApiKey: string;
+
+  /**
+   * Shared secret the API gateway sends on every outbound gRPC call. Microservices
+   * reject requests when the metadata token is missing or mismatched in dev/prod.
+   */
+  readonly grpcServiceSecret: string;
 }

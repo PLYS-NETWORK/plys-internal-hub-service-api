@@ -350,4 +350,25 @@ export class ConsultantTransactionRepository
       .getRawOne<{ amount: string }>();
     return row?.amount ?? '0.00';
   }
+
+  /** @inheritdoc */
+  public async sumClearedEarningsByConsultantGroupedBySkill(
+    consultantId: string,
+  ): Promise<Map<string, string>> {
+    const rows = await this.createQueryBuilder('ct')
+      .innerJoin('tasks', 'task', 'task.id = ct.task_id')
+      .innerJoin('project_required_skills', 'prs', 'prs.project_id = task.project_id')
+      .select('prs.skill_id', 'skill_id')
+      .addSelect('COALESCE(SUM(ct.amount), 0)', 'amount')
+      .where('ct.consultant_id = :consultantId', { consultantId })
+      .andWhere('ct.type = :type', { type: ConsultantTransactionType.CREDIT_CLEARED })
+      .groupBy('prs.skill_id')
+      .getRawMany<{ skill_id: string; amount: string }>();
+
+    const out = new Map<string, string>();
+    for (const row of rows) {
+      out.set(row.skill_id, row.amount);
+    }
+    return out;
+  }
 }

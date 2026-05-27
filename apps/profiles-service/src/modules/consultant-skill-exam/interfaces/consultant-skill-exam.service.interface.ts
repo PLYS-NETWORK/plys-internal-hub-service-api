@@ -16,7 +16,7 @@ export interface IConsultantSkillExamService {
 
   /**
    * Returns whether the caller can register a new exam right now. Single source
-   * of truth for the Lona "Start exam" button.
+   * of truth for the Lonaos "Start exam" button.
    */
   getEligibility(): Promise<SkillExamEligibilityResponseDto>;
 

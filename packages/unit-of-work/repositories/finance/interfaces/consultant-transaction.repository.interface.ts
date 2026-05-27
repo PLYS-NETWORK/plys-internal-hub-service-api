@@ -207,4 +207,10 @@ export interface IConsultantTransactionRepository extends AbstractRepository<Con
    * @returns Decimal string (`'0.00'` when empty).
    */
   sumClearedEarningsByConsultantAndSkillId(consultantId: string, skillId: string): Promise<string>;
+
+  /**
+   * Single grouped query for consultant skill-performance earnings.
+   * @returns Map of skillId → decimal amount string.
+   */
+  sumClearedEarningsByConsultantGroupedBySkill(consultantId: string): Promise<Map<string, string>>;
 }

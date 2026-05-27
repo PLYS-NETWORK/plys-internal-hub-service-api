@@ -2,13 +2,16 @@ import { Metadata } from '@grpc/grpc-js';
 import { HttpStatus } from '@nestjs/common';
 import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
+import { ClassConstructor } from 'class-transformer';
 
+import { validateRequestDto } from './grpc-dto-validation.util';
 import { mapExceptionToHttpResponse } from './grpc-error.util';
 import { GrpcBridgeHandler, IHttpRequest, IHttpResponse } from './grpc-http.types';
 import {
   applyMetadataToRequestContext,
   readRequestContextFromMetadata,
 } from './grpc-metadata.util';
+import { assertGrpcServiceAuthorized } from './grpc-service-auth.util';
 
 export abstract class GrpcBridgeBase {
   protected abstract readonly handlers: Record<string, GrpcBridgeHandler>;
@@ -28,6 +31,12 @@ export abstract class GrpcBridgeBase {
         headers: {},
         cookies: {},
       };
+    }
+
+    try {
+      assertGrpcServiceAuthorized(metadata);
+    } catch (exception) {
+      return mapExceptionToHttpResponse(exception);
     }
 
     const context = metadata ? readRequestContextFromMetadata(metadata) : undefined;
@@ -54,6 +63,14 @@ export abstract class GrpcBridgeBase {
     }
     const text = Buffer.isBuffer(raw) ? raw.toString('utf8') : Buffer.from(raw).toString('utf8');
     return JSON.parse(text) as T;
+  }
+
+  protected async parseAndValidateBody<T extends object>(
+    request: IHttpRequest,
+    dtoClass: ClassConstructor<T>,
+  ): Promise<T> {
+    const plain = this.parseJsonBody<Record<string, unknown>>(request);
+    return validateRequestDto(plain, dtoClass);
   }
 
   protected getPathParam(request: IHttpRequest, key: string): string {

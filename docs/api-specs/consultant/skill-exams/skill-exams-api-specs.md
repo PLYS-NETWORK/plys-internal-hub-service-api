@@ -41,7 +41,7 @@ Exceeding the limit returns `429 AUTH_RATE_LIMITED`.
 
 ### 1. Get current exam
 
-Return the consultant's currently active exam (any non-terminal status) — or `null` when none. The Lona dashboard uses this to render either the "you have a pending exam" card OR the "register a new exam" CTA.
+Return the consultant's currently active exam (any non-terminal status) — or `null` when none. The Lonaos dashboard uses this to render either the "you have a pending exam" card OR the "register a new exam" CTA.
 
 - **Endpoint:** `GET /consultant/skill-exams/current`
 - **Throttle:** `DEFAULT` (60 / 60 s)
@@ -257,7 +257,7 @@ The non-terminal set (`SKILL_EXAM_IN_PROGRESS_STATUSES`) — used by the start g
 
 ### `consultant_view_status` — `ConsultantViewSkillExamStatus`
 
-Hides the back-of-house CopyLeaks/AI-eval transitions behind a single `PENDING_REVIEW` value so the Lona UI shows a steady "waiting for review" state from submit through to terminal verdict:
+Hides the back-of-house CopyLeaks/AI-eval transitions behind a single `PENDING_REVIEW` value so the Lonaos UI shows a steady "waiting for review" state from submit through to terminal verdict:
 
 `GENERATING_QUESTIONS` · `IN_PROGRESS` · `PENDING_REVIEW` · `EXPIRED` · `COPYLEAKS_FAILED` · `FAILED` · `PASSED`
 

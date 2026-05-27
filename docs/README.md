@@ -9,11 +9,12 @@
 
 ## Architecture
 
-| Doc                                                                              | Description                                          |
-| -------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| [architecture/domain-ownership.md](./architecture/domain-ownership.md)           | Table ownership and bounded contexts                 |
-| [architecture/transaction-inventory.md](./architecture/transaction-inventory.md) | Composite SQL transactions during monorepo migration |
-| [architecture/versioning.md](./architecture/versioning.md)                       | `@plys/libraries` semver via Changesets              |
+| Doc                                                                              | Description                                           |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| [architecture/system-architecture.md](./architecture/system-architecture.md)     | Services, gRPC bridge, security, data layer, packages |
+| [architecture/domain-ownership.md](./architecture/domain-ownership.md)           | Table ownership and bounded contexts                  |
+| [architecture/transaction-inventory.md](./architecture/transaction-inventory.md) | Composite SQL transactions during monorepo migration  |
+| [architecture/versioning.md](./architecture/versioning.md)                       | `@plys/libraries` semver via Changesets               |
 
 ## Integration
 

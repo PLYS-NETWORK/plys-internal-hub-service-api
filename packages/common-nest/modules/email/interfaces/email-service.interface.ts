@@ -41,7 +41,7 @@ export interface IEmailService {
   /**
    * Sends an email verification / registration confirmation email to the given address.
    *
-   * The template is selected based on `platform` — Lona for CONSULTANT, Ployos for BUSINESS.
+   * The template is selected based on `platform` — Lonaos for CONSULTANT, Ployos for BUSINESS.
    *
    * @param to       - Recipient email address.
    * @param options  - Template variables (e.g. OTP code, user name).
@@ -58,7 +58,7 @@ export interface IEmailService {
   /**
    * Sends a forgot-password OTP email to the given address.
    *
-   * The template is selected based on `platform` — Lona for CONSULTANT, Ployos for BUSINESS.
+   * The template is selected based on `platform` — Lonaos for CONSULTANT, Ployos for BUSINESS.
    *
    * @param to       - Recipient email address.
    * @param options  - Template variables (e.g. OTP code, expiry minutes).
@@ -75,7 +75,7 @@ export interface IEmailService {
   /**
    * Sends a welcome email to a newly registered user.
    *
-   * The template is selected based on `platform` — Lona for CONSULTANT, Ployos for BUSINESS.
+   * The template is selected based on `platform` — Lonaos for CONSULTANT, Ployos for BUSINESS.
    *
    * @param to       - Recipient email address.
    * @param options  - Template variables (e.g. first name, login URL).

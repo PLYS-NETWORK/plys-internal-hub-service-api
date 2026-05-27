@@ -30,6 +30,36 @@ export const ENV_SECRET_REGISTRY: readonly IEnvSecretDefinition[] = [
     label: 'JWT refresh token signing key',
     required: true,
   },
+  {
+    envVar: 'PUBLIC_ENDPOINT_API_KEY',
+    type: SecretType.JwtHmacSha256,
+    label: 'BFF public endpoint API key',
+    required: false,
+  },
+  {
+    envVar: 'GRPC_SERVICE_SECRET',
+    type: SecretType.JwtHmacSha256,
+    label: 'gRPC service-to-service auth secret',
+    required: false,
+  },
+  {
+    envVar: 'SSO_TOKEN_ENCRYPTION_KEY',
+    type: SecretType.Aes256GcmKeyBase64,
+    label: 'SSO token encryption key',
+    required: false,
+  },
+  {
+    envVar: 'STRIPE_WEBHOOK_SECRET',
+    type: SecretType.JwtHmacSha256,
+    label: 'Stripe webhook signing secret',
+    required: false,
+  },
+  {
+    envVar: 'POLAR_WEBHOOK_SECRET',
+    type: SecretType.JwtHmacSha256,
+    label: 'Polar webhook signing secret',
+    required: false,
+  },
 ];
 
 /** Collects non-empty AI_KEYS_MASTER_KEY_v<N> env var names present in env. */

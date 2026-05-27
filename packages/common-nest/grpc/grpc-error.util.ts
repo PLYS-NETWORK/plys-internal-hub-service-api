@@ -1,6 +1,7 @@
 import { Metadata, status as GrpcStatus } from '@grpc/grpc-js';
 import { HttpStatus } from '@nestjs/common';
 import { ERROR_CODES, ErrorCode } from '@plys/libraries/common-nest/constants/error-codes';
+import { mapPostgresError } from '@plys/libraries/common-nest/errors/postgres-error.mapper';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
 import { QueryFailedError } from 'typeorm';
 
@@ -112,49 +113,8 @@ export function httpStatusToGrpcStatus(httpStatus: number): number {
 }
 
 function mapQueryFailedError(exception: QueryFailedError): IHttpResponse {
-  const driverError = exception.driverError as { code?: string; message?: string };
-
-  switch (driverError?.code) {
-    case '23505':
-      return buildErrorResponse(
-        HttpStatus.CONFLICT,
-        ERROR_CODES.DATABASE_UNIQUE_VIOLATION,
-        'error.database.unique_violation',
-      );
-    case '23503':
-      return buildErrorResponse(
-        HttpStatus.UNPROCESSABLE_ENTITY,
-        ERROR_CODES.DATABASE_FOREIGN_KEY_VIOLATION,
-        'error.database.foreign_key_violation',
-      );
-    case '23502':
-      return buildErrorResponse(
-        HttpStatus.UNPROCESSABLE_ENTITY,
-        ERROR_CODES.DATABASE_NOT_NULL_VIOLATION,
-        'error.database.not_null_violation',
-      );
-    case 'P0001': {
-      const triggerMessage = driverError?.message ?? '';
-      if (/project.*status/i.test(triggerMessage)) {
-        return buildErrorResponse(
-          HttpStatus.UNPROCESSABLE_ENTITY,
-          ERROR_CODES.PROJECT_INVALID_STATUS_TRANSITION,
-          'error.project.invalid_status_transition',
-        );
-      }
-      return buildErrorResponse(
-        HttpStatus.UNPROCESSABLE_ENTITY,
-        ERROR_CODES.GENERIC_BAD_REQUEST,
-        'error.generic.bad_request',
-      );
-    }
-    default:
-      return buildErrorResponse(
-        HttpStatus.UNPROCESSABLE_ENTITY,
-        ERROR_CODES.GENERIC_BAD_REQUEST,
-        'error.generic.bad_request',
-      );
-  }
+  const mapped = mapPostgresError(exception);
+  return buildErrorResponse(mapped.status, mapped.errorCode, mapped.messageKey);
 }
 
 function buildErrorResponse(

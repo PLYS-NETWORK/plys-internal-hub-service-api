@@ -29,7 +29,7 @@ export const SKILL_EXAM_IN_PROGRESS_STATUSES: readonly SkillExamStatus[] = [
 
 /**
  * Logical, consultant-facing state. Hides the internal CopyLeaks/AI eval transitions
- * behind a single `PENDING_REVIEW` value so the Lona UI shows a steady "waiting for
+ * behind a single `PENDING_REVIEW` value so the Lonaos UI shows a steady "waiting for
  * review" state from submit through to terminal verdict.
  */
 export enum ConsultantViewSkillExamStatus {

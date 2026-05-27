@@ -5,6 +5,7 @@ import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environ
 import * as FileType from 'file-type';
 
 import { IUploadInput } from '../interfaces';
+import { readImageDimensions } from '../utils/image-dimensions.util';
 
 /**
  * Centralised validation pipeline shared by every entry point that accepts
@@ -45,6 +46,18 @@ export class FileContentValidator {
         errorCode: ERROR_CODES.FILE_INVALID_TYPE,
         status: HttpStatus.UNSUPPORTED_MEDIA_TYPE,
       });
+    }
+
+    const maxPixels = this.env.filesMaxImagePixels;
+    if (maxPixels !== null && sniffedMime.startsWith('image/')) {
+      const dimensions = readImageDimensions(buffer, sniffedMime);
+      if (dimensions !== null && dimensions.width * dimensions.height > maxPixels) {
+        throw new TranslatableException({
+          messageKey: 'error.file.dimensions_exceeded',
+          errorCode: ERROR_CODES.FILE_DIMENSIONS_EXCEEDED,
+          status: HttpStatus.UNPROCESSABLE_ENTITY,
+        });
+      }
     }
 
     return {

@@ -46,7 +46,7 @@
 
 ### 2. Upload a CV or avatar (pre-step for Step 1)
 
-CV and avatar uploads reuse the shared `/files` endpoint. They are not part of the onboarding controller — repeated here so the Lona app has a single reference.
+CV and avatar uploads reuse the shared `/files` endpoint. They are not part of the onboarding controller — repeated here so the Lonaos app has a single reference.
 
 - **Endpoint:** `POST /files?purpose=consultant_cv` (CV) or `POST /files?purpose=avatar` (avatar)
 - **Content-Type:** `multipart/form-data`
@@ -240,7 +240,7 @@ Submits **every** answer in a single request and finalises the interview. Each e
   | 422 | `CONSULTANT_ONBOARDING_INVALID_ANSWER` | An entry's shape does not match its question type (e.g. RADIO `value` not in options, CHECKBOX `values` empty). |
   | 422 | (validation) | DTO failed validation (e.g. missing `answers` array, malformed UUIDs). |
 
-  Idempotency: the endpoint is **not** idempotent. After a successful call the status is `INTERVIEW_SUBMITTED`, so a retry returns `409 CONSULTANT_ONBOARDING_INVALID_STATUS`. The Lona app should treat that 409 as "already submitted" and surface a friendly state.
+  Idempotency: the endpoint is **not** idempotent. After a successful call the status is `INTERVIEW_SUBMITTED`, so a retry returns `409 CONSULTANT_ONBOARDING_INVALID_STATUS`. The Lonaos app should treat that 409 as "already submitted" and surface a friendly state.
 
 ---
 

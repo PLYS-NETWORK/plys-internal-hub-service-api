@@ -1,9 +1,10 @@
 import { VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-import { IoAdapter } from '@nestjs/platform-socket.io';
 import { SwaggerModule } from '@nestjs/swagger';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
+import { RedisIoAdapter } from '@plys/libraries/common-nest/modules/notifications-realtime';
+import { createCorsOriginDelegate } from '@plys/libraries/common-nest/utils/cors-origin.util';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { I18nValidationExceptionFilter, I18nValidationPipe } from 'nestjs-i18n';
 import * as path from 'path';
@@ -19,9 +20,11 @@ async function bootstrap(): Promise<void> {
   );
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
-  app.useWebSocketAdapter(new IoAdapter(app));
 
   const envService = app.get(EnvironmentsService);
+  const redisIoAdapter = new RedisIoAdapter(app, envService);
+  await redisIoAdapter.connectToRedis();
+  app.useWebSocketAdapter(redisIoAdapter);
 
   if (envService.filesStorageProvider === 'local') {
     await app.register(import('@fastify/static') as never, {
@@ -39,7 +42,7 @@ async function bootstrap(): Promise<void> {
   });
 
   app.enableCors({
-    origin: envService.allowedOrigins,
+    origin: createCorsOriginDelegate(envService.allowedOrigins, envService.corsAllowLocalhost),
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   });

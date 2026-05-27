@@ -149,6 +149,7 @@ export class PolarPaymentProvider implements IPaymentProvider {
 
     return {
       type: this.mapEventType(raw['type'] as string | undefined),
+      rawType: (raw['type'] as string | undefined) ?? 'unknown',
       data: (raw['data'] as Record<string, unknown>) ?? {},
       // Standard Webhooks uses the webhook-id header as the unique message ID.
       processorEventId: headers['webhook-id'] ?? '',

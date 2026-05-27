@@ -15,6 +15,8 @@ export type WebhookEventType = (typeof WebhookEventType)[keyof typeof WebhookEve
 
 export interface IWebhookEvent {
   readonly type: WebhookEventType;
+  /** Provider-native event name (e.g. Stripe `transfer.failed`). */
+  readonly rawType: string;
   /** Normalized payload — provider-specific fields are abstracted away. */
   readonly data: Record<string, unknown>;
   /** Original processor event ID for idempotency checks. */

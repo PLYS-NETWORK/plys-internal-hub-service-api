@@ -2,7 +2,6 @@ import { AiBootstrapModule } from '@modules/ai-bootstrap/ai-bootstrap.module';
 import { BusinessProjectsModule } from '@modules/business-projects/business-projects.module';
 import { ConsultantProjectsModule } from '@modules/consultant-projects/consultant-projects.module';
 import { ExploreModule } from '@modules/explore/explore.module';
-import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { ProjectAiContextModule } from '@modules/project-ai-context/project-ai-context.module';
 import { ProjectChatSessionModule } from '@modules/project-chat-session/project-chat-session.module';
 import { TaskReviewsModule } from '@modules/task-reviews/task-reviews.module';
@@ -26,6 +25,7 @@ import configuration from '@plys/libraries/config/configuration';
 import { resolveEnvFilePath } from '@plys/libraries/config/env-file.config';
 import { AuditSubscriber } from '@plys/libraries/database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from '@plys/libraries/database/typeorm.config';
+import { NotificationsModule } from '@plys/libraries/notifications';
 import { ProjectsUnitOfWorkModule } from '@plys/libraries/unit-of-work/projects-unit-of-work.module';
 import { WinstonModule } from 'nest-winston';
 

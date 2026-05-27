@@ -5,6 +5,7 @@ import { EmailService } from '@plys/libraries/common-nest/modules/email/email.se
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
 import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
+import { maskEmailForLog } from '@plys/libraries/common-nest/utils/mask-email.util';
 import { ActivePlatform, SsoProvider } from '@plys/libraries/database/enums';
 import { UnitOfWorkService } from '@plys/libraries/unit-of-work/unit-of-work.service';
 
@@ -48,7 +49,7 @@ export class SsoAuthService implements ISsoAuthService {
     context: ISessionContext,
   ): Promise<AuthResponseDto> {
     this.logger.log(
-      `ssoLogin — start | provider: ${provider}, platform: ${activePlatform}, email: ${userData.email}`,
+      `ssoLogin — start | provider: ${provider}, platform: ${activePlatform}, email: ${maskEmailForLog(userData.email)}`,
     );
 
     if (!userData.email) {
@@ -187,7 +188,7 @@ export class SsoAuthService implements ISsoAuthService {
       if (isNewUser) {
         let dashboardUrl =
           activePlatform === ActivePlatform.CONSULTANT
-            ? `${this.envService.lonaUrl}/dashboard`
+            ? `${this.envService.lonaosUrl}/dashboard`
             : this.envService.ployosUrl;
 
         // For business users, try to get business profile ID for proper dashboard URL

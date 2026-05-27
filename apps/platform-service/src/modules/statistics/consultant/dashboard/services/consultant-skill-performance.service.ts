@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
 import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
+import { RedisService } from '@plys/libraries/common-nest/modules/redis/redis.service';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 import { ProficiencyLevel } from '@plys/libraries/database/enums';
 import { UnitOfWorkService } from '@plys/libraries/unit-of-work/unit-of-work.service';
@@ -10,6 +11,8 @@ import { plainToInstance } from 'class-transformer';
 import { ConsultantSkillPerformanceDto } from '../../../dto/requests/consultant-skill-performance.dto';
 import { ConsultantSkillPerformanceResponseDto } from '../../../dto/responses/consultant-skill-performance-response.dto';
 import { IConsultantSkillPerformanceService } from '../interfaces/consultant-skill-performance-service.interface';
+
+const SKILL_PERFORMANCE_CACHE_TTL_SECONDS = 60;
 
 interface ISkillItem {
   skill_id: string;
@@ -29,6 +32,7 @@ export class ConsultantSkillPerformanceService implements IConsultantSkillPerfor
 
   constructor(
     private readonly uow: UnitOfWorkService,
+    private readonly redis: RedisService,
     private readonly requestContext: RequestContextService,
   ) {
     this.logger = new AppLogger(ConsultantSkillPerformanceService.name, requestContext);
@@ -48,6 +52,14 @@ export class ConsultantSkillPerformanceService implements IConsultantSkillPerfor
       });
     }
     const consultantId = consultantProfile.id;
+    const cacheKey = `consultant:dashboard:skill_performance:${consultantId}:${dto.sort}:${dto.limit}:v1`;
+    const cached = await this.redis.get(cacheKey);
+    if (cached !== null) {
+      return plainToInstance(ConsultantSkillPerformanceResponseDto, JSON.parse(cached), {
+        excludeExtraneousValues: true,
+      });
+    }
+
     const now = new Date();
 
     this.logger.log(
@@ -80,21 +92,10 @@ export class ConsultantSkillPerformanceService implements IConsultantSkillPerfor
         skillIds,
       ),
       this.uow.tasks.countDoneByAssigneeGroupedBySkill(consultantId, skillIds),
-      // Earnings need per-skill summation; fan out one query per skill. Cap
-      // the parallelism implicitly via the limit-bounded skill list.
-      Promise.all(
-        skillIds.map(async (skillId) => ({
-          skillId,
-          amount: await this.uow.consultantTransactions.sumClearedEarningsByConsultantAndSkillId(
-            consultantId,
-            skillId,
-          ),
-        })),
-      ),
+      this.uow.consultantTransactions.sumClearedEarningsByConsultantGroupedBySkill(consultantId),
     ]);
 
-    const earningsLookup = new Map<string, string>();
-    for (const row of earningsBySkill) earningsLookup.set(row.skillId, row.amount);
+    const earningsLookup = earningsBySkill;
 
     const items: ISkillItem[] = skillRows.map((row) => {
       const lastCertified = lastCertifiedBySkill.get(row.skillId) ?? null;
@@ -116,11 +117,13 @@ export class ConsultantSkillPerformanceService implements IConsultantSkillPerfor
     const trimmed = items.slice(0, dto.limit);
     this.logger.log(`get — complete | consultantId: ${consultantId}, skills: ${trimmed.length}`);
 
-    return plainToInstance(
+    const response = plainToInstance(
       ConsultantSkillPerformanceResponseDto,
       { skills: trimmed, generated_at: now.toISOString() },
       { excludeExtraneousValues: true },
     );
+    await this.redis.set(cacheKey, JSON.stringify(response), SKILL_PERFORMANCE_CACHE_TTL_SECONDS);
+    return response;
   }
 
   // null-aware comparators: rows with `null` metric land last regardless of

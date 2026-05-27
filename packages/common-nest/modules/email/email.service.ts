@@ -69,7 +69,7 @@ export class EmailService implements IEmailService {
 
   private fromEmailForPlatform(platform: ActivePlatform): string {
     return platform === ActivePlatform.CONSULTANT
-      ? this.env.resendLonaEmail
+      ? this.env.resendLonaosEmail
       : this.env.resendPloyosEmail;
   }
 
@@ -179,7 +179,8 @@ export class EmailService implements IEmailService {
       await this.emailProvider.send({
         from: this.fromEmailForPlatform(platform),
         to,
-        subject: platform === ActivePlatform.CONSULTANT ? 'Welcome to Lona!' : 'Welcome to Ployos!',
+        subject:
+          platform === ActivePlatform.CONSULTANT ? 'Welcome to Lonaos!' : 'Welcome to Ployos!',
         html,
       });
       this.logger.log(`sendWelcomeEmail — sent | to: ${to}`);
@@ -325,7 +326,7 @@ export class EmailService implements IEmailService {
     this.logger.log(`sendInterviewReadyEmail — start | to: ${to}`);
     try {
       await this.emailProvider.send({
-        from: this.env.resendLonaEmail,
+        from: this.env.resendLonaosEmail,
         to,
         subject: 'Your interview questions are ready',
         html: await buildConsultantInterviewReadyEmail(options),
@@ -346,7 +347,7 @@ export class EmailService implements IEmailService {
     this.logger.log(`sendApplicationSubmittedEmail — start | to: ${to}`);
     try {
       await this.emailProvider.send({
-        from: this.env.resendLonaEmail,
+        from: this.env.resendLonaosEmail,
         to,
         subject: 'Interview submitted — we are reviewing your application',
         html: await buildConsultantApplicationSubmittedEmail(options),
@@ -367,7 +368,7 @@ export class EmailService implements IEmailService {
     this.logger.log(`sendApplicationApprovedEmail — start | to: ${to}`);
     try {
       await this.emailProvider.send({
-        from: this.env.resendLonaEmail,
+        from: this.env.resendLonaosEmail,
         to,
         subject: 'Congratulations — your application has been approved!',
         html: await buildConsultantApplicationApprovedEmail(options),
@@ -388,7 +389,7 @@ export class EmailService implements IEmailService {
     this.logger.log(`sendApplicationRejectedEmail — start | to: ${to}`);
     try {
       await this.emailProvider.send({
-        from: this.env.resendLonaEmail,
+        from: this.env.resendLonaosEmail,
         to,
         subject: 'Update on your application',
         html: await buildConsultantApplicationRejectedEmail(options),

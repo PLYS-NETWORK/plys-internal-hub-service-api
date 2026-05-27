@@ -118,14 +118,18 @@ export class RedisService implements IRedisService, OnModuleInit, OnModuleDestro
   }
 
   public async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
-    this.logger.log(`set — start | key: ${key}`);
+    if (!this.env.isProduction) {
+      this.logger.log(`set — start | key: ${key}`);
+    }
     try {
       if (ttlSeconds !== undefined) {
         await this.client.set(key, value, 'EX', ttlSeconds);
       } else {
         await this.client.set(key, value);
       }
-      this.logger.log(`set — complete | key: ${key}`);
+      if (!this.env.isProduction) {
+        this.logger.log(`set — complete | key: ${key}`);
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`set — failed | key: ${key} | error: ${message}`);
@@ -134,10 +138,14 @@ export class RedisService implements IRedisService, OnModuleInit, OnModuleDestro
   }
 
   public async get(key: string): Promise<string | null> {
-    this.logger.log(`get — start | key: ${key}`);
+    if (!this.env.isProduction) {
+      this.logger.log(`get — start | key: ${key}`);
+    }
     try {
       const value = await this.client.get(key);
-      this.logger.log(`get — complete | key: ${key} | hit: ${value !== null}`);
+      if (!this.env.isProduction) {
+        this.logger.log(`get — complete | key: ${key} | hit: ${value !== null}`);
+      }
       return value;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
@@ -309,6 +317,32 @@ export class RedisService implements IRedisService, OnModuleInit, OnModuleDestro
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`hDel — failed | key: ${key} | error: ${message}`);
+      throw err;
+    }
+  }
+
+  /**
+   * Scans for keys matching `pattern` using SCAN (non-blocking).
+   */
+  public async scanKeys(pattern: string): Promise<string[]> {
+    if (!this.env.isProduction) {
+      this.logger.log(`scanKeys — start | pattern: ${pattern}`);
+    }
+    try {
+      const keys: string[] = [];
+      let cursor = '0';
+      do {
+        const [nextCursor, batch] = await this.client.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = nextCursor;
+        keys.push(...batch);
+      } while (cursor !== '0');
+      if (!this.env.isProduction) {
+        this.logger.log(`scanKeys — complete | pattern: ${pattern} | count: ${keys.length}`);
+      }
+      return keys;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`scanKeys — failed | pattern: ${pattern} | error: ${message}`);
       throw err;
     }
   }

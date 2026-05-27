@@ -98,27 +98,29 @@ export class BillingSettlementService {
       `runSettlement — start | year: ${year}, month: ${month + 1}${businessId ? `, businessId: ${businessId}` : ''}`,
     );
 
-    const pendingTxns = await this.uow.consultantTransactions.find({
-      where: {
-        type: ConsultantTransactionType.CREDIT_PENDING,
-        status: TransactionStatus.PENDING,
-      },
-      relations: { task: { project: true } },
-    });
+    const periodStart = new Date(year, month, 1, 0, 0, 0, 0);
+    const periodEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-    // Filter to requested period and optionally to a single business
+    const qb = this.uow.consultantTransactions
+      .createQueryBuilder('ct')
+      .innerJoinAndSelect('ct.task', 'task')
+      .innerJoinAndSelect('task.project', 'project')
+      .where('ct.type = :type', { type: ConsultantTransactionType.CREDIT_PENDING })
+      .andWhere('ct.status = :status', { status: TransactionStatus.PENDING })
+      .andWhere('ct.created_at >= :periodStart', { periodStart })
+      .andWhere('ct.created_at <= :periodEnd', { periodEnd });
+
+    if (businessId) {
+      qb.andWhere('project.business_id = :businessId', { businessId });
+    }
+
+    const pendingTxns = await qb.getMany();
+
     const byBusiness = new Map<string, typeof pendingTxns>();
 
     for (const txn of pendingTxns) {
       if (!txn.task || !txn.task.project) continue;
-
-      const createdMonth = txn.createdAt.getMonth();
-      const createdYear = txn.createdAt.getFullYear();
-      if (createdMonth !== month || createdYear !== year) continue;
-
       const bid = txn.task.project.businessId;
-      if (businessId && bid !== businessId) continue;
-
       const list = byBusiness.get(bid) ?? [];
       list.push(txn);
       byBusiness.set(bid, list);

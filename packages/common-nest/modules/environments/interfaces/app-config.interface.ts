@@ -13,4 +13,10 @@ export interface IAppConfig {
 
   /** List of origins allowed by the CORS policy. Supports wildcard `['*']` for local dev. */
   readonly allowedOrigins: string[];
+
+  /**
+   * When `true` (dev deploy only), localhost/127.0.0.1 browser origins are allowed
+   * even if not listed in `allowedOrigins`.
+   */
+  readonly corsAllowLocalhost: boolean;
 }

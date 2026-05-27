@@ -11,6 +11,7 @@ import { IPaymentConfig } from './payment-config.interface';
 import { IRedisConfig } from './redis-config.interface';
 import { IResendConfig } from './resend-config.interface';
 import { ISecurityConfig } from './security-config.interface';
+import { IWebSocketConfig } from './websocket-config.interface';
 
 export interface IEnvironmentsService
   extends
@@ -26,4 +27,5 @@ export interface IEnvironmentsService
     IGoogleConfig,
     IIdentityConfig,
     IRedisConfig,
-    ISecurityConfig {}
+    ISecurityConfig,
+    IWebSocketConfig {}

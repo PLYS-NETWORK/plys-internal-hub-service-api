@@ -131,6 +131,12 @@ export interface IRedisService {
   hDel(key: string, ...fields: string[]): Promise<number>;
 
   /**
+   * Iterates keys matching `pattern` using SCAN (non-blocking).
+   * Pass a fully-prefixed pattern when using keyPrefix (same as `keys()`).
+   */
+  scanKeys(pattern: string): Promise<string[]>;
+
+  /**
    * Returns all keys matching the glob-style `pattern` (e.g. `"session:*"`).
    *
    * Caution: this is a blocking O(N) scan — avoid on large keyspaces in production;
@@ -180,7 +186,7 @@ export interface IRedisService {
    * regular commands, so this method lazily creates a SECOND ioredis client
    * that is reused across all subsequent psubscribe calls in this process.
    *
-   * @param pattern - Glob pattern matching one or more channels (e.g. `"notif:user:*"`).
+   * @param pattern - Glob pattern matching one or more channels (e.g. `"events:*"`).
    * @param handler - Callback invoked for every received message. `channel` is the
    *                  exact channel that matched the pattern; `message` is the payload string.
    * @returns Resolves once the subscription is acknowledged.

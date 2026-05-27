@@ -34,6 +34,12 @@ export interface IPaymentService {
   createRefund(params: ICreateRefundParams): Promise<void>;
 
   /**
+   * Validates the incoming Stripe webhook signature and returns a normalized event.
+   * Always uses the Stripe provider regardless of the active payment processor.
+   */
+  constructStripeWebhookEvent(payload: Buffer, headers: Record<string, string>): IWebhookEvent;
+
+  /**
    * Validates the incoming webhook signature and returns a normalized `IWebhookEvent`.
    *
    * This is the security boundary — the raw request body (as a `Buffer`) and all

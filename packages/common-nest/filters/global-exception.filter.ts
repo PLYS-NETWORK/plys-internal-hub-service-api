@@ -9,6 +9,8 @@ import { FastifyRequest } from 'fastify';
 import { I18nService } from 'nestjs-i18n';
 import { QueryFailedError } from 'typeorm';
 
+import { mapPostgresError } from '../errors/postgres-error.mapper';
+
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger: AppLogger;
@@ -54,44 +56,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           : (typed.message ?? typed.error ?? exception.message);
       }
     } else if (exception instanceof QueryFailedError) {
-      const driverError = exception.driverError as { code?: string; message?: string };
-      switch (driverError?.code) {
-        case '23505':
-          status = HttpStatus.CONFLICT;
-          message = this.translate('error.database.unique_violation', lang);
-          errorCode = ERROR_CODES.DATABASE_UNIQUE_VIOLATION;
-          break;
-        case '23503':
-          status = HttpStatus.UNPROCESSABLE_ENTITY;
-          message = this.translate('error.database.foreign_key_violation', lang);
-          errorCode = ERROR_CODES.DATABASE_FOREIGN_KEY_VIOLATION;
-          break;
-        case '23502':
-          status = HttpStatus.UNPROCESSABLE_ENTITY;
-          message = this.translate('error.database.not_null_violation', lang);
-          errorCode = ERROR_CODES.DATABASE_NOT_NULL_VIOLATION;
-          break;
-        // P0001 — `RAISE EXCEPTION` from a PL/pgSQL trigger. Used by
-        // `trg_enforce_project_status` to reject illegal status transitions.
-        // Surface as a domain error so callers see a stable code.
-        case 'P0001': {
-          const triggerMessage = driverError?.message ?? '';
-          if (/project.*status/i.test(triggerMessage)) {
-            status = HttpStatus.UNPROCESSABLE_ENTITY;
-            message = this.translate('error.project.invalid_status_transition', lang);
-            errorCode = ERROR_CODES.PROJECT_INVALID_STATUS_TRANSITION;
-          } else {
-            status = HttpStatus.UNPROCESSABLE_ENTITY;
-            message = this.translate('error.generic.bad_request', lang);
-            errorCode = ERROR_CODES.GENERIC_BAD_REQUEST;
-          }
-          break;
-        }
-        default:
-          status = HttpStatus.UNPROCESSABLE_ENTITY;
-          message = this.translate('error.generic.bad_request', lang);
-          errorCode = ERROR_CODES.GENERIC_BAD_REQUEST;
-      }
+      const mapped = mapPostgresError(exception);
+      status = mapped.status;
+      message = this.translate(mapped.messageKey, lang);
+      errorCode = mapped.errorCode;
     } else if (exception instanceof Error) {
       message = exception.message;
     }

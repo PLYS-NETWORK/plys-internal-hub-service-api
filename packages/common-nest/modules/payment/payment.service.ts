@@ -60,6 +60,17 @@ export class PaymentService implements IPaymentService {
   }
 
   /**
+   * Validates the incoming Stripe webhook signature and returns a normalized event.
+   * Always uses the Stripe provider regardless of the active payment processor.
+   */
+  public constructStripeWebhookEvent(
+    payload: Buffer,
+    headers: Record<string, string>,
+  ): IWebhookEvent {
+    return this.registry.create(PaymentProcessor.STRIPE).constructWebhookEvent(payload, headers);
+  }
+
+  /**
    * Validates the incoming webhook signature and returns a normalized event.
    * Must be called with the raw request body (Buffer) before any JSON parsing.
    */

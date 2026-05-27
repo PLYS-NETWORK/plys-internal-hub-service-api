@@ -14,6 +14,6 @@ export interface IGoogleConfig {
   /** Base URL for the Business platform frontend (Ployos). Used to build post-auth redirect URLs. */
   readonly ployosUrl: string;
 
-  /** Base URL for the Consultant platform frontend (Lona). Used to build post-auth redirect URLs. */
-  readonly lonaUrl: string;
+  /** Base URL for the Consultant platform frontend (Lonaos). Used to build post-auth redirect URLs. */
+  readonly lonaosUrl: string;
 }

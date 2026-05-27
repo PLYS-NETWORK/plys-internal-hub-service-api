@@ -41,6 +41,7 @@ import {
 // Replaces the older idx_tasks_project_status — strict superset, removes the
 // Sort step from the board's `ORDER BY display_order ASC` listing query.
 @Index('idx_tasks_project_status_order', ['projectId', 'kanbanStatus', 'displayOrder'])
+@Index('idx_tasks_assigned_kanban', ['assignedTo', 'kanbanStatus'])
 @Index('idx_tasks_billing_period', ['billingPeriodId'])
 @Index('idx_tasks_due_date', ['dueDate'])
 @Index('idx_tasks_started_at', ['startedAt'])

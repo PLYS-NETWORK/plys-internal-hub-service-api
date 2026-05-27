@@ -1,25 +1,28 @@
-import { Controller, Get, HttpCode, HttpStatus, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common';
+import { ApiHeader, ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { THROTTLE_DEFAULT } from '@plys/libraries/common-nest/constants';
+import { Public } from '@plys/libraries/common-nest/decorators/public.decorator';
+import { PublicEndpointApiKeyGuard } from '@plys/libraries/common-nest/guards/public-endpoint-api-key.guard';
 import { ITranslatedPayload } from '@plys/libraries/common-nest/interceptors/transform-response.interceptor';
 
 import { AiProviderKeyService } from './ai-provider-key.service';
 import { GetActiveKeyQueryDto } from './dto/requests';
 import { ApiKeyBffResponseDto } from './dto/responses';
 
-// `GET /ai-provider-keys/active` is the only public-ish endpoint in this
-// module — it's hit by the FE BFF before opening a chat box. Authentication
-// gates it (the global JwtAuthGuard runs first); admins are not required.
-// Plaintext never leaves the BE — the response carries an envelope wrapped in
-// FE_BFF_SECRET that only the FE BFF process can decrypt.
+// `GET /ai-provider-keys/active` is called exclusively by the FE BFF before opening
+// a chat box. JWT is not used — the BFF presents `x-api-key` instead so end-user
+// sessions cannot exfiltrate encrypted key envelopes.
 @ApiTags('AI Provider Keys')
-@ApiBearerAuth()
+@ApiSecurity('x-api-key')
 @Controller('ai-provider-keys')
 @Throttle(THROTTLE_DEFAULT)
 export class AiProviderKeyBffController {
   constructor(private readonly service: AiProviderKeyService) {}
 
+  @Public()
+  @UseGuards(PublicEndpointApiKeyGuard)
+  @ApiHeader({ name: 'x-api-key', required: true, description: 'Shared BFF secret' })
   @Get('active')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

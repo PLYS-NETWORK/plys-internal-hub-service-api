@@ -22,6 +22,7 @@ import { BillingPeriod } from './billing-period.entity';
 @Unique('uq_invoices_processor_invoice_id', ['processorInvoiceId'])
 @Index('idx_invoices_business_id', ['businessId'])
 @Index('idx_invoices_status', ['status'])
+@Index('idx_invoices_status_notified', ['status', 'notifiedAt'])
 export class Invoice extends AuditableEntity {
   @PrimaryGeneratedColumn('uuid', { primaryKeyConstraintName: 'pk_invoices' })
   public readonly id!: string;

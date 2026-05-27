@@ -47,7 +47,7 @@ export {
   type IWithdrawCancelledTemplateOptions,
 } from './business/withdraw-cancelled.template';
 
-// Consultant (Lona) templates
+// Consultant (Lonaos) templates
 export {
   buildConsultantApplicationApprovedEmail,
   type IConsultantApplicationApprovedTemplateOptions,
