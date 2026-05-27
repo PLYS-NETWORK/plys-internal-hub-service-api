@@ -1,6 +1,7 @@
 import { AdminAuthModule } from '@modules/admin-auth/admin-auth.module';
 import { AuthModule } from '@modules/auth/auth.module';
 import { UsersModule } from '@modules/users/users.module';
+import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -44,6 +45,21 @@ import {
       imports: [EnvironmentsModule],
       inject: [EnvironmentsService],
       useFactory: (envService: EnvironmentsService) => getTypeOrmConfig(envService),
+    }),
+    BullModule.forRootAsync({
+      imports: [EnvironmentsModule],
+      inject: [EnvironmentsService],
+      useFactory: (env: EnvironmentsService) => ({
+        redis: {
+          host: env.redisHost,
+          port: env.redisPort,
+          password: env.redisPassword,
+          db: env.redisDb,
+          tls: env.redisTlsEnabled ? {} : undefined,
+          maxRetriesPerRequest: null,
+          enableReadyCheck: false,
+        },
+      }),
     }),
     I18nModule,
     RequestContextModule,
