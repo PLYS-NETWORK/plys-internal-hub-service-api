@@ -4,6 +4,7 @@ export { ChatSessionsGrpcController } from './chat-sessions.grpc-controller';
 export { ConsultantProjectsGrpcController } from './consultant-projects.grpc-controller';
 export { ExploreGrpcController } from './explore.grpc-controller';
 export { GrpcModule } from './grpc.module';
+export { GRPC_HTTP_PROVIDERS } from './grpc-http.providers';
 export { HealthGrpcController } from './health.grpc-controller';
 export { ProjectAiContextGrpcController } from './project-ai-context.grpc-controller';
 export { TaskReviewsGrpcController } from './task-reviews.grpc-controller';

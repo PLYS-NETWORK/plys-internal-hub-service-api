@@ -1,15 +1,8 @@
 import { FilesModule } from '@modules/files';
-import { FilesController } from '@modules/files/files.controller';
-import { HealthController } from '@modules/health/health.controller';
 import { HealthModule } from '@modules/health/health.module';
 import { HousekeepingModule } from '@modules/housekeeping/housekeeping.module';
-import { NotificationsController } from '@modules/notifications/notifications.controller';
 import { NotificationsModule } from '@modules/notifications/notifications.module';
-import { SkillsController } from '@modules/skills/skills.controller';
 import { SkillsModule } from '@modules/skills/skills.module';
-import { AdminStatisticsController } from '@modules/statistics/admin/admin-statistics.controller';
-import { BusinessDashboardController } from '@modules/statistics/business/dashboard/business-dashboard.controller';
-import { ConsultantDashboardController } from '@modules/statistics/consultant/dashboard/consultant-dashboard.controller';
 import { StatisticsModule } from '@modules/statistics/statistics.module';
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
@@ -37,6 +30,7 @@ import { WinstonModule } from 'nest-winston';
 
 import {
   FilesGrpcController,
+  GRPC_HTTP_PROVIDERS,
   GrpcModule,
   HealthGrpcController,
   NotificationsGrpcController,
@@ -90,20 +84,13 @@ import {
     HousekeepingModule,
     GrpcModule,
   ],
-  providers: [AuditSubscriber],
+  providers: [AuditSubscriber, ...GRPC_HTTP_PROVIDERS],
   controllers: [
     HealthGrpcController,
     FilesGrpcController,
     SkillsGrpcController,
     StatisticsGrpcController,
     NotificationsGrpcController,
-    FilesController,
-    SkillsController,
-    AdminStatisticsController,
-    BusinessDashboardController,
-    ConsultantDashboardController,
-    NotificationsController,
-    HealthController,
   ],
 })
 export class AppModule {}

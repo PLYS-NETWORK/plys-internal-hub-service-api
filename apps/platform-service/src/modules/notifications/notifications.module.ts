@@ -2,6 +2,8 @@ import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { NotificationRealtimeModule } from '@plys/libraries/common-nest/modules/notifications-realtime';
+import { RedisModule } from '@plys/libraries/common-nest/modules/redis';
+import { RequestContextModule } from '@plys/libraries/common-nest/modules/request-context';
 import { UnitOfWorkModule } from '@plys/libraries/unit-of-work/unit-of-work.module';
 
 import { SKILL_MATCH_NOTIFICATION_QUEUE } from './queues/skill-match-notification.constants';
@@ -17,6 +19,8 @@ import { NotificationsService } from './services/notifications.service';
 @Module({
   imports: [
     UnitOfWorkModule,
+    RedisModule,
+    RequestContextModule,
     NotificationRealtimeModule,
     // Standalone JwtModule registration (matches AuthModule's pattern) — secret
     // and claim options are passed per-call inside the gateway. Registering here
