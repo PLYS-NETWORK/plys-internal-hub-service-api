@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 
 FROM node:20-alpine AS base
-RUN corepack enable && corepack prepare pnpm@10 --activate
+# corepack prepare pnpm@10 fails on Alpine (wrong binary arch); pin via npm instead.
+RUN npm install -g pnpm@10.32.1
 WORKDIR /app
 
 # ─── Dependencies ─────────────────────────────────────────────────────────────
@@ -31,14 +32,10 @@ COPY --from=build /app/package.json /app/pnpm-workspace.yaml ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/packages ./packages
 COPY --from=build /app/apps ./apps
+COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ARG SERVICE=api-gateway
 ENV SERVICE=${SERVICE}
 
-# migrate runs TypeORM migrations + seeds then exits
-CMD if [ "$SERVICE" = "migrate" ]; then \
-      node ./packages/node_modules/typeorm/cli.js migration:run -d packages/dist/database/data-source.js && \
-      node packages/dist/database/seeds/seed-runner.js; \
-    else \
-      node apps/${SERVICE}/dist/apps/${SERVICE}/src/main.js; \
-    fi
+ENTRYPOINT ["docker-entrypoint.sh"]
