@@ -169,4 +169,49 @@ runs:
             fi
           fi
 
+          wait_for_gateway_health() {
+            local app_env_file=".env.${DEPLOY_ENV}"
+            local port gateway_url response
+
+            if [ ! -f "$app_env_file" ]; then
+              echo "ERROR: ${app_env_file} not found — cannot resolve PORT for health check."
+              exit 1
+            fi
+
+            port=$(grep -E '^PORT=' "$app_env_file" | tail -1 | cut -d= -f2- | tr -d ' "')
+            if [ -z "$port" ]; then
+              echo "ERROR: PORT not set in ${app_env_file}"
+              exit 1
+            fi
+
+            gateway_url="http://127.0.0.1:${port}/api/v1/gateway/health"
+            echo "==> Waiting for api-gateway at ${gateway_url}..."
+
+            for attempt in 1 2 3 4 5 6 7 8 9 10; do
+              sleep 10
+              response=$(curl --silent --show-error --max-time 10 "$gateway_url" 2>&1) || true
+              if printf '%s' "$response" | grep -q '"status":"ok"'; then
+                echo "Gateway health passed (attempt ${attempt})"
+                return 0
+              fi
+              echo "Gateway health attempt ${attempt} failed, retrying..."
+            done
+
+            echo "ERROR: Gateway health check failed after 10 attempts"
+            echo "--- last response ---"
+            printf '%s\n' "$response" | head -c 1000
+            echo
+            echo "--- pm2 status ---"
+            pm2 status || true
+            echo "--- docker ps ---"
+            docker ps --format 'table {{.Names}}\t{{.Status}}' 2>/dev/null || true
+            echo "--- api-gateway logs (last 40 lines) ---"
+            pm2 logs "internal-hub-be-${DEPLOY_ENV}-api-gateway" --lines 40 --nostream 2>/dev/null || true
+            exit 1
+          }
+
+          if [ "$SERVICE" = "all" ] || [ "$SERVICE" = "api-gateway" ]; then
+            wait_for_gateway_health
+          fi
+
           echo "✓ Deployed ${SERVICE} to ${DEPLOY_ENV}"

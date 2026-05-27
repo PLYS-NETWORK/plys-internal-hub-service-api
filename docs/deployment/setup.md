@@ -151,7 +151,8 @@ No manual edit needed after the first successful deploy.
 pm2 status
 # Expect 6 apps: internal-hub-be-dev-api-gateway, ...-identity-service, etc.
 
-curl -s https://api-dev.lona.my/v1/health
+curl -s http://127.0.0.1:4001/api/v1/gateway/health   # dev VPS (PORT in .env.dev)
+curl -s https://api-dev.lona.my/v1/health             # public URL — requires nginx → :4001
 docker ps
 ```
 
@@ -195,13 +196,13 @@ See [overview.md](./overview.md#rollback).
 
 ## 6. Troubleshooting
 
-| Symptom                            | Check                                                                         |
-| ---------------------------------- | ----------------------------------------------------------------------------- |
-| `pull access denied`               | `GHCR_PULL_TOKEN` valid; `docker login ghcr.io` on VPS                        |
-| PM2 app errored                    | `pm2 logs <name>`; verify `.env` has all `IMAGE_TAG_*` keys                   |
-| Health check fails                 | `docker ps`; gateway container up; reverse proxy → dev `:4001` / prod `:4000` |
-| Migration failed                   | Run migrate manually; check `DB_*` in `.env.dev` on VPS                       |
-| Single deploy broke other services | Other services keep old tags — only target PM2 app restarts                   |
+| Symptom                            | Check                                                                                                                                                                             |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pull access denied`               | `GHCR_PULL_TOKEN` valid; `docker login ghcr.io` on VPS                                                                                                                            |
+| PM2 app errored                    | `pm2 logs <name>`; verify `.env` has all `IMAGE_TAG_*` keys                                                                                                                       |
+| Health check fails                 | `curl http://127.0.0.1:4001/api/v1/gateway/health` on VPS; `pm2 logs internal-hub-be-dev-api-gateway`; nginx must proxy to dev `:4001` / prod `:4000` (502 = wrong upstream port) |
+| Migration failed                   | Run migrate manually; check `DB_*` in `.env.dev` on VPS                                                                                                                           |
+| Single deploy broke other services | Other services keep old tags — only target PM2 app restarts                                                                                                                       |
 
 ---
 

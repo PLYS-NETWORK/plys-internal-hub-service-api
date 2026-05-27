@@ -142,19 +142,6 @@ jobs:
           image-registry: ${{ env.IMAGE_REGISTRY }}
           run-migrations: ${{ steps.deploy.outputs.run_migrations }}
 
-      - name: Health check
-        run: |
-          for attempt in 1 2 3 4 5 6; do
-            sleep 10
-            if curl --fail --silent --max-time 15 https://api-dev.lona.my/v1/health \
-              | grep -q '"status":"ok"'; then
-              echo "Health check passed (attempt ${attempt})"
-              exit 0
-            fi
-            echo "Health check attempt ${attempt} failed, retrying..."
-          done
-          echo "Health check failed after 6 attempts" && exit 1
-
       - name: Deployment summary
         if: success()
         run: |
