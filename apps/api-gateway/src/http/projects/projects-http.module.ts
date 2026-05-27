@@ -22,11 +22,14 @@ import { AiProviderKeyBffController } from '@plys/libraries/ai-provider-key';
 
 import { ProjectsClientsModule } from '@/clients/projects';
 
-import { GatewayHttpAuthModule } from '../shared/gateway-http-auth.module';
+import {
+  gatewayBffGuardImports,
+  gatewayBffGuardProviders,
+} from '../shared/gateway-http-auth.providers';
 import { PROJECTS_HTTP_PROVIDERS } from './projects-http.providers';
 
 @Module({
-  imports: [ProjectsClientsModule, GatewayHttpAuthModule],
+  imports: [ProjectsClientsModule, ...gatewayBffGuardImports],
   controllers: [
     BusinessProjectsController,
     BusinessProjectOverviewController,
@@ -49,6 +52,6 @@ import { PROJECTS_HTTP_PROVIDERS } from './projects-http.providers';
     ProjectSessionsController,
     ChatSessionsController,
   ],
-  providers: PROJECTS_HTTP_PROVIDERS,
+  providers: [...PROJECTS_HTTP_PROVIDERS, ...gatewayBffGuardProviders],
 })
 export class ProjectsHttpModule {}

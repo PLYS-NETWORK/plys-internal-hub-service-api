@@ -9,13 +9,13 @@ import { FileContentValidator } from '@plys/libraries/common-nest/modules/file-s
 
 import { PlatformClientsModule } from '@/clients/platform';
 
-import { GatewayHttpAuthModule } from '../shared/gateway-http-auth.module';
+import { gatewayJwtAuthImports } from '../shared/gateway-http-auth.providers';
 import { PlatformFilesController } from './files.controller';
 import { NotificationsGateway } from './notifications.gateway';
 import { PLATFORM_HTTP_PROVIDERS } from './platform-http.providers';
 
 @Module({
-  imports: [PlatformClientsModule, GatewayHttpAuthModule],
+  imports: [PlatformClientsModule, ...gatewayJwtAuthImports],
   controllers: [
     PlatformFilesController,
     SkillsController,
