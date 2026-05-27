@@ -14,7 +14,6 @@ import { Module } from '@nestjs/common';
 
 import { ProfilesClientsModule } from '@/clients/profiles';
 
-import { gatewayBffGuardImports } from '../shared/gateway-http-auth.providers';
 import {
   GatewayNotBannedGuard,
   GatewayOnboardingApprovedGuard,
@@ -22,7 +21,7 @@ import {
 import { PROFILES_HTTP_PROVIDERS } from './profiles-http.providers';
 
 @Module({
-  imports: [ProfilesClientsModule, ...gatewayBffGuardImports],
+  imports: [ProfilesClientsModule],
   controllers: [
     BusinessProfilesController,
     BusinessProfilesAdminController,

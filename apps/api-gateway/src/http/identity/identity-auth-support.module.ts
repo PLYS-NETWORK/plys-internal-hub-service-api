@@ -5,6 +5,7 @@ import { OAuthStateStore } from '@modules/auth/services/oauth-state-store.servic
 import { GoogleStrategy } from '@modules/auth/strategies/google.strategy';
 import { RefreshTokenStrategy } from '@modules/auth/strategies/refresh-token.strategy';
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { PublicEndpointApiKeyGuard } from '@plys/libraries/common-nest/guards/public-endpoint-api-key.guard';
@@ -18,6 +19,7 @@ import { RequestContextModule } from '@plys/libraries/common-nest/modules/reques
 @Module({
   imports: [
     PassportModule,
+    ConfigModule,
     JwtModule.register({}),
     EnvironmentsModule,
     RedisModule,
