@@ -5,8 +5,12 @@
   "compilerOptions": {
     "deleteOutDir": true,
     "assets": [
-      { "include": "**/*.ejs", "watchAssets": true },
-      { "include": "i18n/**/*.json", "outDir": "dist", "watchAssets": true }
+      {
+        "include": "../../packages/common-nest/i18n/**/*.json",
+        "outDir": "dist/i18n",
+        "watchAssets": true
+      },
+      { "include": "**/*.ejs", "watchAssets": true }
     ],
     "plugins": [
       {
