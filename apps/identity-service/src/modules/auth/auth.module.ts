@@ -76,6 +76,6 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
     GoogleCallbackGuard,
     PublicEndpointApiKeyGuard,
   ],
-  exports: [AuthService, SessionService, JwtModule],
+  exports: [AuthService, SessionService, SsoCodeStore, OAuthStateStore, JwtModule],
 })
 export class AuthModule {}

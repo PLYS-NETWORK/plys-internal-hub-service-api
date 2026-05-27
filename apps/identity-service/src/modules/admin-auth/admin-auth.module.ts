@@ -18,5 +18,6 @@ import { AdminOtpAttemptTracker } from './services/admin-otp-attempt-tracker.ser
   ],
   controllers: [],
   providers: [AdminAuthService, AdminOtpAttemptTracker, AdminAllowedEmailsService],
+  exports: [AdminAuthService, AdminAllowedEmailsService],
 })
 export class AdminAuthModule {}

@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { AiProviderKeyModule } from '@plys/libraries/ai-provider-key';
 import { UnitOfWorkModule } from '@plys/libraries/unit-of-work/unit-of-work.module';
 
 import { GoogleServerAiProvider } from './providers/google-server-ai.provider';
@@ -8,7 +9,7 @@ import { ServerAiService } from './server-ai.service';
 
 @Global()
 @Module({
-  imports: [UnitOfWorkModule],
+  imports: [UnitOfWorkModule, AiProviderKeyModule],
   providers: [
     ServerAiService,
     OpenAiServerAiProvider,
