@@ -39,6 +39,15 @@ const DOMAIN_PROTO_RELATIVE: Record<DomainKey, string[]> = {
   PROJECTS: ['common/v1/http.proto', 'projects/v1/projects.proto'],
   FINANCE: ['common/v1/http.proto', 'finance/v1/finance.proto'],
   PLATFORM: ['common/v1/http.proto', 'platform/v1/platform.proto'],
+  NOTIFICATIONS: ['common/v1/http.proto', 'notifications/v1/notifications.proto'],
+  AIPROVIDER: ['common/v1/http.proto', 'aiprovider/v1/aiprovider.proto'],
+  BUSINESS: ['common/v1/http.proto', 'business/v1/business.proto'],
+  CONSULTANT: ['common/v1/http.proto', 'consultant/v1/consultant.proto'],
+  INTERNAL_ADMIN: ['common/v1/http.proto', 'internal-admin/v1/internal-admin.proto'],
+  INTERNAL_TASK_REVIEWER: [
+    'common/v1/http.proto',
+    'internal-task-reviewer/v1/internal-task-reviewer.proto',
+  ],
 };
 
 export function createGrpcClientModuleOptions(

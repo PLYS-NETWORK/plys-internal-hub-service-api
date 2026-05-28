@@ -2,8 +2,14 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
+    "rootDir": "../../",
+    "rootDirs": ["src", "../../packages"],
+    "declaration": false,
+    "declarationMap": false,
     "baseUrl": ".",
     "paths": {
+      "@errors/error-codes": ["src/errors/error-codes.ts"],
+
       "@plys/libraries/proto": ["../../packages/proto/index.ts"],
       "@plys/libraries/shared-kernel": ["../../packages/shared-kernel/index.ts"],
       "@plys/libraries/database": ["../../packages/database/index.ts"],
@@ -15,7 +21,7 @@
       "@modules/auth/*": ["src/modules/auth/*"],
       "@modules/admin-auth/*": ["src/modules/admin-auth/*"],
       "@modules/users/*": ["src/modules/users/*"],
-      "@modules/notifications/*": ["../platform-service/src/modules/notifications/*"]
+      "@modules/notifications/*": ["../notifications-service/src/modules/notifications/*"]
     }
   },
   "include": ["src/**/*"],

@@ -5,7 +5,19 @@ import { ICopyleaksConfig } from './copyleaks-config.interface';
 import { IDataConnection } from './data-connection.interface';
 import { IFilesConfig } from './files-config.interface';
 import { IGoogleConfig } from './google-config.interface';
-import { IIdentityConfig } from './identity-config.interface';
+import {
+  IAiProviderConfig,
+  IBusinessConfig,
+  IConsultantConfig,
+  IFinanceConfig,
+  IIdentityConfig,
+  IInternalAdminConfig,
+  IInternalTaskReviewerConfig,
+  INotificationsConfig,
+  IPlatformConfig,
+  IProfilesConfig,
+  IProjectsConfig,
+} from './identity-config.interface';
 import { IJwtConfig } from './jwt-config.interface';
 import { IPaymentConfig } from './payment-config.interface';
 import { IRedisConfig } from './redis-config.interface';
@@ -26,6 +38,16 @@ export interface IEnvironmentsService
     IPaymentConfig,
     IGoogleConfig,
     IIdentityConfig,
+    IBusinessConfig,
+    IConsultantConfig,
+    IInternalAdminConfig,
+    IInternalTaskReviewerConfig,
+    IFinanceConfig,
+    INotificationsConfig,
+    IPlatformConfig,
+    IAiProviderConfig,
+    IProfilesConfig,
+    IProjectsConfig,
     IRedisConfig,
     ISecurityConfig,
     IWebSocketConfig {}

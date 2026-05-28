@@ -1,19 +1,20 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
+import { NOTIFICATION_TYPES } from '@plys/libraries/api-contracts/notifications/enums/notification-type.enum';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
 import { EmailService } from '@plys/libraries/common-nest/modules/email/email.service';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
 import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
+import { NotificationsClientService } from '@plys/libraries/common-nest/modules/notifications-client/notifications-client.service';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 import { maskEmailForLog } from '@plys/libraries/common-nest/utils/mask-email.util';
 import { ActivePlatform, AuthTokenType } from '@plys/libraries/database/enums';
-import { NOTIFICATION_TYPES, NotificationDispatcherService } from '@plys/libraries/notifications';
 import { IUnitOfWork } from '@plys/libraries/unit-of-work/interfaces/unit-of-work.interface';
 import { UnitOfWorkService } from '@plys/libraries/unit-of-work/unit-of-work.service';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 import { Not } from 'typeorm';
 
+import { ERROR_CODES } from '../../../errors/error-codes';
 import {
   AuthResponseDto,
   ChangePasswordDto,
@@ -46,7 +47,7 @@ export class BasicAuthService implements IBasicAuthService {
     private readonly envService: EnvironmentsService,
     private readonly requestContext: RequestContextService,
     private readonly loginAttemptTracker: LoginAttemptTracker,
-    private readonly notificationDispatcher: NotificationDispatcherService,
+    private readonly notificationsClient: NotificationsClientService,
   ) {
     this.logger = new AppLogger(BasicAuthService.name, requestContext);
   }
@@ -424,20 +425,15 @@ export class BasicAuthService implements IBasicAuthService {
     });
 
     // Fire-and-forget — security audit so other devices/tabs see the change.
-    void this.notificationDispatcher
-      .dispatch({
-        userId: user.id,
-        type: NOTIFICATION_TYPES.PASSWORD_CHANGED,
-        metadata: {
-          device_id: this.requestContext.deviceId,
-          ip_address: this.requestContext.ipAddress,
-        },
-        actorId: user.id,
-      })
-      .catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        this.logger.error(`changePassword — notification dispatch failed | error: ${msg}`);
-      });
+    this.notificationsClient.dispatch({
+      userId: user.id,
+      type: NOTIFICATION_TYPES.PASSWORD_CHANGED,
+      metadata: {
+        device_id: this.requestContext.deviceId,
+        ip_address: this.requestContext.ipAddress,
+      },
+      actorId: user.id,
+    });
 
     this.logger.log(`changePassword — complete | userId: ${user.id}`);
   }

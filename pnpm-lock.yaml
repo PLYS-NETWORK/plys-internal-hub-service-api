@@ -95,6 +95,144 @@ importers:
         specifier: ^5.1.0
         version: 5.9.3
 
+  apps/ai-provider-service:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.1037.0
+        version: 3.1044.0
+      '@aws-sdk/s3-request-presigner':
+        specifier: ^3.1037.0
+        version: 3.1044.0
+      '@fastify/compress':
+        specifier: ^8.3.1
+        version: 8.3.1
+      '@fastify/cookie':
+        specifier: ^11.0.2
+        version: 11.0.2
+      '@fastify/helmet':
+        specifier: ^13.0.2
+        version: 13.0.2
+      '@google/generative-ai':
+        specifier: ^0.24.1
+        version: 0.24.1
+      '@grpc/grpc-js':
+        specifier: ^1.13.0
+        version: 1.14.4
+      '@grpc/proto-loader':
+        specifier: ^0.7.15
+        version: 0.7.15
+      '@nest-lab/throttler-storage-redis':
+        specifier: ^1.2.0
+        version: 1.2.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/throttler@6.5.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14))(ioredis@5.10.1)(reflect-metadata@0.1.14)
+      '@nestjs/bull':
+        specifier: ^11.0.4
+        version: 11.0.4(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(bull@4.16.5)
+      '@nestjs/common':
+        specifier: ^11.1.19
+        version: 11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/config':
+        specifier: ^3.0.0
+        version: 3.3.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(rxjs@7.8.2)
+      '@nestjs/core':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/microservices@11.1.24)(@nestjs/websockets@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/event-emitter':
+        specifier: ^3.1.0
+        version: 3.1.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/jwt':
+        specifier: ^10.0.0
+        version: 10.2.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))
+      '@nestjs/microservices':
+        specifier: ^11.1.19
+        version: 11.1.24(@grpc/grpc-js@1.14.4)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/websockets@11.1.19)(ioredis@5.10.1)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/platform-fastify':
+        specifier: ^11.1.19
+        version: 11.1.19(@fastify/static@9.1.3)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/platform-socket.io':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/websockets@11.1.19)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^7.0.0
+        version: 7.4.2(@fastify/static@9.1.3)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)
+      '@nestjs/throttler':
+        specifier: ^6.5.0
+        version: 6.5.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14)
+      '@nestjs/typeorm':
+        specifier: ^10.0.0
+        version: 10.0.2(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)(typeorm@0.3.28(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))
+      '@nestjs/websockets':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/platform-socket.io@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@plys/libraries':
+        specifier: workspace:*
+        version: link:../../packages
+      '@socket.io/redis-emitter':
+        specifier: ^5.1.0
+        version: 5.1.0
+      bull:
+        specifier: ^4.16.5
+        version: 4.16.5
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.0
+        version: 0.14.4
+      dayjs:
+        specifier: ^1.11.0
+        version: 1.11.20
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+      ejs:
+        specifier: ^5.0.2
+        version: 5.0.2
+      fastify:
+        specifier: ^5.8.5
+        version: 5.8.5
+      file-type:
+        specifier: ^16.5.4
+        version: 16.5.4
+      groq-sdk:
+        specifier: ^1.1.2
+        version: 1.1.2
+      ioredis:
+        specifier: ^5.10.1
+        version: 5.10.1
+      lodash:
+        specifier: ^4.17.21
+        version: 4.18.1
+      nest-winston:
+        specifier: ^1.10.2
+        version: 1.10.2(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(winston@3.19.0)
+      nestjs-i18n:
+        specifier: ^10.6.5
+        version: 10.8.4(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(class-validator@0.14.4)(rxjs@7.8.2)
+      openai:
+        specifier: ^6.37.0
+        version: 6.37.0(ws@8.18.3)(zod@4.4.3)
+      pg:
+        specifier: ^8.11.0
+        version: 8.20.0
+      reflect-metadata:
+        specifier: ^0.1.13
+        version: 0.1.14
+      resend:
+        specifier: ^4.0.0
+        version: 4.8.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      rxjs:
+        specifier: ^7.8.0
+        version: 7.8.2
+      socket.io:
+        specifier: ^4.8.1
+        version: 4.8.3
+      typeorm:
+        specifier: ^0.3.17
+        version: 0.3.28(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3))
+      winston:
+        specifier: ^3.19.0
+        version: 3.19.0
+
   apps/api-gateway:
     dependencies:
       '@aws-sdk/client-s3':
@@ -265,6 +403,288 @@ importers:
       stripe:
         specifier: ^22.0.2
         version: 22.1.1(@types/node@22.19.19)
+      typeorm:
+        specifier: ^0.3.17
+        version: 0.3.28(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3))
+      winston:
+        specifier: ^3.19.0
+        version: 3.19.0
+
+  apps/business-service:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.1037.0
+        version: 3.1044.0
+      '@aws-sdk/s3-request-presigner':
+        specifier: ^3.1037.0
+        version: 3.1044.0
+      '@fastify/compress':
+        specifier: ^8.3.1
+        version: 8.3.1
+      '@fastify/cookie':
+        specifier: ^11.0.2
+        version: 11.0.2
+      '@fastify/helmet':
+        specifier: ^13.0.2
+        version: 13.0.2
+      '@google/generative-ai':
+        specifier: ^0.24.1
+        version: 0.24.1
+      '@grpc/grpc-js':
+        specifier: ^1.13.0
+        version: 1.14.4
+      '@grpc/proto-loader':
+        specifier: ^0.7.15
+        version: 0.7.15
+      '@nest-lab/throttler-storage-redis':
+        specifier: ^1.2.0
+        version: 1.2.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/throttler@6.5.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14))(ioredis@5.10.1)(reflect-metadata@0.1.14)
+      '@nestjs/bull':
+        specifier: ^11.0.4
+        version: 11.0.4(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(bull@4.16.5)
+      '@nestjs/common':
+        specifier: ^11.1.19
+        version: 11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/config':
+        specifier: ^3.0.0
+        version: 3.3.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(rxjs@7.8.2)
+      '@nestjs/core':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/microservices@11.1.24)(@nestjs/websockets@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/event-emitter':
+        specifier: ^3.1.0
+        version: 3.1.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/jwt':
+        specifier: ^10.0.0
+        version: 10.2.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))
+      '@nestjs/microservices':
+        specifier: ^11.1.19
+        version: 11.1.24(@grpc/grpc-js@1.14.4)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/websockets@11.1.19)(ioredis@5.10.1)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/platform-fastify':
+        specifier: ^11.1.19
+        version: 11.1.19(@fastify/static@9.1.3)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/platform-socket.io':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/websockets@11.1.19)(rxjs@7.8.2)
+      '@nestjs/schedule':
+        specifier: ^6.1.3
+        version: 6.1.3(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/swagger':
+        specifier: ^7.0.0
+        version: 7.4.2(@fastify/static@9.1.3)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)
+      '@nestjs/throttler':
+        specifier: ^6.5.0
+        version: 6.5.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14)
+      '@nestjs/typeorm':
+        specifier: ^10.0.0
+        version: 10.0.2(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)(typeorm@0.3.28(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))
+      '@nestjs/websockets':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/platform-socket.io@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@plys/libraries':
+        specifier: workspace:*
+        version: link:../../packages
+      '@socket.io/redis-emitter':
+        specifier: ^5.1.0
+        version: 5.1.0
+      bull:
+        specifier: ^4.16.5
+        version: 4.16.5
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.0
+        version: 0.14.4
+      dayjs:
+        specifier: ^1.11.0
+        version: 1.11.20
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+      ejs:
+        specifier: ^5.0.2
+        version: 5.0.2
+      fastify:
+        specifier: ^5.8.5
+        version: 5.8.5
+      file-type:
+        specifier: ^16.5.4
+        version: 16.5.4
+      groq-sdk:
+        specifier: ^1.1.2
+        version: 1.1.2
+      ioredis:
+        specifier: ^5.10.1
+        version: 5.10.1
+      lodash:
+        specifier: ^4.17.21
+        version: 4.18.1
+      nest-winston:
+        specifier: ^1.10.2
+        version: 1.10.2(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(winston@3.19.0)
+      nestjs-i18n:
+        specifier: ^10.6.5
+        version: 10.8.4(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(class-validator@0.14.4)(rxjs@7.8.2)
+      openai:
+        specifier: ^6.37.0
+        version: 6.37.0(ws@8.18.3)(zod@4.4.3)
+      pg:
+        specifier: ^8.11.0
+        version: 8.20.0
+      reflect-metadata:
+        specifier: ^0.1.13
+        version: 0.1.14
+      resend:
+        specifier: ^4.0.0
+        version: 4.8.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      rxjs:
+        specifier: ^7.8.0
+        version: 7.8.2
+      socket.io:
+        specifier: ^4.8.1
+        version: 4.8.3
+      typeorm:
+        specifier: ^0.3.17
+        version: 0.3.28(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3))
+      winston:
+        specifier: ^3.19.0
+        version: 3.19.0
+
+  apps/consultant-service:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.1037.0
+        version: 3.1044.0
+      '@aws-sdk/s3-request-presigner':
+        specifier: ^3.1037.0
+        version: 3.1044.0
+      '@fastify/compress':
+        specifier: ^8.3.1
+        version: 8.3.1
+      '@fastify/cookie':
+        specifier: ^11.0.2
+        version: 11.0.2
+      '@fastify/helmet':
+        specifier: ^13.0.2
+        version: 13.0.2
+      '@google/generative-ai':
+        specifier: ^0.24.1
+        version: 0.24.1
+      '@grpc/grpc-js':
+        specifier: ^1.13.0
+        version: 1.14.4
+      '@grpc/proto-loader':
+        specifier: ^0.7.15
+        version: 0.7.15
+      '@nest-lab/throttler-storage-redis':
+        specifier: ^1.2.0
+        version: 1.2.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/throttler@6.5.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14))(ioredis@5.10.1)(reflect-metadata@0.1.14)
+      '@nestjs/bull':
+        specifier: ^11.0.4
+        version: 11.0.4(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(bull@4.16.5)
+      '@nestjs/common':
+        specifier: ^11.1.19
+        version: 11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/config':
+        specifier: ^3.0.0
+        version: 3.3.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(rxjs@7.8.2)
+      '@nestjs/core':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/microservices@11.1.24)(@nestjs/websockets@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/event-emitter':
+        specifier: ^3.1.0
+        version: 3.1.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/jwt':
+        specifier: ^10.0.0
+        version: 10.2.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))
+      '@nestjs/microservices':
+        specifier: ^11.1.19
+        version: 11.1.24(@grpc/grpc-js@1.14.4)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/websockets@11.1.19)(ioredis@5.10.1)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/platform-fastify':
+        specifier: ^11.1.19
+        version: 11.1.19(@fastify/static@9.1.3)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/platform-socket.io':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/websockets@11.1.19)(rxjs@7.8.2)
+      '@nestjs/schedule':
+        specifier: ^6.1.3
+        version: 6.1.3(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/swagger':
+        specifier: ^7.0.0
+        version: 7.4.2(@fastify/static@9.1.3)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)
+      '@nestjs/throttler':
+        specifier: ^6.5.0
+        version: 6.5.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14)
+      '@nestjs/typeorm':
+        specifier: ^10.0.0
+        version: 10.0.2(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)(typeorm@0.3.28(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))
+      '@nestjs/websockets':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/platform-socket.io@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@plys/libraries':
+        specifier: workspace:*
+        version: link:../../packages
+      '@socket.io/redis-emitter':
+        specifier: ^5.1.0
+        version: 5.1.0
+      bull:
+        specifier: ^4.16.5
+        version: 4.16.5
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.0
+        version: 0.14.4
+      dayjs:
+        specifier: ^1.11.0
+        version: 1.11.20
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+      ejs:
+        specifier: ^5.0.2
+        version: 5.0.2
+      fastify:
+        specifier: ^5.8.5
+        version: 5.8.5
+      file-type:
+        specifier: ^16.5.4
+        version: 16.5.4
+      groq-sdk:
+        specifier: ^1.1.2
+        version: 1.1.2
+      ioredis:
+        specifier: ^5.10.1
+        version: 5.10.1
+      lodash:
+        specifier: ^4.17.21
+        version: 4.18.1
+      nest-winston:
+        specifier: ^1.10.2
+        version: 1.10.2(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(winston@3.19.0)
+      nestjs-i18n:
+        specifier: ^10.6.5
+        version: 10.8.4(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(class-validator@0.14.4)(rxjs@7.8.2)
+      openai:
+        specifier: ^6.37.0
+        version: 6.37.0(ws@8.18.3)(zod@4.4.3)
+      pg:
+        specifier: ^8.11.0
+        version: 8.20.0
+      reflect-metadata:
+        specifier: ^0.1.13
+        version: 0.1.14
+      resend:
+        specifier: ^4.0.0
+        version: 4.8.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      rxjs:
+        specifier: ^7.8.0
+        version: 7.8.2
+      socket.io:
+        specifier: ^4.8.1
+        version: 4.8.3
       typeorm:
         specifier: ^0.3.17
         version: 0.3.28(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3))
@@ -517,6 +937,399 @@ importers:
       resend:
         specifier: ^4.0.0
         version: 4.8.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      rxjs:
+        specifier: ^7.8.0
+        version: 7.8.2
+      socket.io:
+        specifier: ^4.8.1
+        version: 4.8.3
+      typeorm:
+        specifier: ^0.3.17
+        version: 0.3.28(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3))
+      winston:
+        specifier: ^3.19.0
+        version: 3.19.0
+
+  apps/internal-admin-service:
+    dependencies:
+      '@fastify/compress':
+        specifier: ^8.3.1
+        version: 8.3.1
+      '@fastify/cookie':
+        specifier: ^11.0.2
+        version: 11.0.2
+      '@fastify/helmet':
+        specifier: ^13.0.2
+        version: 13.0.2
+      '@google/generative-ai':
+        specifier: ^0.24.1
+        version: 0.24.1
+      '@grpc/grpc-js':
+        specifier: ^1.13.0
+        version: 1.14.4
+      '@grpc/proto-loader':
+        specifier: ^0.7.15
+        version: 0.7.15
+      '@nest-lab/throttler-storage-redis':
+        specifier: ^1.2.0
+        version: 1.2.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/throttler@6.5.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14))(ioredis@5.10.1)(reflect-metadata@0.1.14)
+      '@nestjs/bull':
+        specifier: ^11.0.4
+        version: 11.0.4(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(bull@4.16.5)
+      '@nestjs/common':
+        specifier: ^11.1.19
+        version: 11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/config':
+        specifier: ^3.0.0
+        version: 3.3.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(rxjs@7.8.2)
+      '@nestjs/core':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/microservices@11.1.24)(@nestjs/websockets@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/event-emitter':
+        specifier: ^3.1.0
+        version: 3.1.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/jwt':
+        specifier: ^10.0.0
+        version: 10.2.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))
+      '@nestjs/microservices':
+        specifier: ^11.1.19
+        version: 11.1.24(@grpc/grpc-js@1.14.4)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/websockets@11.1.19)(ioredis@5.10.1)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/platform-fastify':
+        specifier: ^11.1.19
+        version: 11.1.19(@fastify/static@9.1.3)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/platform-socket.io':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/websockets@11.1.19)(rxjs@7.8.2)
+      '@nestjs/schedule':
+        specifier: ^6.1.3
+        version: 6.1.3(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/swagger':
+        specifier: ^7.0.0
+        version: 7.4.2(@fastify/static@9.1.3)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)
+      '@nestjs/throttler':
+        specifier: ^6.5.0
+        version: 6.5.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14)
+      '@nestjs/typeorm':
+        specifier: ^10.0.0
+        version: 10.0.2(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)(typeorm@0.3.28(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))
+      '@nestjs/websockets':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/platform-socket.io@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@plys/libraries':
+        specifier: workspace:*
+        version: link:../../packages
+      '@socket.io/redis-emitter':
+        specifier: ^5.1.0
+        version: 5.1.0
+      bull:
+        specifier: ^4.16.5
+        version: 4.16.5
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.0
+        version: 0.14.4
+      dayjs:
+        specifier: ^1.11.0
+        version: 1.11.20
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+      ejs:
+        specifier: ^5.0.2
+        version: 5.0.2
+      fastify:
+        specifier: ^5.8.5
+        version: 5.8.5
+      groq-sdk:
+        specifier: ^1.1.2
+        version: 1.1.2
+      ioredis:
+        specifier: ^5.10.1
+        version: 5.10.1
+      nest-winston:
+        specifier: ^1.10.2
+        version: 1.10.2(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(winston@3.19.0)
+      nestjs-i18n:
+        specifier: ^10.6.5
+        version: 10.8.4(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(class-validator@0.14.4)(rxjs@7.8.2)
+      openai:
+        specifier: ^6.37.0
+        version: 6.37.0(ws@8.18.3)(zod@4.4.3)
+      pg:
+        specifier: ^8.11.0
+        version: 8.20.0
+      reflect-metadata:
+        specifier: ^0.1.13
+        version: 0.1.14
+      resend:
+        specifier: ^4.0.0
+        version: 4.8.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      rxjs:
+        specifier: ^7.8.0
+        version: 7.8.2
+      socket.io:
+        specifier: ^4.8.1
+        version: 4.8.3
+      typeorm:
+        specifier: ^0.3.17
+        version: 0.3.28(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3))
+      winston:
+        specifier: ^3.19.0
+        version: 3.19.0
+
+  apps/internal-task-reviewer-service:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.1037.0
+        version: 3.1044.0
+      '@aws-sdk/s3-request-presigner':
+        specifier: ^3.1037.0
+        version: 3.1044.0
+      '@fastify/compress':
+        specifier: ^8.3.1
+        version: 8.3.1
+      '@fastify/cookie':
+        specifier: ^11.0.2
+        version: 11.0.2
+      '@fastify/helmet':
+        specifier: ^13.0.2
+        version: 13.0.2
+      '@google/generative-ai':
+        specifier: ^0.24.1
+        version: 0.24.1
+      '@grpc/grpc-js':
+        specifier: ^1.13.0
+        version: 1.14.4
+      '@grpc/proto-loader':
+        specifier: ^0.7.15
+        version: 0.7.15
+      '@nest-lab/throttler-storage-redis':
+        specifier: ^1.2.0
+        version: 1.2.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/throttler@6.5.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14))(ioredis@5.10.1)(reflect-metadata@0.1.14)
+      '@nestjs/bull':
+        specifier: ^11.0.4
+        version: 11.0.4(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(bull@4.16.5)
+      '@nestjs/common':
+        specifier: ^11.1.19
+        version: 11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/config':
+        specifier: ^3.0.0
+        version: 3.3.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(rxjs@7.8.2)
+      '@nestjs/core':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/microservices@11.1.24)(@nestjs/websockets@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/event-emitter':
+        specifier: ^3.1.0
+        version: 3.1.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/jwt':
+        specifier: ^10.0.0
+        version: 10.2.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))
+      '@nestjs/microservices':
+        specifier: ^11.1.19
+        version: 11.1.24(@grpc/grpc-js@1.14.4)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/websockets@11.1.19)(ioredis@5.10.1)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/platform-fastify':
+        specifier: ^11.1.19
+        version: 11.1.19(@fastify/static@9.1.3)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/platform-socket.io':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/websockets@11.1.19)(rxjs@7.8.2)
+      '@nestjs/swagger':
+        specifier: ^7.0.0
+        version: 7.4.2(@fastify/static@9.1.3)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)
+      '@nestjs/throttler':
+        specifier: ^6.5.0
+        version: 6.5.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14)
+      '@nestjs/typeorm':
+        specifier: ^10.0.0
+        version: 10.0.2(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)(typeorm@0.3.28(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))
+      '@nestjs/websockets':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/platform-socket.io@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@plys/libraries':
+        specifier: workspace:*
+        version: link:../../packages
+      '@socket.io/redis-emitter':
+        specifier: ^5.1.0
+        version: 5.1.0
+      bull:
+        specifier: ^4.16.5
+        version: 4.16.5
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.0
+        version: 0.14.4
+      dayjs:
+        specifier: ^1.11.0
+        version: 1.11.20
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+      ejs:
+        specifier: ^5.0.2
+        version: 5.0.2
+      fastify:
+        specifier: ^5.8.5
+        version: 5.8.5
+      file-type:
+        specifier: ^16.5.4
+        version: 16.5.4
+      groq-sdk:
+        specifier: ^1.1.2
+        version: 1.1.2
+      ioredis:
+        specifier: ^5.10.1
+        version: 5.10.1
+      lodash:
+        specifier: ^4.17.21
+        version: 4.18.1
+      nest-winston:
+        specifier: ^1.10.2
+        version: 1.10.2(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(winston@3.19.0)
+      nestjs-i18n:
+        specifier: ^10.6.5
+        version: 10.8.4(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(class-validator@0.14.4)(rxjs@7.8.2)
+      openai:
+        specifier: ^6.37.0
+        version: 6.37.0(ws@8.18.3)(zod@4.4.3)
+      pg:
+        specifier: ^8.11.0
+        version: 8.20.0
+      reflect-metadata:
+        specifier: ^0.1.13
+        version: 0.1.14
+      resend:
+        specifier: ^4.0.0
+        version: 4.8.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      rxjs:
+        specifier: ^7.8.0
+        version: 7.8.2
+      socket.io:
+        specifier: ^4.8.1
+        version: 4.8.3
+      typeorm:
+        specifier: ^0.3.17
+        version: 0.3.28(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3))
+      winston:
+        specifier: ^3.19.0
+        version: 3.19.0
+
+  apps/notifications-service:
+    dependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.1037.0
+        version: 3.1044.0
+      '@aws-sdk/s3-request-presigner':
+        specifier: ^3.1037.0
+        version: 3.1044.0
+      '@fastify/compress':
+        specifier: ^8.3.1
+        version: 8.3.1
+      '@fastify/cookie':
+        specifier: ^11.0.2
+        version: 11.0.2
+      '@fastify/helmet':
+        specifier: ^13.0.2
+        version: 13.0.2
+      '@fastify/multipart':
+        specifier: ^10.0.0
+        version: 10.0.0
+      '@fastify/static':
+        specifier: ^9.0.0
+        version: 9.1.3
+      '@grpc/grpc-js':
+        specifier: ^1.13.0
+        version: 1.14.4
+      '@grpc/proto-loader':
+        specifier: ^0.7.15
+        version: 0.7.15
+      '@nest-lab/throttler-storage-redis':
+        specifier: ^1.2.0
+        version: 1.2.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/throttler@6.5.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14))(ioredis@5.10.1)(reflect-metadata@0.1.14)
+      '@nestjs/bull':
+        specifier: ^11.0.4
+        version: 11.0.4(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(bull@4.16.5)
+      '@nestjs/common':
+        specifier: ^11.1.19
+        version: 11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/config':
+        specifier: ^3.0.0
+        version: 3.3.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(rxjs@7.8.2)
+      '@nestjs/core':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/microservices@11.1.24)(@nestjs/websockets@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/event-emitter':
+        specifier: ^3.1.0
+        version: 3.1.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/jwt':
+        specifier: ^10.0.0
+        version: 10.2.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))
+      '@nestjs/microservices':
+        specifier: ^11.1.19
+        version: 11.1.24(@grpc/grpc-js@1.14.4)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/websockets@11.1.19)(ioredis@5.10.1)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@nestjs/platform-fastify':
+        specifier: ^11.1.19
+        version: 11.1.19(@fastify/static@9.1.3)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/platform-socket.io':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/websockets@11.1.19)(rxjs@7.8.2)
+      '@nestjs/schedule':
+        specifier: ^6.1.3
+        version: 6.1.3(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)
+      '@nestjs/swagger':
+        specifier: ^7.0.0
+        version: 7.4.2(@fastify/static@9.1.3)(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)
+      '@nestjs/throttler':
+        specifier: ^6.5.0
+        version: 6.5.0(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14)
+      '@nestjs/typeorm':
+        specifier: ^10.0.0
+        version: 10.0.2(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)(typeorm@0.3.28(ioredis@5.10.1)(pg@8.20.0)(ts-node@10.9.2(@types/node@22.19.19)(typescript@5.9.3)))
+      '@nestjs/websockets':
+        specifier: ^11.1.19
+        version: 11.1.19(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(@nestjs/platform-socket.io@11.1.19)(reflect-metadata@0.1.14)(rxjs@7.8.2)
+      '@plys/libraries':
+        specifier: workspace:*
+        version: link:../../packages
+      '@socket.io/redis-emitter':
+        specifier: ^5.1.0
+        version: 5.1.0
+      bull:
+        specifier: ^4.16.5
+        version: 4.16.5
+      class-transformer:
+        specifier: ^0.5.1
+        version: 0.5.1
+      class-validator:
+        specifier: ^0.14.0
+        version: 0.14.4
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
+      fastify:
+        specifier: ^5.8.5
+        version: 5.8.5
+      file-type:
+        specifier: ^16.5.4
+        version: 16.5.4
+      ioredis:
+        specifier: ^5.10.1
+        version: 5.10.1
+      nest-winston:
+        specifier: ^1.10.2
+        version: 1.10.2(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(winston@3.19.0)
+      nestjs-i18n:
+        specifier: ^10.6.5
+        version: 10.8.4(@nestjs/common@11.1.19(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.19)(class-validator@0.14.4)(rxjs@7.8.2)
+      pg:
+        specifier: ^8.11.0
+        version: 8.20.0
+      reflect-metadata:
+        specifier: ^0.1.13
+        version: 0.1.14
       rxjs:
         specifier: ^7.8.0
         version: 7.8.2

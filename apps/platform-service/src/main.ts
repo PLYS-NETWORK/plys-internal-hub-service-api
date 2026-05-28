@@ -14,13 +14,13 @@ async function bootstrap(): Promise<void> {
 
   connectDomainGrpcMicroservice(app, {
     grpcPortEnv: 'PLATFORM_GRPC_PORT',
-    defaultPort: '5005',
+    defaultPort: '5008',
     domainProtoPath: PLATFORM_PROTO_PATH,
     packages: [GRPC_PACKAGES.PLATFORM],
     protoDirName: 'platform/v1/platform.proto',
   });
 
-  await startGrpcOnlyService(app, 'platform-service', 'PLATFORM_GRPC_PORT', '5005');
+  await startGrpcOnlyService(app, 'platform-service', 'PLATFORM_GRPC_PORT', '5008');
 }
 
 void bootstrap();

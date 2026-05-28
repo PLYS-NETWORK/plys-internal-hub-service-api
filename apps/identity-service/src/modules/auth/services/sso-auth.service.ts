@@ -1,5 +1,4 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
-import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
 import { EmailService } from '@plys/libraries/common-nest/modules/email/email.service';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
@@ -9,6 +8,7 @@ import { maskEmailForLog } from '@plys/libraries/common-nest/utils/mask-email.ut
 import { ActivePlatform, SsoProvider } from '@plys/libraries/database/enums';
 import { UnitOfWorkService } from '@plys/libraries/unit-of-work/unit-of-work.service';
 
+import { ERROR_CODES } from '../../../errors/error-codes';
 import { AuthResponseDto } from '../dto/responses/auth-response.dto';
 import {
   ISessionContext,

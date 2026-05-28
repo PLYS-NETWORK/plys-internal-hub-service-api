@@ -14,13 +14,13 @@ async function bootstrap(): Promise<void> {
 
   connectDomainGrpcMicroservice(app, {
     grpcPortEnv: 'FINANCE_GRPC_PORT',
-    defaultPort: '5004',
+    defaultPort: '5006',
     domainProtoPath: FINANCE_PROTO_PATH,
     packages: [GRPC_PACKAGES.FINANCE],
     protoDirName: 'finance/v1/finance.proto',
   });
 
-  await startGrpcOnlyService(app, 'finance-service', 'FINANCE_GRPC_PORT', '5004');
+  await startGrpcOnlyService(app, 'finance-service', 'FINANCE_GRPC_PORT', '5006');
 }
 
 void bootstrap();

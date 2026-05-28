@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package notifications.v1;
+
+import "common/v1/http.proto";
+
+service Notifications {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}

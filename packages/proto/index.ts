@@ -15,6 +15,27 @@ export const FINANCE_PROTO_PATH = path.join(__dirname, 'finance/v1/finance.proto
 
 export const PLATFORM_PROTO_PATH = path.join(__dirname, 'platform/v1/platform.proto');
 
+export const NOTIFICATIONS_PROTO_PATH = path.join(
+  __dirname,
+  'notifications/v1/notifications.proto',
+);
+
+export const AIPROVIDER_PROTO_PATH = path.join(__dirname, 'aiprovider/v1/aiprovider.proto');
+
+export const BUSINESS_PROTO_PATH = path.join(__dirname, 'business/v1/business.proto');
+
+export const CONSULTANT_PROTO_PATH = path.join(__dirname, 'consultant/v1/consultant.proto');
+
+export const INTERNAL_ADMIN_PROTO_PATH = path.join(
+  __dirname,
+  'internal-admin/v1/internal-admin.proto',
+);
+
+export const INTERNAL_TASK_REVIEWER_PROTO_PATH = path.join(
+  __dirname,
+  'internal-task-reviewer/v1/internal-task-reviewer.proto',
+);
+
 /** Proto paths required when loading a domain package that imports http.proto. */
 export const DOMAIN_PROTO_PATHS = {
   IDENTITY: [HTTP_PROTO_PATH, IDENTITY_PROTO_PATH],
@@ -22,6 +43,12 @@ export const DOMAIN_PROTO_PATHS = {
   PROJECTS: [HTTP_PROTO_PATH, PROJECTS_PROTO_PATH],
   FINANCE: [HTTP_PROTO_PATH, FINANCE_PROTO_PATH],
   PLATFORM: [HTTP_PROTO_PATH, PLATFORM_PROTO_PATH],
+  NOTIFICATIONS: [HTTP_PROTO_PATH, NOTIFICATIONS_PROTO_PATH],
+  AIPROVIDER: [HTTP_PROTO_PATH, AIPROVIDER_PROTO_PATH],
+  BUSINESS: [HTTP_PROTO_PATH, BUSINESS_PROTO_PATH],
+  CONSULTANT: [HTTP_PROTO_PATH, CONSULTANT_PROTO_PATH],
+  INTERNAL_ADMIN: [HTTP_PROTO_PATH, INTERNAL_ADMIN_PROTO_PATH],
+  INTERNAL_TASK_REVIEWER: [HTTP_PROTO_PATH, INTERNAL_TASK_REVIEWER_PROTO_PATH],
 } as const;
 
 export const GRPC_PACKAGES = {
@@ -32,6 +59,12 @@ export const GRPC_PACKAGES = {
   PROJECTS: 'projects.v1',
   FINANCE: 'finance.v1',
   PLATFORM: 'platform.v1',
+  NOTIFICATIONS: 'notifications.v1',
+  AIPROVIDER: 'aiprovider.v1',
+  BUSINESS: 'business.v1',
+  CONSULTANT: 'consultant.v1',
+  INTERNAL_ADMIN: 'internal_admin.v1',
+  INTERNAL_TASK_REVIEWER: 'internal_task_reviewer.v1',
 } as const;
 
 export const GRPC_METADATA_KEYS = {

@@ -29,11 +29,12 @@ runs:
         rm -rf deploy-package
         mkdir -p deploy-package
 
-        cp docker-compose.yml deploy-package/
-        cp docker-compose.apps.yml deploy-package/
-        cp "docker-compose.deploy.${{ inputs.deploy-env }}.yml" deploy-package/
-        cp ecosystem.shared.js deploy-package/
-        cp "ecosystem.${{ inputs.deploy-env }}.config.js" deploy-package/
+        cp docker/docker-compose.yml deploy-package/
+        cp docker/docker-compose.apps.yml deploy-package/
+        cp "docker/docker-compose.deploy.${{ inputs.deploy-env }}.yml" deploy-package/
+        mkdir -p deploy-package/ecosystem
+        cp deploy/ecosystem/shared.js deploy-package/ecosystem/
+        cp "deploy/ecosystem/${{ inputs.deploy-env }}.config.js" deploy-package/ecosystem/
         mkdir -p deploy-package/scripts
         cp scripts/patch-image-tag.mjs deploy-package/scripts/
         cp scripts/wait-for-grpc-backends.mjs deploy-package/scripts/

@@ -1,0 +1,38 @@
+{
+  "name": "ai-provider-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/ai-provider-service/src",
+  "projectType": "application",
+  "tags": ["scope:app", "type:service", "domain:aiprovider"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "nest build && rm -rf dist/i18n && cp -r ../../packages/common-nest/i18n dist/i18n",
+        "cwd": "apps/ai-provider-service"
+      },
+      "dependsOn": ["^build"]
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "NODE_ENV=development nest start --watch",
+        "cwd": "apps/ai-provider-service"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint \"src/**/*.ts\" --max-warnings=0",
+        "cwd": "apps/ai-provider-service"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "jest --config jest.config.js",
+        "cwd": "apps/ai-provider-service"
+      }
+    }
+  }
+}

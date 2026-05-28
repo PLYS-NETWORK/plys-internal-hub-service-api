@@ -27,9 +27,11 @@
       "@plys/libraries/config/*": ["packages/config/*"],
       "@plys/libraries/common-nest/*": ["packages/common-nest/*"],
       "@plys/libraries/unit-of-work/*": ["packages/unit-of-work/*"],
-      "@plys/libraries/ai-provider-key": ["packages/ai-provider-key/index.ts"],
-      "@plys/libraries/notifications": ["packages/notifications/index.ts"],
-      "@plys/libraries/profiles-port": ["packages/profiles-port/index.ts"]
+      "@plys/libraries/unit-of-work-core": ["packages/unit-of-work-core/index.ts"],
+      "@plys/libraries/transaction-coordinator": ["packages/transaction-coordinator/index.ts"],
+      "@plys/libraries/profiles-port": ["packages/profiles-port/index.ts"],
+      "@plys/libraries/api-contracts": ["packages/api-contracts/index.ts"],
+      "@plys/libraries/api-contracts/*": ["packages/api-contracts/*"]
     }
   },
   "exclude": ["node_modules", "tmp", "dist"]

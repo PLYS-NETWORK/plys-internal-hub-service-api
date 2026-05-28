@@ -20,7 +20,6 @@ module.exports = {
     '^@plys/libraries/database/(.*)$': '<rootDir>/../../../packages/database/$1',
     '^@plys/libraries/config/(.*)$': '<rootDir>/../../../packages/config/$1',
     '^@plys/libraries/unit-of-work/(.*)$': '<rootDir>/../../../packages/unit-of-work/$1',
-    '^@plys/libraries/notifications$': '<rootDir>/../../../packages/notifications/index.ts',
     '^@plys/libraries/proto$': '<rootDir>/../../../packages/proto/index.ts',
     '^@plys/libraries/shared-kernel$': '<rootDir>/../../../packages/shared-kernel/index.ts',
   },

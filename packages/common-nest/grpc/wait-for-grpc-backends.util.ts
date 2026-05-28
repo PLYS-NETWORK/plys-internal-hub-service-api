@@ -2,10 +2,14 @@ import * as net from 'node:net';
 
 const DEFAULT_PORTS = {
   identity: '5001',
-  profiles: '5002',
-  projects: '5003',
-  finance: '5004',
-  platform: '5005',
+  business: '5002',
+  consultant: '5003',
+  internalAdmin: '5004',
+  internalTaskReviewer: '5005',
+  finance: '5006',
+  notifications: '5007',
+  platform: '5008',
+  aiProvider: '5009',
 } as const;
 
 export interface IGrpcBackendTarget {
@@ -53,10 +57,34 @@ export function resolveGrpcBackendTargetsFromEnv(
   const host = env.GRPC_HOST || '127.0.0.1';
   const entries: Array<[string, string | undefined, string | undefined]> = [
     ['identity-service', env.IDENTITY_GRPC_URL, env.IDENTITY_GRPC_PORT ?? DEFAULT_PORTS.identity],
-    ['profiles-service', env.PROFILES_GRPC_URL, env.PROFILES_GRPC_PORT ?? DEFAULT_PORTS.profiles],
-    ['projects-service', env.PROJECTS_GRPC_URL, env.PROJECTS_GRPC_PORT ?? DEFAULT_PORTS.projects],
+    ['business-service', env.BUSINESS_GRPC_URL, env.BUSINESS_GRPC_PORT ?? DEFAULT_PORTS.business],
+    [
+      'consultant-service',
+      env.CONSULTANT_GRPC_URL,
+      env.CONSULTANT_GRPC_PORT ?? DEFAULT_PORTS.consultant,
+    ],
+    [
+      'internal-admin-service',
+      env.INTERNAL_ADMIN_GRPC_URL,
+      env.INTERNAL_ADMIN_GRPC_PORT ?? DEFAULT_PORTS.internalAdmin,
+    ],
+    [
+      'internal-task-reviewer-service',
+      env.INTERNAL_TASK_REVIEWER_GRPC_URL,
+      env.INTERNAL_TASK_REVIEWER_GRPC_PORT ?? DEFAULT_PORTS.internalTaskReviewer,
+    ],
     ['finance-service', env.FINANCE_GRPC_URL, env.FINANCE_GRPC_PORT ?? DEFAULT_PORTS.finance],
+    [
+      'notifications-service',
+      env.NOTIFICATIONS_GRPC_URL,
+      env.NOTIFICATIONS_GRPC_PORT ?? DEFAULT_PORTS.notifications,
+    ],
     ['platform-service', env.PLATFORM_GRPC_URL, env.PLATFORM_GRPC_PORT ?? DEFAULT_PORTS.platform],
+    [
+      'ai-provider-service',
+      env.AI_PROVIDER_GRPC_URL,
+      env.AI_PROVIDER_GRPC_PORT ?? DEFAULT_PORTS.aiProvider,
+    ],
   ];
 
   return entries.map(([name, url, port]) => {

@@ -36,7 +36,7 @@ export function mapPostgresError(exception: QueryFailedError): IPostgresErrorMap
         return {
           status: HttpStatus.UNPROCESSABLE_ENTITY,
           messageKey: 'error.project.invalid_status_transition',
-          errorCode: ERROR_CODES.PROJECT_INVALID_STATUS_TRANSITION,
+          errorCode: 'PROJECT_INVALID_STATUS_TRANSITION',
         };
       }
       return {

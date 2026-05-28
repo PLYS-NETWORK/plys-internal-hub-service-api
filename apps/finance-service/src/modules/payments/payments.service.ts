@@ -1,10 +1,10 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
 import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 import { ActivePlatform } from '@plys/libraries/database/enums';
 
+import { ERROR_CODES } from '../../errors/error-codes';
 import { BusinessWithdrawStrategy } from './business/business-withdraw.strategy';
 import { ConsultantWithdrawStrategy } from './consultant/consultant-withdraw.strategy';
 import { CreateWithdrawDto } from './dto/requests/create-withdraw.dto';

@@ -1,5 +1,4 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
-import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
 import {
@@ -15,6 +14,7 @@ import { UnitOfWorkService } from '@plys/libraries/unit-of-work/unit-of-work.ser
 import { plainToInstance } from 'class-transformer';
 import * as crypto from 'crypto';
 
+import { ERROR_CODES } from '../../errors/error-codes';
 import { FileResponseDto } from './dto/responses';
 import { IFileDownloadResult, IFilesService } from './interfaces';
 

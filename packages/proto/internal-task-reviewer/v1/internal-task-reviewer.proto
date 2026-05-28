@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package internal_task_reviewer.v1;
+
+import "common/v1/http.proto";
+
+service TaskReviews {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}

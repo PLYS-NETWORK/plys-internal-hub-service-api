@@ -13,8 +13,11 @@
       "@plys/libraries/config/*": ["config/*"],
       "@plys/libraries/common-nest/*": ["common-nest/*"],
       "@plys/libraries/unit-of-work/*": ["unit-of-work/*"],
-      "@plys/libraries/ai-provider-key": ["ai-provider-key/index.ts"],
-      "@plys/libraries/profiles-port": ["profiles-port/index.ts"]
+      "@plys/libraries/unit-of-work-core": ["unit-of-work-core/index.ts"],
+      "@plys/libraries/transaction-coordinator": ["transaction-coordinator/index.ts"],
+      "@plys/libraries/profiles-port": ["profiles-port/index.ts"],
+      "@plys/libraries/api-contracts": ["api-contracts/index.ts"],
+      "@plys/libraries/api-contracts/*": ["api-contracts/*"]
     }
   },
   "include": [
@@ -24,8 +27,10 @@
     "config/**/*.ts",
     "common-nest/**/*.ts",
     "unit-of-work/**/*.ts",
-    "ai-provider-key/**/*.ts",
-    "profiles-port/**/*.ts"
+    "unit-of-work-core/**/*.ts",
+    "transaction-coordinator/**/*.ts",
+    "profiles-port/**/*.ts",
+    "api-contracts/**/*.ts"
   ],
   "exclude": ["node_modules", "dist", "**/*spec.ts"]
 }

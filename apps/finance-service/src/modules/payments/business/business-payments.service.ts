@@ -1,6 +1,4 @@
 import { HttpStatus, Injectable, NotImplementedException } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { PageDto } from '@plys/libraries/common-nest/dto/page.dto';
 import { PageMetaDto } from '@plys/libraries/common-nest/dto/page-meta.dto';
 import { NOTIFICATION_EVENTS } from '@plys/libraries/common-nest/events';
@@ -8,6 +6,7 @@ import { TranslatableException } from '@plys/libraries/common-nest/exceptions/tr
 import { EmailService } from '@plys/libraries/common-nest/modules/email/email.service';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
 import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
+import { NotificationsClientService } from '@plys/libraries/common-nest/modules/notifications-client/notifications-client.service';
 import { PaymentService } from '@plys/libraries/common-nest/modules/payment/payment.service';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 import { DateUtil } from '@plys/libraries/common-nest/utils/date';
@@ -24,6 +23,7 @@ import {
 import { UnitOfWorkService } from '@plys/libraries/unit-of-work/unit-of-work.service';
 import { plainToInstance } from 'class-transformer';
 
+import { ERROR_CODES } from '../../../errors/error-codes';
 import { CreateTopUpDto } from '../dto/requests/create-top-up.dto';
 import { ListBusinessTransactionsDto } from '../dto/requests/list-business-transactions.dto';
 import { PayerInfoDto } from '../dto/requests/payer-info.dto';
@@ -46,7 +46,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
     private readonly paymentService: PaymentService,
     private readonly env: EnvironmentsService,
     private readonly emailService: EmailService,
-    private readonly eventEmitter: EventEmitter2,
+    private readonly notificationsClient: NotificationsClientService,
   ) {
     this.logger = new AppLogger(BusinessPaymentsService.name, requestContext);
   }
@@ -382,7 +382,7 @@ export class BusinessPaymentsService implements IBusinessPaymentsService {
 
     this.logger.log(`cancelTopUp — complete | transactionId: ${transaction.id}`);
 
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.PAYMENT_TOP_UP_REFUNDED, {
+    this.notificationsClient.emit(NOTIFICATION_EVENTS.PAYMENT_TOP_UP_REFUNDED, {
       transaction_id: transaction.id,
       transaction_number: transaction.transactionNumber,
       user_id: this.requestContext.userId!,

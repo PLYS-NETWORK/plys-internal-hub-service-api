@@ -1,6 +1,10 @@
 export { GatewayGrpcModule } from './base/grpc-gateway.module';
-export { FinanceClientsModule } from './finance';
-export { IdentityClientsModule } from './identity';
-export { PlatformClientsModule } from './platform';
-export { ProfilesClientsModule } from './profiles';
-export { ProjectsClientsModule } from './projects';
+export * from './v1/ai-provider';
+export * from './v1/business';
+export * from './v1/consultant';
+export * from './v1/finance';
+export * from './v1/identity';
+export * from './v1/internal-admin';
+export * from './v1/internal-task-reviewer';
+export * from './v1/notifications';
+export * from './v1/platform';

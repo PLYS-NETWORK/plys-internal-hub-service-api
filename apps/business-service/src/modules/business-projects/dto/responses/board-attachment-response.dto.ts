@@ -1,0 +1,29 @@
+import { ApiProperty } from '@nestjs/swagger';
+import { TimezoneDate } from '@plys/libraries/common-nest/decorators/timezone-date.decorator';
+import { Exclude, Expose } from 'class-transformer';
+
+import { IBoardAttachmentResponse } from './interfaces/board-attachment.response.interface';
+
+@Exclude()
+export class BoardAttachmentResponseDto implements IBoardAttachmentResponse {
+  @Expose() @ApiProperty() public readonly id!: string;
+
+  @Expose()
+  @ApiProperty({ name: 'file_id', nullable: true })
+  public readonly file_id!: string | null;
+
+  @Expose() @ApiProperty({ name: 'file_name' }) public readonly file_name!: string;
+
+  @Expose()
+  @ApiProperty({ name: 'mime_type', nullable: true })
+  public readonly mime_type!: string | null;
+
+  @Expose()
+  @ApiProperty({ name: 'file_size_bytes', nullable: true })
+  public readonly file_size_bytes!: number | null;
+
+  @Expose()
+  @TimezoneDate()
+  @ApiProperty({ name: 'uploaded_at', example: '2026-05-06 14:30:00' })
+  public readonly uploaded_at!: string;
+}

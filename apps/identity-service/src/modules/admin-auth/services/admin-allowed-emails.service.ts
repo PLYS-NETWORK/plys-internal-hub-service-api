@@ -1,5 +1,4 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { PageDto } from '@plys/libraries/common-nest/dto/page.dto';
 import { PageMetaDto } from '@plys/libraries/common-nest/dto/page-meta.dto';
 import { Order } from '@plys/libraries/common-nest/dto/page-options.dto';
@@ -14,6 +13,7 @@ import { UnitOfWorkService } from '@plys/libraries/unit-of-work/unit-of-work.ser
 import { plainToInstance } from 'class-transformer';
 import { SelectQueryBuilder } from 'typeorm';
 
+import { ERROR_CODES } from '../../../errors/error-codes';
 import { InviteAdminEmailDto } from '../dto/requests/invite-admin-email.dto';
 import {
   AdminAllowedEmailSortable,

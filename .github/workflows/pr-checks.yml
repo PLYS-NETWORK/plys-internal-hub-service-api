@@ -34,6 +34,9 @@ jobs:
       - name: Lint
         run: pnpm exec nx run-many -t lint --all
 
+      - name: Gateway boundary check
+        run: node scripts/check-gateway-boundary.mjs
+
   typecheck:
     name: Type check
     runs-on: ubuntu-latest
@@ -54,12 +57,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Type check all apps
-        run: |
-          for app in api-gateway identity-service profiles-service projects-service finance-service platform-service; do
-            echo "==> tsc $app"
-            pnpm exec tsc --noEmit -p "apps/${app}/tsconfig.json"
-          done
+      - name: Type check
+        run: pnpm run typecheck
 
   build:
     name: Build
@@ -88,12 +87,32 @@ jobs:
         run: pnpm exec nx run libraries:build
 
       - name: Build apps
-        run: pnpm exec nx run-many -t build --projects=api-gateway,identity-service,profiles-service,projects-service,finance-service,platform-service
+        run: pnpm exec nx run-many -t build --projects=api-gateway,identity-service,business-service,consultant-service,internal-admin-service,internal-task-reviewer-service,finance-service,notifications-service,platform-service,ai-provider-service
+
+  docker-build:
+    name: Docker build smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build api-gateway image
+        run: |
+          docker buildx build \
+            --file docker/Dockerfile \
+            --build-arg SERVICE=api-gateway \
+            --tag plys-api-gateway:ci \
+            --load \
+            .
 
   all-green:
     name: All checks
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, build]
+    needs: [lint, typecheck, build, docker-build]
     if: always()
     steps:
       - name: Verify all required jobs passed

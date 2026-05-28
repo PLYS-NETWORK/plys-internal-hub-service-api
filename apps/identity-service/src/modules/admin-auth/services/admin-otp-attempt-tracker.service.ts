@@ -1,10 +1,10 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
 import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
 import { RedisService } from '@plys/libraries/common-nest/modules/redis/redis.service';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 
+import { ERROR_CODES } from '../../../errors/error-codes';
 import { IAdminOtpAttemptTracker } from '../interfaces/admin-otp-attempt-tracker.interface';
 
 // Max wrong OTP attempts before the email is locked.

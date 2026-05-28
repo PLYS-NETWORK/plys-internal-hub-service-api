@@ -1,15 +1,17 @@
 # Deployment Setup — VPS to GitHub
 
-Step-by-step guide to prepare a VPS, configure GitHub, and run the first deploy for the Plys internal hub backend.
+Step-by-step guide to prepare a VPS, configure GitHub, and run the first deploy for the Plys internal hub backend (**10 runtime services**).
+
+---
 
 ## Prerequisites
 
-| Item        | Requirement                                                          |
-| ----------- | -------------------------------------------------------------------- |
-| VPS         | Ubuntu 22.04+ (or similar), 4 GB+ RAM recommended for 6 services     |
-| Domain      | DNS A record pointing to VPS (e.g. `api-dev.lona.my`, `api.lona.my`) |
-| GitHub repo | Admin access to configure secrets and environments                   |
-| External DB | PostgreSQL and Redis reachable from VPS (not in compose on VPS)      |
+| Item        | Requirement                                                           |
+| ----------- | --------------------------------------------------------------------- |
+| VPS         | Ubuntu 22.04+ (or similar), **8 GB+ RAM recommended** for 10 services |
+| Domain      | DNS A record → VPS (`api-dev.lona.my`, `api.lona.my`)                 |
+| GitHub repo | Admin access for secrets and environments                             |
+| External DB | PostgreSQL and Redis reachable from VPS (not in compose on VPS)       |
 
 ---
 
@@ -52,19 +54,22 @@ sudo ufw allow 443/tcp
 sudo ufw enable
 ```
 
-The API gateway listens on the host loopback port from `PORT` in `.env.dev` / `.env.prod` (dev **4001**, prod **4000**); expose it via reverse proxy (nginx/Caddy) on 443.
+api-gateway listens on host `PORT` from env (**4001** dev, **4000** prod). gRPC services use **5001–5009** on loopback only — do not expose those ports publicly.
 
 ### 1.4 Reverse proxy (outline)
 
-Point `https://api-dev.lona.my` → `http://127.0.0.1:4001` and `https://api.lona.my` → `http://127.0.0.1:4000`. Use TLS termination at the proxy (Let's Encrypt).
+| Public URL                | Upstream                |
+| ------------------------- | ----------------------- |
+| `https://api-dev.lona.my` | `http://127.0.0.1:4001` |
+| `https://api.lona.my`     | `http://127.0.0.1:4000` |
+
+Use TLS termination at the proxy (Let's Encrypt).
 
 ---
 
 ## 2. Configure GitHub
 
 ### 2.1 Environments
-
-Create two GitHub environments under **Settings → Environments**:
 
 | Name         | Purpose                                   |
 | ------------ | ----------------------------------------- |
@@ -73,43 +78,40 @@ Create two GitHub environments under **Settings → Environments**:
 
 ### 2.2 Repository secrets
 
-Add these secrets to **each environment** (values differ per env):
+Add to **each environment** (values differ per env):
 
-| Secret                                              | How to obtain                                                           |
-| --------------------------------------------------- | ----------------------------------------------------------------------- |
-| `DB_PASSWORD`                                       | PostgreSQL password                                                     |
-| `JWT_ACCESS_SECRET`                                 | `jwt_hmac_sha256` — `openssl rand -base64 48`                           |
-| `JWT_REFRESH_SECRET`                                | `jwt_hmac_sha256` — `openssl rand -base64 48` (must differ from access) |
-| `PUBLIC_ENDPOINT_API_KEY`                           | `openssl rand -base64 32`                                               |
-| `GRPC_SERVICE_SECRET`                               | `jwt_hmac_sha256` — `openssl rand -base64 48` (shared across services)  |
-| `SSO_TOKEN_ENCRYPTION_KEY`                          | Optional until SSO is enabled — `openssl rand -base64 32`               |
-| `RESEND_API_KEY`                                    | Resend dashboard                                                        |
-| `POLAR_ACCESS_TOKEN` / `POLAR_WEBHOOK_SECRET`       | Polar dashboard                                                         |
-| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`       | Stripe dashboard                                                        |
-| `GOOGLE_CLIENT_SECRET`                              | Google Cloud Console                                                    |
-| `AWS_S3_ACCESS_KEY_ID` / `AWS_S3_SECRET_ACCESS_KEY` | AWS IAM                                                                 |
-| `COPYLEAKS_API_KEY`                                 | Copyleaks                                                               |
-| `REDIS_PASSWORD`                                    | Redis provider                                                          |
-| `AI_KEYS_MASTER_KEY_v1`                             | `aes_256_gcm_key_base64` — `openssl rand -base64 32`                    |
-| `FE_BFF_SECRET_v1`                                  | `aes_256_gcm_key_base64` — `openssl rand -base64 32`                    |
-| `VPS_HOST`                                          | VPS IP or hostname                                                      |
-| `VPS_USER`                                          | SSH user                                                                |
-| `VPS_SSH_KEY`                                       | Private key (PEM) for deploy user                                       |
-| `VPS_SSH_PORT`                                      | Usually `22`                                                            |
-| `GHCR_PULL_TOKEN`                                   | GitHub PAT with `read:packages` scope                                   |
+| Secret                                                   | How to obtain                                       |
+| -------------------------------------------------------- | --------------------------------------------------- |
+| `DB_PASSWORD`                                            | PostgreSQL password                                 |
+| `JWT_ACCESS_SECRET`                                      | `openssl rand -base64 48`                           |
+| `JWT_REFRESH_SECRET`                                     | `openssl rand -base64 48` (must differ from access) |
+| `PUBLIC_ENDPOINT_API_KEY`                                | `openssl rand -base64 32`                           |
+| `GRPC_SERVICE_SECRET`                                    | `openssl rand -base64 48` (shared across services)  |
+| `SSO_TOKEN_ENCRYPTION_KEY`                               | Optional until SSO — `openssl rand -base64 32`      |
+| `RESEND_API_KEY`                                         | Resend dashboard                                    |
+| `POLAR_ACCESS_TOKEN` / `POLAR_WEBHOOK_SECRET`            | Polar dashboard                                     |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`            | Stripe dashboard                                    |
+| `GOOGLE_CLIENT_SECRET`                                   | Google Cloud Console                                |
+| `AWS_S3_ACCESS_KEY_ID` / `AWS_S3_SECRET_ACCESS_KEY`      | AWS IAM                                             |
+| `COPYLEAKS_API_KEY`                                      | Copyleaks                                           |
+| `REDIS_PASSWORD`                                         | Redis provider                                      |
+| `AI_KEYS_MASTER_KEY_v1`                                  | `openssl rand -base64 32`                           |
+| `FE_BFF_SECRET_v1`                                       | `openssl rand -base64 32`                           |
+| `VPS_HOST` / `VPS_USER` / `VPS_SSH_KEY` / `VPS_SSH_PORT` | SSH deploy                                          |
+| `GHCR_PULL_TOKEN`                                        | GitHub PAT with `read:packages`                     |
 
-Non-secret values (URLs, feature flags, DB host/port) live in committed [`.env.dev`](../../.env.dev) / [`.env.prod`](../../.env.prod).
+Non-secret values live in committed [`env/.env.dev`](../../env/.env.dev) / [`env/.env.prod`](../../env/.env.prod).
 
 ### 2.3 GHCR pull token on VPS
 
-Create a GitHub Personal Access Token (classic) with `read:packages`. Store it as `GHCR_PULL_TOKEN` in GitHub secrets. CI logs the VPS into GHCR during each deploy.
+Store `GHCR_PULL_TOKEN` in GitHub secrets. CI runs `docker login ghcr.io` on the VPS during deploy.
 
 ### 2.4 Branch protection
 
 On `main` and `develop`:
 
 - Require PR before merge
-- Require status check: **All checks** (from `pr-checks.yml`)
+- Require status check: **All checks** (`pr-checks.yml`)
 
 ---
 
@@ -117,24 +119,31 @@ On `main` and `develop`:
 
 ### 3.1 App environment files
 
-Edit committed templates for each environment:
+Edit:
 
-- [`.env.dev`](../../.env.dev) — DB host, Redis host, URLs, non-secrets for dev VPS
-- [`.env.prod`](../../.env.prod) — same for production
+- [`env/.env.dev`](../../env/.env.dev) — DB/Redis hosts, URLs, gRPC ports **5001–5009**
+- [`env/.env.prod`](../../env/.env.prod) — production equivalents
 
-Ensure `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `REDIS_HOST`, etc. point to your external services.
+Ensure `DB_HOST`, `REDIS_HOST`, and `GRPC_HOST=127.0.0.1` match your VPS layout.
 
 ### 3.2 Compose image registry
 
-CI writes `current/.env` on the VPS with:
+After first successful deploy, `current/.env` contains:
 
 ```env
 IMAGE_REGISTRY=ghcr.io/<github-owner>/<repo-name>
 IMAGE_TAG_API_GATEWAY=develop-abc123
-...
+IMAGE_TAG_IDENTITY_SERVICE=develop-abc123
+IMAGE_TAG_BUSINESS_SERVICE=develop-abc123
+IMAGE_TAG_CONSULTANT_SERVICE=develop-abc123
+IMAGE_TAG_INTERNAL_ADMIN_SERVICE=develop-abc123
+IMAGE_TAG_INTERNAL_TASK_REVIEWER_SERVICE=develop-abc123
+IMAGE_TAG_FINANCE_SERVICE=develop-abc123
+IMAGE_TAG_NOTIFICATIONS_SERVICE=develop-abc123
+IMAGE_TAG_PLATFORM_SERVICE=develop-abc123
+IMAGE_TAG_AI_PROVIDER_SERVICE=develop-abc123
+IMAGE_TAG_MIGRATE=develop-abc123
 ```
-
-No manual edit needed after the first successful deploy.
 
 ---
 
@@ -142,54 +151,52 @@ No manual edit needed after the first successful deploy.
 
 ### 4.1 Dev (recommended first)
 
-1. Merge code to `develop` (or run **Actions → Deploy to Dev** manually)
-2. Select **service: all**, **run migrations: true**
-3. Wait for workflow to complete (build → upload bundle → pull → migrate → PM2)
+1. Merge to `develop` or run **Actions → Deploy to Dev**
+2. **service: all**, **run migrations: true**
+3. Wait for build → upload → pull → migrate → PM2
 
 ### 4.2 Verify on VPS
 
 ```bash
 pm2 status
-# Expect 6 apps: internal-hub-be-dev-api-gateway, ...-identity-service, etc.
+# Expect 10 apps: internal-hub-be-dev-api-gateway, ...-identity-service,
+# ...-business-service, ...-consultant-service, ...-internal-admin-service,
+# ...-internal-task-reviewer-service, ...-finance-service, ...-notifications-service,
+# ...-platform-service, ...-ai-provider-service
 
-curl -s http://127.0.0.1:4001/api/v1/gateway/health   # dev VPS (PORT in .env.dev)
-curl -s https://api-dev.lona.my/v1/health             # public URL — requires nginx → :4001
+curl -s http://127.0.0.1:4001/api/v1/gateway/health
+curl -s https://api-dev.lona.my/api/v1/gateway/health
 docker ps
 ```
 
 ### 4.3 Production
 
 1. **Actions → Deploy to Production**
-2. Type `deploy` to confirm
-3. Branch: `main`, service: `all`, run migrations: true
+2. Type `deploy`, branch `main`, service `all`, migrations true
 
 ---
 
 ## 5. Day-to-day operations
 
-### Deploy one service only
+### Deploy one service
 
-**Actions → Deploy to Dev** (or Production):
-
-| Field          | Value                            |
-| -------------- | -------------------------------- |
-| service        | e.g. `api-gateway`               |
-| run_migrations | Uncheck unless DB schema changed |
-
-Only that image is built, pulled, and restarted via PM2.
+| Field          | Value                                      |
+| -------------- | ------------------------------------------ |
+| service        | e.g. `business-service`                    |
+| run_migrations | Uncheck unless `packages/database` changed |
 
 ### Deploy full stack
 
-Push to `develop` (auto) or manual dispatch with **service: all**.
+Push to `develop` or manual dispatch with **service: all**.
 
 ### View logs
 
 ```bash
-pm2 logs internal-hub-be-dev-api-gateway --lines 100
-tail -f /apps/internal-hub-be/dev/logs/api-gateway-error.log
+pm2 logs internal-hub-be-dev-business-service --lines 100
+tail -f /apps/internal-hub-be/dev/logs/business-service-error.log
 ```
 
-### Rollback one service
+### Rollback
 
 See [overview.md](./overview.md#rollback).
 
@@ -197,17 +204,22 @@ See [overview.md](./overview.md#rollback).
 
 ## 6. Troubleshooting
 
-| Symptom                            | Check                                                                                                                                                                             |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pull access denied`               | `GHCR_PULL_TOKEN` valid; `docker login ghcr.io` on VPS                                                                                                                            |
-| PM2 app errored                    | `pm2 logs <name>`; verify `.env` has all `IMAGE_TAG_*` keys                                                                                                                       |
-| Health check fails                 | `curl http://127.0.0.1:4001/api/v1/gateway/health` on VPS; `pm2 logs internal-hub-be-dev-api-gateway`; nginx must proxy to dev `:4001` / prod `:4000` (502 = wrong upstream port) |
-| Migration failed                   | Run migrate manually; check `DB_*` in `.env.dev` on VPS                                                                                                                           |
-| Single deploy broke other services | Other services keep old tags — only target PM2 app restarts                                                                                                                       |
+| Symptom                    | Check                                                                      |
+| -------------------------- | -------------------------------------------------------------------------- |
+| `pull access denied`       | `GHCR_PULL_TOKEN`; `docker login ghcr.io` on VPS                           |
+| PM2 app errored            | `pm2 logs <name>`; all `IMAGE_TAG_*` keys in `current/.env`                |
+| Health check fails         | `curl http://127.0.0.1:4001/api/v1/gateway/health`; nginx → correct `PORT` |
+| Gateway starts before gRPC | Restart api-gateway PM2 app after backends are up                          |
+| gRPC connection refused    | `ss -lntp \| grep 500` — ports 5001–5009 on 127.0.0.1                      |
+| Migration failed           | Manual migrate; `DB_*` in mounted `.env.dev`                               |
+| Single deploy broke others | Only target PM2 app restarts; other tags unchanged                         |
 
 ---
 
 ## Related docs
 
-- [overview.md](./overview.md) — CI/CD reference, PM2 model, rollback
-- [README.md](../../README.md) — Local development setup
+| Document                                                                         | Topic                              |
+| -------------------------------------------------------------------------------- | ---------------------------------- |
+| [overview.md](./overview.md)                                                     | CI/CD, PM2, image tags, gRPC ports |
+| [../architecture/system-architecture.md](../architecture/system-architecture.md) | Service topology                   |
+| [../../README.md](../../README.md)                                               | Local development                  |

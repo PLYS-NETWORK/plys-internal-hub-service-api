@@ -13,10 +13,14 @@ import path from 'node:path';
 const SERVICE_TAG_KEYS = {
   'api-gateway': 'IMAGE_TAG_API_GATEWAY',
   'identity-service': 'IMAGE_TAG_IDENTITY_SERVICE',
-  'profiles-service': 'IMAGE_TAG_PROFILES_SERVICE',
-  'projects-service': 'IMAGE_TAG_PROJECTS_SERVICE',
+  'business-service': 'IMAGE_TAG_BUSINESS_SERVICE',
+  'consultant-service': 'IMAGE_TAG_CONSULTANT_SERVICE',
+  'internal-admin-service': 'IMAGE_TAG_INTERNAL_ADMIN_SERVICE',
+  'internal-task-reviewer-service': 'IMAGE_TAG_INTERNAL_TASK_REVIEWER_SERVICE',
   'finance-service': 'IMAGE_TAG_FINANCE_SERVICE',
+  'notifications-service': 'IMAGE_TAG_NOTIFICATIONS_SERVICE',
   'platform-service': 'IMAGE_TAG_PLATFORM_SERVICE',
+  'ai-provider-service': 'IMAGE_TAG_AI_PROVIDER_SERVICE',
   migrate: 'IMAGE_TAG_MIGRATE',
 };
 
@@ -63,7 +67,6 @@ function main() {
   const resolvedFile = path.resolve(file);
   const lines = fs.existsSync(resolvedFile)
     ? fs.readFileSync(resolvedFile, 'utf8').split('\n').filter((line, i, arr) => {
-        // keep trailing empty line behavior minimal
         return i < arr.length - 1 || line.length > 0;
       })
     : [];

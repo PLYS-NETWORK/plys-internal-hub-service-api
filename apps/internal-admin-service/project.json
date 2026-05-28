@@ -1,0 +1,38 @@
+{
+  "name": "internal-admin-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/internal-admin-service/src",
+  "projectType": "application",
+  "tags": ["scope:app", "type:service", "domain:internal-admin"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "nest build && rm -rf dist/i18n && cp -r ../../packages/common-nest/i18n dist/i18n",
+        "cwd": "apps/internal-admin-service"
+      },
+      "dependsOn": ["^build"]
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "NODE_ENV=development nest start --watch",
+        "cwd": "apps/internal-admin-service"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint \"src/**/*.ts\" --max-warnings=0",
+        "cwd": "apps/internal-admin-service"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "jest --config jest.config.js",
+        "cwd": "apps/internal-admin-service"
+      }
+    }
+  }
+}

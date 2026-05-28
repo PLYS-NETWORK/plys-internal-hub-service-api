@@ -34,9 +34,9 @@ export const THROTTLE_STRICT = {
   default: { limit: 5, ttl: 60_000 },
 } as const;
 
-/** OTP-issuing endpoints — 3 req / 60 min (forgot-password, resend-verification, admin OTP). */
+/** OTP-issuing endpoints — 5 req / 15 min (forgot-password, resend-verification, admin OTP). */
 export const THROTTLE_OTP = {
-  default: { limit: 3, ttl: 3_600_000 },
+  default: { limit: 5, ttl: 900_000 },
 } as const;
 
 /** Inbound webhooks from trusted external services — 600 req / 60 s (Polar, Stripe). */

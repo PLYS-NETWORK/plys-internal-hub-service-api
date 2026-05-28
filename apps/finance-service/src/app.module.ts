@@ -15,14 +15,13 @@ import {
 } from '@plys/libraries/common-nest/modules/environments';
 import { I18nModule } from '@plys/libraries/common-nest/modules/i18n';
 import { appWinstonOptions } from '@plys/libraries/common-nest/modules/logger';
+import { NotificationsClientModule } from '@plys/libraries/common-nest/modules/notifications-client/notifications-client.module';
 import { PaymentModule } from '@plys/libraries/common-nest/modules/payment';
 import { RedisModule } from '@plys/libraries/common-nest/modules/redis';
 import { RequestContextModule } from '@plys/libraries/common-nest/modules/request-context';
-import configuration from '@plys/libraries/config/configuration';
 import { resolveEnvFilePath } from '@plys/libraries/config/env-file.config';
 import { AuditSubscriber } from '@plys/libraries/database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from '@plys/libraries/database/typeorm.config';
-import { NotificationsDispatchModule } from '@plys/libraries/notifications';
 import { UnitOfWorkModule } from '@plys/libraries/unit-of-work/unit-of-work.module';
 import { WinstonModule } from 'nest-winston';
 
@@ -40,7 +39,6 @@ import {
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: resolveEnvFilePath(),
-      load: [configuration],
     }),
     WinstonModule.forRoot(appWinstonOptions),
     EnvironmentsModule,
@@ -73,7 +71,7 @@ import {
     PaymentModule,
     UnitOfWorkModule,
     JwtModule.register({}),
-    NotificationsDispatchModule,
+    NotificationsClientModule,
     BillingModule,
     PaymentsModule,
     WebhooksModule,

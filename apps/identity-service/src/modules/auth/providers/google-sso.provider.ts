@@ -1,5 +1,4 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
 import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
@@ -7,6 +6,7 @@ import { RequestContextService } from '@plys/libraries/common-nest/modules/reque
 import { SsoProvider } from '@plys/libraries/database/enums';
 import { OAuth2Client, TokenPayload } from 'google-auth-library';
 
+import { ERROR_CODES } from '../../../errors/error-codes';
 import { ISsoUserData } from '../interfaces/auth-service.interface';
 import { ISsoTokenProvider } from './interfaces/sso-provider.interface';
 

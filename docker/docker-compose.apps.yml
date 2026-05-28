@@ -1,0 +1,190 @@
+x-app-common: &app-common
+  restart: unless-stopped
+  networks: [internal]
+
+x-app-build: &app-build
+  context: ..
+  dockerfile: docker/Dockerfile
+
+services:
+  identity-service:
+    <<: *app-common
+    build:
+      <<: *app-build
+      args:
+        SERVICE: identity-service
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-../env/.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  business-service:
+    <<: *app-common
+    build:
+      <<: *app-build
+      args:
+        SERVICE: business-service
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-../env/.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  consultant-service:
+    <<: *app-common
+    build:
+      <<: *app-build
+      args:
+        SERVICE: consultant-service
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-../env/.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  internal-admin-service:
+    <<: *app-common
+    build:
+      <<: *app-build
+      args:
+        SERVICE: internal-admin-service
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-../env/.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  internal-task-reviewer-service:
+    <<: *app-common
+    build:
+      <<: *app-build
+      args:
+        SERVICE: internal-task-reviewer-service
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-../env/.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  finance-service:
+    <<: *app-common
+    build:
+      <<: *app-build
+      args:
+        SERVICE: finance-service
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-../env/.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  notifications-service:
+    <<: *app-common
+    build:
+      <<: *app-build
+      args:
+        SERVICE: notifications-service
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-../env/.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  platform-service:
+    <<: *app-common
+    build:
+      <<: *app-build
+      args:
+        SERVICE: platform-service
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-../env/.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ai-provider-service:
+    <<: *app-common
+    build:
+      <<: *app-build
+      args:
+        SERVICE: ai-provider-service
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-../env/.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  api-gateway:
+    <<: *app-common
+    build:
+      <<: *app-build
+      args:
+        SERVICE: api-gateway
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-../env/.env.example}
+    ports:
+      - '${PORT:-3000}:${PORT:-3000}'
+    depends_on:
+      - identity-service
+      - business-service
+      - consultant-service
+      - internal-admin-service
+      - internal-task-reviewer-service
+      - finance-service
+      - notifications-service
+      - platform-service
+      - ai-provider-service
+
+  migrate:
+    profiles: [migrate]
+    build:
+      <<: *app-build
+      args:
+        SERVICE: migrate
+    environment:
+      DEPLOY_ENV: ${DEPLOY_ENV:-local}
+    env_file:
+      - ${ENV_FILE:-../env/.env.example}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'

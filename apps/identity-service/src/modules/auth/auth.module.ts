@@ -4,8 +4,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { PublicEndpointApiKeyGuard } from '@plys/libraries/common-nest/guards/public-endpoint-api-key.guard';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
+import { NotificationsClientModule } from '@plys/libraries/common-nest/modules/notifications-client/notifications-client.module';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
-import { NotificationsDispatchModule } from '@plys/libraries/notifications';
 import { UnitOfWorkModule } from '@plys/libraries/unit-of-work/unit-of-work.module';
 
 import { AuthService } from './auth.service';
@@ -31,7 +31,7 @@ import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
     UsersModule,
     PassportModule,
     JwtModule.register({}),
-    NotificationsDispatchModule,
+    NotificationsClientModule,
   ],
   controllers: [],
   providers: [

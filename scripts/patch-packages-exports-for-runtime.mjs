@@ -20,8 +20,6 @@ pkg.exports = {
   './common-nest/*': './dist/common-nest/*',
   './unit-of-work': './dist/unit-of-work/unit-of-work.module.js',
   './unit-of-work/*': './dist/unit-of-work/*',
-  './ai-provider-key': './dist/ai-provider-key/index.js',
-  './notifications': './dist/notifications/index.js',
   './profiles-port': './dist/profiles-port/index.js',
 };
 

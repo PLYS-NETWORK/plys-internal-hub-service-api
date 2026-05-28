@@ -33,7 +33,7 @@ function parseArgs(argv) {
 }
 
 function loadSecretKeys(filename) {
-  const listPath = path.join(root, 'scripts', filename);
+  const listPath = path.join(root, 'env', filename);
   return fs
     .readFileSync(listPath, 'utf8')
     .split('\n')
@@ -52,7 +52,7 @@ function setEnvLine(content, key, value) {
 }
 
 const { deployEnv, output } = parseArgs(process.argv);
-const templatePath = path.join(root, `.env.${deployEnv}`);
+const templatePath = path.join(root, 'env', `.env.${deployEnv}`);
 
 if (!fs.existsSync(templatePath)) {
   console.error(`Template not found: ${templatePath}`);
@@ -60,8 +60,8 @@ if (!fs.existsSync(templatePath)) {
 }
 
 let content = fs.readFileSync(templatePath, 'utf8');
-const requiredSecretKeys = loadSecretKeys('env-secrets.list');
-const optionalSecretKeys = loadSecretKeys('env-secrets-optional.list');
+const requiredSecretKeys = loadSecretKeys('secrets.list');
+const optionalSecretKeys = loadSecretKeys('secrets-optional.list');
 const missing = [];
 
 for (const key of requiredSecretKeys) {

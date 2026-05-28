@@ -1,5 +1,4 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { PageDto } from '@plys/libraries/common-nest/dto/page.dto';
 import { PageMetaDto } from '@plys/libraries/common-nest/dto/page-meta.dto';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
@@ -9,6 +8,7 @@ import { DateUtil } from '@plys/libraries/common-nest/utils/date';
 import { UnitOfWorkService } from '@plys/libraries/unit-of-work/unit-of-work.service';
 import { plainToInstance } from 'class-transformer';
 
+import { ERROR_CODES } from '../../../errors/error-codes';
 import { ListBillsDto } from '../dto/requests/list-bills.dto';
 import { TriggerSettlementDto } from '../dto/requests/trigger-settlement.dto';
 import {

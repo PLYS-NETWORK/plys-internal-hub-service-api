@@ -1,11 +1,10 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { NOTIFICATION_EVENTS } from '@plys/libraries/common-nest/events';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
 import { EmailService } from '@plys/libraries/common-nest/modules/email/email.service';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
 import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
+import { NotificationsClientService } from '@plys/libraries/common-nest/modules/notifications-client/notifications-client.service';
 import { PaymentService } from '@plys/libraries/common-nest/modules/payment/payment.service';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 import { DateUtil } from '@plys/libraries/common-nest/utils/date';
@@ -17,6 +16,7 @@ import {
 import { UnitOfWorkService } from '@plys/libraries/unit-of-work/unit-of-work.service';
 import { plainToInstance } from 'class-transformer';
 
+import { ERROR_CODES } from '../../../errors/error-codes';
 import { CancelWithdrawResponseDto } from '../dto/responses/cancel-withdraw-response.dto';
 import { WithdrawResponseDto } from '../dto/responses/withdraw-response.dto';
 import { IWithdrawStrategy } from '../shared/withdraw-strategy.interface';
@@ -30,7 +30,7 @@ export class BusinessWithdrawStrategy implements IWithdrawStrategy {
     private readonly requestContext: RequestContextService,
     private readonly paymentService: PaymentService,
     private readonly env: EnvironmentsService,
-    private readonly eventEmitter: EventEmitter2,
+    private readonly notificationsClient: NotificationsClientService,
     private readonly emailService: EmailService,
   ) {
     this.logger = new AppLogger(BusinessWithdrawStrategy.name, requestContext);
@@ -155,7 +155,7 @@ export class BusinessWithdrawStrategy implements IWithdrawStrategy {
     // here for a non-COMPLETED status.
     if (savedTransaction.status === TransactionStatus.COMPLETED) {
       const newBalance = (currentBalance - amount).toFixed(2);
-      this.eventEmitter.emit(NOTIFICATION_EVENTS.PAYMENT_WITHDRAW_COMPLETED, {
+      this.notificationsClient.emit(NOTIFICATION_EVENTS.PAYMENT_WITHDRAW_COMPLETED, {
         transaction_id: savedTransaction.id,
         transaction_number: savedTransaction.transactionNumber,
         user_id: userId,
@@ -246,7 +246,7 @@ export class BusinessWithdrawStrategy implements IWithdrawStrategy {
       `cancelWithdraw — complete | transactionId: ${transactionId}, restoredAmount: ${restoredAmount}`,
     );
 
-    this.eventEmitter.emit(NOTIFICATION_EVENTS.PAYMENT_WITHDRAW_REVERSED, {
+    this.notificationsClient.emit(NOTIFICATION_EVENTS.PAYMENT_WITHDRAW_REVERSED, {
       transaction_id: transaction.id,
       transaction_number: transaction.transactionNumber,
       user_id: userId,

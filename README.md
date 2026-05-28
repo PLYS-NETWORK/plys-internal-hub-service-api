@@ -2,7 +2,7 @@
 
 Backend for a two-sided marketplace connecting **businesses** (project owners on **Ployos**) and **consultants** (freelance professionals on **Lonaos**).
 
-This repository is an **Nx + pnpm monorepo**. The HTTP edge is `apps/api-gateway`; domain logic runs in five gRPC microservices. Shared code lives in `@plys/libraries` under `packages/`.
+This repository is an **Nx + pnpm monorepo**. The HTTP edge is `apps/api-gateway`; domain logic runs in nine gRPC microservices. Shared code lives in `@plys/libraries` under `packages/`.
 
 ---
 
@@ -19,7 +19,7 @@ This repository is an **Nx + pnpm monorepo**. The HTTP edge is `apps/api-gateway
 | ORM               | TypeORM 0.3                                          |
 | Cache / queues    | Redis 7+ (ioredis, Bull, throttling)                 |
 | Auth              | JWT (access + refresh), Google OAuth 2.0 (SSO)       |
-| Realtime          | Socket.io (notifications via platform-service)       |
+| Realtime          | Socket.io (notifications via notifications-service)  |
 | Email             | Resend                                               |
 | Payments          | Polar or Stripe (configurable)                       |
 | File storage      | Local disk or AWS S3                                 |
@@ -44,60 +44,81 @@ Clients (Ployos, Lonaos, and Plys Internal Hub) talk only to the **API gateway**
 flowchart LR
   Client[Browser / FE BFF] --> Gateway[api-gateway<br/>HTTP :3000]
   Gateway --> Identity[identity-service<br/>gRPC :5001]
-  Gateway --> Profiles[profiles-service<br/>gRPC :5002]
-  Gateway --> Projects[projects-service<br/>gRPC :5003]
-  Gateway --> Finance[finance-service<br/>gRPC :5004]
-  Gateway --> Platform[platform-service<br/>gRPC :5005]
+  Gateway --> Business[business-service<br/>gRPC :5002]
+  Gateway --> Consultant[consultant-service<br/>gRPC :5003]
+  Gateway --> Admin[internal-admin-service<br/>gRPC :5004]
+  Gateway --> Reviewer[internal-task-reviewer-service<br/>gRPC :5005]
+  Gateway --> Finance[finance-service<br/>gRPC :5006]
+  Gateway --> Notifications[notifications-service<br/>gRPC :5007]
+  Gateway --> Platform[platform-service<br/>gRPC :5008]
+  Gateway --> AI[ai-provider-service<br/>gRPC :5009]
   Identity --> PG[(PostgreSQL)]
-  Profiles --> PG
-  Projects --> PG
+  Business --> PG
+  Consultant --> PG
+  Admin --> PG
+  Reviewer --> PG
   Finance --> PG
+  Notifications --> PG
   Platform --> PG
+  AI --> PG
   Identity --> Redis[(Redis)]
-  Profiles --> Redis
-  Projects --> Redis
+  Business --> Redis
+  Consultant --> Redis
+  Admin --> Redis
+  Reviewer --> Redis
   Finance --> Redis
+  Notifications --> Redis
   Platform --> Redis
+  AI --> Redis
 ```
 
 ### Services
 
-| Service            | Port        | Responsibility                                                               |
-| ------------------ | ----------- | ---------------------------------------------------------------------------- |
-| `api-gateway`      | 3000 (HTTP) | REST edge, JWT/session context, rate limiting, Swagger, gRPC client dispatch |
-| `identity-service` | 5001        | Auth, SSO, sessions, users, admin auth                                       |
-| `profiles-service` | 5002        | Business/consultant profiles, onboarding, skill exams                        |
-| `projects-service` | 5003        | Projects, tasks, explore, AI context, chat sessions, task reviews            |
-| `finance-service`  | 5004        | Wallets, payments, billing, payment webhooks                                 |
-| `platform-service` | 5005        | Files, skills taxonomy, statistics, notifications, health                    |
+| Service                          | Port        | Responsibility                                                               |
+| -------------------------------- | ----------- | ---------------------------------------------------------------------------- |
+| `api-gateway`                    | 3000 (HTTP) | REST edge, JWT/session context, rate limiting, Swagger, gRPC client dispatch |
+| `identity-service`               | 5001        | Auth, SSO, sessions, users, admin auth                                       |
+| `business-service`               | 5002        | Business profiles, onboarding, projects, tasks (Ployos)                      |
+| `consultant-service`             | 5003        | Consultant profiles, onboarding, skill exams, explore, membership (Lonaos)   |
+| `internal-admin-service`         | 5004        | Admin onboarding review, skill exam admin, business/consultant admin         |
+| `internal-task-reviewer-service` | 5005        | Task review rounds, voting, completion payout orchestration                  |
+| `finance-service`                | 5006        | Wallets, payments, billing, payment webhooks                                 |
+| `notifications-service`          | 5007        | Notification persistence, event handlers, skill-match queue                  |
+| `platform-service`               | 5008        | Files, skills taxonomy, health                                               |
+| `ai-provider-service`            | 5009        | AI provider keys, chat sessions, project AI context                          |
 
-Compile-time coupling between `profiles-service` and `projects-service` is forbidden; cross-context reads go through `@plys/libraries/profiles-port`. See [docs/architecture/domain-ownership.md](docs/architecture/domain-ownership.md).
+Cross-service reads use gRPC ports and `@plys/libraries/profiles-port` where applicable. See [docs/architecture/domain-ownership.md](docs/architecture/domain-ownership.md).
 
 ### Monorepo layout
 
 ```
 apps/
-├── api-gateway/           # HTTP + WebSocket edge (no direct DB access)
-├── identity-service/      # gRPC — auth domain
-├── profiles-service/      # gRPC — profiles domain
-├── projects-service/      # gRPC — projects domain
-├── finance-service/       # gRPC — finance domain
-└── platform-service/      # gRPC — platform domain
+├── api-gateway/                    # HTTP + WebSocket edge (no direct DB access)
+├── identity-service/               # gRPC — auth domain
+├── business-service/               # gRPC — Ployos domain
+├── consultant-service/             # gRPC — Lonaos domain
+├── internal-admin-service/         # gRPC — internal admin
+├── internal-task-reviewer-service/ # gRPC — task reviews
+├── finance-service/                # gRPC — finance domain
+├── notifications-service/          # gRPC — notifications
+├── platform-service/               # gRPC — files, skills, health
+└── ai-provider-service/            # gRPC — AI provider keys & chat
 
-packages/                  # @plys/libraries (single package, subpath exports)
-├── proto/                 # gRPC .proto contracts
-├── database/              # TypeORM entities, migrations, seeds
-├── config/                # Env file resolution, typed configuration
-├── common-nest/           # Guards, filters, interceptors, shared Nest modules
-├── unit-of-work/          # Repository layer + domain UoW modules
-├── shared-kernel/         # Cross-service constants
-├── ai-provider-key/       # AI provider key CRUD + BFF envelope
-├── notifications/         # NotificationsModule re-export (cross-app)
-└── profiles-port/         # Profiles reader/ledger port interfaces
+packages/                           # @plys/libraries (single package, subpath exports)
+├── proto/                          # Shared gRPC .proto contracts
+├── database/                       # TypeORM entities, migrations, seeds
+├── config/                         # Env file resolution
+├── common-nest/                    # Guards, filters, interceptors, EnvironmentsService
+├── unit-of-work/                   # Repository layer + domain UoW modules
+├── unit-of-work-core/              # AbstractUnitOfWork base
+├── transaction-coordinator/        # Cross-service composite flows
+├── shared-kernel/                  # Cross-service constants
+├── ai-provider-key/                # AI provider key CRUD + BFF envelope
+├── notifications/                  # NotificationsDispatchModule shim (→ notifications-service)
+└── profiles-port/                  # Profiles reader/ledger port interfaces
 
-docker-compose.yml         # Local postgres + redis
-docker-compose.apps.yml    # Full local stack in Docker
-Dockerfile                 # Multi-target build (6 services + migrate)
+docker/                             # Dockerfile, docker-compose*.yml
+env/                                # .env.dev, .env.prod, .env.example
 ```
 
 Import shared code via subpaths, e.g. `@plys/libraries/database`, `@plys/libraries/common-nest/guards/jwt-auth.guard`.
@@ -152,38 +173,40 @@ pnpm install
 
 ### 2. Configure environment
 
-Env files live at the **repo root** and are shared by all apps.
+Env files live under **`env/`** and are shared by all apps.
 
 ```bash
-cp .env.example .env.local
+cp env/.env.example env/.env.local
 ```
 
-Fill in secrets in `.env.local`. Key variables:
+Fill in secrets in `env/.env.local`. Key variables:
 
-| Variable               | Purpose                                                     |
-| ---------------------- | ----------------------------------------------------------- |
-| `DEPLOY_ENV=local`     | Selects `.env.local` at runtime                             |
-| `NODE_ENV=development` | Node runtime mode                                           |
-| `DB_*`                 | PostgreSQL connection (defaults match `docker-compose.yml`) |
-| `REDIS_*`              | Redis connection                                            |
-| `JWT_*`                | Access/refresh token secrets                                |
-| `*_GRPC_URL`           | gRPC addresses for each backend service                     |
+| Variable               | Purpose                                                            |
+| ---------------------- | ------------------------------------------------------------------ |
+| `DEPLOY_ENV=local`     | Selects `env/.env.local` at runtime                                |
+| `NODE_ENV=development` | Node runtime mode                                                  |
+| `DB_*`                 | PostgreSQL connection (defaults match `docker/docker-compose.yml`) |
+| `REDIS_*`              | Redis connection                                                   |
+| `JWT_*`                | Access/refresh token secrets                                       |
+| `*_GRPC_URL`           | gRPC addresses for each backend service                            |
 
-See [.env.example](.env.example) for the full list. Committed templates: `.env.dev`, `.env.prod` (used on VPS). Never commit `.env.local`.
+See [env/.env.example](env/.env.example) for the full list. Committed templates: `env/.env.dev`, `env/.env.prod` (used on VPS). Never commit `env/.env.local`.
 
 ### 3. Start infrastructure
 
 **Postgres + Redis only** (recommended for Nx serve):
 
 ```bash
-docker compose up -d
+pnpm docker:infra
 ```
 
-**Full stack in Docker** (all 6 services + infra):
+**Full production simulation in Docker** (builds images, runs migrations, starts all 10 services):
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.apps.yml up --build
+pnpm docker:simulate
 ```
+
+See [docs/deployment/overview.md](docs/deployment/overview.md) for `docker:build`, `docker:migrate`, `docker:up`, and `docker:down`.
 
 ### 4. Run database migrations
 
@@ -213,19 +236,23 @@ pnpm migration:run
 **Option A — Nx serve** (hot reload, recommended for development):
 
 ```bash
-docker compose up -d   # postgres + redis
-nx run identity-service:serve   # gRPC :5001
-nx run profiles-service:serve   # gRPC :5002
-nx run projects-service:serve   # gRPC :5003
-nx run finance-service:serve    # gRPC :5004
-nx run platform-service:serve   # gRPC :5005
-nx run api-gateway:serve        # HTTP :3000
+pnpm docker:infra   # postgres + redis
+nx run identity-service:serve                  # gRPC :5001
+nx run business-service:serve                  # gRPC :5002
+nx run consultant-service:serve                # gRPC :5003
+nx run internal-admin-service:serve            # gRPC :5004
+nx run internal-task-reviewer-service:serve     # gRPC :5005
+nx run finance-service:serve                   # gRPC :5006
+nx run notifications-service:serve              # gRPC :5007
+nx run platform-service:serve                  # gRPC :5008
+nx run ai-provider-service:serve               # gRPC :5009
+nx run api-gateway:serve                       # HTTP :3000
 ```
 
 Or start all at once:
 
 ```bash
-nx run-many -t serve --projects=identity-service,profiles-service,projects-service,finance-service,platform-service,api-gateway
+nx run-many -t serve --projects=identity-service,business-service,consultant-service,internal-admin-service,internal-task-reviewer-service,finance-service,notifications-service,platform-service,ai-provider-service,api-gateway
 ```
 
 **Option B — Production build**:
@@ -250,6 +277,7 @@ DEPLOY_ENV=local NODE_ENV=production node apps/api-gateway/dist/main.js
 | ---------------------------------------------- | ------------------------------------------------- |
 | `pnpm build`                                   | Build all apps and `@plys/libraries`              |
 | `pnpm lint`                                    | ESLint across all Nx projects                     |
+| `pnpm typecheck`                               | Typecheck packages and all apps                   |
 | `pnpm test`                                    | Run all unit tests                                |
 | `pnpm format`                                  | Prettier on `apps/` and `packages/`               |
 | `pnpm affected`                                | Lint, test, and build only affected projects      |
@@ -259,6 +287,8 @@ DEPLOY_ENV=local NODE_ENV=production node apps/api-gateway/dist/main.js
 | `pnpm db:seed`                                 | Seed skills taxonomy and admin allow-list (local) |
 | `pnpm db:drop`                                 | Drop and recreate `public` schema (local only)    |
 | `nx run api-gateway:serve`                     | Start the HTTP gateway with hot reload            |
+| `pnpm docker:simulate`                         | Build images, migrate, and run full stack locally |
+| `pnpm docker:infra`                            | Start Postgres + Redis only                       |
 | `nx run <service>:serve`                       | Start a single gRPC microservice                  |
 
 ---

@@ -1,11 +1,11 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
 import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
 import { RedisService } from '@plys/libraries/common-nest/modules/redis/redis.service';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 
+import { ERROR_CODES } from '../../../errors/error-codes';
 import { ILoginAttemptTracker } from '../interfaces/login-attempt-tracker.interface';
 
 /**

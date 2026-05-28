@@ -1,0 +1,38 @@
+{
+  "name": "consultant-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/consultant-service/src",
+  "projectType": "application",
+  "tags": ["scope:app", "type:service", "domain:consultant"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "nest build && rm -rf dist/i18n && cp -r ../../packages/common-nest/i18n dist/i18n",
+        "cwd": "apps/consultant-service"
+      },
+      "dependsOn": ["^build"]
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "NODE_ENV=development nest start --watch",
+        "cwd": "apps/consultant-service"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint \"src/**/*.ts\" --max-warnings=0",
+        "cwd": "apps/consultant-service"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "jest --config jest.config.js",
+        "cwd": "apps/consultant-service"
+      }
+    }
+  }
+}

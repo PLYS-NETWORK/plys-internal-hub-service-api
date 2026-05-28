@@ -14,10 +14,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const DEFAULT_PORTS = {
   identity: '5001',
-  profiles: '5002',
-  projects: '5003',
-  finance: '5004',
-  platform: '5005',
+  business: '5002',
+  consultant: '5003',
+  internalAdmin: '5004',
+  internalTaskReviewer: '5005',
+  finance: '5006',
+  notifications: '5007',
+  platform: '5008',
+  aiProvider: '5009',
 };
 
 function parseArgs(argv) {
@@ -100,20 +104,52 @@ function resolveTargets(env) {
       ...parseGrpcTarget(env.IDENTITY_GRPC_URL, host, env.IDENTITY_GRPC_PORT ?? DEFAULT_PORTS.identity),
     },
     {
-      name: 'profiles-service',
-      ...parseGrpcTarget(env.PROFILES_GRPC_URL, host, env.PROFILES_GRPC_PORT ?? DEFAULT_PORTS.profiles),
+      name: 'business-service',
+      ...parseGrpcTarget(env.BUSINESS_GRPC_URL, host, env.BUSINESS_GRPC_PORT ?? DEFAULT_PORTS.business),
     },
     {
-      name: 'projects-service',
-      ...parseGrpcTarget(env.PROJECTS_GRPC_URL, host, env.PROJECTS_GRPC_PORT ?? DEFAULT_PORTS.projects),
+      name: 'consultant-service',
+      ...parseGrpcTarget(env.CONSULTANT_GRPC_URL, host, env.CONSULTANT_GRPC_PORT ?? DEFAULT_PORTS.consultant),
+    },
+    {
+      name: 'internal-admin-service',
+      ...parseGrpcTarget(
+        env.INTERNAL_ADMIN_GRPC_URL,
+        host,
+        env.INTERNAL_ADMIN_GRPC_PORT ?? DEFAULT_PORTS.internalAdmin,
+      ),
+    },
+    {
+      name: 'internal-task-reviewer-service',
+      ...parseGrpcTarget(
+        env.INTERNAL_TASK_REVIEWER_GRPC_URL,
+        host,
+        env.INTERNAL_TASK_REVIEWER_GRPC_PORT ?? DEFAULT_PORTS.internalTaskReviewer,
+      ),
     },
     {
       name: 'finance-service',
       ...parseGrpcTarget(env.FINANCE_GRPC_URL, host, env.FINANCE_GRPC_PORT ?? DEFAULT_PORTS.finance),
     },
     {
+      name: 'notifications-service',
+      ...parseGrpcTarget(
+        env.NOTIFICATIONS_GRPC_URL,
+        host,
+        env.NOTIFICATIONS_GRPC_PORT ?? DEFAULT_PORTS.notifications,
+      ),
+    },
+    {
       name: 'platform-service',
       ...parseGrpcTarget(env.PLATFORM_GRPC_URL, host, env.PLATFORM_GRPC_PORT ?? DEFAULT_PORTS.platform),
+    },
+    {
+      name: 'ai-provider-service',
+      ...parseGrpcTarget(
+        env.AI_PROVIDER_GRPC_URL,
+        host,
+        env.AI_PROVIDER_GRPC_PORT ?? DEFAULT_PORTS.aiProvider,
+      ),
     },
   ];
 }

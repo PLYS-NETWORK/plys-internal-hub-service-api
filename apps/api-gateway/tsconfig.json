@@ -2,8 +2,13 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
+    "rootDir": "../../",
+    "rootDirs": ["src", "../../packages"],
+    "declaration": false,
+    "declarationMap": false,
     "baseUrl": ".",
     "paths": {
+      "@errors/error-codes": ["src/errors/error-codes.ts"],
       "@plys/libraries/proto": ["../../packages/proto/index.ts"],
       "@plys/libraries/shared-kernel": ["../../packages/shared-kernel/index.ts"],
       "@plys/libraries/database": ["../../packages/database/index.ts"],
@@ -12,44 +17,14 @@
       "@plys/libraries/config/*": ["../../packages/config/*"],
       "@plys/libraries/common-nest/*": ["../../packages/common-nest/*"],
       "@plys/libraries/unit-of-work/*": ["../../packages/unit-of-work/*"],
-      "@plys/libraries/ai-provider-key": ["../../packages/ai-provider-key/index.ts"],
       "@plys/libraries/profiles-port": ["../../packages/profiles-port/index.ts"],
+      "@plys/libraries/api-contracts": ["../../packages/api-contracts/index.ts"],
+      "@plys/libraries/api-contracts/*": ["../../packages/api-contracts/*"],
       "@/*": ["src/*"],
-      "@modules/auth/*": ["../identity-service/src/modules/auth/*"],
-      "@modules/admin-auth/*": ["../identity-service/src/modules/admin-auth/*"],
-      "@modules/profiles/*": ["../profiles-service/src/modules/profiles/*"],
-      "@modules/business-onboarding/*": ["../profiles-service/src/modules/business-onboarding/*"],
-      "@modules/consultant-onboarding/*": [
-        "../profiles-service/src/modules/consultant-onboarding/*"
-      ],
-      "@modules/admin-consultant-onboarding/*": [
-        "../profiles-service/src/modules/admin-consultant-onboarding/*"
-      ],
-      "@modules/admin-onboarding-questions/*": [
-        "../profiles-service/src/modules/admin-onboarding-questions/*"
-      ],
-      "@modules/consultant-skill-exam/*": [
-        "../profiles-service/src/modules/consultant-skill-exam/*"
-      ],
-      "@modules/admin-consultant-skill-exam/*": [
-        "../profiles-service/src/modules/admin-consultant-skill-exam/*"
-      ],
-      "@modules/ai-provider-key/*": ["../../packages/ai-provider-key/*"],
-      "@modules/business-projects/*": ["../projects-service/src/modules/business-projects/*"],
-      "@modules/consultant-projects/*": ["../projects-service/src/modules/consultant-projects/*"],
-      "@modules/explore/*": ["../projects-service/src/modules/explore/*"],
-      "@modules/task-reviews/*": ["../projects-service/src/modules/task-reviews/*"],
-      "@modules/ai-bootstrap/*": ["../projects-service/src/modules/ai-bootstrap/*"],
-      "@modules/project-ai-context/*": ["../projects-service/src/modules/project-ai-context/*"],
-      "@modules/project-chat-session/*": ["../projects-service/src/modules/project-chat-session/*"],
-      "@modules/billing/*": ["../finance-service/src/modules/billing/*"],
-      "@modules/payments/*": ["../finance-service/src/modules/payments/*"],
-      "@modules/webhooks/*": ["../finance-service/src/modules/webhooks/*"],
-      "@modules/files/*": ["../platform-service/src/modules/files/*"],
-      "@modules/skills/*": ["../platform-service/src/modules/skills/*"],
-      "@modules/statistics/*": ["../platform-service/src/modules/statistics/*"],
-      "@modules/notifications/*": ["../platform-service/src/modules/notifications/*"],
-      "@modules/health/*": ["../platform-service/src/modules/health/*"]
+      "@/clients/identity": ["src/clients/v1/identity/index.ts"],
+      "@/clients/finance": ["src/clients/v1/finance/index.ts"],
+      "@/clients/platform": ["src/clients/v1/platform/index.ts"],
+      "@/http/shared/*": ["src/http/v1/shared/*"]
     }
   },
   "include": ["src/**/*"],

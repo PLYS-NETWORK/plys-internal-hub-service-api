@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package consultant.v1;
+
+import "common/v1/http.proto";
+
+service Profiles {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service ConsultantOnboarding {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service SkillExams {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service ConsultantProjects {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service Explore {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}
+
+service Statistics {
+  rpc Dispatch(common.v1.HttpRequest) returns (common.v1.HttpResponse);
+}

@@ -7,14 +7,22 @@ module.exports = {
       'apps/api-gateway/tsconfig.eslint.json',
       'apps/identity-service/tsconfig.json',
       'apps/identity-service/tsconfig.eslint.json',
-      'apps/profiles-service/tsconfig.json',
-      'apps/profiles-service/tsconfig.eslint.json',
-      'apps/projects-service/tsconfig.json',
-      'apps/projects-service/tsconfig.eslint.json',
+      'apps/business-service/tsconfig.json',
+      'apps/business-service/tsconfig.eslint.json',
+      'apps/consultant-service/tsconfig.json',
+      'apps/consultant-service/tsconfig.eslint.json',
+      'apps/internal-admin-service/tsconfig.json',
+      'apps/internal-admin-service/tsconfig.eslint.json',
+      'apps/internal-task-reviewer-service/tsconfig.json',
+      'apps/internal-task-reviewer-service/tsconfig.eslint.json',
       'apps/finance-service/tsconfig.json',
       'apps/finance-service/tsconfig.eslint.json',
+      'apps/notifications-service/tsconfig.json',
+      'apps/notifications-service/tsconfig.eslint.json',
       'apps/platform-service/tsconfig.json',
       'apps/platform-service/tsconfig.eslint.json',
+      'apps/ai-provider-service/tsconfig.json',
+      'apps/ai-provider-service/tsconfig.eslint.json',
       'packages/tsconfig.json',
       'packages/tsconfig.eslint.json',
     ],
@@ -22,31 +30,32 @@ module.exports = {
     sourceType: 'module',
   },
   plugins: ['@typescript-eslint/eslint-plugin', 'simple-import-sort'],
-  extends: [
-    'plugin:@typescript-eslint/recommended',
-    'plugin:prettier/recommended',
-  ],
+  extends: ['plugin:@typescript-eslint/recommended', 'plugin:prettier/recommended'],
   root: true,
   env: {
     node: true,
     jest: true,
   },
-  ignorePatterns: ['.eslintrc.js'],
+  ignorePatterns: [
+    '.eslintrc.js',
+    '**/*.mjs',
+    '**/*.cjs',
+    'scripts/**',
+    'deploy/**',
+    '**/tsconfig*.json',
+    'ecosystem*.js',
+  ],
   overrides: [
     {
-      files: ['apps/profiles-service/**/*.ts'],
-      parserOptions: {
-        project: ['apps/profiles-service/tsconfig.json'],
-      },
+      files: ['apps/business-service/**/*.ts', 'apps/consultant-service/**/*.ts'],
       rules: {
         'no-restricted-imports': [
           'error',
           {
             patterns: [
               {
-                group: ['**/apps/projects-service/**', '../projects-service/**'],
-                message:
-                  'profiles-service must not import from projects-service; use @plys/libraries instead.',
+                group: ['**/apps/internal-admin-service/**', '../internal-admin-service/**'],
+                message: 'Role services must not import internal-admin-service directly.',
               },
             ],
           },
@@ -54,19 +63,20 @@ module.exports = {
       },
     },
     {
-      files: ['apps/projects-service/**/*.ts'],
-      parserOptions: {
-        project: ['apps/projects-service/tsconfig.json'],
-      },
+      files: ['apps/api-gateway/src/http/v1/**/*.ts'],
       rules: {
         'no-restricted-imports': [
           'error',
           {
             patterns: [
               {
-                group: ['**/apps/profiles-service/**', '../profiles-service/**'],
+                group: ['**/apps/*-service/**'],
+                message: 'api-gateway must not import backend apps; use gRPC clients only.',
+              },
+              {
+                group: ['@modules/**'],
                 message:
-                  'projects-service must not import from profiles-service; use @plys/libraries/profiles-port instead.',
+                  'api-gateway must not import @modules/*; use shared contracts and gateway-local DTOs.',
               },
             ],
           },

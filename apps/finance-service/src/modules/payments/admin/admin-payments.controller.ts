@@ -1,12 +1,7 @@
-import { Controller, Get, HttpCode, HttpStatus, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
-import { THROTTLE_DEFAULT } from '@plys/libraries/common-nest/constants';
-import { Roles } from '@plys/libraries/common-nest/decorators/roles.decorator';
+import { Controller, Get, HttpCode, HttpStatus, Query } from '@nestjs/common';
+import { ApiOperation } from '@nestjs/swagger';
 import { PageDto } from '@plys/libraries/common-nest/dto/page.dto';
-import { RolesGuard } from '@plys/libraries/common-nest/guards/roles.guard';
 import { ITranslatedPayload } from '@plys/libraries/common-nest/interceptors/transform-response.interceptor';
-import { UserRole } from '@plys/libraries/database/enums';
 
 import { AdminListBusinessTransactionsDto } from '../dto/requests/admin-list-business-transactions.dto';
 import { AdminListConsultantTransactionsDto } from '../dto/requests/admin-list-consultant-transactions.dto';
@@ -15,16 +10,9 @@ import {
   AdminConsultantTransactionResponseDto,
 } from '../dto/responses';
 import { AdminPaymentsService } from './admin-payments.service';
-
-@ApiTags('Admin / Payments')
-@ApiBearerAuth()
 @Controller('admin/payments')
-@UseGuards(RolesGuard)
-@Roles(UserRole.ADMIN_PLATFORM)
-@Throttle(THROTTLE_DEFAULT)
 export class AdminPaymentsController {
   constructor(private readonly adminPaymentsService: AdminPaymentsService) {}
-
   @Get('consultant/transactions')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -36,7 +24,6 @@ export class AdminPaymentsController {
     const data = await this.adminPaymentsService.listConsultantTransactions(dto);
     return { messageKey: 'success.ok', data };
   }
-
   @Get('business/transactions')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

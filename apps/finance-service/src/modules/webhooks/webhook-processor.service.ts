@@ -1,8 +1,8 @@
 import { BillingInvoiceService } from '@modules/billing/services/billing-invoice.service';
 import { Injectable } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NOTIFICATION_EVENTS } from '@plys/libraries/common-nest/events';
 import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
+import { NotificationsClientService } from '@plys/libraries/common-nest/modules/notifications-client/notifications-client.service';
 import { WebhookEventType } from '@plys/libraries/common-nest/modules/payment/interfaces/webhook-event.interface';
 import { PaymentService } from '@plys/libraries/common-nest/modules/payment/payment.service';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
@@ -26,7 +26,7 @@ export class WebhookProcessorService {
     private readonly requestContext: RequestContextService,
     private readonly paymentService: PaymentService,
     private readonly billingInvoiceService: BillingInvoiceService,
-    private readonly eventEmitter: EventEmitter2,
+    private readonly notificationsClient: NotificationsClientService,
   ) {
     this.logger = new AppLogger(WebhookProcessorService.name, requestContext);
   }
@@ -276,7 +276,7 @@ export class WebhookProcessorService {
         `handlePaymentSucceeded — balance updated | businessId: ${businessProfile.id}, oldBalance: ${currentBalance}, newBalance: ${newBalance}`,
       );
 
-      this.eventEmitter.emit(NOTIFICATION_EVENTS.PAYMENT_TOP_UP_COMPLETED, {
+      this.notificationsClient.emit(NOTIFICATION_EVENTS.PAYMENT_TOP_UP_COMPLETED, {
         transaction_id: transaction.id,
         transaction_number: transaction.transactionNumber,
         user_id: businessProfile.userId,
@@ -425,7 +425,7 @@ export class WebhookProcessorService {
         `reverseBusinessWithdrawal — balance restored | businessId: ${businessProfile.id}, amount: ${amount}, newBalance: ${newBalance}`,
       );
 
-      this.eventEmitter.emit(NOTIFICATION_EVENTS.PAYMENT_WITHDRAW_REVERSED, {
+      this.notificationsClient.emit(NOTIFICATION_EVENTS.PAYMENT_WITHDRAW_REVERSED, {
         transaction_id: transaction.id,
         transaction_number: transaction.transactionNumber,
         user_id: businessProfile.userId,

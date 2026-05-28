@@ -11,10 +11,14 @@ const root = process.cwd();
 const RUNTIME_SERVICES = [
   'api-gateway',
   'identity-service',
-  'profiles-service',
-  'projects-service',
+  'business-service',
+  'consultant-service',
+  'internal-admin-service',
+  'internal-task-reviewer-service',
   'finance-service',
+  'notifications-service',
   'platform-service',
+  'ai-provider-service',
 ];
 
 function collectNodePathDirs() {

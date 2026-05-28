@@ -1,2 +1,2 @@
-export { default as configuration } from './configuration';
 export { resolveEnvFilePath } from './env-file.config';
+export { assertEnvSecretsValid } from './secrets/validate-env-secrets';

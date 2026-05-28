@@ -1,6 +1,6 @@
 # System Architecture
 
-This document describes how the Plys marketplace backend is structured: services, communication paths, shared libraries, security boundaries, and cross-cutting patterns. It reflects the current monorepo layout after the gRPC bridge, security hardening, and package-extraction work.
+This document describes how the Plys marketplace backend is structured: services, communication paths, shared libraries, security boundaries, and cross-cutting patterns. It reflects the current Nx monorepo after splitting **profiles-service** / **projects-service** into domain-aligned microservices.
 
 For table ownership and bounded contexts, see [domain-ownership.md](./domain-ownership.md). For deploy topology and env files, see [../deployment/overview.md](../deployment/overview.md).
 
@@ -8,16 +8,22 @@ For table ownership and bounded contexts, see [domain-ownership.md](./domain-own
 
 ## Overview
 
-The backend is an **Nx + pnpm monorepo** with six runnable NestJS applications and shared libraries under `packages/`. Clients (**Ployos**, **Lonaos**, and **Plys Internal Hub**) talk **only to the API gateway** over HTTP and WebSocket. Domain logic runs in five **gRPC-only microservices** that share one PostgreSQL schema and one Redis cluster during the current migration phase.
+The backend is an **Nx + pnpm monorepo** with **ten runnable NestJS applications** (one HTTP edge + nine gRPC microservices) and shared libraries under `packages/`. Clients (**Ployos**, **Lonaos**, and **Plys Internal Hub**) talk **only to api-gateway** over HTTP and WebSocket. Domain logic runs in **gRPC-only microservices** that share one PostgreSQL schema and one Redis cluster during the current migration phase.
 
-| Layer                | Role                                                                              |
-| -------------------- | --------------------------------------------------------------------------------- |
-| **api-gateway**      | HTTP/WS edge — auth guards, validation, throttling, Swagger, gRPC client dispatch |
-| **identity-service** | Users, JWT sessions, SSO, admin OTP auth                                          |
-| **profiles-service** | Business/consultant profiles, onboarding, skill exams                             |
-| **projects-service** | Projects, tasks, explore, AI context, chat sessions, reviews                      |
-| **finance-service**  | Wallets, payments, billing, webhooks                                              |
-| **platform-service** | Files, skills, statistics, notifications, health                                  |
+| Layer                              | Role                                                                                         |
+| ---------------------------------- | -------------------------------------------------------------------------------------------- |
+| **api-gateway**                    | HTTP/WS edge — auth guards, validation, throttling, Swagger, gRPC client dispatch            |
+| **identity-service**               | Users, JWT sessions, SSO, admin OTP auth                                                     |
+| **business-service**               | Business profiles, onboarding, projects, tasks, board, AI sync (Ployos)                      |
+| **consultant-service**             | Consultant profiles, onboarding, skill exams, explore, membership, tasks (Lonaos)            |
+| **internal-admin-service**         | Admin onboarding questions, consultant onboarding review, skill exam admin, AI context admin |
+| **internal-task-reviewer-service** | Task review rounds, voting, completion payout orchestration                                  |
+| **finance-service**                | Wallets, payments, billing, webhooks                                                         |
+| **notifications-service**          | Notification persistence, event handlers, skill-match queue                                  |
+| **platform-service**               | Files, skills, housekeeping, health (slim platform)                                          |
+| **ai-provider-service**            | AI provider keys, chat sessions, project AI context, bootstrap                               |
+
+Legacy **`profiles-service`** / **`projects-service`** are decommissioned; production traffic uses the services above.
 
 ---
 
@@ -32,15 +38,19 @@ flowchart TB
   end
 
   subgraph edge [HTTP edge]
-    GW[api-gateway<br/>:3000 HTTP/WS]
+    GW[api-gateway<br/>HTTP/WS]
   end
 
   subgraph grpc [gRPC microservices]
     ID[identity-service<br/>:5001]
-    PR[profiles-service<br/>:5002]
-    PJ[projects-service<br/>:5003]
-    FN[finance-service<br/>:5004]
-    PL[platform-service<br/>:5005]
+    BS[business-service<br/>:5002]
+    CS[consultant-service<br/>:5003]
+    IA[internal-admin-service<br/>:5004]
+    TR[internal-task-reviewer-service<br/>:5005]
+    FN[finance-service<br/>:5006]
+    NT[notifications-service<br/>:5007]
+    PL[platform-service<br/>:5008]
+    AI[ai-provider-service<br/>:5009]
   end
 
   subgraph infra [Infrastructure]
@@ -53,88 +63,146 @@ flowchart TB
   Lonaos --> GW
   InternalHub --> GW
   GW -->|"gRPC + metadata"| ID
-  GW --> PR
-  GW --> PJ
+  GW --> BS
+  GW --> CS
+  GW --> IA
+  GW --> TR
   GW --> FN
+  GW --> NT
   GW --> PL
+  GW --> AI
   ID --> PG
-  PR --> PG
-  PJ --> PG
+  BS --> PG
+  CS --> PG
+  IA --> PG
+  TR --> PG
   FN --> PG
+  NT --> PG
   PL --> PG
+  AI --> PG
   ID --> RD
-  PR --> RD
-  PJ --> RD
+  BS --> RD
+  CS --> RD
+  IA --> RD
+  TR --> RD
   FN --> RD
+  NT --> RD
   PL --> RD
+  AI --> RD
   FN --> BL
+  NT --> BL
+  CS --> BL
   PL --> BL
-  PR --> BL
 ```
 
 ### Port map
 
-| Service          | HTTP | gRPC | Notes                           |
-| ---------------- | ---- | ---- | ------------------------------- |
-| api-gateway      | 3000 | —    | Fastify; global prefix `api/v1` |
-| identity-service | —    | 5001 | Auth domain                     |
-| profiles-service | —    | 5002 | Profiles domain                 |
-| projects-service | —    | 5003 | Projects domain                 |
-| finance-service  | —    | 5004 | Finance + webhook queue         |
-| platform-service | —    | 5005 | Platform + notification queue   |
+| Service                        | HTTP                                             | gRPC | Notes                                          |
+| ------------------------------ | ------------------------------------------------ | ---- | ---------------------------------------------- |
+| api-gateway                    | `PORT` (3000 local, 4001 dev VPS, 4000 prod VPS) | —    | Fastify; global prefix `api`, URI version `v1` |
+| identity-service               | —                                                | 5001 | Auth domain                                    |
+| business-service               | —                                                | 5002 | Business / projects (Ployos)                   |
+| consultant-service             | —                                                | 5003 | Consultant domain (Lonaos)                     |
+| internal-admin-service         | —                                                | 5004 | Internal admin (Plys Hub)                      |
+| internal-task-reviewer-service | —                                                | 5005 | Task reviewer                                  |
+| finance-service                | —                                                | 5006 | Finance + webhook queue                        |
+| notifications-service          | —                                                | 5007 | Notifications + skill-match queue              |
+| platform-service               | —                                                | 5008 | Files, skills, housekeeping                    |
+| ai-provider-service            | —                                                | 5009 | AI keys, chat, context                         |
 
-gRPC URLs are configured per service via `*_GRPC_URL` env vars (see [deployment/overview.md](../deployment/overview.md)).
+gRPC URLs are resolved by `EnvironmentsService` from `*_GRPC_URL` or `GRPC_HOST` + `*_GRPC_PORT` (see `env/.env.example`).
+
+---
+
+## API gateway: HTTP `v1/{service}/` layout
+
+HTTP controllers live under `apps/api-gateway/src/http/v1/`. Each folder maps to a gRPC backend and registers an `*HttpModule` in `app.module.ts`.
+
+| Folder                                   | gRPC target                    | Primary clients                                 |
+| ---------------------------------------- | ------------------------------ | ----------------------------------------------- |
+| `gateway/`                               | —                              | Health, gateway metadata                        |
+| `identity/`                              | identity-service               | Auth, admin allowed emails                      |
+| `business/`                              | business-service               | Ployos — projects, board, profiles, dashboard   |
+| `consultant/`                            | consultant-service             | Lonaos — explore, tasks, onboarding, exams      |
+| `internal-admin/`                        | internal-admin-service         | Plys Hub — admin CRUD                           |
+| `internal-task-reviewer/`                | internal-task-reviewer-service | Task review APIs                                |
+| `finance/`                               | finance-service                | Payments, billing, webhooks                     |
+| `notifications/`                         | notifications-service          | REST notifications + **WebSocket** gateway      |
+| `platform/`                              | platform-service               | Files, skills                                   |
+| `ai-provider/`                           | ai-provider-service            | AI bootstrap, chat sessions, BFF keys           |
+| `shared/`                                | —                              | gRPC proxy helpers, auth providers (not routed) |
+| `_legacy_profiles/`, `_legacy_projects/` | —                              | Deprecated; do not add routes                   |
+
+Controllers delegate to domain services via **`createGrpcServiceProxy()`** (`http/v1/shared/grpc-service-proxy.util.ts`) and typed gRPC clients under `apps/api-gateway/src/clients/v1/{service}/`.
+
+Public URL pattern: `/api/v1/...` (Nest `setGlobalPrefix('api')` + `VersioningType.URI` default version `1`).
 
 ---
 
 ## Request path: HTTP → gRPC → domain
 
-The gateway does **not** query the database directly. Each HTTP controller delegates to a gRPC client; microservices expose a **gRPC bridge** that reuses the same controller/service code paths as if they were HTTP handlers.
+The gateway does **not** query the database directly. Each HTTP handler invokes a gRPC `Dispatch` on the target microservice; services expose `*GrpcController` handlers that call the same service layer used for domain logic.
 
 ```mermaid
 sequenceDiagram
   participant Client
   participant Gateway as api-gateway
-  participant GrpcClient as GrpcGatewayHelper
+  participant Proxy as GrpcServiceProxy
   participant Svc as domain-service
-  participant Bridge as GrpcBridgeBase
-  participant Ctrl as Controller
   participant Dom as Service / UoW
 
   Client->>Gateway: HTTP + JWT
   Gateway->>Gateway: JwtAuthGuard, ValidationPipe
-  Gateway->>Gateway: RequestContextService populated
-  Gateway->>GrpcClient: call(operation, body)
-  GrpcClient->>GrpcClient: buildMetadataFromRequestContext()
-  Note over GrpcClient: Adds x-grpc-service-auth
-  GrpcClient->>Svc: gRPC Dispatch
-  Svc->>Bridge: dispatch(request, metadata)
-  Bridge->>Bridge: assertGrpcServiceAuthorized()
-  Bridge->>Bridge: applyMetadataToRequestContext()
-  Bridge->>Ctrl: controller method
-  Ctrl->>Dom: business logic
-  Dom-->>Ctrl: ITranslatedPayload
-  Ctrl-->>Bridge: response
-  Bridge-->>GrpcClient: IHttpResponse
-  GrpcClient-->>Gateway: StandardizedResponse
+  Gateway->>Gateway: RequestContextService
+  Gateway->>Proxy: service.method(dto)
+  Proxy->>Proxy: buildMetadataFromRequestContext()
+  Note over Proxy: x-grpc-service-auth + user metadata
+  Proxy->>Svc: gRPC Dispatch
+  Svc->>Dom: business logic
+  Dom-->>Svc: ITranslatedPayload
+  Svc-->>Proxy: IHttpResponse
+  Proxy-->>Gateway: StandardizedResponse
   Gateway-->>Client: JSON envelope
 ```
 
-### gRPC bridge pattern
+### gRPC contracts and bridge
 
-Each microservice registers a `*GrpcController` that extends `GrpcBridgeBase` (`packages/common-nest/grpc/grpc-bridge.base.ts`):
+- **Shared HTTP-over-gRPC wrapper**: `packages/proto/common/v1/http.proto`
+- **Per-domain protos**: canonical copies under `packages/proto/{domain}/v1/`; some apps also keep `apps/{service}/protos/v1/` for code generation
+- **Service auth**: `x-grpc-service-auth` validated against `GRPC_SERVICE_SECRET`
+- **Context**: user/session fields in gRPC metadata → `RequestContextService` before handlers run
 
-1. **Operation routing** — `request.operation` (e.g. `auth.login`) maps to a handler that invokes the existing Nest controller method.
-2. **Service auth** — `assertGrpcServiceAuthorized()` validates `x-grpc-service-auth` metadata against `GRPC_SERVICE_SECRET`. Required in `dev`/`prod`; skipped locally when the secret is unset.
-3. **Identity propagation** — User/session context travels in gRPC metadata (`x-user-id`, `x-user-role`, `x-session-id`, etc.) and is applied to `RequestContextService` before the handler runs.
-4. **DTO validation** — Handlers may use `parseAndValidateBody()` / `parseAndValidateBody()` with class-validator (mirrors gateway `I18nValidationPipe` rules on the gRPC path).
-5. **Error mapping** — Exceptions are converted to `IHttpResponse` via shared PostgreSQL error mapping (`packages/common-nest/errors/postgres-error.mapper.ts`).
+---
 
-Proto contracts live in `packages/proto/` (`common/v1/http.proto` wraps HTTP semantics; each domain has its own `*.proto`).
+## EnvironmentsService
 
-### Compile-time coupling (gateway)
+`EnvironmentsService` (`packages/common-nest/modules/environments/environments.service.ts`) is the **single typed configuration surface** for every app:
 
-The gateway **mounts controller classes from microservice source trees** via tsconfig path aliases (e.g. `@modules/auth/*` → `identity-service/src/...`). This avoids duplicating route definitions but creates compile-time coupling. Shared modules are being moved into `packages/` (see [Packages](#packages) below).
+- Loads env via `resolveEnvFilePath()` → `env/.env.{local|dev|prod}`
+- Runs `assertEnvSecretsValid()` on module init (dev/prod hardening)
+- Exposes DB, Redis, JWT, CORS (`allowedOrigins`, `corsAllowLocalhost`), payment, S3, AI key versions, frontend URLs (`ployosUrl`, `lonaosUrl`, `internalHubUrl`)
+- Resolves **all nine** backend gRPC URLs (`identityServiceGrpcUrl` … `aiProviderServiceGrpcUrl`)
+- WebSocket limits: `wsMaxConnectionsPerUser`, `wsConnectRateLimitPerMinute`
+
+api-gateway uses it for CORS, throttling Redis, port, and `waitForGrpcBackendsFromProcessEnv()` at bootstrap.
+
+---
+
+## Per-service protos and Unit of Work
+
+| Service                        | Proto package(s)                                        | UoW modules (typical)                                                                              |
+| ------------------------------ | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| identity-service               | `packages/proto/identity/v1`                            | `UnitOfWorkModule`                                                                                 |
+| business-service               | `packages/proto/business/v1`, `apps/.../business.proto` | `AppUnitOfWorkModule` → `ProfilesUnitOfWorkModule`, `ProjectsUnitOfWorkModule`, `UnitOfWorkModule` |
+| consultant-service             | `packages/proto/consultant/v1`                          | `AppUnitOfWorkModule` (profiles + projects repos)                                                  |
+| internal-admin-service         | `packages/proto/internal-admin/v1`                      | `AppUnitOfWorkModule` (profiles + projects + core)                                                 |
+| internal-task-reviewer-service | `packages/proto/internal-task-reviewer/v1`              | `AppUnitOfWorkModule`                                                                              |
+| finance-service                | `packages/proto/finance/v1`                             | `UnitOfWorkModule`                                                                                 |
+| notifications-service          | `packages/proto/notifications/v1`                       | `AppUnitOfWorkModule`                                                                              |
+| platform-service               | `packages/proto/platform/v1`                            | `UnitOfWorkModule`                                                                                 |
+| ai-provider-service            | `packages/proto/aiprovider/v1`                          | `AppUnitOfWorkModule` → `ProjectsUnitOfWorkModule`                                                 |
+
+Domain repositories stay in `packages/unit-of-work/`; services import only the UoW slices they need.
 
 ---
 
@@ -142,27 +210,20 @@ The gateway **mounts controller classes from microservice source trees** via tsc
 
 Shared code is published as **`@plys/libraries`** with subpath exports from `packages/`.
 
-| Package           | Purpose                                                                             |
-| ----------------- | ----------------------------------------------------------------------------------- |
-| `proto`           | gRPC `.proto` files and `GRPC_METADATA_KEYS`                                        |
-| `database`        | TypeORM entities, migrations, seeds                                                 |
-| `config`          | Env resolution, secret validation (`assertEnvSecretsValid`)                         |
-| `common-nest`     | Guards, filters, interceptors, gRPC bridge, Redis, payment, email, file storage     |
-| `unit-of-work`    | Repository layer + `UnitOfWorkService`                                              |
-| `shared-kernel`   | Cross-service constants                                                             |
-| `ai-provider-key` | AI provider key vault + BFF envelope encryption                                     |
-| `profiles-port`   | `IProfilesReader` / `IProfilesLedger` port interfaces                               |
-| `notifications`   | Re-exports `NotificationsModule` from platform-service (cross-app import reduction) |
+| Package                   | Purpose                                                                 |
+| ------------------------- | ----------------------------------------------------------------------- |
+| `proto`                   | gRPC `.proto` files and `GRPC_METADATA_KEYS`                            |
+| `database`                | TypeORM entities, migrations, seeds, `COMPOSITE_TRANSACTION_FLOWS`      |
+| `config`                  | Env file resolution, secret validation                                  |
+| `common-nest`             | Guards, filters, interceptors, gRPC helpers, Redis, EnvironmentsService |
+| `unit-of-work`            | Repository layer + `UnitOfWorkService`                                  |
+| `shared-kernel`           | Error code constants                                                    |
+| `transaction-coordinator` | `SharedDbTransactionCoordinator` for cross-port SQL transactions        |
+| `ai-provider-key`         | AI provider key vault + BFF envelope encryption                         |
+| `profiles-port`           | `IProfilesReader` / `IProfilesLedger` port interfaces                   |
+| `notifications`           | `NotificationsDispatchModule` for cross-service event emit              |
 
-Import examples:
-
-```typescript
-import { JwtAuthGuard } from '@plys/libraries/common-nest/guards/jwt-auth.guard';
-import { UnitOfWorkService } from '@plys/libraries/unit-of-work/unit-of-work.service';
-import { NotificationsModule } from '@plys/libraries/notifications';
-```
-
-Versioning for `@plys/libraries` uses Changesets — see [versioning.md](./versioning.md).
+Versioning: [versioning.md](./versioning.md).
 
 ---
 
@@ -171,108 +232,37 @@ Versioning for `@plys/libraries` uses Changesets — see [versioning.md](./versi
 ### PostgreSQL
 
 - Single logical schema; all services connect via TypeORM (`packages/database/typeorm.config.ts`).
-- **Migrations** run automatically on startup in non-local envs (`migrationsRun: true`).
-- **Connection pooling** — `DB_POOL_MAX` (default `10`) sets `extra.max` per process; size pools against Postgres `max_connections` when scaling replicas.
-- **Naming** — constraints and indexes follow `prefix_table_column` (e.g. `idx_tasks_assigned_kanban`, `fk_tasks_to_projects`).
-
-Domain-specific repository access goes through **Unit of Work**, not raw `@InjectRepository`:
-
-```typescript
-await this.uow.withTransaction(async (txUow) => {
-  await txUow.businessTransactions.save(entity);
-});
-```
-
-See [transaction-inventory.md](./transaction-inventory.md) for multi-step SQL transactions.
+- Migrations run on startup in non-local envs when configured (`migrationsRun: true`).
+- **Connection pooling** — `DB_POOL_MAX` per process.
+- **Naming** — constraints/indexes: `prefix_table_column`.
 
 ### Redis
 
-Used for:
+- Session-adjacent state, rate limiting, response caching, Bull backing store
+- Socket.IO **Redis adapter** on api-gateway; notification fan-out via notifications-service + Redis
 
-- Session-adjacent state (login lockout, OAuth state, SSO exchange codes)
-- HTTP rate limiting (`ThrottlerGuard` on gateway)
-- Dashboard / explore / board **response caching** (TTL 30–3600s depending on endpoint)
-- Bull queue backing store
-- Pub/sub for realtime notifications (Socket.IO Redis adapter on api-gateway; redis-emitter from platform-service)
+### Bull queues (current owners)
 
-Cache invalidation uses **`scanKeys()`** (non-blocking SCAN) instead of `KEYS` on hot paths. Redis operation logging is suppressed in production for `get`/`set`/`scanKeys`.
-
-### Bull queues
-
-| Queue                      | Service          | Purpose                                 |
-| -------------------------- | ---------------- | --------------------------------------- |
-| `finance-webhooks`         | finance-service  | Async Polar/Stripe webhook processing   |
-| `skill-match-notification` | platform-service | Fan-out skill-match notifications       |
-| `skill-exam`               | profiles-service | AI evaluation pipeline with rate limits |
-| `housekeeping`             | platform-service | Scheduled maintenance jobs              |
-
-Webhook HTTP handlers enqueue jobs and return `200` immediately; workers call `WebhookProcessorService` with signature verification already enforced in the worker path.
+| Queue                      | Service               | Purpose                               |
+| -------------------------- | --------------------- | ------------------------------------- |
+| `finance-webhooks`         | finance-service       | Async Polar/Stripe webhook processing |
+| `skill-match-notification` | notifications-service | Skill-match notification fan-out      |
+| `skill-exam`               | consultant-service    | AI evaluation pipeline                |
+| `housekeeping`             | platform-service      | Scheduled maintenance                 |
 
 ---
 
 ## Security architecture
 
-```mermaid
-flowchart TB
-  subgraph public [Public edge]
-    BFF[FE BFF x-api-key]
-    User[End user JWT]
-  end
+| Layer           | Mechanism                                     | Where                           |
+| --------------- | --------------------------------------------- | ------------------------------- |
+| End-user API    | JWT + session re-validation                   | api-gateway `JwtAuthGuard`      |
+| BFF-only routes | `x-api-key` → `PUBLIC_ENDPOINT_API_KEY`       | Register, explore, AI key fetch |
+| Admin           | JWT + `ADMIN_PLATFORM` + OTP whitelist        | Internal admin routes           |
+| gRPC internal   | `x-grpc-service-auth` → `GRPC_SERVICE_SECRET` | All microservice `Dispatch`     |
+| Webhooks        | Provider signatures                           | finance-service workers         |
 
-  subgraph gateway [api-gateway]
-    JWT[JwtAuthGuard]
-    APIKEY[PublicEndpointApiKeyGuard]
-    THR[ThrottlerGuard]
-  end
-
-  subgraph internal [Internal trust]
-    GRPCAUTH[GRPC_SERVICE_SECRET]
-    META[gRPC metadata user context]
-  end
-
-  subgraph external [External verifiers]
-    STRIPE[Stripe webhook HMAC]
-    POLAR[Polar Standard Webhooks]
-  end
-
-  BFF --> APIKEY
-  User --> JWT
-  APIKEY --> gateway
-  JWT --> gateway
-  gateway --> GRPCAUTH
-  GRPCAUTH --> META
-  STRIPE --> FN[finance-service]
-  POLAR --> FN
-```
-
-### Authentication layers
-
-| Layer           | Mechanism                                                  | Where                             |
-| --------------- | ---------------------------------------------------------- | --------------------------------- |
-| End-user API    | JWT access token + session re-validation                   | Gateway global `JwtAuthGuard`     |
-| BFF-only routes | `x-api-key` → `PUBLIC_ENDPOINT_API_KEY`                    | Register, explore, AI key fetch   |
-| Admin           | JWT + `ADMIN_PLATFORM` role + OTP whitelist                | Admin controllers                 |
-| gRPC internal   | `x-grpc-service-auth` → `GRPC_SERVICE_SECRET`              | All microservice `Dispatch` calls |
-| Webhooks        | Provider signature (Polar Standard Webhooks / Stripe HMAC) | finance-service workers           |
-
-### AI provider keys
-
-- Plaintext keys encrypted at rest with **AES-256-GCM** (`AI_KEYS_MASTER_KEY_v<N>`).
-- `GET /ai-provider-keys/active` is **BFF-only** (`PublicEndpointApiKeyGuard`); response is an envelope encrypted under `FE_BFF_SECRET_v<N>`.
-- Admin CRUD under `/admin/ai-provider-keys` requires `ADMIN_PLATFORM`.
-
-### Configuration hardening (dev/prod)
-
-Startup validation (`packages/config/secrets/validate-env-secrets.ts`) enforces:
-
-- JWT secrets length and distinct access/refresh keys
-- `ALLOWED_ORIGINS` must be set (no wildcard default)
-- `DB_PASSWORD` must not be the local default
-- Required secrets: `PUBLIC_ENDPOINT_API_KEY`, `GRPC_SERVICE_SECRET`
-- Optional until SSO is enabled: `SSO_TOKEN_ENCRYPTION_KEY`
-- Versioned AES keys for AI master and BFF secrets when configured
-
-`JWT_STRICT_CLAIMS` defaults to **on** in dev/prod unless explicitly disabled.
+AI provider keys: AES-256-GCM at rest; BFF envelope under `FE_BFF_SECRET_v<N>`.
 
 ---
 
@@ -280,135 +270,49 @@ Startup validation (`packages/config/secrets/validate-env-secrets.ts`) enforces:
 
 ### Request context
 
-`RequestContextService` (AsyncLocalStorage) holds per-request identity and tracing:
-
-- `userId`, `email`, `userRole`, `sessionId`, `activePlatform`, `businessId`
-- `requestId`, `deviceId`, `locale`, `timezone`, `idempotencyKey`
-
-Services read context from the service; they do not accept `userId` as a method parameter from controllers.
+`RequestContextService` (AsyncLocalStorage): `userId`, `email`, `userRole`, `sessionId`, `activePlatform`, `businessId`, `requestId`, `deviceId`, `locale`, `timezone`, `idempotencyKey`.
 
 ### Standardized HTTP response
 
-All gateway responses use:
-
-```json
-{
-  "status_code": 200,
-  "message": "…",
-  "error_code": "",
-  "data": {},
-  "timestamp": "…",
-  "path": "/api/v1/…"
-}
-```
-
-Controllers return `{ messageKey, data }`; `TransformResponseInterceptor` and `GlobalExceptionFilter` build the envelope. Errors use `TranslatableException` with stable `error_code` values.
+See [../api/common-response.md](../api/common-response.md). Controllers return `{ messageKey, data }`; `TransformResponseInterceptor` and `GlobalExceptionFilter` build the envelope.
 
 ### Clients and platforms
 
-| Client            | `ActivePlatform`         | Product        | Typical users                 |
-| ----------------- | ------------------------ | -------------- | ----------------------------- |
-| Ployos            | `BUSINESS`               | Ployos         | Project owners                |
-| Lonaos            | `CONSULTANT`             | Lonaos         | Freelancers                   |
-| Plys Internal Hub | `ADMIN`, `TASK_REVIEWER` | Internal admin | Platform operators, reviewers |
+| Client            | `ActivePlatform`         | Product                    |
+| ----------------- | ------------------------ | -------------------------- |
+| Ployos            | `BUSINESS`               | Ployos                     |
+| Lonaos            | `CONSULTANT`             | Lonaos                     |
+| Plys Internal Hub | `ADMIN`, `TASK_REVIEWER` | Internal admin / reviewers |
 
-Three clients share one gateway; `PlatformGuard` still scopes REST endpoints by JWT `activePlatform`. JWT carries `activePlatform`; gRPC metadata propagates it to microservices.
+### Notifications (realtime)
 
-### Internationalization
+| Component                | Location                             | Role                           |
+| ------------------------ | ------------------------------------ | ------------------------------ |
+| `NotificationsGateway`   | api-gateway `http/v1/notifications/` | WS auth, rooms `user:{userId}` |
+| `RedisIoAdapter`         | api-gateway bootstrap                | Cross-replica Socket.IO        |
+| Notification handlers    | notifications-service                | Persist + emit events          |
+| Postgres `notifications` | notifications-service                | Source of truth                |
 
-- Request locale from `Accept-Language` / metadata → `nestjs-i18n`
-- User-facing strings in JSON translation files (`packages/common-nest/i18n/`)
-- Domain labels (skills, categories) stored as i18n keys in the database
+See [notifications-realtime-api-specs.md](../api-specs/shared/notifications-realtime-api-specs.md).
 
-### Notifications
+### Composite transactions
 
-Implementation lives in **platform-service** (`apps/platform-service/src/modules/notifications/`). Event handling is split by domain:
-
-| Handler                                     | Responsibility                               |
-| ------------------------------------------- | -------------------------------------------- |
-| `NotificationEventSharedService`            | Admin fan-out, name resolution               |
-| `NotificationAdminEventHandlerService`      | Admin notification types                     |
-| `NotificationBusinessEventHandlerService`   | Business user notifications                  |
-| `NotificationConsultantEventHandlerService` | Consultant notifications + skill-match queue |
-| `NotificationEventHandlerService`           | Thin `@OnEvent` orchestrator                 |
-
-Other services import `NotificationsModule` via `@plys/libraries/notifications` to dispatch events without compiling platform source directly.
-
-#### Realtime delivery (shared WebSocket)
-
-Ployos, Lonaos, and Plys Internal Hub all connect to **`/ws/notifications`** on api-gateway with their platform JWT. Implementation:
-
-| Component                            | Location              | Role                                                             |
-| ------------------------------------ | --------------------- | ---------------------------------------------------------------- |
-| `NotificationsGateway`               | api-gateway           | Auth, room join `user:{userId}`, `notification.connected`        |
-| `RedisIoAdapter`                     | api-gateway bootstrap | Cross-replica Socket.IO room sync via `@socket.io/redis-adapter` |
-| `NotificationRealtimeEmitterService` | platform-service      | Targeted emit via `@socket.io/redis-emitter` after DB persist    |
-| Postgres `notifications` table       | platform-service      | Source of truth; FE REST catch-up on reconnect                   |
-
-```mermaid
-sequenceDiagram
-  participant Ployos
-  participant Lonaos
-  participant InternalHub
-  participant Gateway as api_gateway
-  participant RedisAdapter as Redis_SocketIO_adapter
-  participant Platform as platform_service
-  participant Emitter as redis_emitter
-
-  Ployos->>Gateway: WS connect JWT
-  Lonaos->>Gateway: WS connect JWT
-  InternalHub->>Gateway: WS connect JWT
-  Gateway->>Gateway: join room user_userId
-
-  Platform->>Platform: persist notification
-  Platform->>Emitter: emit notification.new to room
-  Emitter->>RedisAdapter: targeted room broadcast
-  RedisAdapter->>Gateway: deliver to connected sockets
-```
-
-**Mitigations applied**
-
-| Former risk                    | Status   | Mitigation                                                                  |
-| ------------------------------ | -------- | --------------------------------------------------------------------------- |
-| Global Redis pub/sub fan-out   | Resolved | Replaced `psubscribe('notif:user:*')` with redis-emitter targeted room emit |
-| Multi-instance gateway scaling | Resolved | `@socket.io/redis-adapter` on api-gateway                                   |
-| Per-connect cost               | Resolved | Session validation cache (30s TTL) + unread count from Redis before gRPC    |
-| WS CORS drift                  | Resolved | CORS from `EnvironmentsService.allowedOrigins` in gateway `afterInit`       |
-| No WS rate limiting            | Resolved | Per-IP connect rate limit + max sockets per user (`WS_*` env vars)          |
-| Wrong consultant redirect URLs | Resolved | `baseUrlKey: 'lonaosUrl'` on all consultant notification types              |
-| Fire-and-forget delivery       | Accepted | Postgres + FE bootstrap on reconnect (by design)                            |
-| Multi-tab duplication          | Accepted | Same user, multiple tabs = multiple sockets in one room (intended)          |
-
-See [notifications-realtime-api-specs.md](../api-specs/shared/notifications-realtime-api-specs.md) for FE integration.
+Multi-table flows that must stay atomic use `SharedDbTransactionCoordinator` (`packages/transaction-coordinator/`). See [transaction-inventory.md](./transaction-inventory.md).
 
 ---
 
 ## Domain boundaries
 
-Services must not import each other's application source (enforced by ESLint). Cross-context reads use ports or shared packages:
+Services must not import each other's application source (ESLint). Cross-context access uses ports or `@plys/libraries` packages.
 
-- **profiles ↔ projects** — `@plys/libraries/profiles-port` (`IProfilesReader`, `IProfilesLedger`)
-- **notifications** — `@plys/libraries/notifications`
-- **AI keys** — `@plys/libraries/ai-provider-key`
-
-Full table ownership matrix: [domain-ownership.md](./domain-ownership.md).
+Full matrix: [domain-ownership.md](./domain-ownership.md).
 
 ---
 
 ## Testing
 
-| Location                             | Scope                                                  |
-| ------------------------------------ | ------------------------------------------------------ |
-| `packages/**/*.spec.ts`              | Crypto, config validators, gRPC auth, shared utilities |
-| `apps/finance-service/**/*.spec.ts`  | Webhook verification, billing                          |
-| `apps/identity-service/**/*.spec.ts` | Auth helpers                                           |
-| All services                         | `test` target in `project.json` + `jest.config.js`     |
-
-Run all tests:
-
 ```bash
 pnpm test
-# or per project:
 pnpm exec jest --config apps/finance-service/jest.config.js
 pnpm exec jest --config packages/jest.config.js
 ```
@@ -417,12 +321,13 @@ pnpm exec jest --config packages/jest.config.js
 
 ## Related documentation
 
-| Document                                                                                                        | Topic                              |
-| --------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| [domain-ownership.md](./domain-ownership.md)                                                                    | Table ownership, module boundaries |
-| [transaction-inventory.md](./transaction-inventory.md)                                                          | Multi-step SQL transactions        |
-| [versioning.md](./versioning.md)                                                                                | Library semver / Changesets        |
-| [deployment/overview.md](../deployment/overview.md)                                                             | Docker, CI/CD, env vars            |
-| [integration/ai-chat-flows.md](../integration/ai-chat-flows.md)                                                 | AI BFF integration                 |
-| [api-specs/shared/notifications-realtime-api-specs.md](../api-specs/shared/notifications-realtime-api-specs.md) | WebSocket notification integration |
-| [api-specs/](../api-specs/)                                                                                     | Per-endpoint API specifications    |
+| Document                                                           | Topic                             |
+| ------------------------------------------------------------------ | --------------------------------- |
+| [domain-ownership.md](./domain-ownership.md)                       | Table ownership, bounded contexts |
+| [transaction-inventory.md](./transaction-inventory.md)             | Composite SQL transactions        |
+| [versioning.md](./versioning.md)                                   | Library semver / HTTP v1 layout   |
+| [../api/common-response.md](../api/common-response.md)             | Response envelope                 |
+| [../api/error-codes.md](../api/error-codes.md)                     | Error code catalog                |
+| [../deployment/overview.md](../deployment/overview.md)             | Docker, CI/CD, env vars           |
+| [../integration/ai-chat-flows.md](../integration/ai-chat-flows.md) | AI BFF integration                |
+| [../api-specs/](../api-specs/)                                     | Per-endpoint API specifications   |

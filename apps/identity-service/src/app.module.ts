@@ -15,7 +15,6 @@ import { I18nModule } from '@plys/libraries/common-nest/modules/i18n';
 import { appWinstonOptions } from '@plys/libraries/common-nest/modules/logger';
 import { RedisModule } from '@plys/libraries/common-nest/modules/redis';
 import { RequestContextModule } from '@plys/libraries/common-nest/modules/request-context';
-import configuration from '@plys/libraries/config/configuration';
 import { resolveEnvFilePath } from '@plys/libraries/config/env-file.config';
 import { getTypeOrmConfig } from '@plys/libraries/database/typeorm.config';
 import { UnitOfWorkModule } from '@plys/libraries/unit-of-work/unit-of-work.module';
@@ -35,7 +34,6 @@ import {
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: resolveEnvFilePath(),
-      load: [configuration],
     }),
     WinstonModule.forRoot(appWinstonOptions),
     EnvironmentsModule,

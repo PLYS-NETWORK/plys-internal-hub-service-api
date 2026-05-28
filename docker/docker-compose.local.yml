@@ -1,0 +1,49 @@
+# Local production simulation — builds images from docker/Dockerfile and runs on the
+# internal bridge network with env/.env.docker (Compose DNS for Postgres, Redis, gRPC).
+#
+# Usage (from repo root):
+#   pnpm docker:simulate
+#   pnpm docker:build && pnpm docker:migrate && pnpm docker:up
+
+x-local-docker-env: &local-docker-env
+  env_file:
+    - ../env/.env.docker
+  environment:
+    DEPLOY_ENV: docker
+    NODE_ENV: production
+
+services:
+  identity-service:
+    <<: *local-docker-env
+
+  business-service:
+    <<: *local-docker-env
+
+  consultant-service:
+    <<: *local-docker-env
+
+  internal-admin-service:
+    <<: *local-docker-env
+
+  internal-task-reviewer-service:
+    <<: *local-docker-env
+
+  finance-service:
+    <<: *local-docker-env
+
+  notifications-service:
+    <<: *local-docker-env
+
+  platform-service:
+    <<: *local-docker-env
+
+  ai-provider-service:
+    <<: *local-docker-env
+
+  api-gateway:
+    <<: *local-docker-env
+    ports:
+      - '${PORT:-3000}:3000'
+
+  migrate:
+    <<: *local-docker-env

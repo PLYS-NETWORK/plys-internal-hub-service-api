@@ -3,7 +3,6 @@ import { ISessionContext } from '@modules/auth/interfaces/auth-service.interface
 import { SessionService } from '@modules/auth/services/session.service';
 import { sha256 } from '@modules/auth/utils/auth.utils';
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
 import { EmailService } from '@plys/libraries/common-nest/modules/email/email.service';
 import { IAdminOtpEmailOptions } from '@plys/libraries/common-nest/modules/email/interfaces/email-send-options.interface';
@@ -14,6 +13,7 @@ import { User } from '@plys/libraries/database/entities/auth/user.entity';
 import { ActivePlatform, AuthTokenType, UserRole } from '@plys/libraries/database/enums';
 import { UnitOfWorkService } from '@plys/libraries/unit-of-work/unit-of-work.service';
 
+import { ERROR_CODES } from '../../../errors/error-codes';
 import { AdminRequestOtpDto } from '../dto/requests/admin-request-otp.dto';
 import { AdminVerifyOtpDto } from '../dto/requests/admin-verify-otp.dto';
 import { IAdminAuthService } from '../interfaces/admin-auth-service.interface';

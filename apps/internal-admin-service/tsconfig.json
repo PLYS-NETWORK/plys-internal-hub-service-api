@@ -1,0 +1,31 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "../../",
+    "rootDirs": ["src", "../../packages"],
+    "declaration": false,
+    "declarationMap": false,
+    "baseUrl": ".",
+    "paths": {
+      "@errors/error-codes": ["src/errors/error-codes.ts"],
+
+      "@plys/libraries/proto": ["../../packages/proto/index.ts"],
+      "@plys/libraries/shared-kernel": ["../../packages/shared-kernel/index.ts"],
+      "@plys/libraries/database": ["../../packages/database/index.ts"],
+      "@plys/libraries/database/*": ["../../packages/database/*"],
+      "@plys/libraries/config": ["../../packages/config/index.ts"],
+      "@plys/libraries/config/*": ["../../packages/config/*"],
+      "@plys/libraries/common-nest/*": ["../../packages/common-nest/*"],
+      "@plys/libraries/unit-of-work/*": ["../../packages/unit-of-work/*"],
+      "@modules/admin-consultant-onboarding/*": ["src/modules/admin-consultant-onboarding/*"],
+      "@modules/admin-consultant-skill-exam/*": ["src/modules/admin-consultant-skill-exam/*"],
+      "@modules/admin-onboarding-questions/*": ["src/modules/admin-onboarding-questions/*"],
+      "@modules/project-ai-context/*": ["src/modules/project-ai-context/*"],
+      "@modules/statistics/*": ["src/modules/statistics/*"],
+      "@plys/libraries/profiles-port": ["../../packages/profiles-port/index.ts"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*spec.ts"]
+}

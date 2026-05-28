@@ -9,7 +9,6 @@
       "@plys/libraries/config/*": ["packages/config/*"],
       "@plys/libraries/common-nest/*": ["packages/common-nest/*"],
       "@plys/libraries/unit-of-work/*": ["packages/unit-of-work/*"],
-      "@plys/libraries/ai-provider-key": ["packages/ai-provider-key/index.ts"],
       "@plys/libraries/profiles-port": ["packages/profiles-port/index.ts"]
     }
   }

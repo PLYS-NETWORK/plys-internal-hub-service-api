@@ -1,0 +1,21 @@
+import { DATABASE_ERROR_CODES, GENERIC_ERROR_CODES } from '@plys/libraries/shared-kernel';
+
+/** HTTP edge: idempotency, WebSocket auth, file upload validation at gateway. */
+export const GATEWAY_ERROR_CODES = {
+  IDEMPOTENCY_KEY_BODY_MISMATCH: 'IDEMPOTENCY_KEY_BODY_MISMATCH',
+  AUTH_TOKEN_EXPIRED: 'AUTH_TOKEN_EXPIRED',
+  AUTH_TOKEN_INVALID: 'AUTH_TOKEN_INVALID',
+  AUTH_DEVICE_MISMATCH: 'AUTH_DEVICE_MISMATCH',
+  AUTH_OAUTH_STATE_INVALID: 'AUTH_OAUTH_STATE_INVALID',
+  FILE_UPLOAD_FAILED: 'FILE_UPLOAD_FAILED',
+  FILE_SIZE_EXCEEDED: 'FILE_SIZE_EXCEEDED',
+} as const;
+
+export const ERROR_CODES = {
+  ...GENERIC_ERROR_CODES,
+  ...DATABASE_ERROR_CODES,
+  ...GATEWAY_ERROR_CODES,
+} as const;
+
+export type GatewayErrorCode = (typeof GATEWAY_ERROR_CODES)[keyof typeof GATEWAY_ERROR_CODES];
+export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];

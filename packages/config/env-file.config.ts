@@ -28,11 +28,18 @@ export function resolveEnvFilePath(): string {
   const root = resolveWorkspaceRoot();
   const deployEnv = process.env.DEPLOY_ENV ?? 'local';
 
-  if (deployEnv === 'prod') return path.join(root, '.env.prod');
-  if (deployEnv === 'dev') return path.join(root, '.env.dev');
+  if (deployEnv === 'prod') return path.join(root, 'env', '.env.prod');
+  if (deployEnv === 'dev') return path.join(root, 'env', '.env.dev');
+  if (deployEnv === 'docker') return path.join(root, 'env', '.env.docker');
 
-  const localPath = path.join(root, '.env.local');
+  const localPath = path.join(root, 'env', '.env.local');
   if (fs.existsSync(localPath)) return localPath;
+
+  const legacyLocal = path.join(root, '.env.local');
+  if (fs.existsSync(legacyLocal)) return legacyLocal;
+
+  const examplePath = path.join(root, 'env', '.env.example');
+  if (fs.existsSync(examplePath)) return examplePath;
 
   return path.join(root, '.env');
 }

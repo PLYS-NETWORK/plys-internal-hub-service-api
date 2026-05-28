@@ -1,6 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
 import { JwtPayload } from '@plys/libraries/common-nest/interfaces/jwt-payload.interface';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
@@ -11,6 +10,7 @@ import { ActivePlatform } from '@plys/libraries/database/enums';
 import { UnitOfWorkService } from '@plys/libraries/unit-of-work/unit-of-work.service';
 import { plainToInstance } from 'class-transformer';
 
+import { ERROR_CODES } from '../../../errors/error-codes';
 import { AuthResponseDto } from '../dto/responses/auth-response.dto';
 import { UserResponseDto } from '../dto/responses/user-response.dto';
 import { ISessionContext, ISessionService } from '../interfaces/auth-service.interface';

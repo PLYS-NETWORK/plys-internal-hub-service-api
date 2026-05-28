@@ -80,13 +80,13 @@ runs:
           }
 
           reset_pm2_compose_monitors() {
-            for svc in identity-service profiles-service projects-service finance-service platform-service api-gateway; do
+            for svc in identity-service business-service consultant-service internal-admin-service internal-task-reviewer-service finance-service notifications-service platform-service ai-provider-service api-gateway; do
               pm2 delete "${PM2_PREFIX}-${svc}" 2>/dev/null || true
             done
           }
 
           start_pm2_compose_monitors() {
-            pm2 start "ecosystem.${DEPLOY_ENV}.config.js"
+            pm2 start "ecosystem/${DEPLOY_ENV}.config.js"
             pm2 save
           }
 
@@ -130,7 +130,7 @@ runs:
 
             echo "==> Starting backend containers (detached)..."
             docker compose $COMPOSE_FILES up -d --remove-orphans \
-              identity-service profiles-service projects-service finance-service platform-service
+              identity-service business-service consultant-service internal-admin-service internal-task-reviewer-service finance-service notifications-service platform-service ai-provider-service
 
             if ! node scripts/wait-for-grpc-backends.mjs --env-file ".env.${DEPLOY_ENV}"; then
               echo "ERROR: gRPC backends did not become ready"
@@ -138,7 +138,7 @@ runs:
               pm2 status || true
               echo "--- docker compose ps ---"
               docker compose $COMPOSE_FILES ps -a || true
-              for svc in identity-service profiles-service projects-service finance-service platform-service; do
+              for svc in identity-service business-service consultant-service internal-admin-service internal-task-reviewer-service finance-service notifications-service platform-service ai-provider-service; do
                 echo "--- logs: ${svc} (last 40 lines) ---"
                 docker compose $COMPOSE_FILES logs --tail 40 "$svc" 2>&1 || true
               done
@@ -209,7 +209,7 @@ runs:
             remove_legacy_pm2_stack
             pm2 delete "$PM2_NAME" 2>/dev/null || true
             echo "==> Restarting PM2 app ${PM2_NAME}..."
-            pm2 start "ecosystem.${DEPLOY_ENV}.config.js" --only "$PM2_NAME"
+            pm2 start "ecosystem/${DEPLOY_ENV}.config.js" --only "$PM2_NAME"
             pm2 save
           fi
 

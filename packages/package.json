@@ -13,9 +13,11 @@
     "./common-nest/*": "./dist/common-nest/*",
     "./unit-of-work": "./dist/unit-of-work/unit-of-work.module.js",
     "./unit-of-work/*": "./dist/unit-of-work/*",
-    "./ai-provider-key": "./dist/ai-provider-key/index.js",
-    "./notifications": "./dist/notifications/index.js",
-    "./profiles-port": "./dist/profiles-port/index.js"
+    "./unit-of-work-core": "./dist/unit-of-work-core/index.js",
+    "./transaction-coordinator": "./dist/transaction-coordinator/index.js",
+    "./profiles-port": "./dist/profiles-port/index.js",
+    "./api-contracts": "./dist/api-contracts/index.js",
+    "./api-contracts/*": "./dist/api-contracts/*"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1037.0",

@@ -25,26 +25,32 @@ import { resolveEnvFilePath } from '@plys/libraries/config/env-file.config';
 import { WinstonModule } from 'nest-winston';
 
 import {
+  AiProviderClientsModule,
+  BusinessClientsModule,
+  ConsultantClientsModule,
   FinanceClientsModule,
   IdentityClientsModule,
+  InternalAdminClientsModule,
+  InternalTaskReviewerClientsModule,
+  NotificationsClientsModule,
   PlatformClientsModule,
-  ProfilesClientsModule,
-  ProjectsClientsModule,
 } from '@/clients';
-import configuration from '@/config/configuration';
-import { GatewayHealthModule } from '@/gateway-health/gateway-health.module';
-import { FinanceHttpModule } from '@/http/finance/finance-http.module';
-import { IdentityHttpModule } from '@/http/identity/identity-http.module';
-import { PlatformHttpModule } from '@/http/platform/platform-http.module';
-import { ProfilesHttpModule } from '@/http/profiles/profiles-http.module';
-import { ProjectsHttpModule } from '@/http/projects/projects-http.module';
+import { AiProviderHttpModule } from '@/http/v1/ai-provider/ai-provider-http.module';
+import { BusinessHttpModule } from '@/http/v1/business/business-http.module';
+import { ConsultantHttpModule } from '@/http/v1/consultant/consultant-http.module';
+import { FinanceHttpModule } from '@/http/v1/finance/finance-http.module';
+import { GatewayHealthModule } from '@/http/v1/gateway/gateway-health.module';
+import { IdentityHttpModule } from '@/http/v1/identity/identity-http.module';
+import { InternalAdminHttpModule } from '@/http/v1/internal-admin/internal-admin-http.module';
+import { InternalTaskReviewerHttpModule } from '@/http/v1/internal-task-reviewer/internal-task-reviewer-http.module';
+import { NotificationsHttpModule } from '@/http/v1/notifications/notifications-http.module';
+import { PlatformHttpModule } from '@/http/v1/platform/platform-http.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: resolveEnvFilePath(),
-      load: [configuration],
     }),
     WinstonModule.forRoot(appWinstonOptions),
     EnvironmentsModule,
@@ -66,17 +72,25 @@ import { ProjectsHttpModule } from '@/http/projects/projects-http.module';
     RequestContextModule,
     RedisModule,
     IdentityClientsModule,
-    ProfilesClientsModule,
-    ProjectsClientsModule,
+    BusinessClientsModule,
+    ConsultantClientsModule,
+    InternalAdminClientsModule,
+    InternalTaskReviewerClientsModule,
     FinanceClientsModule,
+    NotificationsClientsModule,
     PlatformClientsModule,
+    AiProviderClientsModule,
     JwtModule.register({}),
     GatewayHealthModule,
     IdentityHttpModule,
-    ProfilesHttpModule,
-    ProjectsHttpModule,
+    BusinessHttpModule,
+    ConsultantHttpModule,
+    InternalAdminHttpModule,
+    InternalTaskReviewerHttpModule,
     FinanceHttpModule,
+    NotificationsHttpModule,
     PlatformHttpModule,
+    AiProviderHttpModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
