@@ -26,7 +26,7 @@ import configuration from '@plys/libraries/config/configuration';
 import { resolveEnvFilePath } from '@plys/libraries/config/env-file.config';
 import { AuditSubscriber } from '@plys/libraries/database/subscribers/audit.subscriber';
 import { getTypeOrmConfig } from '@plys/libraries/database/typeorm.config';
-import { NotificationsModule } from '@plys/libraries/notifications';
+import { NotificationsDispatchModule } from '@plys/libraries/notifications';
 import { ProjectsUnitOfWorkModule } from '@plys/libraries/unit-of-work/projects-unit-of-work.module';
 import { UnitOfWorkModule } from '@plys/libraries/unit-of-work/unit-of-work.module';
 import { WinstonModule } from 'nest-winston';
@@ -81,7 +81,7 @@ import {
     ProjectsUnitOfWorkModule,
     UnitOfWorkModule,
     JwtModule.register({}),
-    NotificationsModule,
+    NotificationsDispatchModule,
     BusinessProjectsModule,
     ProjectAiContextModule,
     ProjectChatSessionModule,

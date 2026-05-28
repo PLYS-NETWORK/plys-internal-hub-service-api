@@ -1,7 +1,6 @@
 import { AdminAuthModule } from '@modules/admin-auth/admin-auth.module';
 import { AuthModule } from '@modules/auth/auth.module';
 import { UsersModule } from '@modules/users/users.module';
-import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -19,7 +18,6 @@ import { RequestContextModule } from '@plys/libraries/common-nest/modules/reques
 import configuration from '@plys/libraries/config/configuration';
 import { resolveEnvFilePath } from '@plys/libraries/config/env-file.config';
 import { getTypeOrmConfig } from '@plys/libraries/database/typeorm.config';
-import { NotificationsModule } from '@plys/libraries/notifications';
 import { UnitOfWorkModule } from '@plys/libraries/unit-of-work/unit-of-work.module';
 import { WinstonModule } from 'nest-winston';
 
@@ -46,21 +44,6 @@ import {
       inject: [EnvironmentsService],
       useFactory: (envService: EnvironmentsService) => getTypeOrmConfig(envService),
     }),
-    BullModule.forRootAsync({
-      imports: [EnvironmentsModule],
-      inject: [EnvironmentsService],
-      useFactory: (env: EnvironmentsService) => ({
-        redis: {
-          host: env.redisHost,
-          port: env.redisPort,
-          password: env.redisPassword,
-          db: env.redisDb,
-          tls: env.redisTlsEnabled ? {} : undefined,
-          maxRetriesPerRequest: null,
-          enableReadyCheck: false,
-        },
-      }),
-    }),
     I18nModule,
     RequestContextModule,
     RedisModule,
@@ -68,7 +51,6 @@ import {
     UnitOfWorkModule,
     JwtModule.register({}),
     EventEmitterModule.forRoot({ wildcard: false }),
-    NotificationsModule,
     UsersModule,
     AuthModule,
     AdminAuthModule,

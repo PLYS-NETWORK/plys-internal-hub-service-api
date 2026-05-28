@@ -27,7 +27,7 @@ import { RequestContextModule } from '@plys/libraries/common-nest/modules/reques
 import configuration from '@plys/libraries/config/configuration';
 import { resolveEnvFilePath } from '@plys/libraries/config/env-file.config';
 import { getTypeOrmConfig } from '@plys/libraries/database/typeorm.config';
-import { NotificationsModule } from '@plys/libraries/notifications';
+import { NotificationsDispatchModule } from '@plys/libraries/notifications';
 import { ProfilesUnitOfWorkModule } from '@plys/libraries/unit-of-work/profiles-unit-of-work.module';
 import { WinstonModule } from 'nest-winston';
 
@@ -82,7 +82,7 @@ import {
     AiProviderKeyModule,
     ProfilesUnitOfWorkModule,
     JwtModule.register({}),
-    NotificationsModule,
+    NotificationsDispatchModule,
     ProfilesModule,
     BusinessOnboardingModule,
     ConsultantOnboardingModule,
