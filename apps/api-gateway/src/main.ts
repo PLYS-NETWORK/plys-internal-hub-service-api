@@ -1,3 +1,7 @@
+import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import * as path from 'node:path';
+
 import { VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -7,12 +11,32 @@ import { RedisIoAdapter } from '@plys/libraries/common-nest/modules/notification
 import { createCorsOriginDelegate } from '@plys/libraries/common-nest/utils/cors-origin.util';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { I18nValidationExceptionFilter, I18nValidationPipe } from 'nestjs-i18n';
-import * as path from 'path';
 
 import { AppModule } from './app.module';
 import { swaggerConfig } from './config/swagger.config';
 
+/** Block until backend gRPC ports accept connections (VPS host networking). */
+function waitForUpstreamGrpcBackends(): void {
+  if (process.env.SKIP_GRPC_BACKEND_WAIT === 'true') {
+    return;
+  }
+  const deployEnv = process.env.DEPLOY_ENV;
+  if (!deployEnv || deployEnv === 'local') {
+    return;
+  }
+  const envFile = path.resolve(process.cwd(), `.env.${deployEnv}`);
+  if (!existsSync(envFile)) {
+    return;
+  }
+  execSync(`node scripts/wait-for-grpc-backends.mjs --env-file ${envFile}`, {
+    stdio: 'inherit',
+    cwd: process.cwd(),
+  });
+}
+
 async function bootstrap(): Promise<void> {
+  waitForUpstreamGrpcBackends();
+
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ logger: false }),

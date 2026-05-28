@@ -10,6 +10,8 @@ COMPOSE_ARGS=(-f docker-compose.yml -f docker-compose.apps.yml -f "docker-compos
 
 if [[ "$SERVICE" == "api-gateway" ]]; then
   node scripts/wait-for-grpc-backends.mjs --env-file ".env.${DEPLOY_ENV}"
+  sleep 3
+  node scripts/wait-for-grpc-backends.mjs --env-file ".env.${DEPLOY_ENV}" --timeout-ms 60000
 fi
 
 docker compose "${COMPOSE_ARGS[@]}" up -d --no-deps --remove-orphans "$SERVICE"

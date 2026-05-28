@@ -11,6 +11,9 @@ const RUNTIME_SERVICES = [
 
 const BACKEND_SERVICES = RUNTIME_SERVICES.filter((service) => service !== 'api-gateway');
 
+/** PM2 starts backends before api-gateway so gRPC ports are up before the gateway bootstraps. */
+const PM2_START_ORDER = [...BACKEND_SERVICES, 'api-gateway'];
+
 /**
  * @param {object} options
  * @param {DeployEnv} options.env
@@ -22,7 +25,7 @@ function buildEcosystem({ env, cwd, logDir, deployComposeFile }) {
   const prefix = `internal-hub-be-${env}`;
 
   return {
-    apps: RUNTIME_SERVICES.map((service) => ({
+    apps: PM2_START_ORDER.map((service) => ({
       name: `${prefix}-${service}`,
       cwd,
       script: 'scripts/start-compose-service.sh',
@@ -46,5 +49,6 @@ function buildEcosystem({ env, cwd, logDir, deployComposeFile }) {
 module.exports = {
   RUNTIME_SERVICES,
   BACKEND_SERVICES,
+  PM2_START_ORDER,
   buildEcosystem,
 };

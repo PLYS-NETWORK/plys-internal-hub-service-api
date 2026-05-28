@@ -115,6 +115,10 @@ runs:
             docker compose $COMPOSE_FILES up -d --remove-orphans \
               identity-service profiles-service projects-service finance-service platform-service
 
+            BACKEND_PM2="internal-hub-be-${DEPLOY_ENV}-identity-service,internal-hub-be-${DEPLOY_ENV}-profiles-service,internal-hub-be-${DEPLOY_ENV}-projects-service,internal-hub-be-${DEPLOY_ENV}-finance-service,internal-hub-be-${DEPLOY_ENV}-platform-service"
+            echo "==> Syncing PM2 backend log tailers..."
+            pm2 startOrReload "ecosystem.${DEPLOY_ENV}.config.js" --only "$BACKEND_PM2" || true
+
             if ! node scripts/wait-for-grpc-backends.mjs --env-file ".env.${DEPLOY_ENV}"; then
               echo "ERROR: gRPC backends did not become ready"
               echo "--- pm2 status ---"
@@ -128,8 +132,13 @@ runs:
               exit 1
             fi
 
-            echo "==> Reloading PM2 apps..."
-            pm2 startOrReload "ecosystem.${DEPLOY_ENV}.config.js"
+            echo "==> Reloading PM2 api-gateway (backends already running via compose)..."
+            PM2_GATEWAY="internal-hub-be-${DEPLOY_ENV}-api-gateway"
+            if pm2 describe "$PM2_GATEWAY" > /dev/null 2>&1; then
+              pm2 startOrReload "ecosystem.${DEPLOY_ENV}.config.js" --only "$PM2_GATEWAY"
+            else
+              pm2 start "ecosystem.${DEPLOY_ENV}.config.js" --only "$PM2_GATEWAY"
+            fi
             pm2 save
           else
             if [ -z "$IMAGE_TAG" ] || [ -z "$IMAGE_REGISTRY" ]; then
