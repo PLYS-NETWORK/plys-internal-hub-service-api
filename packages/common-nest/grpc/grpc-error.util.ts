@@ -1,5 +1,5 @@
 import { Metadata, status as GrpcStatus } from '@grpc/grpc-js';
-import { HttpStatus } from '@nestjs/common';
+import { HttpException, HttpStatus } from '@nestjs/common';
 import { ERROR_CODES, ErrorCode } from '@plys/libraries/common-nest/constants/error-codes';
 import { mapPostgresError } from '@plys/libraries/common-nest/errors/postgres-error.mapper';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
@@ -60,6 +60,10 @@ export function mapExceptionToHttpResponse(exception: unknown): IHttpResponse {
     return mapQueryFailedError(exception);
   }
 
+  if (exception instanceof HttpException) {
+    return mapHttpExceptionToResponse(exception);
+  }
+
   if (exception instanceof Error && 'status' in exception) {
     const status = (exception as { status?: number }).status ?? HttpStatus.BAD_REQUEST;
     return {
@@ -112,6 +116,47 @@ export function httpStatusToGrpcStatus(httpStatus: number): number {
   return GrpcStatus.INVALID_ARGUMENT;
 }
 
+function mapHttpExceptionToResponse(exception: HttpException): IHttpResponse {
+  const statusCode = exception.getStatus();
+  const response = exception.getResponse();
+  let details: Record<string, unknown> | null = null;
+
+  if (typeof response === 'object' && response !== null) {
+    const typed = response as { message?: string | string[] };
+    if (typed.message) {
+      details = {
+        message: Array.isArray(typed.message) ? typed.message.join('; ') : typed.message,
+      };
+    }
+  } else if (typeof response === 'string') {
+    details = { message: response };
+  }
+
+  return {
+    statusCode,
+    body: details ? Buffer.from(JSON.stringify({ details })) : Buffer.alloc(0),
+    errorCode: mapHttpStatusToErrorCode(statusCode),
+    messageKey: mapHttpStatusToMessageKey(statusCode),
+    headers: {},
+    cookies: {},
+  };
+}
+
+function mapHttpStatusToMessageKey(status: number): string {
+  const map: Record<number, string> = {
+    [HttpStatus.BAD_REQUEST]: 'error.generic.bad_request',
+    [HttpStatus.UNAUTHORIZED]: 'error.generic.unauthorized',
+    [HttpStatus.FORBIDDEN]: 'error.generic.forbidden',
+    [HttpStatus.NOT_FOUND]: 'error.generic.not_found',
+    [HttpStatus.CONFLICT]: 'error.generic.conflict',
+    [HttpStatus.UNPROCESSABLE_ENTITY]: 'error.generic.validation_failed',
+    [HttpStatus.TOO_MANY_REQUESTS]: 'error.auth.rate_limited',
+    [HttpStatus.BAD_GATEWAY]: 'error.generic.email_delivery_failed',
+    [HttpStatus.INTERNAL_SERVER_ERROR]: 'error.generic.internal_server_error',
+  };
+  return map[status] ?? 'error.generic.internal_server_error';
+}
+
 function mapQueryFailedError(exception: QueryFailedError): IHttpResponse {
   const mapped = mapPostgresError(exception);
   return buildErrorResponse(mapped.status, mapped.errorCode, mapped.messageKey);
@@ -140,6 +185,8 @@ function mapHttpStatusToErrorCode(status: number): ErrorCode {
     [HttpStatus.NOT_FOUND]: ERROR_CODES.GENERIC_NOT_FOUND,
     [HttpStatus.CONFLICT]: ERROR_CODES.GENERIC_CONFLICT,
     [HttpStatus.UNPROCESSABLE_ENTITY]: ERROR_CODES.GENERIC_UNPROCESSABLE,
+    [HttpStatus.TOO_MANY_REQUESTS]: ERROR_CODES.ADMIN_AUTH_RESEND_LIMIT,
+    [HttpStatus.BAD_GATEWAY]: ERROR_CODES.EMAIL_DELIVERY_FAILED,
   };
   return map[status] ?? ERROR_CODES.GENERIC_INTERNAL_SERVER_ERROR;
 }

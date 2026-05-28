@@ -1,4 +1,6 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
+import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
 import { IEmailMessage } from '@plys/libraries/common-nest/modules/email/interfaces/email-message.interface';
 import { IEmailProvider } from '@plys/libraries/common-nest/modules/email/interfaces/email-provider.interface';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
@@ -37,7 +39,12 @@ export class ResendEmailProvider implements IEmailProvider {
 
     if (error) {
       this.logger.error(`Failed to send email to ${message.to}: ${error.message}`, error.name);
-      throw new InternalServerErrorException('Email delivery failed. Please try again later.');
+      throw new TranslatableException({
+        messageKey: 'error.generic.email_delivery_failed',
+        errorCode: ERROR_CODES.EMAIL_DELIVERY_FAILED,
+        status: HttpStatus.BAD_GATEWAY,
+        details: { provider: 'resend', reason: error.message },
+      });
     }
 
     this.logger.log(`Email "${message.subject}" delivered to ${message.to}`);

@@ -10,6 +10,7 @@ import {
 } from '@plys/libraries/common-nest/grpc';
 import { ITranslatedPayload } from '@plys/libraries/common-nest/interceptors/transform-response.interceptor';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
+import { instanceToPlain } from 'class-transformer';
 
 @Injectable()
 export class GrpcGatewayHelper {
@@ -26,7 +27,9 @@ export class GrpcGatewayHelper {
   ): Promise<ITranslatedPayload<T>> {
     const request: IHttpRequest = {
       operation,
-      body: options.body ? Buffer.from(JSON.stringify(options.body)) : undefined,
+      body: options.body
+        ? Buffer.from(JSON.stringify(instanceToPlain(options.body, { exposeUnsetFields: false })))
+        : undefined,
       pathParams: options.pathParams,
       queryParams: options.queryParams,
     };

@@ -6,7 +6,8 @@
     "not_found": "Not found",
     "conflict": "Conflict",
     "internal_server_error": "Something went wrong",
-    "validation_failed": "Validation failed"
+    "validation_failed": "Validation failed",
+    "email_delivery_failed": "We could not send the email. Please try again later."
   },
   "auth": {
     "invalid_credentials": "Invalid credentials",

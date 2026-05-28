@@ -42,7 +42,7 @@ export class AdminAuthGrpcController extends GrpcBridgeBase {
   private async requestOtp(
     request: Parameters<GrpcBridgeBase['dispatch']>[0],
   ): Promise<IHttpResponse> {
-    const dto = this.parseJsonBody<AdminRequestOtpDto>(request);
+    const dto = await this.parseAndValidateBody(request, AdminRequestOtpDto);
     const context = this.buildSessionContext(request);
     await this.adminAuthService.requestOtp(dto, context);
     return buildSuccessResponse({ messageKey: 'success.ok', data: null });
@@ -51,7 +51,7 @@ export class AdminAuthGrpcController extends GrpcBridgeBase {
   private async verifyOtp(
     request: Parameters<GrpcBridgeBase['dispatch']>[0],
   ): Promise<IHttpResponse> {
-    const dto = this.parseJsonBody<AdminVerifyOtpDto>(request);
+    const dto = await this.parseAndValidateBody(request, AdminVerifyOtpDto);
     const context = this.buildSessionContext(request);
     const data = await this.adminAuthService.verifyOtp(dto, context);
     return buildSuccessResponse<AuthResponseDto>({ messageKey: 'success.ok', data });

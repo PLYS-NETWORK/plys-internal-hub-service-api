@@ -6,7 +6,8 @@
     "not_found": "Bulunamadı",
     "conflict": "Çakışma",
     "internal_server_error": "Bir hata oluştu",
-    "validation_failed": "Doğrulama başarısız"
+    "validation_failed": "Doğrulama başarısız",
+    "email_delivery_failed": "E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin."
   },
   "auth": {
     "invalid_credentials": "Geçersiz kimlik bilgileri",
