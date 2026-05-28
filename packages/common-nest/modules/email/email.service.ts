@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { buildExceptionLogMeta } from '@plys/libraries/common-nest/grpc';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
 import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
@@ -94,8 +95,7 @@ export class EmailService implements IEmailService {
       });
       this.logger.log(`sendVerificationEmail — sent | to: ${to}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendVerificationEmail — failed | to: ${to} | error: ${message}`);
+      this.logSendFailure('sendVerificationEmail', { to, platform }, err);
       throw err;
     }
   }
@@ -121,8 +121,7 @@ export class EmailService implements IEmailService {
       });
       this.logger.log(`sendForgotPasswordOtpEmail — sent | to: ${to}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendForgotPasswordOtpEmail — failed | to: ${to} | error: ${message}`);
+      this.logSendFailure('sendForgotPasswordOtpEmail', { to, platform }, err);
       throw err;
     }
   }
@@ -139,8 +138,7 @@ export class EmailService implements IEmailService {
       });
       this.logger.log(`sendAdminOtpEmail — sent | to: ${to}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendAdminOtpEmail — failed | to: ${to} | error: ${message}`);
+      this.logSendFailure('sendAdminOtpEmail', { to }, err);
       throw err;
     }
   }
@@ -157,8 +155,7 @@ export class EmailService implements IEmailService {
       });
       this.logger.log(`sendAdminInviteEmail — sent | to: ${to}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendAdminInviteEmail — failed | to: ${to} | error: ${message}`);
+      this.logSendFailure('sendAdminInviteEmail', { to }, err);
       throw err;
     }
   }
@@ -185,8 +182,7 @@ export class EmailService implements IEmailService {
       });
       this.logger.log(`sendWelcomeEmail — sent | to: ${to}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendWelcomeEmail — failed | to: ${to} | error: ${message}`);
+      this.logSendFailure('sendWelcomeEmail', { to, platform }, err);
       throw err;
     }
   }
@@ -205,10 +201,7 @@ export class EmailService implements IEmailService {
       });
       this.logger.log(`sendProjectPublishedReceiptEmail — sent | to: ${to}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(
-        `sendProjectPublishedReceiptEmail — failed | to: ${to} | error: ${message}`,
-      );
+      this.logSendFailure('sendProjectPublishedReceiptEmail', { to }, err);
       throw err;
     }
   }
@@ -227,10 +220,7 @@ export class EmailService implements IEmailService {
       });
       this.logger.log(`sendProjectPublishedSuccessEmail — sent | to: ${to}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(
-        `sendProjectPublishedSuccessEmail — failed | to: ${to} | error: ${message}`,
-      );
+      this.logSendFailure('sendProjectPublishedSuccessEmail', { to }, err);
       throw err;
     }
   }
@@ -249,8 +239,7 @@ export class EmailService implements IEmailService {
       });
       this.logger.log(`sendProjectRepublishRefundEmail — sent | to: ${to}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendProjectRepublishRefundEmail — failed | to: ${to} | error: ${message}`);
+      this.logSendFailure('sendProjectRepublishRefundEmail', { to }, err);
       throw err;
     }
   }
@@ -269,8 +258,7 @@ export class EmailService implements IEmailService {
       });
       this.logger.log(`sendTopUpCancelledEmail — sent | to: ${to}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendTopUpCancelledEmail — failed | to: ${to} | error: ${message}`);
+      this.logSendFailure('sendTopUpCancelledEmail', { to }, err);
       throw err;
     }
   }
@@ -289,8 +277,7 @@ export class EmailService implements IEmailService {
       });
       this.logger.log(`sendWithdrawCancelledEmail — sent | to: ${to}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendWithdrawCancelledEmail — failed | to: ${to} | error: ${message}`);
+      this.logSendFailure('sendWithdrawCancelledEmail', { to }, err);
       throw err;
     }
   }
@@ -312,8 +299,7 @@ export class EmailService implements IEmailService {
       });
       this.logger.log(`sendMonthlyInvoiceEmail — sent | to: ${to}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendMonthlyInvoiceEmail — failed | to: ${to} | error: ${message}`);
+      this.logSendFailure('sendMonthlyInvoiceEmail', { to }, err);
       throw err;
     }
   }
@@ -333,8 +319,7 @@ export class EmailService implements IEmailService {
       });
       this.logger.log(`sendInterviewReadyEmail — sent | to: ${to}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendInterviewReadyEmail — failed | to: ${to} | error: ${message}`);
+      this.logSendFailure('sendInterviewReadyEmail', { to }, err);
       throw err;
     }
   }
@@ -354,8 +339,7 @@ export class EmailService implements IEmailService {
       });
       this.logger.log(`sendApplicationSubmittedEmail — sent | to: ${to}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendApplicationSubmittedEmail — failed | to: ${to} | error: ${message}`);
+      this.logSendFailure('sendApplicationSubmittedEmail', { to }, err);
       throw err;
     }
   }
@@ -375,8 +359,7 @@ export class EmailService implements IEmailService {
       });
       this.logger.log(`sendApplicationApprovedEmail — sent | to: ${to}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendApplicationApprovedEmail — failed | to: ${to} | error: ${message}`);
+      this.logSendFailure('sendApplicationApprovedEmail', { to }, err);
       throw err;
     }
   }
@@ -396,8 +379,7 @@ export class EmailService implements IEmailService {
       });
       this.logger.log(`sendApplicationRejectedEmail — sent | to: ${to}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendApplicationRejectedEmail — failed | to: ${to} | error: ${message}`);
+      this.logSendFailure('sendApplicationRejectedEmail', { to }, err);
       throw err;
     }
   }
@@ -422,9 +404,15 @@ export class EmailService implements IEmailService {
       );
       this.logger.log(`sendAdminNewApplicationEmail — sent | recipients: ${recipients.length}`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`sendAdminNewApplicationEmail — failed | error: ${message}`);
+      this.logSendFailure('sendAdminNewApplicationEmail', { recipients: recipients.length }, err);
       throw err;
     }
+  }
+
+  private logSendFailure(method: string, context: Record<string, unknown>, err: unknown): void {
+    this.logger.error(`${method} — failed`, err instanceof Error ? err.stack : undefined, {
+      ...context,
+      ...buildExceptionLogMeta(err),
+    });
   }
 }

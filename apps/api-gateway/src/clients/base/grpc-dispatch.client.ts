@@ -14,6 +14,10 @@ export abstract class GrpcDispatchClientBase implements IGrpcDispatchClient, OnM
 
   protected abstract readonly grpcServiceName: string;
 
+  public get bridgeServiceName(): string {
+    return this.grpcServiceName;
+  }
+
   protected constructor(protected readonly clientGrpc: ClientGrpc) {}
 
   public onModuleInit(): void {

@@ -10,6 +10,7 @@ import { I18nService } from 'nestjs-i18n';
 import { QueryFailedError } from 'typeorm';
 
 import { mapPostgresError } from '../errors/postgres-error.mapper';
+import { buildExceptionLogMeta, writeServiceLog } from '../grpc/grpc-call-log.util';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -74,18 +75,28 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       path: request.url,
       status,
       error_code: errorCode,
-      ...(exception instanceof TranslatableException ? { error_key: exception.messageKey } : {}),
-      ...(exception instanceof Error ? { error_message: exception.message } : {}),
+      ...(exception instanceof TranslatableException
+        ? {
+            error_key: exception.messageKey,
+            error_details: exception.details ?? undefined,
+            error_args: exception.args ?? undefined,
+          }
+        : {}),
+      ...buildExceptionLogMeta(exception),
     };
 
+    const logMessage = `request failed | ${request.method} ${request.url} | status: ${status} | error_code: ${errorCode}`;
+
     if (status >= 500) {
-      this.logger.error(
-        'request failed',
-        exception instanceof Error ? exception.stack : undefined,
+      writeServiceLog(
+        this.logger,
+        logMessage,
+        status,
         meta,
+        exception instanceof Error ? exception.stack : undefined,
       );
     } else {
-      this.logger.warn('request failed', meta);
+      writeServiceLog(this.logger, logMessage, status, meta);
     }
 
     const requestId = this.requestContext.requestId;

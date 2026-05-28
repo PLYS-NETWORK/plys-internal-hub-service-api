@@ -26,7 +26,7 @@ import {
   THROTTLE_STRICT,
 } from '@plys/libraries/common-nest/constants';
 import { TranslatableException } from '@plys/libraries/common-nest/exceptions/translatable.exception';
-import { assertGrpcSuccess, GrpcGatewayHelper } from '@plys/libraries/common-nest/grpc';
+import { GrpcGatewayHelper } from '@plys/libraries/common-nest/grpc';
 import { ITranslatedPayload } from '@plys/libraries/common-nest/interceptors/transform-response.interceptor';
 import { FileContentValidator } from '@plys/libraries/common-nest/modules/file-storage';
 import { FilePurpose } from '@plys/libraries/database/enums';
@@ -143,6 +143,6 @@ export class PlatformFilesController {
       operation: 'files.remove',
       pathParams: { id },
     });
-    assertGrpcSuccess(response);
+    this.grpcHelper.assertSuccess(this.filesClient, 'files.remove', response);
   }
 }

@@ -7,6 +7,16 @@ export {
   startGrpcOnlyService,
 } from './grpc-bootstrap.util';
 export { GrpcBridgeBase } from './grpc-bridge.base';
+export {
+  buildExceptionLogMeta,
+  buildInboundBridgeErrorMeta,
+  buildUpstreamBridgeErrorMeta,
+  buildUpstreamTransportErrorMeta,
+  formatGrpcTransportError,
+  resolveRuntimeServiceName,
+  resolveUpstreamServiceName,
+  writeServiceLog,
+} from './grpc-call-log.util';
 export { controllerProvider, createControllerBridgeHandlers } from './grpc-controller-bridge.util';
 export {
   attachGrpcErrorMetadata,

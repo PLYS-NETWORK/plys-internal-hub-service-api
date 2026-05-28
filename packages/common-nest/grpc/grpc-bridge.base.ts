@@ -1,9 +1,15 @@
 import { Metadata } from '@grpc/grpc-js';
 import { HttpStatus } from '@nestjs/common';
 import { ERROR_CODES } from '@plys/libraries/common-nest/constants/error-codes';
+import { AppLogger } from '@plys/libraries/common-nest/modules/logger';
 import { RequestContextService } from '@plys/libraries/common-nest/modules/request-context/request-context.service';
 import { ClassConstructor } from 'class-transformer';
 
+import {
+  buildInboundBridgeErrorMeta,
+  resolveRuntimeServiceName,
+  writeServiceLog,
+} from './grpc-call-log.util';
 import { validateRequestDto } from './grpc-dto-validation.util';
 import { mapExceptionToHttpResponse } from './grpc-error.util';
 import { GrpcBridgeHandler, IHttpRequest, IHttpResponse } from './grpc-http.types';
@@ -16,14 +22,18 @@ import { assertGrpcServiceAuthorized } from './grpc-service-auth.util';
 export abstract class GrpcBridgeBase {
   protected abstract readonly handlers: Record<string, GrpcBridgeHandler>;
 
-  protected constructor(protected readonly requestContext: RequestContextService) {}
+  private readonly logger: AppLogger;
+
+  protected constructor(protected readonly requestContext: RequestContextService) {
+    this.logger = new AppLogger(this.constructor.name, requestContext);
+  }
 
   public async dispatch(request: IHttpRequest, metadata?: Metadata): Promise<IHttpResponse> {
     const operation = request.operation ?? '';
     const handler = this.handlers[operation];
 
     if (!handler) {
-      return {
+      const response: IHttpResponse = {
         statusCode: HttpStatus.NOT_FOUND,
         body: Buffer.alloc(0),
         errorCode: ERROR_CODES.GENERIC_NOT_FOUND,
@@ -31,12 +41,27 @@ export abstract class GrpcBridgeBase {
         headers: {},
         cookies: {},
       };
+      writeServiceLog(
+        this.logger,
+        `gRPC operation not found | service: ${resolveRuntimeServiceName()} | operation: ${operation}`,
+        HttpStatus.NOT_FOUND,
+        buildInboundBridgeErrorMeta(
+          this.constructor.name,
+          operation,
+          response,
+          undefined,
+          'routing',
+        ),
+      );
+      return response;
     }
 
     try {
       assertGrpcServiceAuthorized(metadata);
     } catch (exception) {
-      return mapExceptionToHttpResponse(exception);
+      const response = mapExceptionToHttpResponse(exception);
+      this.logBridgeFailure(operation, exception, response, 'auth');
+      return response;
     }
 
     const context = metadata ? readRequestContextFromMetadata(metadata) : undefined;
@@ -52,7 +77,9 @@ export abstract class GrpcBridgeBase {
       }
       return await handler(request);
     } catch (exception) {
-      return mapExceptionToHttpResponse(exception);
+      const response = mapExceptionToHttpResponse(exception);
+      this.logBridgeFailure(operation, exception, response, 'handler');
+      return response;
     }
   }
 
@@ -79,5 +106,28 @@ export abstract class GrpcBridgeBase {
 
   protected getQueryParam(request: IHttpRequest, key: string): string | undefined {
     return request.queryParams?.[key];
+  }
+
+  private logBridgeFailure(
+    operation: string,
+    exception: unknown,
+    response: IHttpResponse,
+    phase: 'auth' | 'handler',
+  ): void {
+    const status = response.statusCode ?? HttpStatus.INTERNAL_SERVER_ERROR;
+    const meta = buildInboundBridgeErrorMeta(
+      this.constructor.name,
+      operation,
+      response,
+      exception,
+      phase,
+    );
+    writeServiceLog(
+      this.logger,
+      `gRPC handler failed | service: ${resolveRuntimeServiceName()} | operation: ${operation} | phase: ${phase}`,
+      status,
+      meta,
+      exception instanceof Error ? exception.stack : undefined,
+    );
   }
 }

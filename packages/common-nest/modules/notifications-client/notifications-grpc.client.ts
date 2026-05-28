@@ -15,6 +15,10 @@ export const NOTIFICATIONS_GRPC = 'NOTIFICATIONS_GRPC';
 export class NotificationsGrpcClient implements IGrpcDispatchClient, OnModuleInit {
   private grpcService!: IGrpcDispatchClient;
 
+  public get bridgeServiceName(): string {
+    return 'Notifications';
+  }
+
   constructor(@Inject(NOTIFICATIONS_GRPC) private readonly clientGrpc: ClientGrpc) {}
 
   public onModuleInit(): void {

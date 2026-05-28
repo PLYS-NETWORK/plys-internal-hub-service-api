@@ -9,7 +9,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { UnreadCountResponseDto } from '@plys/libraries/api-contracts/notifications/dto/responses';
-import { assertGrpcSuccess } from '@plys/libraries/common-nest/grpc';
+import { GrpcGatewayHelper } from '@plys/libraries/common-nest/grpc';
 import { JwtPayload } from '@plys/libraries/common-nest/interfaces/jwt-payload.interface';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
 import { IdentitySessionClient } from '@plys/libraries/common-nest/modules/identity-client';
@@ -77,6 +77,7 @@ export class NotificationsGateway
     private readonly redis: RedisService,
     private readonly identitySession: IdentitySessionClient,
     private readonly notificationsClient: NotificationsClient,
+    private readonly grpcHelper: GrpcGatewayHelper,
     private readonly requestContext: RequestContextService,
   ) {
     this.logger = new AppLogger(NotificationsGateway.name, requestContext);
@@ -267,7 +268,11 @@ export class NotificationsGateway
       {},
       metadata,
     );
-    const payload = assertGrpcSuccess<UnreadCountResponseDto>(response);
+    const payload = this.grpcHelper.assertSuccess<UnreadCountResponseDto>(
+      this.notificationsClient,
+      'notifications.unreadCount',
+      response,
+    );
     return payload.data?.unread_count ?? 0;
   }
 

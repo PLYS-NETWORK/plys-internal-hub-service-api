@@ -38,7 +38,12 @@ export class ResendEmailProvider implements IEmailProvider {
     });
 
     if (error) {
-      this.logger.error(`Failed to send email to ${message.to}: ${error.message}`, error.name);
+      this.logger.error(`email provider send failed | to: ${message.to}`, error.name, {
+        provider: 'resend',
+        subject: message.subject,
+        error_message: error.message,
+        error_name: error.name,
+      });
       throw new TranslatableException({
         messageKey: 'error.generic.email_delivery_failed',
         errorCode: ERROR_CODES.EMAIL_DELIVERY_FAILED,

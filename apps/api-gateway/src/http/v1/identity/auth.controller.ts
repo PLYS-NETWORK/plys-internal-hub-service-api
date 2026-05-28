@@ -36,7 +36,7 @@ import {
   THROTTLE_STRICT,
 } from '@plys/libraries/common-nest/constants';
 import { Public } from '@plys/libraries/common-nest/decorators/public.decorator';
-import { assertGrpcSuccess, GrpcGatewayHelper } from '@plys/libraries/common-nest/grpc';
+import { GrpcGatewayHelper } from '@plys/libraries/common-nest/grpc';
 import { PublicEndpointApiKeyGuard } from '@plys/libraries/common-nest/guards/public-endpoint-api-key.guard';
 import { ITranslatedPayload } from '@plys/libraries/common-nest/interceptors/transform-response.interceptor';
 import { FastifyReply, FastifyRequest } from 'fastify';
@@ -285,7 +285,7 @@ export class AuthController {
       return;
     }
 
-    assertGrpcSuccess(response);
+    this.grpcHelper.assertSuccess(this.authClient, 'ssoGoogleCallback', response);
   }
 
   @Public()

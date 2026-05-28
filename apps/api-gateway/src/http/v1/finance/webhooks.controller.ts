@@ -11,7 +11,7 @@ import { ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { THROTTLE_WEBHOOK } from '@plys/libraries/common-nest/constants';
 import { Public } from '@plys/libraries/common-nest/decorators/public.decorator';
-import { assertGrpcSuccess, GrpcGatewayHelper } from '@plys/libraries/common-nest/grpc';
+import { GrpcGatewayHelper } from '@plys/libraries/common-nest/grpc';
 import { FastifyRequest } from 'fastify';
 
 import { WebhooksClient } from '@/clients/v1/finance';
@@ -49,7 +49,11 @@ export class FinanceWebhooksController {
         webhookSignature,
       },
     });
-    const payload = assertGrpcSuccess<{ received: boolean }>(response);
+    const payload = this.grpcHelper.assertSuccess<{ received: boolean }>(
+      this.webhooksClient,
+      'webhooks.handlePolarWebhook',
+      response,
+    );
     return payload.data ?? { received: true };
   }
 
@@ -71,7 +75,11 @@ export class FinanceWebhooksController {
       body: rawBody,
       queryParams: { stripeSignature },
     });
-    const payload = assertGrpcSuccess<{ received: boolean }>(response);
+    const payload = this.grpcHelper.assertSuccess<{ received: boolean }>(
+      this.webhooksClient,
+      'webhooks.handleStripeWebhook',
+      response,
+    );
     return payload.data ?? { received: true };
   }
 }

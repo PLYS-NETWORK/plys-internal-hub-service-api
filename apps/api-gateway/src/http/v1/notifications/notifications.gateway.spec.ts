@@ -27,6 +27,7 @@ describe('NotificationsGateway', () => {
   };
   let identitySession: { validateSession: jest.Mock };
   let notificationsClient: { dispatchOperation: jest.Mock };
+  let grpcHelper: { assertSuccess: jest.Mock };
   let requestContext: Record<string, never>;
   let client: {
     id: string;
@@ -69,6 +70,11 @@ describe('NotificationsGateway', () => {
         body: Buffer.from(JSON.stringify({ messageKey: 'success.ok', data: { unread_count: 2 } })),
       })),
     };
+    grpcHelper = {
+      assertSuccess: jest.fn((_client, _operation, response) =>
+        JSON.parse((response.body as Buffer).toString('utf8')),
+      ),
+    };
     requestContext = {};
 
     gateway = new NotificationsGateway(
@@ -77,6 +83,7 @@ describe('NotificationsGateway', () => {
       redis as never,
       identitySession as never,
       notificationsClient as never,
+      grpcHelper as never,
       requestContext as never,
     );
 
