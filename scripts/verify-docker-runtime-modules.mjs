@@ -286,6 +286,40 @@ for (const service of RUNTIME_SERVICES) {
   }
 }
 
+const EMAIL_TEMPLATE_SERVICES = [
+  'identity-service',
+  'business-service',
+  'consultant-service',
+  'internal-admin-service',
+  'internal-task-reviewer-service',
+  'finance-service',
+];
+
+for (const service of EMAIL_TEMPLATE_SERVICES) {
+  const bundledLoader = path.join(
+    root,
+    'apps',
+    service,
+    'dist',
+    'packages',
+    'common-nest',
+    'modules',
+    'email',
+    'templates',
+    'admin',
+    'admin-otp.template.js',
+  );
+  const bundledEjs = bundledLoader.replace(/\.js$/, '.ejs');
+  if (fs.existsSync(bundledLoader) && !fs.existsSync(bundledEjs)) {
+    failures.push({
+      fromFile: bundledEjs,
+      request: 'admin-otp.template.ejs',
+      reason:
+        'bundled email template loader missing peer .ejs file — run copy-email-templates-to-dist.mjs after nest build',
+    });
+  }
+}
+
 if (failures.length > 0) {
   console.error('Docker runtime module verification failed:\n');
   const unique = new Map();

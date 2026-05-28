@@ -22,6 +22,20 @@ if [ ! -f /app/packages/dist/proto/common/v1/http.proto ] && [ -d /app/packages/
   done
 fi
 
+# Self-heal missing email .ejs templates in bundled service dist (nest emits .js only).
+if [ -d /app/packages/common-nest/modules/email/templates ]; then
+  for bundled_dir in /app/apps/*/dist/packages/common-nest/modules/email/templates; do
+    if [ -d "$bundled_dir" ] && [ ! -f "$bundled_dir/admin/admin-otp.template.ejs" ]; then
+      find /app/packages/common-nest/modules/email/templates -name '*.ejs' | while IFS= read -r ejs_file; do
+        rel="${ejs_file#/app/packages/common-nest/modules/email/templates/}"
+        target_dir="$bundled_dir/$(dirname "$rel")"
+        mkdir -p "$target_dir"
+        cp "$ejs_file" "$bundled_dir/$rel"
+      done
+    fi
+  done
+fi
+
 if [ "$service" = "migrate" ]; then
   node ./packages/node_modules/typeorm/cli.js migration:run -d packages/dist/database/data-source.js
   exec node packages/dist/database/seeds/seed-runner.js
