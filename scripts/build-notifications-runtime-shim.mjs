@@ -17,11 +17,13 @@ const rel = (suffix) =>
 const indexPath = path.join(outDir, 'index.js');
 const relEnum = rel('enums/notification-type.enum.js');
 const relModule = rel('notifications.module.js');
+const relDispatchModule = rel('notifications-dispatch.module.js');
 const relDispatcher = rel('services/notification-dispatcher.service.js');
 
 for (const target of [
   path.join(root, platformBase, 'enums/notification-type.enum.js'),
   path.join(root, platformBase, 'notifications.module.js'),
+  path.join(root, platformBase, 'notifications-dispatch.module.js'),
   path.join(root, platformBase, 'services/notification-dispatcher.service.js'),
 ]) {
   if (!fs.existsSync(target)) {
@@ -36,9 +38,10 @@ fs.writeFileSync(
   indexPath,
   `'use strict';
 Object.defineProperty(exports, '__esModule', { value: true });
-exports.NotificationsModule = exports.NotificationDispatcherService = exports.NOTIFICATION_TYPES = void 0;
+exports.NotificationsDispatchModule = exports.NotificationsModule = exports.NotificationDispatcherService = exports.NOTIFICATION_TYPES = void 0;
 exports.NOTIFICATION_TYPES = require('${relEnum}').NOTIFICATION_TYPES;
 exports.NotificationsModule = require('${relModule}').NotificationsModule;
+exports.NotificationsDispatchModule = require('${relDispatchModule}').NotificationsDispatchModule;
 exports.NotificationDispatcherService = require('${relDispatcher}').NotificationDispatcherService;
 `,
 );
