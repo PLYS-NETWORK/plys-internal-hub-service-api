@@ -5,7 +5,7 @@ import { Type } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-import { GRPC_PACKAGES, HEALTH_PROTO_PATH, HTTP_PROTO_PATH } from '@plys/libraries/proto';
+import { GRPC_PACKAGES, HEALTH_PROTO_PATH } from '@plys/libraries/proto';
 
 export interface IGrpcServiceBootstrapOptions {
   grpcPortEnv: string;
@@ -51,11 +51,6 @@ export function connectDomainGrpcMicroservice(
     HEALTH_PROTO_PATH,
     path.join(process.cwd(), 'packages/proto/common/v1/health.proto'),
   ]);
-  const httpProto = resolveProtoPath([
-    path.join(__dirname, 'common/v1/http.proto'),
-    HTTP_PROTO_PATH,
-    path.join(process.cwd(), 'packages/proto/common/v1/http.proto'),
-  ]);
   const domainProto = resolveProtoPath([
     path.join(__dirname, options.protoDirName),
     options.domainProtoPath,
@@ -66,7 +61,8 @@ export function connectDomainGrpcMicroservice(
     transport: Transport.GRPC,
     options: {
       package: [GRPC_PACKAGES.HEALTH, GRPC_PACKAGES.COMMON, ...options.packages],
-      protoPath: [healthProto, httpProto, domainProto],
+      // Domain protos import common/v1/http.proto — do not list http.proto separately (duplicate symbols).
+      protoPath: [healthProto, domainProto],
       url: `0.0.0.0:${grpcPort}`,
       loader: {
         includeDirs: [path.dirname(healthProto), path.join(process.cwd(), 'packages/proto')],

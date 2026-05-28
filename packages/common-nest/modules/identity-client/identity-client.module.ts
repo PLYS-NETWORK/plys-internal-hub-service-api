@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -7,7 +8,11 @@ import {
   EnvironmentsModule,
   EnvironmentsService,
 } from '@plys/libraries/common-nest/modules/environments';
-import { GRPC_PACKAGES, IDENTITY_PROTO_PATH } from '@plys/libraries/proto';
+import {
+  getProtoLoaderIncludeDirs,
+  GRPC_PACKAGES,
+  IDENTITY_PROTO_PATH,
+} from '@plys/libraries/proto';
 
 import { IdentitySessionClient } from './identity-session.client';
 
@@ -32,21 +37,15 @@ function resolveIdentityProtoPath(): string {
         name: 'IDENTITY_GRPC',
         imports: [EnvironmentsModule],
         inject: [EnvironmentsService],
-        useFactory: (
-          env: EnvironmentsService,
-        ): {
-          transport: Transport.GRPC;
-          options: {
-            package: string;
-            protoPath: string;
-            url: string;
-          };
-        } => ({
+        useFactory: (env: EnvironmentsService) => ({
           transport: Transport.GRPC,
           options: {
             package: GRPC_PACKAGES.IDENTITY,
             protoPath: resolveIdentityProtoPath(),
             url: env.identityServiceGrpcUrl,
+            loader: {
+              includeDirs: getProtoLoaderIncludeDirs(),
+            },
           },
         }),
       },

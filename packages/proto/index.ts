@@ -29,6 +29,14 @@ export function resolveNotificationsProtoPath(): string {
   return resolveProtoFile('notifications', 'v1', 'notifications.proto');
 }
 
+/** Root dirs for @grpc/proto-loader to resolve `import "common/v1/http.proto"` from domain protos. */
+export function getProtoLoaderIncludeDirs(): string[] {
+  return [
+    path.join(process.cwd(), 'packages/proto'),
+    path.join(process.cwd(), 'packages/dist/proto'),
+  ];
+}
+
 export const IDENTITY_PROTO_PATH = resolveProtoFile('identity', 'v1', 'identity.proto');
 
 export const PROFILES_PROTO_PATH = resolveProtoFile('profiles', 'v1', 'profiles.proto');
@@ -63,19 +71,19 @@ export const INTERNAL_TASK_REVIEWER_PROTO_PATH = resolveProtoFile(
   'internal-task-reviewer.proto',
 );
 
-/** Proto paths required when loading a domain package that imports http.proto. */
+/** Proto paths for gRPC clients/servers. Domain files import common/v1/http.proto. */
 export const DOMAIN_PROTO_PATHS = {
-  IDENTITY: [HTTP_PROTO_PATH, IDENTITY_PROTO_PATH],
-  PROFILES: [HTTP_PROTO_PATH, PROFILES_PROTO_PATH],
-  PROJECTS: [HTTP_PROTO_PATH, PROJECTS_PROTO_PATH],
-  FINANCE: [HTTP_PROTO_PATH, FINANCE_PROTO_PATH],
-  PLATFORM: [HTTP_PROTO_PATH, PLATFORM_PROTO_PATH],
-  NOTIFICATIONS: [HTTP_PROTO_PATH, NOTIFICATIONS_PROTO_PATH],
-  AIPROVIDER: [HTTP_PROTO_PATH, AIPROVIDER_PROTO_PATH],
-  BUSINESS: [HTTP_PROTO_PATH, BUSINESS_PROTO_PATH],
-  CONSULTANT: [HTTP_PROTO_PATH, CONSULTANT_PROTO_PATH],
-  INTERNAL_ADMIN: [HTTP_PROTO_PATH, INTERNAL_ADMIN_PROTO_PATH],
-  INTERNAL_TASK_REVIEWER: [HTTP_PROTO_PATH, INTERNAL_TASK_REVIEWER_PROTO_PATH],
+  IDENTITY: [IDENTITY_PROTO_PATH],
+  PROFILES: [PROFILES_PROTO_PATH],
+  PROJECTS: [PROJECTS_PROTO_PATH],
+  FINANCE: [FINANCE_PROTO_PATH],
+  PLATFORM: [PLATFORM_PROTO_PATH],
+  NOTIFICATIONS: [NOTIFICATIONS_PROTO_PATH],
+  AIPROVIDER: [AIPROVIDER_PROTO_PATH],
+  BUSINESS: [BUSINESS_PROTO_PATH],
+  CONSULTANT: [CONSULTANT_PROTO_PATH],
+  INTERNAL_ADMIN: [INTERNAL_ADMIN_PROTO_PATH],
+  INTERNAL_TASK_REVIEWER: [INTERNAL_TASK_REVIEWER_PROTO_PATH],
 } as const;
 
 export const GRPC_PACKAGES = {

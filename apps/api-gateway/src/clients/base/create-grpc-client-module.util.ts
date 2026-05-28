@@ -6,7 +6,11 @@ import {
   EnvironmentsModule,
   EnvironmentsService,
 } from '@plys/libraries/common-nest/modules/environments';
-import { DOMAIN_PROTO_PATHS, GRPC_PACKAGES } from '@plys/libraries/proto';
+import {
+  DOMAIN_PROTO_PATHS,
+  getProtoLoaderIncludeDirs,
+  GRPC_PACKAGES,
+} from '@plys/libraries/proto';
 
 import { resolveProtoPaths } from './grpc-proto.util';
 
@@ -34,20 +38,17 @@ const GRPC_CLIENT_CHANNEL_OPTIONS = {
 type DomainKey = keyof typeof DOMAIN_PROTO_PATHS;
 
 const DOMAIN_PROTO_RELATIVE: Record<DomainKey, string[]> = {
-  IDENTITY: ['common/v1/http.proto', 'identity/v1/identity.proto'],
-  PROFILES: ['common/v1/http.proto', 'profiles/v1/profiles.proto'],
-  PROJECTS: ['common/v1/http.proto', 'projects/v1/projects.proto'],
-  FINANCE: ['common/v1/http.proto', 'finance/v1/finance.proto'],
-  PLATFORM: ['common/v1/http.proto', 'platform/v1/platform.proto'],
-  NOTIFICATIONS: ['common/v1/http.proto', 'notifications/v1/notifications.proto'],
-  AIPROVIDER: ['common/v1/http.proto', 'aiprovider/v1/aiprovider.proto'],
-  BUSINESS: ['common/v1/http.proto', 'business/v1/business.proto'],
-  CONSULTANT: ['common/v1/http.proto', 'consultant/v1/consultant.proto'],
-  INTERNAL_ADMIN: ['common/v1/http.proto', 'internal-admin/v1/internal-admin.proto'],
-  INTERNAL_TASK_REVIEWER: [
-    'common/v1/http.proto',
-    'internal-task-reviewer/v1/internal-task-reviewer.proto',
-  ],
+  IDENTITY: ['identity/v1/identity.proto'],
+  PROFILES: ['profiles/v1/profiles.proto'],
+  PROJECTS: ['projects/v1/projects.proto'],
+  FINANCE: ['finance/v1/finance.proto'],
+  PLATFORM: ['platform/v1/platform.proto'],
+  NOTIFICATIONS: ['notifications/v1/notifications.proto'],
+  AIPROVIDER: ['aiprovider/v1/aiprovider.proto'],
+  BUSINESS: ['business/v1/business.proto'],
+  CONSULTANT: ['consultant/v1/consultant.proto'],
+  INTERNAL_ADMIN: ['internal-admin/v1/internal-admin.proto'],
+  INTERNAL_TASK_REVIEWER: ['internal-task-reviewer/v1/internal-task-reviewer.proto'],
 };
 
 export function createGrpcClientModuleOptions(
@@ -73,7 +74,7 @@ export function createGrpcClientModuleOptions(
           url: urlSelector(env),
           channelOptions: GRPC_CLIENT_CHANNEL_OPTIONS,
           loader: {
-            includeDirs: [path.join(process.cwd(), 'packages/proto')],
+            includeDirs: getProtoLoaderIncludeDirs(),
           },
         },
       }),

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { Global, Module } from '@nestjs/common';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import {
@@ -5,8 +6,8 @@ import {
   EnvironmentsService,
 } from '@plys/libraries/common-nest/modules/environments';
 import {
+  getProtoLoaderIncludeDirs,
   GRPC_PACKAGES,
-  resolveHttpProtoPath,
   resolveNotificationsProtoPath,
 } from '@plys/libraries/proto';
 
@@ -21,21 +22,15 @@ import { NOTIFICATIONS_GRPC, NotificationsGrpcClient } from './notifications-grp
         name: NOTIFICATIONS_GRPC,
         imports: [EnvironmentsModule],
         inject: [EnvironmentsService],
-        useFactory: (
-          env: EnvironmentsService,
-        ): {
-          transport: Transport.GRPC;
-          options: {
-            package: string[];
-            protoPath: string[];
-            url: string;
-          };
-        } => ({
+        useFactory: (env: EnvironmentsService) => ({
           transport: Transport.GRPC,
           options: {
             package: [GRPC_PACKAGES.COMMON, GRPC_PACKAGES.NOTIFICATIONS],
-            protoPath: [resolveHttpProtoPath(), resolveNotificationsProtoPath()],
+            protoPath: [resolveNotificationsProtoPath()],
             url: env.notificationsServiceGrpcUrl,
+            loader: {
+              includeDirs: getProtoLoaderIncludeDirs(),
+            },
           },
         }),
       },

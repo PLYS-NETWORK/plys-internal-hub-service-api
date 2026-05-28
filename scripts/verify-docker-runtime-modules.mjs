@@ -231,6 +231,59 @@ for (const service of RUNTIME_SERVICES) {
     process.env.NODE_PATH = previous;
     Module._initPaths();
   }
+
+  const bundledGrpcBootstrap = path.join(
+    root,
+    'apps',
+    service,
+    'dist',
+    'packages',
+    'common-nest',
+    'grpc',
+    'grpc-bootstrap.util.js',
+  );
+  if (fs.existsSync(bundledGrpcBootstrap)) {
+    const bootstrapSource = fs.readFileSync(bundledGrpcBootstrap, 'utf8');
+    if (/\bhttpProto\b/.test(bootstrapSource)) {
+      failures.push({
+        fromFile: bundledGrpcBootstrap,
+        request: 'grpc-bootstrap protoPath',
+        reason:
+          'bundled grpc-bootstrap still lists http.proto separately — rebuild service after libraries grpc fix',
+      });
+    }
+  }
+
+  const bundledNotificationsClient = path.join(
+    root,
+    'apps',
+    service,
+    'dist',
+    'packages',
+    'common-nest',
+    'modules',
+    'notifications-client',
+    'notifications-client.module.js',
+  );
+  if (fs.existsSync(bundledNotificationsClient)) {
+    const clientSource = fs.readFileSync(bundledNotificationsClient, 'utf8');
+    if (!/\bincludeDirs\b/.test(clientSource)) {
+      failures.push({
+        fromFile: bundledNotificationsClient,
+        request: 'notifications-client loader.includeDirs',
+        reason:
+          'bundled notifications gRPC client missing loader.includeDirs — rebuild service after proto import fix',
+      });
+    }
+    if (/resolveHttpProtoPath/.test(clientSource)) {
+      failures.push({
+        fromFile: bundledNotificationsClient,
+        request: 'notifications-client protoPath',
+        reason:
+          'bundled notifications client still lists http.proto separately — use includeDirs for common/v1/http.proto imports',
+      });
+    }
+  }
 }
 
 if (failures.length > 0) {
