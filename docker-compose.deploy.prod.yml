@@ -55,12 +55,7 @@ services:
     image: ${IMAGE_REGISTRY}/api-gateway:${IMAGE_TAG_API_GATEWAY}
     networks: !reset
     ports: !reset
-    depends_on: !reset
-      - identity-service
-      - profiles-service
-      - projects-service
-      - finance-service
-      - platform-service
+    depends_on: !reset []
     env_file: !reset
       - .env.prod
 

@@ -69,9 +69,26 @@ runs:
           RUN_MIGRATIONS="${{ inputs.run-migrations }}"
 
           COMPOSE_FILES="-f docker-compose.yml -f docker-compose.apps.yml -f docker-compose.deploy.${DEPLOY_ENV}.yml"
+          PM2_PREFIX="internal-hub-be-${DEPLOY_ENV}"
 
           cd "$DEPLOY_DIR"
           mkdir -p "$LOG_DIR"
+
+          remove_legacy_pm2_stack() {
+            # Old monolithic PM2 app (pre per-service compose monitors).
+            pm2 delete "$PM2_PREFIX" 2>/dev/null || true
+          }
+
+          reset_pm2_compose_monitors() {
+            for svc in identity-service profiles-service projects-service finance-service platform-service api-gateway; do
+              pm2 delete "${PM2_PREFIX}-${svc}" 2>/dev/null || true
+            done
+          }
+
+          start_pm2_compose_monitors() {
+            pm2 start "ecosystem.${DEPLOY_ENV}.config.js"
+            pm2 save
+          }
 
           ensure_compose_env_file() {
             local compose_env_file=".env.${DEPLOY_ENV}"
@@ -115,10 +132,6 @@ runs:
             docker compose $COMPOSE_FILES up -d --remove-orphans \
               identity-service profiles-service projects-service finance-service platform-service
 
-            BACKEND_PM2="internal-hub-be-${DEPLOY_ENV}-identity-service,internal-hub-be-${DEPLOY_ENV}-profiles-service,internal-hub-be-${DEPLOY_ENV}-projects-service,internal-hub-be-${DEPLOY_ENV}-finance-service,internal-hub-be-${DEPLOY_ENV}-platform-service"
-            echo "==> Syncing PM2 backend log tailers..."
-            pm2 startOrReload "ecosystem.${DEPLOY_ENV}.config.js" --only "$BACKEND_PM2" || true
-
             if ! node scripts/wait-for-grpc-backends.mjs --env-file ".env.${DEPLOY_ENV}"; then
               echo "ERROR: gRPC backends did not become ready"
               echo "--- pm2 status ---"
@@ -132,14 +145,14 @@ runs:
               exit 1
             fi
 
-            echo "==> Reloading PM2 api-gateway (backends already running via compose)..."
-            PM2_GATEWAY="internal-hub-be-${DEPLOY_ENV}-api-gateway"
-            if pm2 describe "$PM2_GATEWAY" > /dev/null 2>&1; then
-              pm2 startOrReload "ecosystem.${DEPLOY_ENV}.config.js" --only "$PM2_GATEWAY"
-            else
-              pm2 start "ecosystem.${DEPLOY_ENV}.config.js" --only "$PM2_GATEWAY"
-            fi
-            pm2 save
+            echo "==> Starting api-gateway container (detached)..."
+            docker compose $COMPOSE_FILES up -d --no-deps --remove-orphans api-gateway
+
+            remove_legacy_pm2_stack
+            echo "==> Resetting PM2 compose monitors (clears waiting-restart state)..."
+            reset_pm2_compose_monitors
+            echo "==> Starting PM2 compose monitors..."
+            start_pm2_compose_monitors
           else
             if [ -z "$IMAGE_TAG" ] || [ -z "$IMAGE_REGISTRY" ]; then
               echo "ERROR: image-tag and image-registry are required for single-service deploy."
@@ -185,14 +198,19 @@ runs:
               docker compose $COMPOSE_FILES --profile migrate run --rm migrate
             fi
 
-            PM2_NAME="internal-hub-be-${DEPLOY_ENV}-${SERVICE}"
-            echo "==> Restarting PM2 app ${PM2_NAME}..."
-            if pm2 describe "$PM2_NAME" > /dev/null 2>&1; then
-              pm2 restart "$PM2_NAME"
+            PM2_NAME="${PM2_PREFIX}-${SERVICE}"
+            echo "==> Restarting ${SERVICE}..."
+            if [ "$SERVICE" = "api-gateway" ]; then
+              docker compose $COMPOSE_FILES up -d --no-deps --remove-orphans api-gateway
             else
-              pm2 start "ecosystem.${DEPLOY_ENV}.config.js" --only "$PM2_NAME"
-              pm2 save
+              docker compose $COMPOSE_FILES up -d --no-deps --remove-orphans "$SERVICE"
             fi
+
+            remove_legacy_pm2_stack
+            pm2 delete "$PM2_NAME" 2>/dev/null || true
+            echo "==> Restarting PM2 app ${PM2_NAME}..."
+            pm2 start "ecosystem.${DEPLOY_ENV}.config.js" --only "$PM2_NAME"
+            pm2 save
           fi
 
           wait_for_gateway_health() {
@@ -213,8 +231,13 @@ runs:
             gateway_url="http://127.0.0.1:${port}/api/v1/gateway/health"
             echo "==> Waiting for api-gateway at ${gateway_url}..."
 
-            for attempt in 1 2 3 4 5 6 7 8 9 10; do
-              sleep 10
+            for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+              sleep 5
+              if ! docker compose $COMPOSE_FILES ps api-gateway --status running -q 2>/dev/null | grep -q .; then
+                echo "Gateway container not running (attempt ${attempt})"
+                docker compose $COMPOSE_FILES logs --tail 30 api-gateway 2>&1 || true
+                continue
+              fi
               response=$(curl --silent --show-error --max-time 10 "$gateway_url" 2>&1) || true
               if printf '%s' "$response" | grep -q '"status":"ok"'; then
                 echo "Gateway health passed (attempt ${attempt})"
@@ -223,16 +246,20 @@ runs:
               echo "Gateway health attempt ${attempt} failed, retrying..."
             done
 
-            echo "ERROR: Gateway health check failed after 10 attempts"
+            echo "ERROR: Gateway health check failed after 20 attempts"
             echo "--- last response ---"
             printf '%s\n' "$response" | head -c 1000
             echo
             echo "--- pm2 status ---"
             pm2 status || true
+            echo "--- docker compose ps api-gateway ---"
+            docker compose $COMPOSE_FILES ps -a api-gateway 2>/dev/null || true
             echo "--- docker ps ---"
             docker ps --format 'table {{.Names}}\t{{.Status}}' 2>/dev/null || true
-            echo "--- api-gateway logs (last 40 lines) ---"
-            pm2 logs "internal-hub-be-${DEPLOY_ENV}-api-gateway" --lines 40 --nostream 2>/dev/null || true
+            echo "--- api-gateway container logs (last 60 lines) ---"
+            docker compose $COMPOSE_FILES logs --tail 60 api-gateway 2>&1 || true
+            echo "--- api-gateway pm2 logs (last 40 lines) ---"
+            pm2 logs "${PM2_PREFIX}-api-gateway" --lines 40 --nostream 2>/dev/null || true
             exit 1
           }
 
