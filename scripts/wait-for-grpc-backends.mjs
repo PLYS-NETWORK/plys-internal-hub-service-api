@@ -24,6 +24,7 @@ function parseArgs(argv) {
   let envFile = null;
   let timeoutMs = 120_000;
   let intervalMs = 2_000;
+  let settleDelayMs = 3_000;
   for (let i = 2; i < argv.length; i += 1) {
     if (argv[i] === '--env-file' && argv[i + 1]) {
       envFile = argv[i + 1];
@@ -34,13 +35,16 @@ function parseArgs(argv) {
     } else if (argv[i] === '--interval-ms' && argv[i + 1]) {
       intervalMs = Number.parseInt(argv[i + 1], 10);
       i += 1;
+    } else if (argv[i] === '--settle-delay-ms' && argv[i + 1]) {
+      settleDelayMs = Number.parseInt(argv[i + 1], 10);
+      i += 1;
     }
   }
   if (!envFile) {
     console.error('Usage: node scripts/wait-for-grpc-backends.mjs --env-file .env.dev');
     process.exit(1);
   }
-  return { envFile, timeoutMs, intervalMs };
+  return { envFile, timeoutMs, intervalMs, settleDelayMs };
 }
 
 function stripEnvValue(value) {
@@ -129,7 +133,7 @@ function probePort(host, port, timeoutMs) {
   });
 }
 
-async function waitForTargets(targets, timeoutMs, intervalMs) {
+async function waitForTargets(targets, timeoutMs, intervalMs, settleDelayMs) {
   const deadline = Date.now() + timeoutMs;
   let attempt = 0;
   while (Date.now() < deadline) {
@@ -142,6 +146,26 @@ async function waitForTargets(targets, timeoutMs, intervalMs) {
     );
     const pending = results.filter((r) => !r.ok);
     if (pending.length === 0) {
+      if (settleDelayMs > 0) {
+        await new Promise((r) => setTimeout(r, settleDelayMs));
+        const recheck = await Promise.all(
+          targets.map(async (target) => ({
+            target,
+            ok: await probePort(target.host, target.port, 1_500),
+          })),
+        );
+        const unstable = recheck.filter((r) => !r.ok);
+        if (unstable.length > 0) {
+          const summary = unstable
+            .map(({ target }) => `${target.name}@${target.host}:${target.port}`)
+            .join(', ');
+          console.log(
+            `gRPC backends unstable after settle delay (attempt ${attempt}): ${summary}`,
+          );
+          await new Promise((r) => setTimeout(r, intervalMs));
+          continue;
+        }
+      }
       console.log(`gRPC backends ready (attempt ${attempt})`);
       return;
     }
@@ -159,9 +183,9 @@ async function waitForTargets(targets, timeoutMs, intervalMs) {
   process.exit(1);
 }
 
-const { envFile, timeoutMs, intervalMs } = parseArgs(process.argv);
+const { envFile, timeoutMs, intervalMs, settleDelayMs } = parseArgs(process.argv);
 const targets = resolveTargets(loadEnvFile(envFile));
 console.log(
   `Waiting for gRPC backends from ${envFile}: ${targets.map((t) => `${t.host}:${t.port}`).join(', ')}`,
 );
-await waitForTargets(targets, timeoutMs, intervalMs);
+await waitForTargets(targets, timeoutMs, intervalMs, settleDelayMs);

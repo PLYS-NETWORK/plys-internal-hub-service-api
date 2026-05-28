@@ -21,7 +21,9 @@ export {
   dispatchGrpc,
   type IGrpcDispatchClient,
   isGrpcErrorResponse,
+  isGrpcTransientError,
   parseGrpcSuccessPayload,
+  runWithTransientGrpcRejectionGuard,
 } from './grpc-http.client';
 export type {
   GrpcBridgeHandler,

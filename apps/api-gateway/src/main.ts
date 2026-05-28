@@ -4,7 +4,10 @@ import { VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { SwaggerModule } from '@nestjs/swagger';
-import { waitForGrpcBackendsFromProcessEnv } from '@plys/libraries/common-nest/grpc';
+import {
+  runWithTransientGrpcRejectionGuard,
+  waitForGrpcBackendsFromProcessEnv,
+} from '@plys/libraries/common-nest/grpc';
 import { EnvironmentsService } from '@plys/libraries/common-nest/modules/environments';
 import { RedisIoAdapter } from '@plys/libraries/common-nest/modules/notifications-realtime';
 import { createCorsOriginDelegate } from '@plys/libraries/common-nest/utils/cors-origin.util';
@@ -22,16 +25,22 @@ async function waitForUpstreamGrpcBackends(): Promise<void> {
   if (!deployEnv || deployEnv === 'local') {
     return;
   }
-  await waitForGrpcBackendsFromProcessEnv({ timeoutMs: 120_000 });
+  await waitForGrpcBackendsFromProcessEnv({
+    timeoutMs: 120_000,
+    settleDelayMs: 3_000,
+  });
 }
 
 async function bootstrap(): Promise<void> {
   await waitForUpstreamGrpcBackends();
 
-  const app = await NestFactory.create<NestFastifyApplication>(
-    AppModule,
-    new FastifyAdapter({ logger: false }),
-    { rawBody: true, bufferLogs: true },
+  const app = await runWithTransientGrpcRejectionGuard(
+    () =>
+      NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({ logger: false }), {
+        rawBody: true,
+        bufferLogs: true,
+      }),
+    'api-gateway',
   );
 
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));

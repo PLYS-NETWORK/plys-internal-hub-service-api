@@ -26,8 +26,8 @@ curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker "$USER"
 # Log out and back in for group membership
 
-# Node.js 20 (for patch-image-tag.mjs on deploy)
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+# Node.js 22 (for patch-image-tag.mjs on deploy)
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # PM2

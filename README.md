@@ -10,7 +10,7 @@ This repository is an **Nx + pnpm monorepo**. The HTTP edge is `apps/api-gateway
 
 | Layer             | Technology                                           |
 | ----------------- | ---------------------------------------------------- |
-| Runtime           | Node.js 20 LTS                                       |
+| Runtime           | Node.js 22 LTS                                       |
 | Monorepo          | pnpm workspaces + Nx 20                              |
 | Framework         | NestJS 11 (Fastify adapter on the gateway)           |
 | Language          | TypeScript 5                                         |

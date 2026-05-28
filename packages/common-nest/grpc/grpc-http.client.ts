@@ -18,7 +18,7 @@ const GRPC_UNAVAILABLE = 14;
 const DEFAULT_DISPATCH_RETRIES = 3;
 const RETRY_BASE_MS = 400;
 
-function isGrpcTransientError(err: unknown): boolean {
+export function isGrpcTransientError(err: unknown): boolean {
   if (!err || typeof err !== 'object') {
     return false;
   }
@@ -52,6 +52,33 @@ export async function dispatchGrpc(
     }
   }
   throw lastError;
+}
+
+/**
+ * NestFactory.create can trigger early gRPC channel errors as unhandled rejections
+ * when backends are still warming up. Swallow transient UNAVAILABLE/ECONNREFUSED
+ * during the guarded window only.
+ */
+export async function runWithTransientGrpcRejectionGuard<T>(
+  fn: () => Promise<T>,
+  label = 'bootstrap',
+): Promise<T> {
+  const handler = (reason: unknown): void => {
+    if (isGrpcTransientError(reason)) {
+      const message = reason instanceof Error ? reason.message : String(reason);
+      // eslint-disable-next-line no-console
+      console.warn(`[${label}] transient gRPC rejection (ignored): ${message}`);
+      return;
+    }
+    process.off('unhandledRejection', handler);
+    throw reason;
+  };
+  process.on('unhandledRejection', handler);
+  try {
+    return await fn();
+  } finally {
+    process.off('unhandledRejection', handler);
+  }
 }
 
 export function isGrpcErrorResponse(response: IHttpResponse): boolean {

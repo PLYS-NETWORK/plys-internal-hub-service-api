@@ -5,6 +5,9 @@
   "description": "Plys marketplace monorepo — API gateway and microservices",
   "license": "UNLICENSED",
   "packageManager": "pnpm@10.32.1",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "nx run libraries:build && nx run-many -t build --projects=api-gateway,identity-service,profiles-service,projects-service,finance-service,platform-service",
     "lint": "nx run-many -t lint --all",
@@ -32,7 +35,7 @@
     "@types/bcryptjs": "^3.0.0",
     "@types/ejs": "^3.1.5",
     "@types/lodash": "^4.14.200",
-    "@types/node": "^20.0.0",
+    "@types/node": "^22.0.0",
     "@types/passport-google-oauth20": "^2.0.17",
     "@types/passport-jwt": "^4.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",

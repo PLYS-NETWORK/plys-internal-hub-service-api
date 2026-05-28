@@ -18,6 +18,8 @@ export interface IWaitForGrpcBackendsOptions {
   timeoutMs?: number;
   intervalMs?: number;
   probeTimeoutMs?: number;
+  /** After all ports respond, wait and re-probe to avoid startup race windows. */
+  settleDelayMs?: number;
 }
 
 function parseGrpcTarget(
@@ -89,27 +91,45 @@ export async function waitForGrpcBackendsFromProcessEnv(
   const timeoutMs = options.timeoutMs ?? 120_000;
   const intervalMs = options.intervalMs ?? 2_000;
   const probeTimeoutMs = options.probeTimeoutMs ?? 1_500;
+  const settleDelayMs = options.settleDelayMs ?? 3_000;
   const targets = resolveGrpcBackendTargetsFromEnv();
 
   const deadline = Date.now() + timeoutMs;
   let attempt = 0;
 
-  while (Date.now() < deadline) {
-    attempt += 1;
+  const probeAll = async (): Promise<IGrpcBackendTarget[]> => {
     const results = await Promise.all(
       targets.map(async (target) => ({
         target,
         ok: await probePort(target.host, target.port, probeTimeoutMs),
       })),
     );
-    const pending = results.filter((r) => !r.ok);
+    return results.filter((result) => !result.ok).map(({ target }) => target);
+  };
+
+  while (Date.now() < deadline) {
+    attempt += 1;
+    const pending = await probeAll();
     if (pending.length === 0) {
+      if (settleDelayMs > 0) {
+        await sleep(settleDelayMs);
+        const unstable = await probeAll();
+        if (unstable.length > 0) {
+          const summary = unstable
+            .map((target) => `${target.name}@${target.host}:${target.port}`)
+            .join(', ');
+          // eslint-disable-next-line no-console
+          console.log(`gRPC backends unstable after settle delay (attempt ${attempt}): ${summary}`);
+          await sleep(intervalMs);
+          continue;
+        }
+      }
       // eslint-disable-next-line no-console
       console.log(`gRPC backends ready (attempt ${attempt})`);
       return;
     }
     const summary = pending
-      .map(({ target }) => `${target.name}@${target.host}:${target.port}`)
+      .map((target) => `${target.name}@${target.host}:${target.port}`)
       .join(', ');
     // eslint-disable-next-line no-console
     console.log(`Waiting for gRPC backends (attempt ${attempt}): ${summary}`);

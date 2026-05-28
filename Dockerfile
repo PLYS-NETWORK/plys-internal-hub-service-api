@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 # corepack prepare pnpm@10 fails on Alpine (wrong binary arch); pin via npm instead.
 RUN npm install -g pnpm@10.32.1
 WORKDIR /app
