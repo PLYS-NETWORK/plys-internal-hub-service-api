@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Production VPS override — use GHCR images instead of local build.
 # Requires IMAGE_REGISTRY + per-service IMAGE_TAG_* in compose .env.
 

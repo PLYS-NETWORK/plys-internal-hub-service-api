@@ -10,6 +10,27 @@ import { DOMAIN_PROTO_PATHS, GRPC_PACKAGES } from '@plys/libraries/proto';
 
 import { resolveProtoPaths } from './grpc-proto.util';
 
+const GRPC_CLIENT_CHANNEL_OPTIONS = {
+  'grpc.initial_reconnect_backoff_ms': 500,
+  'grpc.max_reconnect_backoff_ms': 5_000,
+  'grpc.keepalive_time_ms': 30_000,
+  'grpc.keepalive_timeout_ms': 10_000,
+  'grpc.service_config': JSON.stringify({
+    methodConfig: [
+      {
+        name: [{}],
+        retryPolicy: {
+          maxAttempts: 5,
+          initialBackoff: '0.5s',
+          maxBackoff: '5s',
+          backoffMultiplier: 2,
+          retryableStatusCodes: ['UNAVAILABLE'],
+        },
+      },
+    ],
+  }),
+};
+
 type DomainKey = keyof typeof DOMAIN_PROTO_PATHS;
 
 const DOMAIN_PROTO_RELATIVE: Record<DomainKey, string[]> = {
@@ -41,6 +62,7 @@ export function createGrpcClientModuleOptions(
           package: [GRPC_PACKAGES.COMMON, GRPC_PACKAGES[domain]],
           protoPath: [...resolveProtoPaths([protoPaths, cwdFallback])],
           url: urlSelector(env),
+          channelOptions: GRPC_CLIENT_CHANNEL_OPTIONS,
           loader: {
             includeDirs: [path.join(process.cwd(), 'packages/proto')],
           },

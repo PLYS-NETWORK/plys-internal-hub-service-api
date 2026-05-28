@@ -36,3 +36,9 @@ export {
   buildMetadataFromRequestContext,
   readRequestContextFromMetadata,
 } from './grpc-metadata.util';
+export {
+  type IGrpcBackendTarget,
+  type IWaitForGrpcBackendsOptions,
+  resolveGrpcBackendTargetsFromEnv,
+  waitForGrpcBackendsFromProcessEnv,
+} from './wait-for-grpc-backends.util';

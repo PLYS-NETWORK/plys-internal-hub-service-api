@@ -14,12 +14,44 @@ export interface IGrpcDispatchClient {
   dispatch(request: IHttpRequest, metadata?: Metadata): Observable<IHttpResponse>;
 }
 
+const GRPC_UNAVAILABLE = 14;
+const DEFAULT_DISPATCH_RETRIES = 3;
+const RETRY_BASE_MS = 400;
+
+function isGrpcTransientError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') {
+    return false;
+  }
+  const candidate = err as { code?: number; message?: string; details?: string };
+  if (candidate.code === GRPC_UNAVAILABLE) {
+    return true;
+  }
+  const text = `${candidate.message ?? ''} ${candidate.details ?? ''}`;
+  return text.includes('ECONNREFUSED') || text.includes('UNAVAILABLE');
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function dispatchGrpc(
   client: IGrpcDispatchClient,
   request: IHttpRequest,
   metadata?: Metadata,
 ): Promise<IHttpResponse> {
-  return firstValueFrom(client.dispatch(request, metadata));
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= DEFAULT_DISPATCH_RETRIES; attempt += 1) {
+    try {
+      return await firstValueFrom(client.dispatch(request, metadata));
+    } catch (err: unknown) {
+      lastError = err;
+      if (attempt >= DEFAULT_DISPATCH_RETRIES || !isGrpcTransientError(err)) {
+        throw err;
+      }
+      await sleep(RETRY_BASE_MS * attempt);
+    }
+  }
+  throw lastError;
 }
 
 export function isGrpcErrorResponse(response: IHttpResponse): boolean {
