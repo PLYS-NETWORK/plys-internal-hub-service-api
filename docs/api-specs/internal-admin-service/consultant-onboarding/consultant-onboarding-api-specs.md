@@ -204,7 +204,7 @@ Clients should therefore treat both URLs as **short-lived** and request the deta
   | Branch | DB writes | Notifications |
   | ------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
   | APPROVED | `onboarding.status = APPROVED`, `reviewed_by/reviewed_at` set, `consultant_profiles.is_verified = true` (same transaction). | In-app: `CONSULTANT_ONBOARDING_APPROVED` event → notification fan-out. Email: `sendApplicationApprovedEmail`. |
-  | REJECTED | `onboarding.status = REJECTED`, `reviewed_by/reviewed_at`, `rejection_note`, `blocked_until = now + 3 months`. | Email: `sendApplicationRejectedEmail` with `reason` + `blocked_until`. Auth flow then refuses login / register / profile-submit for 3 months — see [consultant auth](../../consultant-service/auth/auth-api-specs.md#onboarding-rejection-block-read-first). |
+  | REJECTED | `onboarding.status = REJECTED`, `reviewed_by/reviewed_at`, `rejection_note`, `blocked_until = now + 3 months`. | Email: `sendApplicationRejectedEmail` with `reason` + `blocked_until`. Auth flow then refuses login / register / profile-submit for 3 months — see [consultant account gates](../../identity-service/auth/consultant-account-gates-api-specs.md#onboarding-rejection-block-read-first). |
 
 - **Errors:**
 

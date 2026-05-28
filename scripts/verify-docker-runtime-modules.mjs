@@ -76,9 +76,8 @@ function findTypeScriptRuntimeRequires(scanRoots) {
 function resolvePlysExport(subpath) {
   const pkgPath = path.join(root, 'packages/package.json');
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-  const key = subpath.includes('/') ? `./${subpath.split('/')[0]}/*` : `./${subpath}`;
   const exactKey = `./${subpath}`;
-  let target = pkg.exports[exactKey] ?? pkg.exports[key];
+  let target = pkg.exports[exactKey];
   if (!target) {
     for (const [exportKey, exportTarget] of Object.entries(pkg.exports)) {
       if (!exportKey.endsWith('/*')) continue;

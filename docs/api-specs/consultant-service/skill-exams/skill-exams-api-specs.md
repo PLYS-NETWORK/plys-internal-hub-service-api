@@ -33,7 +33,7 @@ Exceeding the limit returns `429 AUTH_RATE_LIMITED`.
 | 422  | `GENERIC_VALIDATION_FAILED`          | DTO failed class-validator validation.                                                                                                                                                                                                                           |
 | 429  | `AUTH_RATE_LIMITED`                  | Endpoint-specific throttle exceeded.                                                                                                                                                                                                                             |
 
-> The `CONSULTANT_ONBOARDING_BLOCKED` (3-month admin-rejection block) does **not** reach these endpoints — it is enforced at the auth layer, so the consultant cannot sign in to obtain a token in the first place. See [auth-api-specs.md](../identity-service/auth/auth-api-specs.md).
+> The `CONSULTANT_ONBOARDING_BLOCKED` (3-month admin-rejection block) does **not** reach these endpoints — it is enforced at the auth layer, so the consultant cannot sign in to obtain a token in the first place. See [consultant account gates](../identity-service/auth/consultant-account-gates-api-specs.md).
 
 ---
 
@@ -296,4 +296,4 @@ Each EXPIRED transition increments `users.exam_expired_count`. On the 3rd EXPIRE
 
 ## Auth interaction
 
-While the consultant's account has `users.is_active = false` (CopyLeaks 3-strike ban), every endpoint above is unreachable — every active session was revoked at ban time, so even cached JWTs immediately fail their session lookup. If a request somehow survives long enough to reach the controller, `NotBannedGuard` rejects it with `403 SKILL_EXAM_USER_BANNED` (`details.ban_reason`). See [auth-api-specs.md](../identity-service/auth/auth-api-specs.md) for the full ban/block matrix.
+While the consultant's account has `users.is_active = false` (CopyLeaks 3-strike ban), every endpoint above is unreachable — every active session was revoked at ban time, so even cached JWTs immediately fail their session lookup. If a request somehow survives long enough to reach the controller, `NotBannedGuard` rejects it with `403 SKILL_EXAM_USER_BANNED` (`details.ban_reason`). See [consultant account gates](../identity-service/auth/consultant-account-gates-api-specs.md) for the full ban/block matrix.

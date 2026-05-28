@@ -243,7 +243,7 @@ interface IConsultantOnboardingApprovedMetadata {
 Emitted from `AdminConsultantOnboardingService.decide` together with the rejection email.
 The consultant is **blocked from re-onboarding for 3 months** — login, register, and profile-submit
 all return `403 CONSULTANT_ONBOARDING_BLOCKED` while the block is active. See
-[auth](../identity-service/auth/auth-api-specs.md) for the auth gate.
+[consultant account gates](../identity-service/auth/consultant-account-gates-api-specs.md) for the auth gate.
 
 | Field          | Value                                                     |
 | -------------- | --------------------------------------------------------- |

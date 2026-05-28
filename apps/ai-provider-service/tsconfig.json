@@ -21,7 +21,7 @@
       "@modules/ai-bootstrap/*": ["src/modules/ai-bootstrap/*"],
       "@modules/project-ai-context/*": ["src/modules/project-ai-context/*"],
       "@modules/project-chat-session/*": ["src/modules/project-chat-session/*"],
-      "@modules/ai-provider-key": ["src/modules/ai-provider-key/index.ts"],
+      "@modules/ai-provider-key": ["src/modules/ai-provider-key/index"],
       "@modules/ai-provider-key/*": ["src/modules/ai-provider-key/*"]
     }
   },

@@ -21,9 +21,9 @@
       "@plys/libraries/api-contracts": ["../../packages/api-contracts/index.ts"],
       "@plys/libraries/api-contracts/*": ["../../packages/api-contracts/*"],
       "@/*": ["src/*"],
-      "@/clients/identity": ["src/clients/v1/identity/index.ts"],
-      "@/clients/finance": ["src/clients/v1/finance/index.ts"],
-      "@/clients/platform": ["src/clients/v1/platform/index.ts"],
+      "@/clients/identity": ["src/clients/v1/identity/index"],
+      "@/clients/finance": ["src/clients/v1/finance/index"],
+      "@/clients/platform": ["src/clients/v1/platform/index"],
       "@/http/shared/*": ["src/http/v1/shared/*"]
     }
   },

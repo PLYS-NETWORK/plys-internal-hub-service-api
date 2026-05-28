@@ -8,7 +8,7 @@
 > **Field-name convention:** request/response columns use **snake_case** (the JSON contract).
 > **Soft-deleted users in the join:** the list-endpoint left-join to `users` excludes rows with `deleted_at IS NOT NULL`, so a tombstoned admin account never leaks its `last_login_at`.
 
-This surface is distinct from the OTP flow at [`/admin/auth/*`](./auth-api-specs.md). It governs **who is allowed onto the hub**, not the login itself.
+This surface is distinct from the OTP flow at [`/admin/auth/*`](./admin-auth-api-specs.md). It governs **who is allowed onto the hub**, not the login itself.
 
 ## Cross-cutting errors
 
@@ -133,7 +133,7 @@ This surface is distinct from the OTP flow at [`/admin/auth/*`](./auth-api-specs
 
 ## Interaction with the OTP login flow
 
-The OTP request/verify endpoints at [`/admin/auth/*`](./auth-api-specs.md) call `AdminAllowedEmailRepository.findActiveByEmail` (active rows only). The endpoints above govern that table:
+The OTP request/verify endpoints at [`/admin/auth/*`](./admin-auth-api-specs.md) call `AdminAllowedEmailRepository.findActiveByEmail` (active rows only). The endpoints above govern that table:
 
 - Inviting an email creates an active row → the OTP flow accepts it.
 - Setting `is_active = false` keeps the row but locks the holder out → the OTP flow rejects with `403 ADMIN_AUTH_EMAIL_NOT_ALLOWED`.
@@ -147,4 +147,4 @@ The OTP request/verify endpoints at [`/admin/auth/*`](./auth-api-specs.md) call 
 - **Env:** `INTERNAL_HUB_URL` — exposed via `EnvironmentsService.internalHubUrl`. See `.env.example`.
 - **Pagination utilities:** [`PageOptionsDto`](../../../../packages/common-nest/dto/page-options.dto.ts), [`PageDto`](../../../../packages/common-nest/dto/page.dto.ts), [`PageMetaDto`](../../../../packages/common-nest/dto/page-meta.dto.ts).
 - **Admin controller convention precedent:** [`BusinessProfilesAdminController`](../../../../apps/identity-service/src/modules/profiles/business/business-profiles-admin.controller.ts) — same shape (class-level `@Roles(UserRole.ADMIN_PLATFORM)`, separate `*-admin.controller.ts`, `{ value: bool }` PATCH body for booleans).
-- **OTP flow spec (sibling):** [`auth-api-specs.md`](./auth-api-specs.md).
+- **OTP flow spec (sibling):** [`admin-auth-api-specs.md`](./admin-auth-api-specs.md).

@@ -246,4 +246,4 @@ Submits **every** answer in a single request and finalises the interview. Each e
 
 ## Auth / blocking interaction
 
-While the consultant's latest onboarding has `blocked_until > now` (after an admin REJECT), **every** call above is unreachable: login already fails with `403 CONSULTANT_ONBOARDING_BLOCKED`, so the client never gets a session to call these endpoints. See [auth](../identity-service/auth/auth-api-specs.md#onboarding-rejection-block-read-first) for the full block matrix.
+While the consultant's latest onboarding has `blocked_until > now` (after an admin REJECT), **every** call above is unreachable: login already fails with `403 CONSULTANT_ONBOARDING_BLOCKED`, so the client never gets a session to call these endpoints. See [consultant account gates](../identity-service/auth/consultant-account-gates-api-specs.md#onboarding-rejection-block-read-first) for the full block matrix.

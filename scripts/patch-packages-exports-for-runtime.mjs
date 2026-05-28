@@ -20,7 +20,11 @@ pkg.exports = {
   './common-nest/*': './dist/common-nest/*',
   './unit-of-work': './dist/unit-of-work/unit-of-work.module.js',
   './unit-of-work/*': './dist/unit-of-work/*',
+  './unit-of-work-core': './dist/unit-of-work-core/index.js',
+  './transaction-coordinator': './dist/transaction-coordinator/index.js',
   './profiles-port': './dist/profiles-port/index.js',
+  './api-contracts': './dist/api-contracts/index.js',
+  './api-contracts/*': './dist/api-contracts/*',
 };
 
 fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);

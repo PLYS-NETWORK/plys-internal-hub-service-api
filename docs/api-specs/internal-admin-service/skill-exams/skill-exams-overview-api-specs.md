@@ -122,5 +122,5 @@ Every terminal skill-exam transition (PASSED / FAILED / EXPIRED / COPYLEAKS_FAIL
 
 ## Companion docs
 
-- [Auth — Consultant](../consultant-service/auth/auth-api-specs.md) — banned-account login behaviour.
+- [Auth — Consultant](../identity-service/auth/consultant-account-gates-api-specs.md) — banned-account login behaviour.
 - Notifications — [consultant catalog](../consultant-service/notifications/notifications-consultant-events-api-specs.md) · [admin catalog](../internal-admin-service/notifications/notifications-admin-events-api-specs.md).

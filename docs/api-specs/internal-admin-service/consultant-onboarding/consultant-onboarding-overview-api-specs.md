@@ -92,11 +92,11 @@ When the admin rejects:
 
 1. `consultant_onboardings.blocked_until = now + 3 months`.
 2. Consultant receives the rejection email.
-3. For 3 months, **login**, **register**, and **profile-submit** all return `403 CONSULTANT_ONBOARDING_BLOCKED` with `details.blocked_until`. See [consultant auth](../consultant-service/auth/auth-api-specs.md#onboarding-rejection-block-read-first).
+3. For 3 months, **login**, **register**, and **profile-submit** all return `403 CONSULTANT_ONBOARDING_BLOCKED` with `details.blocked_until`. See [consultant account gates](../identity-service/auth/consultant-account-gates-api-specs.md#onboarding-rejection-block-read-first).
 4. After the block expires the consultant may re-register / re-onboard.
 
 ## Companion docs
 
-- [Auth — Consultant](../consultant-service/auth/auth-api-specs.md) — login behaviour around the rejection block.
+- [Consultant account gates](../identity-service/auth/consultant-account-gates-api-specs.md) — login behaviour around the rejection block.
 - [Notifications — Consultant Event Catalog](../consultant-service/notifications/notifications-consultant-events-api-specs.md) — onboarding_approved notification.
 - [Files — Upload + Purpose](./files-api-specs.md) — shared `/files` upload endpoint.

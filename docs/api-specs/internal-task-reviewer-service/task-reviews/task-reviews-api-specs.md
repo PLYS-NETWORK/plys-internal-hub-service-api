@@ -49,7 +49,7 @@ IN_PROGRESS ─submitForReview──▶ IN_REVIEW
 
 ## Authentication & authorisation
 
-Standard JWT flow via the admin OTP login at [`/admin/auth/*`](../identity-service/auth/auth-api-specs.md). After verifying the OTP, `users.role` is read from the `admin_allowed_emails` row matching the email — so an invited `TASK_REVIEWER` ends up with role `TASK_REVIEWER` and a JWT carrying `platform = admin_platform`.
+Standard JWT flow via the admin OTP login at [`/admin/auth/*`](../identity-service/auth/admin-auth-api-specs.md). After verifying the OTP, `users.role` is read from the `admin_allowed_emails` row matching the email — so an invited `TASK_REVIEWER` ends up with role `TASK_REVIEWER` and a JWT carrying `platform = admin_platform`.
 
 Per-endpoint authorisation:
 
