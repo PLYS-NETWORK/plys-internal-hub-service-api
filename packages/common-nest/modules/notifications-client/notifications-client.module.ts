@@ -4,14 +4,14 @@ import {
   EnvironmentsModule,
   EnvironmentsService,
 } from '@plys/libraries/common-nest/modules/environments';
-import { GRPC_PACKAGES, HTTP_PROTO_PATH } from '@plys/libraries/proto';
+import {
+  GRPC_PACKAGES,
+  resolveHttpProtoPath,
+  resolveNotificationsProtoPath,
+} from '@plys/libraries/proto';
 
 import { NotificationsClientService } from './notifications-client.service';
-import {
-  NOTIFICATIONS_GRPC,
-  NotificationsGrpcClient,
-  resolveNotificationsProtoPath,
-} from './notifications-grpc.client';
+import { NOTIFICATIONS_GRPC, NotificationsGrpcClient } from './notifications-grpc.client';
 
 @Global()
 @Module({
@@ -34,7 +34,7 @@ import {
           transport: Transport.GRPC,
           options: {
             package: [GRPC_PACKAGES.COMMON, GRPC_PACKAGES.NOTIFICATIONS],
-            protoPath: [HTTP_PROTO_PATH, resolveNotificationsProtoPath()],
+            protoPath: [resolveHttpProtoPath(), resolveNotificationsProtoPath()],
             url: env.notificationsServiceGrpcUrl,
           },
         }),

@@ -8,7 +8,7 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json && cp -r database/seeds/data dist/database/seeds/data && cp -r common-nest/i18n dist/i18n",
+        "command": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json && cp -r database/seeds/data dist/database/seeds/data && cp -r common-nest/i18n dist/i18n && node ../scripts/copy-proto-to-dist.mjs",
         "cwd": "packages"
       }
     },

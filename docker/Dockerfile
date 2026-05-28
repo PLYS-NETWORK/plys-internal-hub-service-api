@@ -23,6 +23,7 @@ FROM deps AS build
 COPY . .
 RUN pnpm exec nx run-many -t build \
   --projects=libraries,api-gateway,identity-service,business-service,consultant-service,internal-admin-service,internal-task-reviewer-service,finance-service,notifications-service,platform-service,ai-provider-service
+RUN node scripts/copy-proto-to-dist.mjs
 RUN node scripts/patch-packages-exports-for-runtime.mjs
 RUN node scripts/verify-docker-runtime-modules.mjs
 

@@ -1,6 +1,3 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-
 import { Metadata } from '@grpc/grpc-js';
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { ClientGrpc } from '@nestjs/microservices';
@@ -45,17 +42,4 @@ export class NotificationsGrpcClient implements IGrpcDispatchClient, OnModuleIni
     };
     return dispatchGrpc(this, request, metadata);
   }
-}
-
-export function resolveNotificationsProtoPath(): string {
-  const candidates = [
-    path.join(process.cwd(), 'packages/proto/notifications/v1/notifications.proto'),
-    path.join(__dirname, '../../../proto/notifications/v1/notifications.proto'),
-  ];
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return candidates[0];
 }

@@ -4,7 +4,7 @@
  * at runtime (same NODE_PATH layout as docker-entrypoint.sh).
  */
 import fs from 'node:fs';
-import Module from 'node:module';
+import Module, { createRequire } from 'node:module';
 import path from 'node:path';
 
 const root = process.cwd();
@@ -173,6 +173,64 @@ for (const hit of tsRequires) {
     request: hit.request,
     reason: 'compiled output must not require .ts paths — fix tsconfig path alias target',
   });
+}
+
+const requiredProtoFiles = [
+  'packages/dist/proto/common/v1/http.proto',
+  'packages/proto/common/v1/http.proto',
+];
+for (const relativePath of requiredProtoFiles) {
+  const filePath = path.join(root, relativePath);
+  if (!fs.existsSync(filePath)) {
+    failures.push({
+      fromFile: filePath,
+      request: relativePath,
+      reason: 'gRPC proto file missing — ensure libraries build copies proto/*.proto into dist/proto',
+    });
+  }
+}
+
+const protoIndexJs = path.join(root, 'packages/dist/proto/index.js');
+if (fs.existsSync(protoIndexJs)) {
+  const protoExports = createRequire(import.meta.url)(protoIndexJs);
+  const httpProtoPath = protoExports.HTTP_PROTO_PATH;
+  if (typeof httpProtoPath !== 'string' || !fs.existsSync(httpProtoPath)) {
+    failures.push({
+      fromFile: protoIndexJs,
+      request: 'HTTP_PROTO_PATH',
+      reason: `resolved HTTP_PROTO_PATH missing on disk: ${httpProtoPath ?? '(undefined)'}`,
+    });
+  }
+}
+
+for (const service of RUNTIME_SERVICES) {
+  const mainJs = path.join(root, 'apps', service, 'dist', 'apps', service, 'src', 'main.js');
+  if (!fs.existsSync(mainJs)) continue;
+
+  const nodePath = collectNodePathDirs().join(path.delimiter);
+  const previous = process.env.NODE_PATH;
+  process.env.NODE_PATH = nodePath;
+  Module._initPaths();
+  const req = Module.createRequire(mainJs);
+  try {
+    const { HTTP_PROTO_PATH: httpProtoPath } = req('@plys/libraries/proto');
+    if (typeof httpProtoPath !== 'string' || !fs.existsSync(httpProtoPath)) {
+      failures.push({
+        fromFile: mainJs,
+        request: '@plys/libraries/proto HTTP_PROTO_PATH',
+        reason: `resolved HTTP_PROTO_PATH missing on disk: ${httpProtoPath ?? '(undefined)'}`,
+      });
+    }
+  } catch (error) {
+    failures.push({
+      fromFile: mainJs,
+      request: '@plys/libraries/proto',
+      reason: error instanceof Error ? error.message : String(error),
+    });
+  } finally {
+    process.env.NODE_PATH = previous;
+    Module._initPaths();
+  }
 }
 
 if (failures.length > 0) {

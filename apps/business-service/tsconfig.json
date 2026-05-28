@@ -18,6 +18,8 @@
       "@plys/libraries/config/*": ["../../packages/config/*"],
       "@plys/libraries/common-nest/*": ["../../packages/common-nest/*"],
       "@plys/libraries/unit-of-work/*": ["../../packages/unit-of-work/*"],
+      "@plys/libraries/api-contracts": ["../../packages/api-contracts/index.ts"],
+      "@plys/libraries/api-contracts/*": ["../../packages/api-contracts/*"],
       "@modules/profiles/*": ["src/modules/profiles/*"],
       "@modules/business-onboarding/*": ["src/modules/business-onboarding/*"],
       "@modules/business-projects/*": ["src/modules/business-projects/*"],
