@@ -9,6 +9,40 @@ export type GrpcCallOptions = {
 
 export type GrpcOperationArgBuilder = (args: unknown[]) => GrpcCallOptions;
 
+/** Nest lifecycle / introspection keys must not become gRPC operation names. */
+const PROXY_RESERVED_KEYS = new Set([
+  'then',
+  'catch',
+  'finally',
+  'constructor',
+  'onModuleInit',
+  'onModuleDestroy',
+  'onApplicationBootstrap',
+  'onApplicationShutdown',
+  'toString',
+  'valueOf',
+  'inspect',
+  'nodeUtilInspectCustom',
+]);
+
+function collectServiceMethodNames(serviceToken: Type<object>): Set<string> {
+  const names = new Set<string>();
+  let proto: object | null = serviceToken.prototype;
+  while (proto && proto !== Object.prototype) {
+    for (const name of Object.getOwnPropertyNames(proto)) {
+      if (name === 'constructor') {
+        continue;
+      }
+      const descriptor = Object.getOwnPropertyDescriptor(proto, name);
+      if (typeof descriptor?.value === 'function') {
+        names.add(name);
+      }
+    }
+    proto = Object.getPrototypeOf(proto);
+  }
+  return names;
+}
+
 function isUuid(value: unknown): value is string {
   return typeof value === 'string' && /^[0-9a-f-]{36}$/i.test(value);
 }
@@ -79,13 +113,19 @@ export function provideGrpcServiceProxy<T extends object>(
 ): Provider {
   return {
     provide: serviceToken,
-    useFactory: (client: IGrpcDispatchClient, grpcHelper: GrpcGatewayHelper) =>
-      new Proxy({} as T, {
+    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+    useFactory: (client: IGrpcDispatchClient, grpcHelper: GrpcGatewayHelper) => {
+      const methodNames = collectServiceMethodNames(serviceToken);
+
+      return new Proxy({} as T, {
         get(
           _target,
           prop: string | symbol,
         ): undefined | ((...args: unknown[]) => Promise<unknown>) {
-          if (typeof prop !== 'string' || prop === 'then') {
+          if (typeof prop !== 'string' || PROXY_RESERVED_KEYS.has(prop)) {
+            return undefined;
+          }
+          if (!methodNames.has(prop)) {
             return undefined;
           }
           const override = methodOverrides[prop as keyof T & string];
@@ -99,7 +139,8 @@ export function provideGrpcServiceProxy<T extends object>(
             return payload.data;
           };
         },
-      }),
+      });
+    },
     inject: [clientToken, GrpcGatewayHelper],
   };
 }
