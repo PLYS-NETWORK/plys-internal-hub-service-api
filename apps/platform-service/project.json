@@ -23,7 +23,7 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "eslint \"src/**/*.ts\" --max-warnings=0",
+        "command": "NODE_OPTIONS=--max-old-space-size=8192 eslint \"src/**/*.ts\" --max-warnings=0",
         "cwd": "apps/platform-service"
       }
     },
